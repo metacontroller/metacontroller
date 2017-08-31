@@ -10,9 +10,8 @@ var getConditionStatus = function (obj, conditionType) {
 };
 
 var isRunningAndReady = function (pod) {
-  return pod && pod.status && pod.status.phase === 'Running' &&
-    getConditionStatus(pod, 'Ready') === 'True' &&
-    !pod.metadata.deletionTimestamp;
+  return pod && pod.status && pod.status.phase === 'Running' && !pod.metadata.deletionTimestamp &&
+    getConditionStatus(pod, 'Ready') === 'True';
 };
 
 var getOrdinal = function (baseName, name) {
@@ -21,14 +20,16 @@ var getOrdinal = function (baseName, name) {
   return -1;
 };
 
-var newPod = function (podName, template, pvcs) {
-  let pod = JSON.parse(JSON.stringify(template));
+var newPod = function (podName, catset) {
+  let pod = JSON.parse(JSON.stringify(catset.spec.template));
   pod.apiVersion = 'v1';
   pod.kind = 'Pod';
   pod.metadata.name = podName;
-  if (pvcs) {
+  pod.spec.hostname = podName;
+  pod.spec.subdomain = catset.spec.serviceName;
+  if (catset.spec.volumeClaimTemplates) {
     pod.spec.volumes = pod.spec.volumes || [];
-    for (let pvc of pvcs) {
+    for (let pvc of catset.spec.volumeClaimTemplates) {
       pod.spec.volumes.push({
         name: pvc.metadata.name,
         persistentVolumeClaim: {claimName: `${pvc.metadata.name}-${podName}`}
@@ -76,12 +77,12 @@ module.exports = async function (context) {
       if (ordinal >= 0) desiredPods[ordinal] = observedPods[podName];
     }
     // Fill in one missing Pod if all lower ordinals are Ready.
-    for (var next = 0; next < catset.spec.replicas && isRunningAndReady(desiredPods[next]); next++);
-    if (next < catset.spec.replicas && !(next in desiredPods)) {
-      desiredPods[next] = newPod(`${catset.metadata.name}-${next}`, catset.spec.template, catset.spec.volumeClaimTemplates);
+    for (var ready = 0; ready < catset.spec.replicas && isRunningAndReady(desiredPods[ready]); ready++);
+    if (ready < catset.spec.replicas && !(ready in desiredPods)) {
+      desiredPods[ready] = newPod(`${catset.metadata.name}-${ready}`, catset);
     }
     // If all desired Pods are Ready, see if we need to scale down.
-    if (next === catset.spec.replicas) {
+    if (ready === catset.spec.replicas) {
       let maxOrdinal = Math.max(...Object.keys(desiredPods));
       if (maxOrdinal >= catset.spec.replicas) {
         delete desiredPods[maxOrdinal];
@@ -90,8 +91,7 @@ module.exports = async function (context) {
     desired.children.push(...Object.values(desiredPods));
 
     // Compute controller status.
-    desired.status.replicas = Object.keys(observedPods).length;
-    desired.status.readyReplicas = next;
+    desired.status = {replicas: Object.keys(observedPods).length, readyReplicas: ready};
   } catch (e) {
     return {status: 500, body: e.stack};
   }
