@@ -29,14 +29,15 @@ curl -Lo fission https://github.com/fission/fission/releases/download/nightly201
 ### Install CatSet
 
 ```sh
+export FISSION_URL=http://<external IP for fission/controller service>
 ./fission env create --name nodejs --image fission/node-env
-./fission function create --name catset-sync --env nodejs --code examples/catset-sync.js
+./fission function create --name catset-sync --env nodejs --code examples/catset/catset-sync.js
 ./fission route create --method POST --url /ctl.enisoc.com/catsets/sync --function catset-sync
-kubectl create -f examples/catset-controller.yaml
+kubectl create -f examples/catset/catset-controller.yaml
 ```
 
 ```sh
-kubectl create -f examples/my-catset.yaml
+kubectl create -f examples/catset/my-catset.yaml
 ```
 
 ## Build
