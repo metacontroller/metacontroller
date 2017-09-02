@@ -14,9 +14,9 @@ kubectl create clusterrolebinding <user>-cluster-admin-binding --clusterrole=clu
 kubectl create -f manifests/
 ```
 
-## Example
+## Examples
 
-### Install fission.io
+### Install fission.io and node.js environment
 
 ```sh
 kubectl create -f examples/fission/
@@ -24,13 +24,25 @@ kubectl create -f examples/fission/
 
 ```sh
 curl -Lo fission https://github.com/fission/fission/releases/download/nightly20170705/fission-cli-linux && chmod +x fission
-```
-
-### Install CatSet
-
-```sh
 export FISSION_URL=http://<external IP for fission/controller service>
 ./fission env create --name nodejs --image fission/node-env
+```
+
+### BlueGreenDeployment
+
+```sh
+./fission function create --name bluegreen-sync --env nodejs --code examples/bluegreen/bluegreen-sync.js
+./fission route create --method POST --url /ctl.enisoc.com/bluegreendeployments/sync --function bluegreen-sync
+kubectl create -f examples/bluegreen/bluegreen-controller.yaml
+```
+
+```sh
+kubectl create -f examples/bluegreen/my-bluegreen.yaml
+```
+
+### CatSet
+
+```sh
 ./fission function create --name catset-sync --env nodejs --code examples/catset/catset-sync.js
 ./fission route create --method POST --url /ctl.enisoc.com/catsets/sync --function catset-sync
 kubectl create -f examples/catset/catset-controller.yaml
