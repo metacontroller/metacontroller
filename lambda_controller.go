@@ -157,6 +157,10 @@ func updateParentStatus(clientset *dynamicClientset, lc *v1alpha1.LambdaControll
 func deleteChildren(client *dynamicResourceClient, parent *unstructured.Unstructured, observed, desired map[string]*unstructured.Unstructured) error {
 	var errs []error
 	for name, obj := range observed {
+		if obj.GetDeletionTimestamp() != nil {
+			// Skip objects that are already pending deletion.
+			continue
+		}
 		if desired == nil || desired[name] == nil {
 			// This observed object wasn't listed as desired.
 			glog.Infof("%v %v/%v: deleting %v %v", parent.GetKind(), parent.GetNamespace(), parent.GetName(), obj.GetKind(), obj.GetName())
