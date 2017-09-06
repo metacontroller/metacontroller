@@ -9,10 +9,12 @@ spec:
   selector:
     matchLabels:
       app: nginx
+      component: frontend
   template:
     metadata:
       labels:
         app: nginx
+        component: frontend
     spec:
       containers:
       - name: nginx
@@ -21,11 +23,13 @@ spec:
         - containerPort: 80
   service:
     metadata:
-      name: nginx
+      name: nginx-frontend
       labels:
         app: nginx
+        component: frontend
     spec:
       selector:
         app: nginx
+        component: frontend
       ports:
       - port: 80
