@@ -18,6 +18,7 @@ apiVersion: apps/v1beta1
 kind: Deployment
 metadata:
   name: metacontroller
+  namespace: metacontroller
   labels:
     app: metacontroller
 spec:
