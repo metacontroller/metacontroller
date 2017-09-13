@@ -2,6 +2,9 @@
 
 This is not an official Google product.
 
+This is a prototype for an add-on that can be installed in any Kubernetes cluster to make it easier
+to write and deploy custom controllers.
+
 ### Grant yourself cluster-admin
 
 [known issue](https://cloud.google.com/container-engine/docs/role-based-access-control#defining_permissions_in_a_role)
