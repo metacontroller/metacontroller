@@ -58,3 +58,11 @@ kubectl create -f examples/catset/my-catset.yaml
 dep ensure
 make
 ```
+
+## Contributing changes
+
+* See [CONTRIBUTING.md](CONTRIBUTING.md)
+
+## Licensing
+
+* See [LICENSE](LICENSE)
