@@ -1,3 +1,19 @@
+/*
+Copyright 2017 Google Inc.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package main
 
 import (
@@ -9,10 +25,11 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
+	k8s "k8s.io/metacontroller/third_party/kubernetes"
 )
 
 type dynamicControllerRefManager struct {
-	BaseControllerRefManager
+	k8s.BaseControllerRefManager
 	parentKind schema.GroupVersionKind
 	childKind  schema.GroupVersionKind
 	client     *dynamicResourceClient
@@ -20,7 +37,7 @@ type dynamicControllerRefManager struct {
 
 func newDynamicControllerRefManager(client *dynamicResourceClient, parent metav1.Object, selector labels.Selector, parentKind, childKind schema.GroupVersionKind, canAdopt func() error) *dynamicControllerRefManager {
 	return &dynamicControllerRefManager{
-		BaseControllerRefManager: BaseControllerRefManager{
+		BaseControllerRefManager: k8s.BaseControllerRefManager{
 			Controller:   parent,
 			Selector:     selector,
 			CanAdoptFunc: canAdopt,
@@ -76,7 +93,7 @@ func (m *dynamicControllerRefManager) adoptChild(obj *unstructured.Unstructured)
 		// Check if we're in the list.
 		for _, ref := range ownerRefs {
 			ownerRef := ref.(map[string]interface{})
-			if getNestedString(ownerRef, "uid") == parentUID {
+			if k8s.GetNestedString(ownerRef, "uid") == parentUID {
 				// We already own this. Update other fields as needed.
 				changed := false
 				for k, v := range controllerRef {
@@ -100,7 +117,7 @@ func (m *dynamicControllerRefManager) releaseChild(obj *unstructured.Unstructure
 		// Remove ourselves from the list.
 		for i, ref := range ownerRefs {
 			ownerRef := ref.(map[string]interface{})
-			if getNestedString(ownerRef, "uid") == parentUID {
+			if k8s.GetNestedString(ownerRef, "uid") == parentUID {
 				return append(ownerRefs[:i], ownerRefs[i+1:]...), true
 			}
 		}
@@ -119,7 +136,7 @@ func updateOwnerReferences(client *dynamicResourceClient, orig *unstructured.Uns
 	// We can't use merge patch because that would replace the whole list.
 	// We can't use JSON patch ops because that wouldn't be idempotent.
 	return client.UpdateWithRetries(orig, func(obj *unstructured.Unstructured) bool {
-		ownerRefs, ok := getNestedField(obj.UnstructuredContent(), "metadata", "ownerReferences").([]interface{})
+		ownerRefs, ok := k8s.GetNestedField(obj.UnstructuredContent(), "metadata", "ownerReferences").([]interface{})
 		if !ok {
 			// Nothing there. Start a list from scratch.
 			ownerRefs = nil
@@ -129,7 +146,7 @@ func updateOwnerReferences(client *dynamicResourceClient, orig *unstructured.Uns
 			// There's nothing to do.
 			return false
 		}
-		setNestedField(obj.UnstructuredContent(), ownerRefs, "metadata", "ownerReferences")
+		k8s.SetNestedField(obj.UnstructuredContent(), ownerRefs, "metadata", "ownerReferences")
 		return true
 	})
 }

@@ -11,9 +11,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package main
+package kubernetes
 
-// This is copied from k8s.io/kubernetes to avoid importing it.
+// This is copied from k8s.io/kubernetes to avoid a dependency on all of Kubernetes.
 // TODO(enisoc): Move the upstream code to somewhere better.
 
 import (

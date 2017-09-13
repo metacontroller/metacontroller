@@ -11,7 +11,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package main
+package kubernetes
 
 import (
 	"fmt"
@@ -20,9 +20,10 @@ import (
 	"k8s.io/apimachinery/pkg/util/json"
 )
 
-// These are based on functions from apimachinery/pkg/apis/meta/v1/unstructured.
+// These are based on functions from k8s.io/apimachinery/pkg/apis/meta/v1/unstructured.
+// They are copied here to make them exported.
 
-func getNestedField(obj map[string]interface{}, fields ...string) interface{} {
+func GetNestedField(obj map[string]interface{}, fields ...string) interface{} {
 	var val interface{} = obj
 	for _, field := range fields {
 		if _, ok := val.(map[string]interface{}); !ok {
@@ -33,8 +34,8 @@ func getNestedField(obj map[string]interface{}, fields ...string) interface{} {
 	return val
 }
 
-func getNestedFieldInto(out interface{}, obj map[string]interface{}, fields ...string) error {
-	objMap := getNestedField(obj, fields...)
+func GetNestedFieldInto(out interface{}, obj map[string]interface{}, fields ...string) error {
+	objMap := GetNestedField(obj, fields...)
 	if objMap == nil {
 		// If field has no value, leave `out` as is.
 		return nil
@@ -50,22 +51,22 @@ func getNestedFieldInto(out interface{}, obj map[string]interface{}, fields ...s
 	return nil
 }
 
-func getNestedString(obj map[string]interface{}, fields ...string) string {
-	if str, ok := getNestedField(obj, fields...).(string); ok {
+func GetNestedString(obj map[string]interface{}, fields ...string) string {
+	if str, ok := GetNestedField(obj, fields...).(string); ok {
 		return str
 	}
 	return ""
 }
 
-func getNestedInt64(obj map[string]interface{}, fields ...string) int64 {
-	if str, ok := getNestedField(obj, fields...).(int64); ok {
+func GetNestedInt64(obj map[string]interface{}, fields ...string) int64 {
+	if str, ok := GetNestedField(obj, fields...).(int64); ok {
 		return str
 	}
 	return 0
 }
 
-func getNestedInt64Pointer(obj map[string]interface{}, fields ...string) *int64 {
-	nested := getNestedField(obj, fields...)
+func GetNestedInt64Pointer(obj map[string]interface{}, fields ...string) *int64 {
+	nested := GetNestedField(obj, fields...)
 	switch n := nested.(type) {
 	case int64:
 		return &n
@@ -76,8 +77,8 @@ func getNestedInt64Pointer(obj map[string]interface{}, fields ...string) *int64 
 	}
 }
 
-func getNestedSlice(obj map[string]interface{}, fields ...string) []string {
-	if m, ok := getNestedField(obj, fields...).([]interface{}); ok {
+func GetNestedSlice(obj map[string]interface{}, fields ...string) []string {
+	if m, ok := GetNestedField(obj, fields...).([]interface{}); ok {
 		strSlice := make([]string, 0, len(m))
 		for _, v := range m {
 			if str, ok := v.(string); ok {
@@ -89,8 +90,8 @@ func getNestedSlice(obj map[string]interface{}, fields ...string) []string {
 	return nil
 }
 
-func getNestedMap(obj map[string]interface{}, fields ...string) map[string]string {
-	if m, ok := getNestedField(obj, fields...).(map[string]interface{}); ok {
+func GetNestedMap(obj map[string]interface{}, fields ...string) map[string]string {
+	if m, ok := GetNestedField(obj, fields...).(map[string]interface{}); ok {
 		strMap := make(map[string]string, len(m))
 		for k, v := range m {
 			if str, ok := v.(string); ok {
@@ -102,7 +103,7 @@ func getNestedMap(obj map[string]interface{}, fields ...string) map[string]strin
 	return nil
 }
 
-func setNestedField(obj map[string]interface{}, value interface{}, fields ...string) {
+func SetNestedField(obj map[string]interface{}, value interface{}, fields ...string) {
 	m := obj
 	if len(fields) > 1 {
 		for _, field := range fields[0 : len(fields)-1] {
@@ -115,18 +116,18 @@ func setNestedField(obj map[string]interface{}, value interface{}, fields ...str
 	m[fields[len(fields)-1]] = value
 }
 
-func setNestedSlice(obj map[string]interface{}, value []string, fields ...string) {
+func SetNestedSlice(obj map[string]interface{}, value []string, fields ...string) {
 	m := make([]interface{}, 0, len(value))
 	for _, v := range value {
 		m = append(m, v)
 	}
-	setNestedField(obj, m, fields...)
+	SetNestedField(obj, m, fields...)
 }
 
-func setNestedMap(obj map[string]interface{}, value map[string]string, fields ...string) {
+func SetNestedMap(obj map[string]interface{}, value map[string]string, fields ...string) {
 	m := make(map[string]interface{}, len(value))
 	for k, v := range value {
 		m[k] = v
 	}
-	setNestedField(obj, m, fields...)
+	SetNestedField(obj, m, fields...)
 }

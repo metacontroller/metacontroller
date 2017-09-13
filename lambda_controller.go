@@ -1,3 +1,19 @@
+/*
+Copyright 2017 Google Inc.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package main
 
 import (
@@ -11,6 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/metacontroller/apis/metacontroller/v1alpha1"
+	k8s "k8s.io/metacontroller/third_party/kubernetes"
 )
 
 func syncLambdaController(clientset *dynamicClientset, lc *v1alpha1.LambdaController) error {
@@ -38,7 +55,7 @@ func syncLambdaController(clientset *dynamicClientset, lc *v1alpha1.LambdaContro
 func syncParentResource(clientset *dynamicClientset, lc *v1alpha1.LambdaController, parentResource *APIResource, parent *unstructured.Unstructured) error {
 	// Get the parent's LabelSelector.
 	labelSelector := &metav1.LabelSelector{}
-	if err := getNestedFieldInto(&labelSelector, parent.UnstructuredContent(), "spec", "selector"); err != nil {
+	if err := k8s.GetNestedFieldInto(&labelSelector, parent.UnstructuredContent(), "spec", "selector"); err != nil {
 		return fmt.Errorf("can't get label selector from %v %v/%v", parentResource.Kind, parent.GetNamespace(), parent.GetName())
 	}
 
@@ -87,7 +104,7 @@ func claimChildren(clientset *dynamicClientset, lc *v1alpha1.LambdaController, p
 	if err != nil {
 		return nil, err
 	}
-	canAdoptFunc := RecheckDeletionTimestamp(func() (metav1.Object, error) {
+	canAdoptFunc := k8s.RecheckDeletionTimestamp(func() (metav1.Object, error) {
 		// Make sure this is always an uncached read.
 		fresh, err := parentClient.Get(parent.GetName(), metav1.GetOptions{})
 		if err != nil {
@@ -144,12 +161,12 @@ func updateParentStatus(clientset *dynamicClientset, lc *v1alpha1.LambdaControll
 	// TODO(enisoc): Use /status subresource when that exists.
 	// TODO(enisoc): Update status.observedGeneration when spec.generation starts working.
 	return parentClient.UpdateWithRetries(parent, func(obj *unstructured.Unstructured) bool {
-		oldStatus := getNestedField(obj.UnstructuredContent(), "status")
+		oldStatus := k8s.GetNestedField(obj.UnstructuredContent(), "status")
 		if reflect.DeepEqual(oldStatus, status) {
 			// Nothing to do.
 			return false
 		}
-		setNestedField(obj.UnstructuredContent(), status, "status")
+		k8s.SetNestedField(obj.UnstructuredContent(), status, "status")
 		return true
 	})
 }
@@ -200,9 +217,9 @@ func updateChildren(client *dynamicResourceClient, parent *unstructured.Unstruct
 				"controller":         true,
 				"blockOwnerDeletion": true,
 			}
-			ownerRefs, _ := getNestedField(obj.UnstructuredContent(), "metadata", "ownerReferences").([]interface{})
+			ownerRefs, _ := k8s.GetNestedField(obj.UnstructuredContent(), "metadata", "ownerReferences").([]interface{})
 			ownerRefs = append(ownerRefs, controllerRef)
-			setNestedField(obj.UnstructuredContent(), "metadata", "ownerReferences")
+			k8s.SetNestedField(obj.UnstructuredContent(), "metadata", "ownerReferences")
 			if _, err := client.Create(obj); err != nil {
 				errs = append(errs, err)
 				continue
@@ -251,8 +268,8 @@ func manageChildren(clientset *dynamicClientset, lc *v1alpha1.LambdaController, 
 func makeChildMap(list []*unstructured.Unstructured) childMap {
 	children := make(childMap)
 	for _, child := range list {
-		apiVersion := getNestedString(child.UnstructuredContent(), "apiVersion")
-		kind := getNestedString(child.UnstructuredContent(), "kind")
+		apiVersion := k8s.GetNestedString(child.UnstructuredContent(), "apiVersion")
+		kind := k8s.GetNestedString(child.UnstructuredContent(), "kind")
 		key := fmt.Sprintf("%s.%s", kind, apiVersion)
 
 		if children[key] == nil {

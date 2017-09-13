@@ -1,5 +1,7 @@
 ## Metacontroller
 
+This is not an official Google product.
+
 ### Grant yourself cluster-admin
 
 [known issue](https://cloud.google.com/container-engine/docs/role-based-access-control#defining_permissions_in_a_role)
