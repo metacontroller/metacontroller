@@ -60,6 +60,7 @@ kubectl create -f examples/catset/my-catset.yaml
 ## Build
 
 ```sh
+go get -u k8s.io/code-generator/cmd/deepcopy-gen
 dep ensure
 make
 ```
