@@ -1,0 +1,28 @@
+apiVersion: admissionregistration.k8s.io/v1alpha1
+kind: InitializerConfiguration
+metadata:
+  name: podhostname.enisoc.com
+initializers:
+  - name: podhostname.enisoc.com
+    rules:
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        resources: ["pods"]
+---
+apiVersion: metacontroller.k8s.io/v1alpha1
+kind: InitializerController
+metadata:
+  name: podhostname.enisoc.com
+spec:
+  initializerName: podhostname.enisoc.com
+  uninitializedResources:
+  - apiVersion: v1
+    resources: ["pods"]
+  clientConfig:
+    service:
+      name: router
+      namespace: fission
+    caBundle: ...
+  hooks:
+    init:
+      path: /ctl.enisoc.com/podhostname/init

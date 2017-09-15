@@ -26,9 +26,40 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
+	"k8s.io/apimachinery/pkg/util/json"
 	"k8s.io/metacontroller/apis/metacontroller/v1alpha1"
 	k8s "k8s.io/metacontroller/third_party/kubernetes"
 )
+
+func syncAllLambdaControllers(clientset *dynamicClientset) error {
+	lcClient, err := clientset.Resource(v1alpha1.SchemeGroupVersion.String(), "lambdacontrollers", "")
+	if err != nil {
+		return err
+	}
+	obj, err := lcClient.List(metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("can't list LambdaControllers: %v", err)
+	}
+	lcList := obj.(*unstructured.UnstructuredList)
+
+	for i := range lcList.Items {
+		data, err := json.Marshal(&lcList.Items[i])
+		if err != nil {
+			glog.Errorf("can't marshal LambdaController: %v")
+			continue
+		}
+		lc := &v1alpha1.LambdaController{}
+		if err := json.Unmarshal(data, lc); err != nil {
+			glog.Errorf("can't unmarshal LambdaController: %v", err)
+			continue
+		}
+		if err := syncLambdaController(clientset, lc); err != nil {
+			glog.Errorf("syncLambdaController: %v", err)
+			continue
+		}
+	}
+	return nil
+}
 
 func syncLambdaController(clientset *dynamicClientset, lc *v1alpha1.LambdaController) error {
 	// Sync all objects of the parent type, in all namespaces.

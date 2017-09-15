@@ -30,13 +30,13 @@ kubectl create -f examples/fission/
 ```sh
 curl -Lo fission https://github.com/fission/fission/releases/download/nightly20170705/fission-cli-linux && chmod +x fission
 export FISSION_URL=http://<external IP for fission/controller service>
-./fission env create --name nodejs --image fission/node-env
+./fission env create --name node --image fission/node-env
 ```
 
 ### BlueGreenDeployment
 
 ```sh
-./fission function create --name bluegreen-sync --env nodejs --code examples/bluegreen/bluegreen-sync.js
+./fission function create --name bluegreen-sync --env node --code examples/bluegreen/bluegreen-sync.js
 ./fission route create --method POST --url /ctl.enisoc.com/bluegreendeployments/sync --function bluegreen-sync
 kubectl create -f examples/bluegreen/bluegreen-controller.yaml
 ```
@@ -48,13 +48,39 @@ kubectl create -f examples/bluegreen/my-bluegreen.yaml
 ### CatSet
 
 ```sh
-./fission function create --name catset-sync --env nodejs --code examples/catset/catset-sync.js
+./fission function create --name catset-sync --env node --code examples/catset/catset-sync.js
 ./fission route create --method POST --url /ctl.enisoc.com/catsets/sync --function catset-sync
 kubectl create -f examples/catset/catset-controller.yaml
 ```
 
 ```sh
 kubectl create -f examples/catset/my-catset.yaml
+```
+
+### Initializer
+
+For this example, you need a cluster with alpha features enabled (for initializers),
+and it must be v1.6.11+, v1.7.7+, or v1.8.0+ so that the initializer can modify
+certain Pod fields that normally are immutable.
+
+```sh
+./fission function create --name podhostname-init --env node --code examples/initializer/podhostname-init.js
+./fission route create --method POST --url /ctl.enisoc.com/podhostname/init --function podhostname-init
+kubectl create -f examples/initializer/podhostname-initializer.yaml
+```
+
+Create a Pod that still uses only the old annotations, rather than the fields.
+Without the initializer, the Pod DNS would not work in v1.7+ because the annotations
+no longer have any effect.
+
+```sh
+kubectl create -f examples/initializer/bad-pod.yaml
+```
+
+Verify that the initializer properly copied the annotations to fields:
+
+```sh
+kubectl get pod bad-pod -o yaml | grep -E 'hostname|subdomain'
 ```
 
 ## Build

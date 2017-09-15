@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/golang/glog"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/json"
 	"k8s.io/metacontroller/apis/metacontroller/v1alpha1"
@@ -45,39 +46,64 @@ type syncHookResponse struct {
 	Children []*unstructured.Unstructured `json:"children"`
 }
 
+type initHookRequest struct {
+	Object *unstructured.Unstructured `json:"object"`
+}
+
+type initHookResponse struct {
+	Object *unstructured.Unstructured `json:"object"`
+	Result *metav1.Status             `json:"result,omitempty"`
+}
+
 func callSyncHook(lc *v1alpha1.LambdaController, request *syncHookRequest) (*syncHookResponse, error) {
+	url := fmt.Sprintf("http://%s.%s%s", lc.Spec.ClientConfig.Service.Name, lc.Spec.ClientConfig.Service.Namespace, lc.Spec.Hooks.Sync.Path)
+	var response syncHookResponse
+	if err := callHook(url, request, &response); err != nil {
+		return nil, fmt.Errorf("sync hook failed: %v", err)
+	}
+	return &response, nil
+}
+
+func callInitHook(ic *v1alpha1.InitializerController, request *initHookRequest) (*initHookResponse, error) {
+	url := fmt.Sprintf("http://%s.%s%s", ic.Spec.ClientConfig.Service.Name, ic.Spec.ClientConfig.Service.Namespace, ic.Spec.Hooks.Init.Path)
+	var response initHookResponse
+	if err := callHook(url, request, &response); err != nil {
+		return nil, fmt.Errorf("init hook failed: %v", err)
+	}
+	return &response, nil
+}
+
+func callHook(url string, request interface{}, response interface{}) error {
 	// Encode request.
 	reqBody, err := json.Marshal(request)
 	if err != nil {
-		return nil, fmt.Errorf("can't marshal sync hook request: %v", err)
+		return fmt.Errorf("can't marshal request: %v", err)
 	}
 	glog.Infof("DEBUG: request body: %s", reqBody)
 
 	// Send request.
-	url := fmt.Sprintf("http://%s.%s%s", lc.Spec.ClientConfig.Service.Name, lc.Spec.ClientConfig.Service.Namespace, lc.Spec.Hooks.Sync.Path)
 	client := &http.Client{Timeout: hookTimeout}
 	resp, err := client.Post(url, "application/json", bytes.NewReader(reqBody))
 	if err != nil {
-		return nil, fmt.Errorf("http error: %v", err)
+		return fmt.Errorf("http error: %v", err)
 	}
 	defer resp.Body.Close()
 
 	// Read response.
 	respBody, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("can't read response body: %v", err)
+		return fmt.Errorf("can't read response body: %v", err)
 	}
 	glog.Infof("DEBUG: response body: %s", respBody)
 
 	// Check status code.
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("sync hook remote error: %s", respBody)
+		return fmt.Errorf("remote error: %s", respBody)
 	}
 
 	// Decode response.
-	response := &syncHookResponse{}
 	if err := json.Unmarshal(respBody, response); err != nil {
-		return nil, fmt.Errorf("can't unmarshal sync hook response: %v", err)
+		return fmt.Errorf("can't unmarshal response: %v", err)
 	}
-	return response, nil
+	return nil
 }

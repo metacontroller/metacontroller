@@ -58,6 +58,13 @@ func GetNestedString(obj map[string]interface{}, fields ...string) string {
 	return ""
 }
 
+func GetNestedArray(obj map[string]interface{}, fields ...string) []interface{} {
+	if arr, ok := GetNestedField(obj, fields...).([]interface{}); ok {
+		return arr
+	}
+	return nil
+}
+
 func GetNestedInt64(obj map[string]interface{}, fields ...string) int64 {
 	if str, ok := GetNestedField(obj, fields...).(int64); ok {
 		return str
@@ -114,6 +121,19 @@ func SetNestedField(obj map[string]interface{}, value interface{}, fields ...str
 		}
 	}
 	m[fields[len(fields)-1]] = value
+}
+
+func DeleteNestedField(obj map[string]interface{}, fields ...string) {
+	m := obj
+	if len(fields) > 1 {
+		for _, field := range fields[0 : len(fields)-1] {
+			if _, ok := m[field].(map[string]interface{}); !ok {
+				m[field] = make(map[string]interface{})
+			}
+			m = m[field].(map[string]interface{})
+		}
+	}
+	delete(m, fields[len(fields)-1])
 }
 
 func SetNestedSlice(obj map[string]interface{}, value []string, fields ...string) {
