@@ -26,9 +26,46 @@ spec:
       resources: ["pods", "persistentvolumeclaims"]
   clientConfig:
     service:
-      name: router
-      namespace: fission
+      name: catset-controller
+      namespace: metacontroller
     caBundle: ...
   hooks:
     sync:
-      path: /ctl.enisoc.com/catsets/sync
+      path: /sync
+---
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: catset-controller
+  namespace: metacontroller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: catset-controller
+  template:
+    metadata:
+      labels:
+        app: catset-controller
+    spec:
+      containers:
+      - name: controller
+        image: gcr.io/enisoc-kubernetes/nodejs-server:latest
+        volumeMounts:
+        - name: hooks
+          mountPath: /node/hooks
+      volumes:
+      - name: hooks
+        configMap:
+          name: catset-controller
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: catset-controller
+  namespace: metacontroller
+spec:
+  selector:
+    app: catset-controller
+  ports:
+  - port: 80

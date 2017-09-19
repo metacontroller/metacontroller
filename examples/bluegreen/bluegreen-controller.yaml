@@ -16,7 +16,7 @@ spec:
 apiVersion: metacontroller.k8s.io/v1alpha1
 kind: LambdaController
 metadata:
-  name: bluegreendeployment-controller
+  name: bluegreen-controller
 spec:
   parentResource:
     apiVersion: ctl.enisoc.com/v1
@@ -28,9 +28,46 @@ spec:
     resources: ["replicasets"]
   clientConfig:
     service:
-      name: router
-      namespace: fission
+      name: bluegreen-controller
+      namespace: metacontroller
     caBundle: ...
   hooks:
     sync:
-      path: /ctl.enisoc.com/bluegreendeployments/sync
+      path: /sync
+---
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: bluegreen-controller
+  namespace: metacontroller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bluegreen-controller
+  template:
+    metadata:
+      labels:
+        app: bluegreen-controller
+    spec:
+      containers:
+      - name: controller
+        image: gcr.io/enisoc-kubernetes/nodejs-server:latest
+        volumeMounts:
+        - name: hooks
+          mountPath: /node/hooks
+      volumes:
+      - name: hooks
+        configMap:
+          name: bluegreen-controller
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bluegreen-controller
+  namespace: metacontroller
+spec:
+  selector:
+    app: bluegreen-controller
+  ports:
+  - port: 80
