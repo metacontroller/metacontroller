@@ -36,8 +36,9 @@ var getOrdinal = function (baseName, name) {
   return -1;
 };
 
-var newPod = function (podName, catset) {
+var newPod = function (catset, ordinal) {
   let pod = JSON.parse(JSON.stringify(catset.spec.template));
+  let podName = `${catset.metadata.name}-${ordinal}`;
   pod.apiVersion = 'v1';
   pod.kind = 'Pod';
   pod.metadata.name = podName;
@@ -95,7 +96,7 @@ module.exports = async function (context) {
     // Fill in one missing Pod if all lower ordinals are Ready.
     for (var ready = 0; ready < catset.spec.replicas && isRunningAndReady(desiredPods[ready]); ready++);
     if (ready < catset.spec.replicas && !(ready in desiredPods)) {
-      desiredPods[ready] = newPod(`${catset.metadata.name}-${ready}`, catset);
+      desiredPods[ready] = newPod(catset, ready);
     }
     // If all desired Pods are Ready, see if we need to scale down.
     if (ready === catset.spec.replicas) {
