@@ -3,7 +3,7 @@ kind: Pod
 metadata:
   name: bad-pod
   labels:
-    app: nginx
+    app: bad-nginx
   annotations:
     "pod.beta.kubernetes.io/hostname": nginx
     "pod.beta.kubernetes.io/subdomain": web
