@@ -15,7 +15,7 @@ certain Pod fields that normally are immutable.
 
 ```sh
 kubectl create configmap podhostname-initializer -n metacontroller --from-file=init.js
-kubectl create -f podhostname-initializer.yaml
+kubectl apply -f podhostname-initializer.yaml
 ```
 
 ### Enable the initializer config
@@ -30,7 +30,7 @@ As a workaround, you should ensure the initializer controller Pod is Running bef
 ```sh
 kubectl -n metacontroller get po -l app=podhostname-initializer
 
-kubectl create -f initializer-config.yaml
+kubectl apply -f initializer-config.yaml
 ```
 
 ### Create a Pod
@@ -40,7 +40,7 @@ Without the initializer, the Pod DNS would not work in v1.7+ because the annotat
 no longer have any effect.
 
 ```sh
-kubectl create -f bad-pod.yaml
+kubectl apply -f bad-pod.yaml
 ```
 
 Note that in the Metacontroller proof-of-concept, the latency can be up to the poll interval of 5s.

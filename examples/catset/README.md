@@ -12,11 +12,11 @@ For this example, you need a cluster with a default storage class and a dynamic 
 
 ```sh
 kubectl create configmap catset-controller -n metacontroller --from-file=sync.js
-kubectl create -f catset-controller.yaml
+kubectl apply -f catset-controller.yaml
 ```
 
 ### Create a CatSet
 
 ```sh
-kubectl create -f my-catset.yaml
+kubectl apply -f my-catset.yaml
 ```

@@ -90,7 +90,7 @@ kubectl create clusterrolebinding <user>-cluster-admin-binding --clusterrole=clu
 ### Install metacontroller
 
 ```sh
-kubectl create -f manifests/
+kubectl apply -f manifests/
 ```
 
 ## Build

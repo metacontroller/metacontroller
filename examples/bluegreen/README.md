@@ -16,11 +16,11 @@ Finally, it scales down the old ReplicaSet.
 
 ```sh
 kubectl create configmap bluegreen-controller -n metacontroller --from-file=sync.js
-kubectl create -f bluegreen-controller.yaml
+kubectl apply -f bluegreen-controller.yaml
 ```
 
 ### Create a BlueGreenDeployment
 
 ```sh
-kubectl create -f my-bluegreen.yaml
+kubectl apply -f my-bluegreen.yaml
 ```
