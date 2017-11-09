@@ -84,10 +84,16 @@ func syncLambdaController(clientset *dynamicClientset, lc *v1alpha1.LambdaContro
 }
 
 func syncParentResource(clientset *dynamicClientset, lc *v1alpha1.LambdaController, parentResource *APIResource, parent *unstructured.Unstructured) error {
-	// Get the parent's LabelSelector.
 	labelSelector := &metav1.LabelSelector{}
-	if err := k8s.GetNestedFieldInto(&labelSelector, parent.UnstructuredContent(), "spec", "selector"); err != nil {
-		return fmt.Errorf("can't get label selector from %v %v/%v", parentResource.Kind, parent.GetNamespace(), parent.GetName())
+	if lc.Spec.GenerateSelector {
+		// Select by controller-uid, like Job does.
+		// Any selector on the parent is ignored in this case.
+		labelSelector = metav1.AddLabelToSelector(labelSelector, "controller-uid", string(parent.GetUID()))
+	} else {
+		// Get the parent's LabelSelector.
+		if err := k8s.GetNestedFieldInto(&labelSelector, parent.UnstructuredContent(), "spec", "selector"); err != nil {
+			return fmt.Errorf("can't get label selector from %v %v/%v", parentResource.Kind, parent.GetNamespace(), parent.GetName())
+		}
 	}
 
 	// Claim all matching child resources, including orphan/adopt as necessary.
@@ -286,6 +292,20 @@ func manageChildren(clientset *dynamicClientset, lc *v1alpha1.LambdaController, 
 		if err != nil {
 			errs = append(errs, err)
 			continue
+		}
+		if lc.Spec.GenerateSelector {
+			// Add the controller-uid label if there's none.
+			for _, obj := range objects {
+				labels := obj.GetLabels()
+				if labels == nil {
+					labels = make(map[string]string, 1)
+				}
+				if _, ok := labels["controller-uid"]; ok {
+					continue
+				}
+				labels["controller-uid"] = string(parent.GetUID())
+				obj.SetLabels(labels)
+			}
 		}
 		if err := updateChildren(client, parent, observedChildren[key], objects); err != nil {
 			errs = append(errs, err)
