@@ -31,20 +31,23 @@ constantly maintains your desired state and reacts to any changes made to the pa
 
 **Examples**
 
-* [**BlueGreenDeployment**](https://github.com/GoogleCloudPlatform/kube-metacontroller/tree/master/examples/bluegreen)
-
-  This is an alternative to Deployment that implements a Blue-Green rollout
-  strategy.
-  It shows how LambdaController can be used to add various automation on top of
-  built-in APIs like ReplicaSet.
-
-* [**CatSet**](https://github.com/GoogleCloudPlatform/kube-metacontroller/tree/master/examples/catset)
+* [**CatSet**](examples/catset) (JavaScript)
 
   This is a rewrite of StatefulSet, minus rolling updates, as a LambdaController.
   It shows that existing workload controllers already use a pattern that could
   fit within a LambdaController, namely managing child objects based on a parent
   spec.
-  
+
+* [**BlueGreenDeployment**](examples/bluegreen) (JavaScript)
+
+  This is an alternative to Deployment that implements a Blue-Green rollout strategy.
+  It shows how LambdaController can be used to add various automation on top of
+  built-in APIs like ReplicaSet.
+
+* [**IndexedJob**](examples/indexedjob) (Python)
+
+  This is an alternative to Job that gives each Pod a unique index, like StatefulSet.
+  It shows how to write a LambdaController in Python, and also demonstrates selector generation.
 
 ### InitializerController
 
@@ -62,7 +65,7 @@ including both InitializerControllers and LambdaControllers.
 
 **Examples**
 
-* [**podhostname**](https://github.com/GoogleCloudPlatform/kube-metacontroller/tree/master/examples/initializer)
+* [**podhostname**](examples/initializer)
 
   This is an InitializerController that fixes Pods for compatibility with newer
   clusters.
