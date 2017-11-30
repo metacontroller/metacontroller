@@ -39,9 +39,9 @@ func resyncAll(config *rest.Config) error {
 	}
 	clientset := newDynamicClientset(config, newResourceMap(resources))
 
-	// Sync all LambdaController objects.
-	if err := syncAllLambdaControllers(clientset); err != nil {
-		glog.Errorf("can't sync LambdaControllers: %v", err)
+	// Sync all CompositeController objects.
+	if err := syncAllCompositeControllers(clientset); err != nil {
+		glog.Errorf("can't sync CompositeControllers: %v", err)
 	}
 
 	// Sync all InitializerController objects.

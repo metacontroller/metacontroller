@@ -20,18 +20,18 @@ import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-type LambdaController struct {
+type CompositeController struct {
 	metav1.TypeMeta               `json:",inline"`
 	metav1.ObjectMeta             `json:"metadata"`
-	Spec   LambdaControllerSpec   `json:"spec"`
-	Status LambdaControllerStatus `json:"status,omitempty"`
+	Spec   CompositeControllerSpec   `json:"spec"`
+	Status CompositeControllerStatus `json:"status,omitempty"`
 }
 
-type LambdaControllerSpec struct {
+type CompositeControllerSpec struct {
 	ParentResource   ResourceRule          `json:"parentResource"`
 	ChildResources   []ResourcesRule       `json:"childResources,omitempty"`
 	ClientConfig     ClientConfig          `json:"clientConfig,omitempty"`
-	Hooks            LambdaControllerHooks `json:"hooks,omitempty"`
+	Hooks            CompositeControllerHooks `json:"hooks,omitempty"`
 	GenerateSelector bool                  `json:"generateSelector,omitempty"`
 }
 
@@ -54,23 +54,23 @@ type ServiceReference struct {
 	Namespace string `json:"namespace"`
 }
 
-type LambdaControllerHooks struct {
-	Sync LambdaControllerSyncHook `json:"sync,omitempty"`
+type CompositeControllerHooks struct {
+	Sync CompositeControllerSyncHook `json:"sync,omitempty"`
 }
 
-type LambdaControllerSyncHook struct {
+type CompositeControllerSyncHook struct {
 	Path string `json:"path"`
 }
 
-type LambdaControllerStatus struct {
+type CompositeControllerStatus struct {
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-type LambdaControllerList struct {
+type CompositeControllerList struct {
 	metav1.TypeMeta          `json:",inline"`
 	metav1.ListMeta          `json:"metadata"`
-	Items []LambdaController `json:"items"`
+	Items []CompositeController `json:"items"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

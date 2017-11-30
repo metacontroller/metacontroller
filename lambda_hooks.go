@@ -55,8 +55,8 @@ type initHookResponse struct {
 	Result *metav1.Status             `json:"result,omitempty"`
 }
 
-func callSyncHook(lc *v1alpha1.LambdaController, request *syncHookRequest) (*syncHookResponse, error) {
-	url := fmt.Sprintf("http://%s.%s%s", lc.Spec.ClientConfig.Service.Name, lc.Spec.ClientConfig.Service.Namespace, lc.Spec.Hooks.Sync.Path)
+func callSyncHook(cc *v1alpha1.CompositeController, request *syncHookRequest) (*syncHookResponse, error) {
+	url := fmt.Sprintf("http://%s.%s%s", cc.Spec.ClientConfig.Service.Name, cc.Spec.ClientConfig.Service.Namespace, cc.Spec.Hooks.Sync.Path)
 	var response syncHookResponse
 	if err := callHook(url, request, &response); err != nil {
 		return nil, fmt.Errorf("sync hook failed: %v", err)

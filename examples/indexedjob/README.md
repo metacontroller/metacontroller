@@ -1,6 +1,6 @@
 ## IndexedJob
 
-This is an example LambdaController that's similar to Job,
+This is an example CompositeController that's similar to Job,
 except that each Pod gets assigned a unique index, similar to StatefulSet.
 
 ### Prerequisites

@@ -31,39 +31,39 @@ import (
 	k8s "k8s.io/metacontroller/third_party/kubernetes"
 )
 
-func syncAllLambdaControllers(clientset *dynamicClientset) error {
-	lcClient, err := clientset.Resource(v1alpha1.SchemeGroupVersion.String(), "lambdacontrollers", "")
+func syncAllCompositeControllers(clientset *dynamicClientset) error {
+	ccClient, err := clientset.Resource(v1alpha1.SchemeGroupVersion.String(), "compositecontrollers", "")
 	if err != nil {
 		return err
 	}
-	obj, err := lcClient.List(metav1.ListOptions{})
+	obj, err := ccClient.List(metav1.ListOptions{})
 	if err != nil {
-		return fmt.Errorf("can't list LambdaControllers: %v", err)
+		return fmt.Errorf("can't list CompositeControllers: %v", err)
 	}
-	lcList := obj.(*unstructured.UnstructuredList)
+	ccList := obj.(*unstructured.UnstructuredList)
 
-	for i := range lcList.Items {
-		data, err := json.Marshal(&lcList.Items[i])
+	for i := range ccList.Items {
+		data, err := json.Marshal(&ccList.Items[i])
 		if err != nil {
-			glog.Errorf("can't marshal LambdaController: %v")
+			glog.Errorf("can't marshal CompositeController: %v")
 			continue
 		}
-		lc := &v1alpha1.LambdaController{}
-		if err := json.Unmarshal(data, lc); err != nil {
-			glog.Errorf("can't unmarshal LambdaController: %v", err)
+		cc := &v1alpha1.CompositeController{}
+		if err := json.Unmarshal(data, cc); err != nil {
+			glog.Errorf("can't unmarshal CompositeController: %v", err)
 			continue
 		}
-		if err := syncLambdaController(clientset, lc); err != nil {
-			glog.Errorf("syncLambdaController: %v", err)
+		if err := syncCompositeController(clientset, cc); err != nil {
+			glog.Errorf("syncCompositeController: %v", err)
 			continue
 		}
 	}
 	return nil
 }
 
-func syncLambdaController(clientset *dynamicClientset, lc *v1alpha1.LambdaController) error {
+func syncCompositeController(clientset *dynamicClientset, cc *v1alpha1.CompositeController) error {
 	// Sync all objects of the parent type, in all namespaces.
-	parentClient, err := clientset.Resource(lc.Spec.ParentResource.APIVersion, lc.Spec.ParentResource.Resource, "")
+	parentClient, err := clientset.Resource(cc.Spec.ParentResource.APIVersion, cc.Spec.ParentResource.Resource, "")
 	if err != nil {
 		return err
 	}
@@ -74,7 +74,7 @@ func syncLambdaController(clientset *dynamicClientset, lc *v1alpha1.LambdaContro
 	list := obj.(*unstructured.UnstructuredList)
 	for i := range list.Items {
 		parent := &list.Items[i]
-		if err := syncParentResource(clientset, lc, parentClient.APIResource(), parent); err != nil {
+		if err := syncParentResource(clientset, cc, parentClient.APIResource(), parent); err != nil {
 			glog.Errorf("can't sync %v %v/%v: %v", parentClient.Kind(), parent.GetNamespace(), parent.GetName(), err)
 			continue
 		}
@@ -83,9 +83,9 @@ func syncLambdaController(clientset *dynamicClientset, lc *v1alpha1.LambdaContro
 	return nil
 }
 
-func syncParentResource(clientset *dynamicClientset, lc *v1alpha1.LambdaController, parentResource *APIResource, parent *unstructured.Unstructured) error {
+func syncParentResource(clientset *dynamicClientset, cc *v1alpha1.CompositeController, parentResource *APIResource, parent *unstructured.Unstructured) error {
 	labelSelector := &metav1.LabelSelector{}
-	if lc.Spec.GenerateSelector {
+	if cc.Spec.GenerateSelector {
 		// Select by controller-uid, like Job does.
 		// Any selector on the parent is ignored in this case.
 		labelSelector = metav1.AddLabelToSelector(labelSelector, "controller-uid", string(parent.GetUID()))
@@ -101,7 +101,7 @@ func syncParentResource(clientset *dynamicClientset, lc *v1alpha1.LambdaControll
 	if err != nil {
 		return fmt.Errorf("can't convert label selector (%#v): %v", labelSelector, err)
 	}
-	children, err := claimChildren(clientset, lc, parentResource, parent, selector)
+	children, err := claimChildren(clientset, cc, parentResource, parent, selector)
 	if err != nil {
 		return fmt.Errorf("can't claim children: %v", err)
 	}
@@ -111,7 +111,7 @@ func syncParentResource(clientset *dynamicClientset, lc *v1alpha1.LambdaControll
 		Parent:   parent,
 		Children: children,
 	}
-	syncResult, err := callSyncHook(lc, syncRequest)
+	syncResult, err := callSyncHook(cc, syncRequest)
 	if err != nil {
 		return fmt.Errorf("sync hook failed for %v %v/%v: %v", parentResource.Kind, parent.GetNamespace(), parent.GetName(), err)
 	}
@@ -120,21 +120,21 @@ func syncParentResource(clientset *dynamicClientset, lc *v1alpha1.LambdaControll
 	var manageErr error
 	if parent.GetDeletionTimestamp() == nil {
 		// Reconcile children.
-		if err := manageChildren(clientset, lc, parent, children, makeChildMap(syncResult.Children)); err != nil {
+		if err := manageChildren(clientset, cc, parent, children, makeChildMap(syncResult.Children)); err != nil {
 			manageErr = fmt.Errorf("can't reconcile children for %v %v/%v: %v", parentResource.Kind, parent.GetNamespace(), parent.GetName(), err)
 		}
 	}
 
 	// Update parent status.
 	// We'll want to make sure this happens after manageChildren once we support observedGeneration.
-	if err := updateParentStatus(clientset, lc, parentResource, parent, syncResult.Status); err != nil {
+	if err := updateParentStatus(clientset, cc, parentResource, parent, syncResult.Status); err != nil {
 		return fmt.Errorf("can't update status for %v %v/%v: %v", parentResource.Kind, parent.GetNamespace(), parent.GetName(), err)
 	}
 
 	return manageErr
 }
 
-func claimChildren(clientset *dynamicClientset, lc *v1alpha1.LambdaController, parentResource *APIResource, parent *unstructured.Unstructured, selector labels.Selector) (childMap, error) {
+func claimChildren(clientset *dynamicClientset, cc *v1alpha1.CompositeController, parentResource *APIResource, parent *unstructured.Unstructured, selector labels.Selector) (childMap, error) {
 	// Set up values common to all child types.
 	parentGVK := parentResource.GroupVersionKind()
 	parentClient, err := clientset.Resource(parentResource.APIVersion, parentResource.Name, parent.GetNamespace())
@@ -155,7 +155,7 @@ func claimChildren(clientset *dynamicClientset, lc *v1alpha1.LambdaController, p
 
 	// Claim all child types.
 	groups := make(childMap)
-	for _, group := range lc.Spec.ChildResources {
+	for _, group := range cc.Spec.ChildResources {
 		// Within each group/version, there can be multiple resources requested.
 		for _, resourceName := range group.Resources {
 			// List all objects of the child kind in the parent object's namespace.
@@ -188,7 +188,7 @@ func claimChildren(clientset *dynamicClientset, lc *v1alpha1.LambdaController, p
 	return groups, nil
 }
 
-func updateParentStatus(clientset *dynamicClientset, lc *v1alpha1.LambdaController, parentResource *APIResource, parent *unstructured.Unstructured, status map[string]interface{}) error {
+func updateParentStatus(clientset *dynamicClientset, cc *v1alpha1.CompositeController, parentResource *APIResource, parent *unstructured.Unstructured, status map[string]interface{}) error {
 	parentClient, err := clientset.Resource(parentResource.APIVersion, parentResource.Name, parent.GetNamespace())
 	if err != nil {
 		return err
@@ -266,7 +266,7 @@ func updateChildren(client *dynamicResourceClient, parent *unstructured.Unstruct
 	return utilerrors.NewAggregate(errs)
 }
 
-func manageChildren(clientset *dynamicClientset, lc *v1alpha1.LambdaController, parent *unstructured.Unstructured, observedChildren childMap, desiredChildren childMap) error {
+func manageChildren(clientset *dynamicClientset, cc *v1alpha1.CompositeController, parent *unstructured.Unstructured, observedChildren childMap, desiredChildren childMap) error {
 	// If some operations fail, keep trying others so, for example,
 	// we don't block recovery (create new Pod) on a failed delete.
 	var errs []error
@@ -293,7 +293,7 @@ func manageChildren(clientset *dynamicClientset, lc *v1alpha1.LambdaController, 
 			errs = append(errs, err)
 			continue
 		}
-		if lc.Spec.GenerateSelector {
+		if cc.Spec.GenerateSelector {
 			// Add the controller-uid label if there's none.
 			for _, obj := range objects {
 				labels := obj.GetLabels()

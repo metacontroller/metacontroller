@@ -1,6 +1,6 @@
 ## BlueGreenDeployment
 
-This is an example LambdaController that implements a custom rollout strategy
+This is an example CompositeController that implements a custom rollout strategy
 based on a technique called Blue-Green Deployment.
 
 The controller ramps up a completely separate ReplicaSet in the background for any change to the

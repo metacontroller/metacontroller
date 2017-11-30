@@ -13,7 +13,7 @@ spec:
     shortNames: ["ij", "idxj"]
 ---
 apiVersion: metacontroller.k8s.io/v1alpha1
-kind: LambdaController
+kind: CompositeController
 metadata:
   name: indexedjob-controller
 spec:

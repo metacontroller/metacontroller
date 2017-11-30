@@ -30,17 +30,17 @@ import (
 	runtimeserializer "k8s.io/apimachinery/pkg/runtime/serializer"
 )
 
-var _ runtime.Object = &LambdaController{}
-var _ metav1.ObjectMetaAccessor = &LambdaController{}
+var _ runtime.Object = &CompositeController{}
+var _ metav1.ObjectMetaAccessor = &CompositeController{}
 
-var _ runtime.Object = &LambdaControllerList{}
-var _ metav1.ListMetaAccessor = &LambdaControllerList{}
+var _ runtime.Object = &CompositeControllerList{}
+var _ metav1.ListMetaAccessor = &CompositeControllerList{}
 
-func LambdaControllerFuzzerFuncs(codecs runtimeserializer.CodecFactory) []interface{} {
+func CompositeControllerFuzzerFuncs(codecs runtimeserializer.CodecFactory) []interface{} {
 	return []interface{}{
-		func(obj *LambdaControllerList, c fuzz.Continue) {
+		func(obj *CompositeControllerList, c fuzz.Continue) {
 			c.FuzzNoCustom(obj)
-			obj.Items = make([]LambdaController, c.Intn(10))
+			obj.Items = make([]CompositeController, c.Intn(10))
 			for i := range obj.Items {
 				c.Fuzz(&obj.Items[i])
 			}
@@ -57,9 +57,9 @@ func TestRoundTrip(t *testing.T) {
 	AddToScheme(scheme)
 
 	seed := rand.Int63()
-	fuzzerFuncs := fuzzer.MergeFuzzerFuncs(metafuzzer.Funcs, LambdaControllerFuzzerFuncs)
+	fuzzerFuncs := fuzzer.MergeFuzzerFuncs(metafuzzer.Funcs, CompositeControllerFuzzerFuncs)
 	fuzzer := fuzzer.FuzzerFor(fuzzerFuncs, rand.NewSource(seed), codecs)
 
-	roundtrip.RoundTripSpecificKindWithoutProtobuf(t, SchemeGroupVersion.WithKind("LambdaController"), scheme, codecs, fuzzer, nil)
-	roundtrip.RoundTripSpecificKindWithoutProtobuf(t, SchemeGroupVersion.WithKind("LambdaControllerList"), scheme, codecs, fuzzer, nil)
+	roundtrip.RoundTripSpecificKindWithoutProtobuf(t, SchemeGroupVersion.WithKind("CompositeController"), scheme, codecs, fuzzer, nil)
+	roundtrip.RoundTripSpecificKindWithoutProtobuf(t, SchemeGroupVersion.WithKind("CompositeControllerList"), scheme, codecs, fuzzer, nil)
 }
