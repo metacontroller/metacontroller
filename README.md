@@ -11,7 +11,27 @@ In particular, it currently "fakes" watches by polling, resulting in extreme
 traffic to the API server.
 It should only be installed on a test cluster.
 
-### CompositeController
+### Lambda Controllers
+
+*Metacontroller* is a server that extends Kubernetes with APIs that encapsulate
+the common parts of writing custom controllers.
+
+When you create a controller with one of these APIs, you provide a function
+(currently in the form of a webhook) that contains only the business logic
+specific to your controller.
+The Metacontroller server then executes a control loop on your behalf,
+calling your function whenever necessary to decide what to do.
+
+These callback-based custom controllers are called *Lambda Controllers*.
+To keep the interface as simple as possible, each Lambda Controller API targets
+a specific controller pattern, such as:
+
+* CompositeController: *objects composed of other objects*
+* InitializerController: *asynchronous object initialization*
+
+Support for other types of controller patterns will be added in the future.
+
+#### CompositeController
 
 CompositeController is an API provided by Metacontroller, designed to facilitate
 custom controllers whose primary purpose is to manage a set of child objects
@@ -57,7 +77,7 @@ and reacts to any changes made to the parent object.
   It shows how to write a CompositeController in Python, and also demonstrates
   selector generation.
 
-### InitializerController
+#### InitializerController
 
 InitializerController is another API provided by Metacontroller, designed to
 facilitate custom controllers that implement [initializers](https://kubernetes.io/docs/admin/extensible-admission-controllers/#initializers).
