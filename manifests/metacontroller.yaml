@@ -50,7 +50,8 @@ spec:
       serviceAccountName: metacontroller
       containers:
       - name: metacontroller
-        image: gcr.io/enisoc-kubernetes/metacontroller:latest
+        image: gcr.io/enisoc-kubernetes/metacontroller:0.1
+        imagePullPolicy: Always
         command: ["/usr/bin/metacontroller"]
         args:
         - --logtostderr

@@ -1,3 +1,5 @@
+tag = 0.1
+
 all: build
 
 generated_files:
@@ -8,7 +10,7 @@ build: generated_files
 	go build
 
 image: build
-	docker build -t gcr.io/enisoc-kubernetes/metacontroller .
+	docker build -t gcr.io/enisoc-kubernetes/metacontroller:$(tag) .
 
 push: image
-	gcloud docker -- push gcr.io/enisoc-kubernetes/metacontroller
+	gcloud docker -- push gcr.io/enisoc-kubernetes/metacontroller:$(tag)
