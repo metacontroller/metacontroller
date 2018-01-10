@@ -5,7 +5,6 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"path/filepath"
 
 	"strings"
 
@@ -13,8 +12,8 @@ import (
 )
 
 func main() {
-	// Read all Jsonnet files in the hooks dir.
-	files, err := ioutil.ReadDir("./hooks")
+	// Read all Jsonnet files in the working dir.
+	files, err := ioutil.ReadDir(".")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -25,10 +24,9 @@ func main() {
 		}
 
 		hookname := strings.TrimSuffix(filename, ".jsonnet")
-		filepath := filepath.Join("./hooks", filename)
-		filedata, err := ioutil.ReadFile(filepath)
+		filedata, err := ioutil.ReadFile(filename)
 		if err != nil {
-			log.Fatalf("can't read %q: %v", filepath, err)
+			log.Fatalf("can't read %q: %v", filename, err)
 		}
 		hookcode := string(filedata)
 
