@@ -1,12 +1,15 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
-
+	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 
 	jsonnet "github.com/google/go-jsonnet"
 )
@@ -48,6 +51,8 @@ func main() {
 			vm.TLACode("request", string(body))
 			result, err := vm.EvaluateSnippet(filename, hookcode)
 			if err != nil {
+				log.Printf("/%s request: %s", hookname, body)
+				log.Printf("/%s error: %s", hookname, err)
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
@@ -56,5 +61,15 @@ func main() {
 		})
 	}
 
-	log.Fatal(http.ListenAndServe(":80", nil))
+	server := &http.Server{Addr: ":8080"}
+	go func() {
+		log.Fatal(server.ListenAndServe())
+	}()
+
+	// Shutdown on SIGTERM.
+	sigchan := make(chan os.Signal, 2)
+	signal.Notify(sigchan, os.Interrupt, syscall.SIGTERM)
+	sig := <-sigchan
+	log.Printf("Received %v signal. Shutting down...", sig)
+	server.Shutdown(context.Background())
 }
