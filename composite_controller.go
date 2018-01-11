@@ -25,6 +25,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/util/diff"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/apimachinery/pkg/util/json"
 	"k8s.io/metacontroller/apis/metacontroller/v1alpha1"
@@ -238,6 +239,10 @@ func updateChildren(client *dynamicResourceClient, parent *unstructured.Unstruct
 			// Update
 			if !reflect.DeepEqual(obj.UnstructuredContent(), oldObj.UnstructuredContent()) {
 				glog.Infof("%v %v/%v: updating %v %v", parent.GetKind(), parent.GetNamespace(), parent.GetName(), obj.GetKind(), obj.GetName())
+				if glog.V(5) {
+					glog.Infof("diff: a=observed, b=desired:\n%s", diff.ObjectDiff(oldObj.UnstructuredContent(), obj.UnstructuredContent()))
+					glog.Infof("reflect diff: a=observed, b=desired:\n%s", diff.ObjectReflectDiff(oldObj.UnstructuredContent(), obj.UnstructuredContent()))
+				}
 				if _, err := client.Update(obj); err != nil {
 					errs = append(errs, err)
 					continue

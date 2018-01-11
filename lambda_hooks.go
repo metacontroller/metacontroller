@@ -79,7 +79,7 @@ func callHook(url string, request interface{}, response interface{}) error {
 	if err != nil {
 		return fmt.Errorf("can't marshal request: %v", err)
 	}
-	glog.Infof("DEBUG: request body: %s", reqBody)
+	glog.V(6).Infof("DEBUG: request body: %s", reqBody)
 
 	// Send request.
 	client := &http.Client{Timeout: hookTimeout}
@@ -94,7 +94,7 @@ func callHook(url string, request interface{}, response interface{}) error {
 	if err != nil {
 		return fmt.Errorf("can't read response body: %v", err)
 	}
-	glog.Infof("DEBUG: response body: %s", respBody)
+	glog.V(6).Infof("DEBUG: response body: %s", respBody)
 
 	// Check status code.
 	if resp.StatusCode != http.StatusOK {
