@@ -2,4 +2,4 @@ FROM debian:stretch
 
 COPY metacontroller /usr/bin
 
-CMD /usr/bin/metacontroller
+CMD ["/usr/bin/metacontroller"]
