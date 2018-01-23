@@ -21,18 +21,18 @@ import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 type CompositeController struct {
-	metav1.TypeMeta               `json:",inline"`
-	metav1.ObjectMeta             `json:"metadata"`
-	Spec   CompositeControllerSpec   `json:"spec"`
-	Status CompositeControllerStatus `json:"status,omitempty"`
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata"`
+	Spec              CompositeControllerSpec   `json:"spec"`
+	Status            CompositeControllerStatus `json:"status,omitempty"`
 }
 
 type CompositeControllerSpec struct {
-	ParentResource   ResourceRule          `json:"parentResource"`
-	ChildResources   []ResourcesRule       `json:"childResources,omitempty"`
-	ClientConfig     ClientConfig          `json:"clientConfig,omitempty"`
+	ParentResource   ResourceRule             `json:"parentResource"`
+	ChildResources   []ResourcesRule          `json:"childResources,omitempty"`
+	ClientConfig     ClientConfig             `json:"clientConfig,omitempty"`
 	Hooks            CompositeControllerHooks `json:"hooks,omitempty"`
-	GenerateSelector bool                  `json:"generateSelector,omitempty"`
+	GenerateSelector bool                     `json:"generateSelector,omitempty"`
 }
 
 type ResourceRule struct {
@@ -68,18 +68,18 @@ type CompositeControllerStatus struct {
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 type CompositeControllerList struct {
-	metav1.TypeMeta          `json:",inline"`
-	metav1.ListMeta          `json:"metadata"`
-	Items []CompositeController `json:"items"`
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata"`
+	Items           []CompositeController `json:"items"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 type InitializerController struct {
-	metav1.TypeMeta                    `json:",inline"`
-	metav1.ObjectMeta                  `json:"metadata"`
-	Spec   InitializerControllerSpec   `json:"spec"`
-	Status InitializerControllerStatus `json:"status,omitempty"`
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata"`
+	Spec              InitializerControllerSpec   `json:"spec"`
+	Status            InitializerControllerStatus `json:"status,omitempty"`
 }
 
 type InitializerControllerSpec struct {
@@ -103,7 +103,7 @@ type InitializerControllerStatus struct {
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 type InitializerControllerList struct {
-	metav1.TypeMeta               `json:",inline"`
-	metav1.ListMeta               `json:"metadata"`
-	Items []InitializerController `json:"items"`
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata"`
+	Items           []InitializerController `json:"items"`
 }
