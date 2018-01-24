@@ -18,6 +18,10 @@ package v1alpha1
 
 import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+const (
+	UpdateStrategyApply = "Apply"
+)
+
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 type CompositeController struct {
@@ -33,6 +37,7 @@ type CompositeControllerSpec struct {
 	ClientConfig     ClientConfig             `json:"clientConfig,omitempty"`
 	Hooks            CompositeControllerHooks `json:"hooks,omitempty"`
 	GenerateSelector bool                     `json:"generateSelector,omitempty"`
+	UpdateStrategy   string                   `json:"updateStrategy,omitempty"`
 }
 
 type ResourceRule struct {

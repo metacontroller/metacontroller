@@ -26,6 +26,7 @@ import (
 	"github.com/golang/glog"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/json"
 	"k8s.io/metacontroller/apis/metacontroller/v1alpha1"
 )
@@ -37,8 +38,9 @@ const (
 type childMap map[string]map[string]*unstructured.Unstructured
 
 type syncHookRequest struct {
-	Parent   *unstructured.Unstructured `json:"parent"`
-	Children childMap                   `json:"children"`
+	Controller runtime.Object             `json:"controller"`
+	Parent     *unstructured.Unstructured `json:"parent"`
+	Children   childMap                   `json:"children"`
 }
 
 type syncHookResponse struct {
