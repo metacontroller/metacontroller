@@ -23,6 +23,9 @@ import (
 
 	"github.com/golang/glog"
 
+	"k8s.io/metacontroller/apis/metacontroller/v1alpha1"
+	internalclient "k8s.io/metacontroller/client/generated/clientset/internalclientset"
+
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/rest"
 )
@@ -37,15 +40,21 @@ func resyncAll(config *rest.Config) error {
 	if err != nil {
 		return fmt.Errorf("can't discover resources: %v", err)
 	}
-	clientset := newDynamicClientset(config, newResourceMap(resources))
+	dynClient := newDynamicClientset(config, newResourceMap(resources))
+
+	// Create client for metacontroller api objects.
+	mcClient, err := internalclient.NewForConfig(config)
+	if err != nil {
+		return fmt.Errorf("can't create client for api %s: %v", v1alpha1.SchemeGroupVersion, err)
+	}
 
 	// Sync all CompositeController objects.
-	if err := syncAllCompositeControllers(clientset); err != nil {
+	if err := syncAllCompositeControllers(dynClient, mcClient); err != nil {
 		glog.Errorf("can't sync CompositeControllers: %v", err)
 	}
 
 	// Sync all InitializerController objects.
-	if err := syncAllInitializerControllers(clientset); err != nil {
+	if err := syncAllInitializerControllers(dynClient, mcClient); err != nil {
 		glog.Errorf("can't sync InitializerControllers: %v", err)
 	}
 

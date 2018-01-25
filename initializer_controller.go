@@ -20,37 +20,25 @@ import (
 	"fmt"
 
 	"github.com/golang/glog"
+
+	"k8s.io/metacontroller/apis/metacontroller/v1alpha1"
+	internalclient "k8s.io/metacontroller/client/generated/clientset/internalclientset"
+	k8s "k8s.io/metacontroller/third_party/kubernetes"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
-	"k8s.io/apimachinery/pkg/util/json"
-	"k8s.io/metacontroller/apis/metacontroller/v1alpha1"
-	k8s "k8s.io/metacontroller/third_party/kubernetes"
 )
 
-func syncAllInitializerControllers(clientset *dynamicClientset) error {
-	icClient, err := clientset.Resource(v1alpha1.SchemeGroupVersion.String(), "initializercontrollers", "")
-	if err != nil {
-		return err
-	}
-	obj, err := icClient.List(metav1.ListOptions{})
+func syncAllInitializerControllers(dynClient *dynamicClientset, metaClient *internalclient.Clientset) error {
+	icList, err := metaClient.MetacontrollerV1alpha1().InitializerControllers("").List(metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("can't list InitializerControllers: %v", err)
 	}
-	icList := obj.(*unstructured.UnstructuredList)
 
 	for i := range icList.Items {
-		data, err := json.Marshal(&icList.Items[i])
-		if err != nil {
-			glog.Errorf("can't marshal InitializerController: %v")
-			continue
-		}
-		ic := &v1alpha1.InitializerController{}
-		if err := json.Unmarshal(data, ic); err != nil {
-			glog.Errorf("can't unmarshal InitializerController: %v", err)
-			continue
-		}
-		if err := syncInitializerController(clientset, ic); err != nil {
+		ic := &icList.Items[i]
+		if err := syncInitializerController(dynClient, ic); err != nil {
 			glog.Errorf("sync InitializerController %v: %v", ic.Name, err)
 			continue
 		}

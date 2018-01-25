@@ -22,40 +22,28 @@ import (
 	"strings"
 
 	"github.com/golang/glog"
+
+	"k8s.io/metacontroller/apis/metacontroller/v1alpha1"
+	"k8s.io/metacontroller/apply"
+	internalclient "k8s.io/metacontroller/client/generated/clientset/internalclientset"
+	k8s "k8s.io/metacontroller/third_party/kubernetes"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/diff"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
-	"k8s.io/apimachinery/pkg/util/json"
-	"k8s.io/metacontroller/apis/metacontroller/v1alpha1"
-	"k8s.io/metacontroller/apply"
-	k8s "k8s.io/metacontroller/third_party/kubernetes"
 )
 
-func syncAllCompositeControllers(clientset *dynamicClientset) error {
-	ccClient, err := clientset.Resource(v1alpha1.SchemeGroupVersion.String(), "compositecontrollers", "")
-	if err != nil {
-		return err
-	}
-	obj, err := ccClient.List(metav1.ListOptions{})
+func syncAllCompositeControllers(dynClient *dynamicClientset, metaClient *internalclient.Clientset) error {
+	ccList, err := metaClient.MetacontrollerV1alpha1().CompositeControllers("").List(metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("can't list CompositeControllers: %v", err)
 	}
-	ccList := obj.(*unstructured.UnstructuredList)
 
 	for i := range ccList.Items {
-		data, err := json.Marshal(&ccList.Items[i])
-		if err != nil {
-			glog.Errorf("can't marshal CompositeController: %v")
-			continue
-		}
-		cc := &v1alpha1.CompositeController{}
-		if err := json.Unmarshal(data, cc); err != nil {
-			glog.Errorf("can't unmarshal CompositeController: %v", err)
-			continue
-		}
-		if err := syncCompositeController(clientset, cc); err != nil {
+		cc := &ccList.Items[i]
+		if err := syncCompositeController(dynClient, cc); err != nil {
 			glog.Errorf("syncCompositeController: %v", err)
 			continue
 		}
