@@ -19,6 +19,9 @@ package main
 import (
 	"flag"
 	"fmt"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/golang/glog"
@@ -89,11 +92,35 @@ func main() {
 	}
 	glog.V(2).Info("Informers caches synced")
 
-	for {
-		if err := resyncAll(config, mcInformerFactory); err != nil {
-			glog.Errorf("sync: %v", err)
-		}
+	// Close 'stop' to begin shutdown. Wait for 'done' before terminating.
+	stop := make(chan struct{})
+	done := make(chan struct{})
 
-		time.Sleep(5 * time.Second)
-	}
+	// Start polling in the background.
+	// TODO(kube-metacontroller#8): Replace with shared, dynamic informers.
+	go func() {
+		defer close(done)
+
+		ticker := time.NewTicker(5 * time.Second)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-stop:
+				return
+			case <-ticker.C:
+				if err := resyncAll(config, mcInformerFactory); err != nil {
+					glog.Errorf("sync: %v", err)
+				}
+			}
+		}
+	}()
+
+	// On SIGTERM, wait for a complete resync attempt to finish gracefully.
+	sigchan := make(chan os.Signal, 2)
+	signal.Notify(sigchan, os.Interrupt, syscall.SIGTERM)
+	sig := <-sigchan
+	glog.Infof("Received %q signal. Shutting down...", sig)
+	close(stop)
+	<-done
 }
