@@ -19,18 +19,49 @@ package main
 import (
 	"flag"
 	"fmt"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/golang/glog"
 
 	"k8s.io/metacontroller/apis/metacontroller/v1alpha1"
 	internalclient "k8s.io/metacontroller/client/generated/clientset/internalclientset"
+	internalinformers "k8s.io/metacontroller/client/generated/informer/externalversions"
+	internallisters "k8s.io/metacontroller/client/generated/lister/metacontroller/v1alpha1"
 
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/cache"
 )
 
-func resyncAll(config *rest.Config) error {
+// metaController manages metacontroller API objects.
+type metaController struct {
+	// listers
+	ccLister internallisters.CompositeControllerLister
+	icLister internallisters.InitializerControllerLister
+
+	// informer synced functions
+	ccSynced, icSynced cache.InformerSynced
+}
+
+// New creates an instance of metaController.
+func New(mcInformerFactory internalinformers.SharedInformerFactory) *metaController {
+	// obtain reference to shared index informers
+	ccInformerInterface := mcInformerFactory.Metacontroller().V1alpha1().CompositeControllers()
+	icInformerInterface := mcInformerFactory.Metacontroller().V1alpha1().InitializerControllers()
+
+	// create controller
+	return &metaController{
+		ccInformerInterface.Lister(),
+		icInformerInterface.Lister(),
+		ccInformerInterface.Informer().HasSynced,
+		icInformerInterface.Informer().HasSynced,
+	}
+}
+
+func resyncAll(config *rest.Config, mc *metaController) error {
 	// Discover all supported resources.
 	dc, err := discovery.NewDiscoveryClientForConfig(config)
 	if err != nil {
@@ -42,19 +73,13 @@ func resyncAll(config *rest.Config) error {
 	}
 	dynClient := newDynamicClientset(config, newResourceMap(resources))
 
-	// Create client for metacontroller api objects.
-	mcClient, err := internalclient.NewForConfig(config)
-	if err != nil {
-		return fmt.Errorf("can't create client for api %s: %v", v1alpha1.SchemeGroupVersion, err)
-	}
-
 	// Sync all CompositeController objects.
-	if err := syncAllCompositeControllers(dynClient, mcClient); err != nil {
+	if err := syncAllCompositeControllers(dynClient, mc); err != nil {
 		glog.Errorf("can't sync CompositeControllers: %v", err)
 	}
 
 	// Sync all InitializerController objects.
-	if err := syncAllInitializerControllers(dynClient, mcClient); err != nil {
+	if err := syncAllInitializerControllers(dynClient, mc); err != nil {
 		glog.Errorf("can't sync InitializerControllers: %v", err)
 	}
 
@@ -64,12 +89,45 @@ func resyncAll(config *rest.Config) error {
 func main() {
 	flag.Parse()
 
+	// Create OS signal channels.
+	sigs := make(chan os.Signal, 1)
+	stop := make(chan struct{})
+	signal.Notify(sigs, os.Interrupt, syscall.SIGTERM)
+
+	go func() {
+		<-sigs
+		glog.V(2).Info("Stopping informers")
+		close(stop)
+		os.Exit(0)
+	}()
+
 	config, err := rest.InClusterConfig()
 	if err != nil {
-		panic(err)
+		glog.Fatal(err)
 	}
+
+	// Create informerfactory for metacontroller api objects.
+	mcClient, err := internalclient.NewForConfig(config)
+	if err != nil {
+		glog.Fatalf("Can't create client for api %s: %v", v1alpha1.SchemeGroupVersion, err)
+	}
+	mcInformerFactory := internalinformers.NewSharedInformerFactory(mcClient, 5*time.Minute)
+
+	// Create metacontroller.
+	mc := New(mcInformerFactory)
+
+	// Initialize requested informers.
+	mcInformerFactory.Start(stop)
+
+	// Wait for the caches to be synced before starting the loop.
+	glog.V(2).Info("Waiting for informers caches to sync")
+	if ok := cache.WaitForCacheSync(stop, mc.ccSynced, mc.icSynced); !ok {
+		glog.Fatal("Failed to wait for caches to sync")
+	}
+	glog.V(2).Info("Informers caches synced")
+
 	for {
-		if err := resyncAll(config); err != nil {
+		if err := resyncAll(config, mc); err != nil {
 			glog.Errorf("sync: %v", err)
 		}
 
