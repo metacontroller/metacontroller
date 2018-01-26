@@ -25,6 +25,7 @@ import (
 
 	"k8s.io/metacontroller/apis/metacontroller/v1alpha1"
 	"k8s.io/metacontroller/apply"
+	internallisters "k8s.io/metacontroller/client/generated/lister/metacontroller/v1alpha1"
 	k8s "k8s.io/metacontroller/third_party/kubernetes"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,14 +35,13 @@ import (
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 )
 
-func syncAllCompositeControllers(dynClient *dynamicClientset, mc *metaController) error {
-	ccList, err := (mc.ccLister).List(labels.NewSelector())
+func syncAllCompositeControllers(dynClient *dynamicClientset, ccLister internallisters.CompositeControllerLister) error {
+	ccList, err := ccLister.List(labels.Everything())
 	if err != nil {
 		return fmt.Errorf("can't list CompositeControllers: %v", err)
 	}
 
-	for i := range ccList {
-		cc := ccList[i]
+	for _, cc := range ccList {
 		if err := syncCompositeController(dynClient, cc); err != nil {
 			glog.Errorf("syncCompositeController: %v", err)
 			continue

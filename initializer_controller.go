@@ -22,6 +22,7 @@ import (
 	"github.com/golang/glog"
 
 	"k8s.io/metacontroller/apis/metacontroller/v1alpha1"
+	internallisters "k8s.io/metacontroller/client/generated/lister/metacontroller/v1alpha1"
 	k8s "k8s.io/metacontroller/third_party/kubernetes"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -30,14 +31,13 @@ import (
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 )
 
-func syncAllInitializerControllers(dynClient *dynamicClientset, mc *metaController) error {
-	icList, err := (mc.icLister).List(labels.NewSelector())
+func syncAllInitializerControllers(dynClient *dynamicClientset, icLister internallisters.InitializerControllerLister) error {
+	icList, err := icLister.List(labels.Everything())
 	if err != nil {
 		return fmt.Errorf("can't list InitializerControllers: %v", err)
 	}
 
-	for i := range icList {
-		ic := icList[i]
+	for _, ic := range icList {
 		if err := syncInitializerController(dynClient, ic); err != nil {
 			glog.Errorf("sync InitializerController %v: %v", ic.Name, err)
 			continue

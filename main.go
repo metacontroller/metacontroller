@@ -19,9 +19,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"os"
-	"os/signal"
-	"syscall"
 	"time"
 
 	"github.com/golang/glog"
@@ -29,39 +26,13 @@ import (
 	"k8s.io/metacontroller/apis/metacontroller/v1alpha1"
 	internalclient "k8s.io/metacontroller/client/generated/clientset/internalclientset"
 	internalinformers "k8s.io/metacontroller/client/generated/informer/externalversions"
-	internallisters "k8s.io/metacontroller/client/generated/lister/metacontroller/v1alpha1"
 
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 )
 
-// metaController manages metacontroller API objects.
-type metaController struct {
-	// listers
-	ccLister internallisters.CompositeControllerLister
-	icLister internallisters.InitializerControllerLister
-
-	// informer synced functions
-	ccSynced, icSynced cache.InformerSynced
-}
-
-// New creates an instance of metaController.
-func New(mcInformerFactory internalinformers.SharedInformerFactory) *metaController {
-	// obtain reference to shared index informers
-	ccInformerInterface := mcInformerFactory.Metacontroller().V1alpha1().CompositeControllers()
-	icInformerInterface := mcInformerFactory.Metacontroller().V1alpha1().InitializerControllers()
-
-	// create controller
-	return &metaController{
-		ccInformerInterface.Lister(),
-		icInformerInterface.Lister(),
-		ccInformerInterface.Informer().HasSynced,
-		icInformerInterface.Informer().HasSynced,
-	}
-}
-
-func resyncAll(config *rest.Config, mc *metaController) error {
+func resyncAll(config *rest.Config, mcInformerFactory internalinformers.SharedInformerFactory) error {
 	// Discover all supported resources.
 	dc, err := discovery.NewDiscoveryClientForConfig(config)
 	if err != nil {
@@ -74,12 +45,14 @@ func resyncAll(config *rest.Config, mc *metaController) error {
 	dynClient := newDynamicClientset(config, newResourceMap(resources))
 
 	// Sync all CompositeController objects.
-	if err := syncAllCompositeControllers(dynClient, mc); err != nil {
+	ccLister := mcInformerFactory.Metacontroller().V1alpha1().CompositeControllers().Lister()
+	if err := syncAllCompositeControllers(dynClient, ccLister); err != nil {
 		glog.Errorf("can't sync CompositeControllers: %v", err)
 	}
 
 	// Sync all InitializerController objects.
-	if err := syncAllInitializerControllers(dynClient, mc); err != nil {
+	icLister := mcInformerFactory.Metacontroller().V1alpha1().InitializerControllers().Lister()
+	if err := syncAllInitializerControllers(dynClient, icLister); err != nil {
 		glog.Errorf("can't sync InitializerControllers: %v", err)
 	}
 
@@ -88,18 +61,6 @@ func resyncAll(config *rest.Config, mc *metaController) error {
 
 func main() {
 	flag.Parse()
-
-	// Create OS signal channels.
-	sigs := make(chan os.Signal, 1)
-	stop := make(chan struct{})
-	signal.Notify(sigs, os.Interrupt, syscall.SIGTERM)
-
-	go func() {
-		<-sigs
-		glog.V(2).Info("Stopping informers")
-		close(stop)
-		os.Exit(0)
-	}()
 
 	config, err := rest.InClusterConfig()
 	if err != nil {
@@ -113,21 +74,23 @@ func main() {
 	}
 	mcInformerFactory := internalinformers.NewSharedInformerFactory(mcClient, 5*time.Minute)
 
-	// Create metacontroller.
-	mc := New(mcInformerFactory)
-
-	// Initialize requested informers.
-	mcInformerFactory.Start(stop)
+	// Initialize informers.
+	mcInformerFactory.Metacontroller().V1alpha1().CompositeControllers().Informer()
+	mcInformerFactory.Metacontroller().V1alpha1().InitializerControllers().Informer()
+	mcInformerFactory.Start(nil)
 
 	// Wait for the caches to be synced before starting the loop.
 	glog.V(2).Info("Waiting for informers caches to sync")
-	if ok := cache.WaitForCacheSync(stop, mc.ccSynced, mc.icSynced); !ok {
+	if ok := cache.WaitForCacheSync(nil,
+		mcInformerFactory.Metacontroller().V1alpha1().CompositeControllers().Informer().HasSynced,
+		mcInformerFactory.Metacontroller().V1alpha1().InitializerControllers().Informer().HasSynced,
+	); !ok {
 		glog.Fatal("Failed to wait for caches to sync")
 	}
 	glog.V(2).Info("Informers caches synced")
 
 	for {
-		if err := resyncAll(config, mc); err != nil {
+		if err := resyncAll(config, mcInformerFactory); err != nil {
 			glog.Errorf("sync: %v", err)
 		}
 
