@@ -22,6 +22,8 @@ const (
 	UpdateStrategyApply = "Apply"
 )
 
+// +genclient
+// +genclient:noStatus
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 type CompositeController struct {
@@ -78,6 +80,8 @@ type CompositeControllerList struct {
 	Items           []CompositeController `json:"items"`
 }
 
+// +genclient
+// +genclient:noStatus
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 type InitializerController struct {

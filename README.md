@@ -132,7 +132,7 @@ If you want to build your own image for the Metacontroller Deployment,
 you'll need the following prerequisites:
 
 ```sh
-go get -u k8s.io/code-generator/cmd/deepcopy-gen
+go get -u k8s.io/code-generator/cmd/{lister,client,informer,deepcopy}-gen
 dep ensure
 make
 ```

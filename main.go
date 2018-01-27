@@ -23,11 +23,16 @@ import (
 
 	"github.com/golang/glog"
 
+	"k8s.io/metacontroller/apis/metacontroller/v1alpha1"
+	internalclient "k8s.io/metacontroller/client/generated/clientset/internalclientset"
+	internalinformers "k8s.io/metacontroller/client/generated/informer/externalversions"
+
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/cache"
 )
 
-func resyncAll(config *rest.Config) error {
+func resyncAll(config *rest.Config, mcInformerFactory internalinformers.SharedInformerFactory) error {
 	// Discover all supported resources.
 	dc, err := discovery.NewDiscoveryClientForConfig(config)
 	if err != nil {
@@ -37,15 +42,17 @@ func resyncAll(config *rest.Config) error {
 	if err != nil {
 		return fmt.Errorf("can't discover resources: %v", err)
 	}
-	clientset := newDynamicClientset(config, newResourceMap(resources))
+	dynClient := newDynamicClientset(config, newResourceMap(resources))
 
 	// Sync all CompositeController objects.
-	if err := syncAllCompositeControllers(clientset); err != nil {
+	ccLister := mcInformerFactory.Metacontroller().V1alpha1().CompositeControllers().Lister()
+	if err := syncAllCompositeControllers(dynClient, ccLister); err != nil {
 		glog.Errorf("can't sync CompositeControllers: %v", err)
 	}
 
 	// Sync all InitializerController objects.
-	if err := syncAllInitializerControllers(clientset); err != nil {
+	icLister := mcInformerFactory.Metacontroller().V1alpha1().InitializerControllers().Lister()
+	if err := syncAllInitializerControllers(dynClient, icLister); err != nil {
 		glog.Errorf("can't sync InitializerControllers: %v", err)
 	}
 
@@ -57,10 +64,33 @@ func main() {
 
 	config, err := rest.InClusterConfig()
 	if err != nil {
-		panic(err)
+		glog.Fatal(err)
 	}
+
+	// Create informerfactory for metacontroller api objects.
+	mcClient, err := internalclient.NewForConfig(config)
+	if err != nil {
+		glog.Fatalf("Can't create client for api %s: %v", v1alpha1.SchemeGroupVersion, err)
+	}
+	mcInformerFactory := internalinformers.NewSharedInformerFactory(mcClient, 5*time.Minute)
+
+	// Initialize informers.
+	mcInformerFactory.Metacontroller().V1alpha1().CompositeControllers().Informer()
+	mcInformerFactory.Metacontroller().V1alpha1().InitializerControllers().Informer()
+	mcInformerFactory.Start(nil)
+
+	// Wait for the caches to be synced before starting the loop.
+	glog.V(2).Info("Waiting for informers caches to sync")
+	if ok := cache.WaitForCacheSync(nil,
+		mcInformerFactory.Metacontroller().V1alpha1().CompositeControllers().Informer().HasSynced,
+		mcInformerFactory.Metacontroller().V1alpha1().InitializerControllers().Informer().HasSynced,
+	); !ok {
+		glog.Fatal("Failed to wait for caches to sync")
+	}
+	glog.V(2).Info("Informers caches synced")
+
 	for {
-		if err := resyncAll(config); err != nil {
+		if err := resyncAll(config, mcInformerFactory); err != nil {
 			glog.Errorf("sync: %v", err)
 		}
 
