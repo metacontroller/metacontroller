@@ -76,25 +76,50 @@ func TestMerge(t *testing.T) {
           {"name": "keep", "value": "other"},
           {"name": "remove", "value": "other"},
           {"name": "merge", "nested": {"keep": "other"}}
-        ]
+        ],
+				"ports1": [
+					{"port": 80, "keep": "other"}
+				],
+				"ports2": [
+					{"containerPort": 80, "keep": "other"}
+				]
       }`,
 			lastApplied: `{
         "listMap": [
           {"name": "remove", "value": "old"}
-        ]
+        ],
+				"ports1": [
+					{"port": 80, "remove": "old"}
+				]
       }`,
 			desired: `{
         "listMap": [
           {"name": "add", "value": "new"},
           {"name": "merge", "nested": {"add": "new"}}
-        ]
+        ],
+				"ports1": [
+					{"port": 80, "add": "new"},
+					{"port": 90}
+				],
+				"ports2": [
+					{"containerPort": 80},
+					{"containerPort": 90}
+				]
       }`,
 			want: `{
         "listMap": [
           {"name": "keep", "value": "other"},
           {"name": "merge", "nested": {"keep": "other", "add": "new"}},
           {"name": "add", "value": "new"}
-        ]
+        ],
+				"ports1": [
+					{"port": 80, "keep": "other", "add": "new"},
+					{"port": 90}
+				],
+				"ports2": [
+					{"containerPort": 80, "keep": "other"},
+					{"containerPort": 90}
+				]
       }`,
 		},
 	}
