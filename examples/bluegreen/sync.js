@@ -38,40 +38,40 @@ var deepCopy = function (obj) {
 };
 
 var podTemplateEqual = function (bgd, rs) {
-  return deepEqual(bgd.spec.template, JSON.parse(rs.metadata.annotations[podTemplateAnnotation]));
+  return rs && deepEqual(bgd.spec.template, JSON.parse(rs.metadata.annotations[podTemplateAnnotation]));
 };
 
-var updateReplicaSet = function (bgd, rs) {
-  let color = rs.metadata.labels.color;
-  rs.apiVersion = 'extensions/v1beta1';
-  rs.kind = 'ReplicaSet';
-  rs.metadata.labels = deepCopy(bgd.spec.template.metadata.labels) || {};
-  rs.metadata.labels.color = color;
-  rs.metadata.annotations = rs.metadata.annotations || {};
-  rs.metadata.annotations[podTemplateAnnotation] = JSON.stringify(bgd.spec.template);
-  rs.spec.selector = deepCopy(bgd.spec.selector);
-  rs.spec.selector.matchLabels = rs.spec.selector.matchLabels || {};
-  rs.spec.selector.matchLabels.color = color;
-  rs.spec.template = deepCopy(bgd.spec.template);
-  rs.spec.template.metadata.labels.color = color;
-  return rs;
-}
-
-var newReplicaSet = function (bgd, color) {
-  return updateReplicaSet(bgd, {
+var newReplicaSet = function (bgd, color, replicas, template) {
+  let rs = {
+    apiVersion: 'extensions/v1beta1',
+    kind: 'ReplicaSet',
     metadata: {
       name: `${bgd.metadata.name}-${color}`,
-      labels: {color: color}
+      labels: deepCopy(template.metadata.labels),
+      annotations: {}
     },
-    spec: {}
-  });
+    spec: {
+      replicas: replicas,
+      minReadySeconds: bgd.spec.minReadySeconds,
+      selector: deepCopy(bgd.spec.selector),
+      template: deepCopy(template)
+    }
+  };
+
+  rs.metadata.labels.color = color;
+  rs.metadata.annotations[podTemplateAnnotation] = JSON.stringify(template);
+  rs.spec.selector.matchLabels = rs.spec.selector.matchLabels || {};
+  rs.spec.selector.matchLabels.color = color;
+  rs.spec.template.metadata.labels.color = color;
+
+  return rs;
 };
 
-var newService = function (bgd) {
+var newService = function (bgd, color) {
   let service = deepCopy(bgd.spec.service);
   service.apiVersion = 'v1';
   service.kind = 'Service';
-  service.spec.selector.color = 'blue';
+  service.spec.selector.color = color;
   return service;
 };
 
@@ -83,46 +83,58 @@ module.exports = async function (context) {
     let bgd = observed.parent;
     let observedRS = observed.children['ReplicaSet.extensions/v1beta1'];
 
-    // Create or update the Service.
-    let service = observed.children['Service.v1'][bgd.spec.service.metadata.name] || newService(bgd);
-    let activeColor = service.spec.selector.color;
-    desired.children.push(service);
+    // Compute status from observed state.
+    let service = observed.children['Service.v1'][bgd.spec.service.metadata.name];
+    let activeColor = service ? service.spec.selector.color : 'blue';
 
-    // Create or update the ReplicaSets.
-    let blueRS = observedRS[`${bgd.metadata.name}-blue`] || newReplicaSet(bgd, 'blue');
-    let greenRS = observedRS[`${bgd.metadata.name}-green`] || newReplicaSet(bgd, 'green');
-    desired.children.push(blueRS, greenRS);
+    let blueRS = observedRS[`${bgd.metadata.name}-blue`];
+    let greenRS = observedRS[`${bgd.metadata.name}-green`];
+    let [activeRS, inactiveRS] = (activeColor === 'blue') ? [blueRS, greenRS] : [greenRS, blueRS];
+
+    desired.status = {
+      activeColor: activeColor,
+      active: activeRS ? activeRS.status : {},
+      inactive: inactiveRS ? inactiveRS.status : {}
+    };
+
+    // Decide next step for rollout.
+    let activeReplicas = activeRS ? activeRS.spec.replicas : bgd.spec.replicas;
+    let activeTemplate = activeRS ? JSON.parse(activeRS.metadata.annotations[podTemplateAnnotation]) : bgd.spec.template;
+    let inactiveReplicas = inactiveRS ? inactiveRS.spec.replicas : 0;
+    let inactiveTemplate = inactiveRS ? JSON.parse(inactiveRS.metadata.annotations[podTemplateAnnotation]) : bgd.spec.template;
 
     // Is the active ReplicaSet based on the most up-to-date Pod template?
-    let [activeRS, inactiveRS] = (activeColor === 'blue') ? [blueRS, greenRS] : [greenRS, blueRS];
-    activeRS.spec.replicas = bgd.spec.replicas;
     if (podTemplateEqual(bgd, activeRS)) {
       // No rollout necessary. Scale down inactive.
-      inactiveRS.spec.replicas = 0;
+      inactiveReplicas = 0;
     } else if (podTemplateEqual(bgd, inactiveRS)) {
       // The inactive RS already matches. Scale it up.
-      inactiveRS.spec.replicas = bgd.spec.replicas;
+      inactiveReplicas = bgd.spec.replicas;
       // Is it ready to swap?
       if (inactiveRS.status && inactiveRS.status.availableReplicas === bgd.spec.replicas) {
         // Swap active/inactive RS.
-        service.spec.selector.color = inactiveRS.metadata.labels.color;
+        activeColor = inactiveRS.metadata.labels.color;
+        [activeReplicas, inactiveReplicas] = [inactiveReplicas, activeReplicas];
+        [activeTemplate, inactiveTemplate] = [inactiveTemplate, activeTemplate];
       }
     } else {
       // Neither RS matches.
-      if (inactiveRS.spec.replicas === 0 && inactiveRS.status && inactiveRS.status.replicas === 0) {
+      if (inactiveRS && inactiveRS.spec.replicas === 0 && inactiveRS.status && inactiveRS.status.replicas === 0) {
         // Start a new rollout.
-        updateReplicaSet(bgd, inactiveRS);
-        inactiveRS.spec.replicas = bgd.spec.replicas;
+        inactiveReplicas = bgd.spec.replicas;
+        inactiveTemplate = bgd.spec.template;
       } else {
         // Some other rollout was in progress. We need to cancel it and wait.
-        inactiveRS.spec.replicas = 0;
+        inactiveReplicas = 0;
       }
     }
 
-    // Compute controller status.
-    desired.status.activeColor = activeColor;
-    desired.status.active = activeRS.status;
-    desired.status.inactive = inactiveRS.status;
+    // Generate desired children.
+    desired.children = [
+      newService(bgd, activeColor),
+      newReplicaSet(bgd, activeColor, activeReplicas, activeTemplate),
+      newReplicaSet(bgd, activeColor == 'blue' ? 'green' : 'blue', inactiveReplicas, inactiveTemplate)
+    ];
   } catch (e) {
     return {status: 500, body: e.stack};
   }
