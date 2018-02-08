@@ -17,6 +17,7 @@ kind: CompositeController
 metadata:
   name: indexedjob-controller
 spec:
+  updateStrategy: Apply
   parentResource:
     apiVersion: ctl.enisoc.com/v1
     resource: indexedjobs
