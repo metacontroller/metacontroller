@@ -221,38 +221,32 @@ func deleteChildren(client *dynamicResourceClient, parent *unstructured.Unstruct
 	return utilerrors.NewAggregate(errs)
 }
 
-func updateChildren(client *dynamicResourceClient, parent *unstructured.Unstructured, observed, desired map[string]*unstructured.Unstructured, updateStrategy string) error {
+func updateChildren(client *dynamicResourceClient, parent *unstructured.Unstructured, observed, desired map[string]*unstructured.Unstructured) error {
 	var errs []error
 	for name, obj := range desired {
 		if oldObj := observed[name]; oldObj != nil {
 			// Update
 			var newObj *unstructured.Unstructured
 
-			switch updateStrategy {
-			case v1alpha1.UpdateStrategyApply:
-				// The controller only returns a partial object.
-				// We compute the full updated object in the style of "kubectl apply".
-				lastApplied, err := apply.GetLastApplied(oldObj)
-				if err != nil {
-					errs = append(errs, err)
-					continue
-				}
-				newObj = &unstructured.Unstructured{}
-				newObj.Object, err = apply.Merge(oldObj.UnstructuredContent(), lastApplied, obj.UnstructuredContent())
-				if err != nil {
-					errs = append(errs, err)
-					continue
-				}
-				apply.SetLastApplied(newObj, obj.UnstructuredContent())
-			default:
-				// The controller is expected to return the full updated object.
-				newObj = obj
+			// The controller only returns a partial object.
+			// We compute the full updated object in the style of "kubectl apply".
+			lastApplied, err := apply.GetLastApplied(oldObj)
+			if err != nil {
+				errs = append(errs, err)
+				continue
 			}
+			newObj = &unstructured.Unstructured{}
+			newObj.Object, err = apply.Merge(oldObj.UnstructuredContent(), lastApplied, obj.UnstructuredContent())
+			if err != nil {
+				errs = append(errs, err)
+				continue
+			}
+			apply.SetLastApplied(newObj, obj.UnstructuredContent())
 
+			// Attempt an update, if the 3-way merge resulted in any changes.
 			if !reflect.DeepEqual(newObj.UnstructuredContent(), oldObj.UnstructuredContent()) {
 				glog.Infof("%v %v/%v: updating %v %v", parent.GetKind(), parent.GetNamespace(), parent.GetName(), obj.GetKind(), obj.GetName())
 				if glog.V(5) {
-					glog.Infof("diff: a=observed, b=desired:\n%s", diff.ObjectDiff(oldObj.UnstructuredContent(), newObj.UnstructuredContent()))
 					glog.Infof("reflect diff: a=observed, b=desired:\n%s", diff.ObjectReflectDiff(oldObj.UnstructuredContent(), newObj.UnstructuredContent()))
 				}
 				if _, err := client.Update(newObj); err != nil {
@@ -264,17 +258,14 @@ func updateChildren(client *dynamicResourceClient, parent *unstructured.Unstruct
 			// Create
 			glog.Infof("%v %v/%v: creating %v %v", parent.GetKind(), parent.GetNamespace(), parent.GetName(), obj.GetKind(), obj.GetName())
 
-			switch updateStrategy {
-			case v1alpha1.UpdateStrategyApply:
-				// The controller should return a partial object containing only the
-				// fields it cares about. We save this partial object so we can do
-				// a 3-way merge upon update, in the style of "kubectl apply".
-				//
-				// Make sure this happens before we add anything else to the object.
-				if err := apply.SetLastApplied(obj, obj.UnstructuredContent()); err != nil {
-					errs = append(errs, err)
-					continue
-				}
+			// The controller should return a partial object containing only the
+			// fields it cares about. We save this partial object so we can do
+			// a 3-way merge upon update, in the style of "kubectl apply".
+			//
+			// Make sure this happens before we add anything else to the object.
+			if err := apply.SetLastApplied(obj, obj.UnstructuredContent()); err != nil {
+				errs = append(errs, err)
+				continue
 			}
 
 			// For CompositeController, we always claim everything we create.
@@ -340,7 +331,7 @@ func manageChildren(clientset *dynamicClientset, cc *v1alpha1.CompositeControlle
 				obj.SetLabels(labels)
 			}
 		}
-		if err := updateChildren(client, parent, observedChildren[key], objects, cc.Spec.UpdateStrategy); err != nil {
+		if err := updateChildren(client, parent, observedChildren[key], objects); err != nil {
 			errs = append(errs, err)
 			continue
 		}
