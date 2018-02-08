@@ -18,6 +18,7 @@ kind: CompositeController
 metadata:
   name: catset-controller
 spec:
+  updateStrategy: Apply
   parentResource:
     apiVersion: ctl.enisoc.com/v1
     resource: catsets

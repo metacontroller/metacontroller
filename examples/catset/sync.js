@@ -70,31 +70,24 @@ module.exports = async function (context) {
 
   try {
     let catset = observed.parent;
-    let observedPods = observed.children['Pod.v1'];
-    let observedPVCs = observed.children['PersistentVolumeClaim.v1'];
-
-    // Carry over observed PVCs. We never delete them as long as the parent controller exists.
-    desired.children.push(...Object.values(observedPVCs));
-    // Fill in any missing PVCs.
-    if (catset.spec.volumeClaimTemplates) {
-      for (let template of catset.spec.volumeClaimTemplates) {
-        for (let i = 0; i < catset.spec.replicas; i++) {
-          let name = `${template.metadata.name}-${catset.metadata.name}-${i}`;
-          if (!(name in observedPVCs)) {
-            desired.children.push(newPVC(name, template));
-          }
-        }
-      }
-    }
 
     // Arrange observed Pods by ordinal.
+    let observedPods = {};
+    for (let pod of Object.values(observed.children['Pod.v1'])) {
+      let ordinal = getOrdinal(catset.metadata.name, pod.metadata.name);
+      if (ordinal >= 0) observedPods[ordinal] = pod;
+    }
+
+    // Compute controller status.
+    for (var ready = 0; ready < catset.spec.replicas && isRunningAndReady(observedPods[ready]); ready++);
+    desired.status = {replicas: Object.keys(observedPods).length, readyReplicas: ready};
+
+    // Generate desired Pods. First generate desired state for all existing Pods.
     let desiredPods = {};
-    for (let podName in observedPods) {
-      let ordinal = getOrdinal(catset.metadata.name, podName);
-      if (ordinal >= 0) desiredPods[ordinal] = observedPods[podName];
+    for (let ordinal in observedPods) {
+      desiredPods[ordinal] = newPod(catset, ordinal);
     }
     // Fill in one missing Pod if all lower ordinals are Ready.
-    for (var ready = 0; ready < catset.spec.replicas && isRunningAndReady(desiredPods[ready]); ready++);
     if (ready < catset.spec.replicas && !(ready in desiredPods)) {
       desiredPods[ready] = newPod(catset, ready);
     }
@@ -107,8 +100,25 @@ module.exports = async function (context) {
     }
     desired.children.push(...Object.values(desiredPods));
 
-    // Compute controller status.
-    desired.status = {replicas: Object.keys(observedPods).length, readyReplicas: ready};
+    if (catset.spec.volumeClaimTemplates) {
+      // Generate desired PVCs.
+      let desiredPVCs = {};
+      for (let template of catset.spec.volumeClaimTemplates) {
+        let baseName = `${template.metadata.name}-${catset.metadata.name}`;
+        for (let i = 0; i < catset.spec.replicas; i++) {
+          desired.children.push(newPVC(`${baseName}-${i}`, template));
+        }
+        // Also generate a desired state for existing PVCs outside the range.
+        // PVCs are retained after scale down, but are deleted with the CatSet.
+        for (let pvc of Object.values(observed.children['PersistentVolumeClaim.v1'])) {
+          if (pvc.metadata.name.startsWith(baseName)) {
+            let ordinal = getOrdinal(baseName, pvc.metadata.name);
+            if (ordinal >= catset.spec.replicas) desired.children.push(newPVC(pvc.metadata.name, template));
+          }
+        }
+      }
+      desired.children.push(...Object.values(desiredPVCs));
+    }
   } catch (e) {
     return {status: 500, body: e.stack};
   }
