@@ -47,11 +47,11 @@ def new_pod(job, index):
   return pod
 
 class Controller(BaseHTTPRequestHandler):
-  def sync(self, job, observed_pods):
+  def sync(self, job, children):
     # Arrange observed Pods by index, and count by phase.
-    desired_pods = {}
+    observed_pods = {}
     (active, succeeded, failed) = (0, 0, 0)
-    for pod_name, pod in observed_pods.iteritems():
+    for pod_name, pod in children['Pod.v1'].iteritems():
       pod_index = get_index(job['metadata']['name'], pod_name)
       if pod_index >= 0:
         phase = pod.get('status', {}).get('phase')
@@ -61,17 +61,26 @@ class Controller(BaseHTTPRequestHandler):
           failed += 1
         else:
           active += 1
-        desired_pods[pod_index] = pod
+        observed_pods[pod_index] = pod
 
+    # If the job already finished (either completed or failed) at some point,
+    # stop actively managing Pods since they might get deleted by Pod GC.
+    # Just generate a desired state for any observed Pods and return status.
     if is_job_finished(job):
-      # If the job already finished (either completed or failed) at some point,
-      # stop managing Pods since they might get deleted by Pod GC.
-      return {'status': job['status'], 'children': desired_pods.values()}
+      return {
+        'status': job['status'],
+        'children': [new_pod(job, i) for i, pod in observed_pods.iteritems()]
+      }
 
     # Compute status based on what we observed, before building desired state.
     spec_completions = job['spec'].get('completions', 1)
     desired_status = {'active': active, 'succeeded': succeeded, 'failed': failed}
     desired_status['conditions'] = [{'type': 'Complete', 'status': str(succeeded == spec_completions)}]
+
+    # Generate desired state for existing Pods.
+    desired_pods = {}
+    for pod_index, pod in observed_pods.iteritems():
+      desired_pods[pod_index] = new_pod(job, pod_index)
 
     # Create more Pods as needed.
     spec_parallelism = job['spec'].get('parallelism', 1)
@@ -85,7 +94,7 @@ class Controller(BaseHTTPRequestHandler):
 
   def do_POST(self):
     observed = json.loads(self.rfile.read(int(self.headers.getheader('content-length'))))
-    desired = self.sync(observed['parent'], observed['children']['Pod.v1'])
+    desired = self.sync(observed['parent'], observed['children'])
 
     self.send_response(200)
     self.send_header('Content-type', 'application/json')

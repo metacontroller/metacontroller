@@ -35,11 +35,6 @@ local k8s = import "k8s.libsonnet";
     ],
 
     getObserved(name): observed.children.get(apiVersion, kind, name),
-    updateStrategy:
-      if "updateStrategy" in observed.controller.spec then
-        observed.controller.spec.updateStrategy
-      else
-        null,
   },
 
   // Mix-in for collection that filters observed objects.
@@ -53,9 +48,10 @@ local k8s = import "k8s.libsonnet";
   // "immutable". That is, they will be created if they don't exist, but left
   // untouched if they do.
   //
-  // Note that in the case of the "Apply" strategy, this means we return the
-  // last applied config. Metacontroller might still attempt an update in
-  // response, if a third party has mutated fields to which we've previously
+  // Since Metacontroller treats our output like `kubectl apply`, the way to
+  // specify "no change" is to return the last applied config.
+  // Note that Metacontroller might still attempt an update in response,
+  // if a third party has mutated fields to which we've previously
   // applied values. In other words, it continues to actively maintain the last
   // applied config; it doesn't become totally passive.
   collectionImmutable:: {
@@ -63,12 +59,8 @@ local k8s = import "k8s.libsonnet";
       local observed = super.getObserved(desired.metadata.name);
       if observed == null then
         desired
-      else (
-        if super.updateStrategy == "Apply" then
-          metacontroller.getLastApplied(observed)
-        else
-          observed
-      )
+      else
+        metacontroller.getLastApplied(observed)
       for desired in super.desired
     ],
   },

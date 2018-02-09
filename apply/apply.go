@@ -132,9 +132,9 @@ func mergeObject(fieldPath string, destination, lastApplied, desired map[string]
 }
 
 func mergeArray(fieldPath string, destination, lastApplied, desired []interface{}) (interface{}, error) {
-	// If all the lists *could be* "list maps", use the special merge.
-	if detectListMap(destination) && detectListMap(lastApplied) && detectListMap(desired) {
-		return mergeListMap(fieldPath, destination, lastApplied, desired)
+	// If it looks like a list map, use the special merge.
+	if mergeKey := detectListMapKey(destination, lastApplied, desired); mergeKey != "" {
+		return mergeListMap(fieldPath, mergeKey, destination, lastApplied, desired)
 	}
 
 	// It's a normal array. Just replace for now.
@@ -142,11 +142,11 @@ func mergeArray(fieldPath string, destination, lastApplied, desired []interface{
 	return desired, nil
 }
 
-func mergeListMap(fieldPath string, destination, lastApplied, desired []interface{}) (interface{}, error) {
-	// Treat each list of objects as if it were a map, keyed by the "name" field.
-	destMap := makeListMap(destination)
-	lastMap := makeListMap(lastApplied)
-	desMap := makeListMap(desired)
+func mergeListMap(fieldPath, mergeKey string, destination, lastApplied, desired []interface{}) (interface{}, error) {
+	// Treat each list of objects as if it were a map, keyed by the mergeKey field.
+	destMap := makeListMap(mergeKey, destination)
+	lastMap := makeListMap(mergeKey, lastApplied)
+	desMap := makeListMap(mergeKey, desired)
 
 	_, err := mergeObject(fieldPath, destMap, lastMap, desMap)
 	if err != nil {
@@ -158,7 +158,7 @@ func mergeListMap(fieldPath string, destination, lastApplied, desired []interfac
 	added := make(map[string]bool, len(destMap))
 	// First take items that were already in destination.
 	for _, item := range destination {
-		key := item.(map[string]interface{})["name"].(string)
+		key := stringMergeKey(item.(map[string]interface{})[mergeKey])
 		if newItem, ok := destMap[key]; ok {
 			destList = append(destList, newItem)
 			// Remember which items we've already added to the final list.
@@ -167,7 +167,7 @@ func mergeListMap(fieldPath string, destination, lastApplied, desired []interfac
 	}
 	// Then take items in desired that haven't been added yet.
 	for _, item := range desired {
-		key := item.(map[string]interface{})["name"].(string)
+		key := stringMergeKey(item.(map[string]interface{})[mergeKey])
 		if !added[key] {
 			destList = append(destList, destMap[key])
 			added[key] = true
@@ -177,36 +177,83 @@ func mergeListMap(fieldPath string, destination, lastApplied, desired []interfac
 	return destList, nil
 }
 
-func makeListMap(list []interface{}) map[string]interface{} {
+func makeListMap(mergeKey string, list []interface{}) map[string]interface{} {
 	res := make(map[string]interface{}, len(list))
 	for _, item := range list {
-		// We only call this if detectListMap() returned true.
+		// We only end up here if detectListMapKey() already verified that
+		// all items are objects.
 		itemMap := item.(map[string]interface{})
-		res[itemMap["name"].(string)] = item
+		res[stringMergeKey(itemMap[mergeKey])] = item
 	}
 	return res
 }
 
-// detectListMap tries to guess whether a list is a Kubernetes-style "list map".
-// For now, we only support "name" as the merge key.
-// TODO(enisoc): Support other conventional merge keys.
-func detectListMap(list []interface{}) bool {
-	// If the list is empty, we default to saying yes.
-	// In other words, we're just answering, "Could this be a list map?"
-	if len(list) == 0 {
-		return false
+// stringMergeKey converts merge key values that aren't strings to strings.
+func stringMergeKey(val interface{}) string {
+	switch tval := val.(type) {
+	case string:
+		return tval
+	default:
+		return fmt.Sprintf("%v", val)
+	}
+}
+
+// knownMergeKeys lists the key names we will guess as merge keys.
+//
+// The order determines precedence if multiple entries might work,
+// with the first item having the highest precedence.
+//
+// Note that we don't do merges on status because the controller is solely
+// responsible for providing the entire contents of status.
+// As a result, we don't try to handle things like status.conditions.
+var knownMergeKeys = []string{
+	"containerPort",
+	"port",
+	"name",
+	"uid",
+	"ip",
+}
+
+// detectListMapKey tries to guess whether a field is a k8s-style "list map".
+// You pass in all known examples of values for the field.
+// If a likely merge key can be found, we return it.
+// Otherwise, we return an empty string.
+func detectListMapKey(lists ...[]interface{}) string {
+	// Remember the set of keys that every object has in common.
+	var commonKeys map[string]bool
+
+	for _, list := range lists {
+		for _, item := range list {
+			// All the items must be objects.
+			obj, ok := item.(map[string]interface{})
+			if !ok {
+				return ""
+			}
+
+			// Initialize commonKeys to the keys of the first object seen.
+			if commonKeys == nil {
+				commonKeys = make(map[string]bool, len(obj))
+				for key := range obj {
+					commonKeys[key] = true
+				}
+				continue
+			}
+
+			// For all other objects, prune the set.
+			for key := range commonKeys {
+				if _, ok := obj[key]; !ok {
+					delete(commonKeys, key)
+				}
+			}
+		}
 	}
 
-	for _, item := range list {
-		// All the items must be objects.
-		obj, ok := item.(map[string]interface{})
-		if !ok {
-			return false
-		}
-		// For now, all the items must have a string-type "name" field.
-		if _, ok := obj["name"].(string); !ok {
-			return false
+	// If all objects have one of the known conventional merge keys in common,
+	// we'll guess that this is a list map.
+	for _, key := range knownMergeKeys {
+		if commonKeys[key] {
+			return key
 		}
 	}
-	return true
+	return ""
 }
