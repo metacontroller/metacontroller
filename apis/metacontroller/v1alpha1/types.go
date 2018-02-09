@@ -43,7 +43,7 @@ type ResourceRule struct {
 }
 
 type ResourcesRule struct {
-	APIVersion string   `json:"apiVersion`
+	APIVersion string   `json:"apiVersion"`
 	Resources  []string `json:"resources"`
 }
 
