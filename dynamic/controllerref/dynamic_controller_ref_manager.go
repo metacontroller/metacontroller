@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package main
+package controllerref
 
 import (
 	"fmt"
@@ -25,18 +25,20 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
+
+	dynamicclientset "k8s.io/metacontroller/dynamic/clientset"
 	k8s "k8s.io/metacontroller/third_party/kubernetes"
 )
 
-type dynamicControllerRefManager struct {
+type Manager struct {
 	k8s.BaseControllerRefManager
 	parentKind schema.GroupVersionKind
 	childKind  schema.GroupVersionKind
-	client     *dynamicResourceClient
+	client     *dynamicclientset.ResourceClient
 }
 
-func newDynamicControllerRefManager(client *dynamicResourceClient, parent metav1.Object, selector labels.Selector, parentKind, childKind schema.GroupVersionKind, canAdopt func() error) *dynamicControllerRefManager {
-	return &dynamicControllerRefManager{
+func NewManager(client *dynamicclientset.ResourceClient, parent metav1.Object, selector labels.Selector, parentKind, childKind schema.GroupVersionKind, canAdopt func() error) *Manager {
+	return &Manager{
 		BaseControllerRefManager: k8s.BaseControllerRefManager{
 			Controller:   parent,
 			Selector:     selector,
@@ -48,7 +50,7 @@ func newDynamicControllerRefManager(client *dynamicResourceClient, parent metav1
 	}
 }
 
-func (m *dynamicControllerRefManager) claimChildren(children []unstructured.Unstructured) ([]*unstructured.Unstructured, error) {
+func (m *Manager) ClaimChildren(children []unstructured.Unstructured) ([]*unstructured.Unstructured, error) {
 	var claimed []*unstructured.Unstructured
 	var errlist []error
 
@@ -76,7 +78,7 @@ func (m *dynamicControllerRefManager) claimChildren(children []unstructured.Unst
 	return claimed, utilerrors.NewAggregate(errlist)
 }
 
-func (m *dynamicControllerRefManager) adoptChild(obj *unstructured.Unstructured) error {
+func (m *Manager) adoptChild(obj *unstructured.Unstructured) error {
 	if err := m.CanAdopt(); err != nil {
 		return fmt.Errorf("can't adopt %v %v/%v (%v): %v", m.childKind.Kind, obj.GetNamespace(), obj.GetName(), obj.GetUID(), err)
 	}
@@ -111,7 +113,7 @@ func (m *dynamicControllerRefManager) adoptChild(obj *unstructured.Unstructured)
 	})
 }
 
-func (m *dynamicControllerRefManager) releaseChild(obj *unstructured.Unstructured) error {
+func (m *Manager) releaseChild(obj *unstructured.Unstructured) error {
 	parentUID := string(m.Controller.GetUID())
 	err := updateOwnerReferences(m.client, obj, func(ownerRefs []interface{}) ([]interface{}, bool) {
 		// Remove ourselves from the list.
@@ -124,14 +126,14 @@ func (m *dynamicControllerRefManager) releaseChild(obj *unstructured.Unstructure
 		// We're not listed. Nothing to do.
 		return ownerRefs, false
 	})
-	if errors.IsNotFound(err) || isUIDError(err) {
+	if errors.IsNotFound(err) || dynamicclientset.IsUIDError(err) {
 		// If the original object is gone, that's fine because we're giving up on this child anyway.
 		return nil
 	}
 	return err
 }
 
-func updateOwnerReferences(client *dynamicResourceClient, orig *unstructured.Unstructured, update func(ownerReferences []interface{}) ([]interface{}, bool)) error {
+func updateOwnerReferences(client *dynamicclientset.ResourceClient, orig *unstructured.Unstructured, update func(ownerReferences []interface{}) ([]interface{}, bool)) error {
 	// We can't use strategic merge patch because we want this to work with custom resources.
 	// We can't use merge patch because that would replace the whole list.
 	// We can't use JSON patch ops because that wouldn't be idempotent.
@@ -149,19 +151,4 @@ func updateOwnerReferences(client *dynamicResourceClient, orig *unstructured.Uns
 		k8s.SetNestedField(obj.UnstructuredContent(), ownerRefs, "metadata", "ownerReferences")
 		return true
 	})
-}
-
-type uidError string
-
-func (e uidError) Error() string {
-	return string(e)
-}
-
-func newUIDError(format string, args ...interface{}) error {
-	return uidError(fmt.Sprintf(format, args...))
-}
-
-func isUIDError(err error) bool {
-	_, ok := err.(uidError)
-	return ok
 }

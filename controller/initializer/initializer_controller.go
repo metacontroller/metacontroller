@@ -14,31 +14,32 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package main
+package initializer
 
 import (
 	"fmt"
 
 	"github.com/golang/glog"
 
-	"k8s.io/metacontroller/apis/metacontroller/v1alpha1"
-	internallisters "k8s.io/metacontroller/client/generated/lister/metacontroller/v1alpha1"
-	k8s "k8s.io/metacontroller/third_party/kubernetes"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
+
+	"k8s.io/metacontroller/apis/metacontroller/v1alpha1"
+	internallisters "k8s.io/metacontroller/client/generated/lister/metacontroller/v1alpha1"
+	dynamicclientset "k8s.io/metacontroller/dynamic/clientset"
+	k8s "k8s.io/metacontroller/third_party/kubernetes"
 )
 
-func syncAllInitializerControllers(dynClient *dynamicClientset, icLister internallisters.InitializerControllerLister) error {
+func SyncAll(dynClient *dynamicclientset.Clientset, icLister internallisters.InitializerControllerLister) error {
 	icList, err := icLister.List(labels.Everything())
 	if err != nil {
 		return fmt.Errorf("can't list InitializerControllers: %v", err)
 	}
 
 	for _, ic := range icList {
-		if err := syncInitializerController(dynClient, ic); err != nil {
+		if err := sync(dynClient, ic); err != nil {
 			glog.Errorf("sync InitializerController %v: %v", ic.Name, err)
 			continue
 		}
@@ -46,7 +47,7 @@ func syncAllInitializerControllers(dynClient *dynamicClientset, icLister interna
 	return nil
 }
 
-func syncInitializerController(clientset *dynamicClientset, ic *v1alpha1.InitializerController) error {
+func sync(clientset *dynamicclientset.Clientset, ic *v1alpha1.InitializerController) error {
 	var errs []error
 	// Find all uninitialized objects of the requested kinds.
 	for _, group := range ic.Spec.UninitializedResources {
@@ -61,7 +62,7 @@ func syncInitializerController(clientset *dynamicClientset, ic *v1alpha1.Initial
 	return utilerrors.NewAggregate(errs)
 }
 
-func initializeResource(clientset *dynamicClientset, ic *v1alpha1.InitializerController, apiVersion, resourceName string) error {
+func initializeResource(clientset *dynamicclientset.Clientset, ic *v1alpha1.InitializerController, apiVersion, resourceName string) error {
 	// List all objects of the given kind in all namespaces.
 	client, err := clientset.Resource(apiVersion, resourceName, "")
 	if err != nil {
