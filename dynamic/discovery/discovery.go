@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package main
+package discovery
 
 import (
 	"fmt"
@@ -43,7 +43,7 @@ func (r *APIResource) GroupVersionKind() schema.GroupVersionKind {
 	return r.GroupVersion().WithKind(r.Kind)
 }
 
-type resourceDiscovery interface {
+type ResourceDiscovery interface {
 	Get(groupVersion, resource string) *APIResource
 	GetKind(groupVersion, kind string) *APIResource
 }
@@ -52,24 +52,24 @@ type groupVersionEntry struct {
 	resources, kinds map[string]*APIResource
 }
 
-type resourceMap map[string]groupVersionEntry
+type ResourceMap map[string]groupVersionEntry
 
-func (r resourceMap) Get(apiVersion, resource string) *APIResource {
+func (r ResourceMap) Get(apiVersion, resource string) *APIResource {
 	if gv, ok := r[apiVersion]; ok {
 		return gv.resources[resource]
 	}
 	return nil
 }
 
-func (r resourceMap) GetKind(apiVersion, kind string) *APIResource {
+func (r ResourceMap) GetKind(apiVersion, kind string) *APIResource {
 	if gv, ok := r[apiVersion]; ok {
 		return gv.kinds[kind]
 	}
 	return nil
 }
 
-func newResourceMap(groups []*metav1.APIResourceList) resourceMap {
-	r := make(resourceMap, len(groups))
+func NewResourceMap(groups []*metav1.APIResourceList) ResourceMap {
+	r := make(ResourceMap, len(groups))
 	for _, group := range groups {
 		gv := groupVersionEntry{
 			resources: make(map[string]*APIResource, len(group.APIResources)),

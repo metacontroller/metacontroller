@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package main
+package composite
 
 import (
 	"fmt"
@@ -23,26 +23,29 @@ import (
 
 	"github.com/golang/glog"
 
-	"k8s.io/metacontroller/apis/metacontroller/v1alpha1"
-	"k8s.io/metacontroller/apply"
-	internallisters "k8s.io/metacontroller/client/generated/lister/metacontroller/v1alpha1"
-	k8s "k8s.io/metacontroller/third_party/kubernetes"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/diff"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
+
+	"k8s.io/metacontroller/apis/metacontroller/v1alpha1"
+	internallisters "k8s.io/metacontroller/client/generated/lister/metacontroller/v1alpha1"
+	dynamicapply "k8s.io/metacontroller/dynamic/apply"
+	dynamicclientset "k8s.io/metacontroller/dynamic/clientset"
+	dynamiccontrollerref "k8s.io/metacontroller/dynamic/controllerref"
+	dynamicdiscovery "k8s.io/metacontroller/dynamic/discovery"
+	k8s "k8s.io/metacontroller/third_party/kubernetes"
 )
 
-func syncAllCompositeControllers(dynClient *dynamicClientset, ccLister internallisters.CompositeControllerLister) error {
+func SyncAll(dynClient *dynamicclientset.Clientset, ccLister internallisters.CompositeControllerLister) error {
 	ccList, err := ccLister.List(labels.Everything())
 	if err != nil {
 		return fmt.Errorf("can't list CompositeControllers: %v", err)
 	}
 
 	for _, cc := range ccList {
-		if err := syncCompositeController(dynClient, cc); err != nil {
+		if err := sync(dynClient, cc); err != nil {
 			glog.Errorf("syncCompositeController: %v", err)
 			continue
 		}
@@ -50,7 +53,7 @@ func syncAllCompositeControllers(dynClient *dynamicClientset, ccLister internall
 	return nil
 }
 
-func syncCompositeController(clientset *dynamicClientset, cc *v1alpha1.CompositeController) error {
+func sync(clientset *dynamicclientset.Clientset, cc *v1alpha1.CompositeController) error {
 	// Sync all objects of the parent type, in all namespaces.
 	parentClient, err := clientset.Resource(cc.Spec.ParentResource.APIVersion, cc.Spec.ParentResource.Resource, "")
 	if err != nil {
@@ -72,7 +75,7 @@ func syncCompositeController(clientset *dynamicClientset, cc *v1alpha1.Composite
 	return nil
 }
 
-func syncParentResource(clientset *dynamicClientset, cc *v1alpha1.CompositeController, parentResource *APIResource, parent *unstructured.Unstructured) error {
+func syncParentResource(clientset *dynamicclientset.Clientset, cc *v1alpha1.CompositeController, parentResource *dynamicdiscovery.APIResource, parent *unstructured.Unstructured) error {
 	labelSelector := &metav1.LabelSelector{}
 	if cc.Spec.GenerateSelector {
 		// Select by controller-uid, like Job does.
@@ -124,7 +127,7 @@ func syncParentResource(clientset *dynamicClientset, cc *v1alpha1.CompositeContr
 	return manageErr
 }
 
-func claimChildren(clientset *dynamicClientset, cc *v1alpha1.CompositeController, parentResource *APIResource, parent *unstructured.Unstructured, selector labels.Selector) (childMap, error) {
+func claimChildren(clientset *dynamicclientset.Clientset, cc *v1alpha1.CompositeController, parentResource *dynamicdiscovery.APIResource, parent *unstructured.Unstructured, selector labels.Selector) (childMap, error) {
 	// Set up values common to all child types.
 	parentGVK := parentResource.GroupVersionKind()
 	parentClient, err := clientset.Resource(parentResource.APIVersion, parentResource.Name, parent.GetNamespace())
@@ -160,8 +163,8 @@ func claimChildren(clientset *dynamicClientset, cc *v1alpha1.CompositeController
 			childList := obj.(*unstructured.UnstructuredList)
 
 			// Handle orphan/adopt and filter by owner+selector.
-			crm := newDynamicControllerRefManager(childClient, parent, selector, parentGVK, childClient.GroupVersionKind(), canAdoptFunc)
-			children, err := crm.claimChildren(childList.Items)
+			crm := dynamiccontrollerref.NewManager(childClient, parent, selector, parentGVK, childClient.GroupVersionKind(), canAdoptFunc)
+			children, err := crm.ClaimChildren(childList.Items)
 			if err != nil {
 				return nil, fmt.Errorf("can't claim %v children: %v", childClient.Kind(), err)
 			}
@@ -178,7 +181,7 @@ func claimChildren(clientset *dynamicClientset, cc *v1alpha1.CompositeController
 	return groups, nil
 }
 
-func updateParentStatus(clientset *dynamicClientset, cc *v1alpha1.CompositeController, parentResource *APIResource, parent *unstructured.Unstructured, status map[string]interface{}) error {
+func updateParentStatus(clientset *dynamicclientset.Clientset, cc *v1alpha1.CompositeController, parentResource *dynamicdiscovery.APIResource, parent *unstructured.Unstructured, status map[string]interface{}) error {
 	parentClient, err := clientset.Resource(parentResource.APIVersion, parentResource.Name, parent.GetNamespace())
 	if err != nil {
 		return err
@@ -198,7 +201,7 @@ func updateParentStatus(clientset *dynamicClientset, cc *v1alpha1.CompositeContr
 	})
 }
 
-func deleteChildren(client *dynamicResourceClient, parent *unstructured.Unstructured, observed, desired map[string]*unstructured.Unstructured) error {
+func deleteChildren(client *dynamicclientset.ResourceClient, parent *unstructured.Unstructured, observed, desired map[string]*unstructured.Unstructured) error {
 	var errs []error
 	for name, obj := range observed {
 		if obj.GetDeletionTimestamp() != nil {
@@ -221,7 +224,7 @@ func deleteChildren(client *dynamicResourceClient, parent *unstructured.Unstruct
 	return utilerrors.NewAggregate(errs)
 }
 
-func updateChildren(client *dynamicResourceClient, parent *unstructured.Unstructured, observed, desired map[string]*unstructured.Unstructured) error {
+func updateChildren(client *dynamicclientset.ResourceClient, parent *unstructured.Unstructured, observed, desired map[string]*unstructured.Unstructured) error {
 	var errs []error
 	for name, obj := range desired {
 		if oldObj := observed[name]; oldObj != nil {
@@ -230,18 +233,18 @@ func updateChildren(client *dynamicResourceClient, parent *unstructured.Unstruct
 
 			// The controller only returns a partial object.
 			// We compute the full updated object in the style of "kubectl apply".
-			lastApplied, err := apply.GetLastApplied(oldObj)
+			lastApplied, err := dynamicapply.GetLastApplied(oldObj)
 			if err != nil {
 				errs = append(errs, err)
 				continue
 			}
 			newObj = &unstructured.Unstructured{}
-			newObj.Object, err = apply.Merge(oldObj.UnstructuredContent(), lastApplied, obj.UnstructuredContent())
+			newObj.Object, err = dynamicapply.Merge(oldObj.UnstructuredContent(), lastApplied, obj.UnstructuredContent())
 			if err != nil {
 				errs = append(errs, err)
 				continue
 			}
-			apply.SetLastApplied(newObj, obj.UnstructuredContent())
+			dynamicapply.SetLastApplied(newObj, obj.UnstructuredContent())
 
 			// Attempt an update, if the 3-way merge resulted in any changes.
 			if !reflect.DeepEqual(newObj.UnstructuredContent(), oldObj.UnstructuredContent()) {
@@ -263,7 +266,7 @@ func updateChildren(client *dynamicResourceClient, parent *unstructured.Unstruct
 			// a 3-way merge upon update, in the style of "kubectl apply".
 			//
 			// Make sure this happens before we add anything else to the object.
-			if err := apply.SetLastApplied(obj, obj.UnstructuredContent()); err != nil {
+			if err := dynamicapply.SetLastApplied(obj, obj.UnstructuredContent()); err != nil {
 				errs = append(errs, err)
 				continue
 			}
@@ -290,7 +293,7 @@ func updateChildren(client *dynamicResourceClient, parent *unstructured.Unstruct
 	return utilerrors.NewAggregate(errs)
 }
 
-func manageChildren(clientset *dynamicClientset, cc *v1alpha1.CompositeController, parent *unstructured.Unstructured, observedChildren childMap, desiredChildren childMap) error {
+func manageChildren(clientset *dynamicclientset.Clientset, cc *v1alpha1.CompositeController, parent *unstructured.Unstructured, observedChildren childMap, desiredChildren childMap) error {
 	// If some operations fail, keep trying others so, for example,
 	// we don't block recovery (create new Pod) on a failed delete.
 	var errs []error

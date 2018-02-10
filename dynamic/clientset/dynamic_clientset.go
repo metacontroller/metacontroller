@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package main
+package clientset
 
 import (
 	"fmt"
@@ -25,21 +25,23 @@ import (
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/util/retry"
+
+	dynamicdiscovery "k8s.io/metacontroller/dynamic/discovery"
 )
 
-type dynamicClientset struct {
+type Clientset struct {
 	config    rest.Config
-	resources resourceDiscovery
+	resources dynamicdiscovery.ResourceDiscovery
 }
 
-func newDynamicClientset(config *rest.Config, resources resourceDiscovery) *dynamicClientset {
-	return &dynamicClientset{
+func New(config *rest.Config, resources dynamicdiscovery.ResourceDiscovery) *Clientset {
+	return &Clientset{
 		config:    *config,
 		resources: resources,
 	}
 }
 
-func (cs *dynamicClientset) Resource(apiVersion, resource, namespace string) (*dynamicResourceClient, error) {
+func (cs *Clientset) Resource(apiVersion, resource, namespace string) (*ResourceClient, error) {
 	// Look up the requested resource in discovery.
 	apiResource := cs.resources.Get(apiVersion, resource)
 	if apiResource == nil {
@@ -48,7 +50,7 @@ func (cs *dynamicClientset) Resource(apiVersion, resource, namespace string) (*d
 	return cs.resource(apiResource, namespace)
 }
 
-func (cs *dynamicClientset) Kind(apiVersion, kind, namespace string) (*dynamicResourceClient, error) {
+func (cs *Clientset) Kind(apiVersion, kind, namespace string) (*ResourceClient, error) {
 	// Look up the requested resource in discovery.
 	apiResource := cs.resources.GetKind(apiVersion, kind)
 	if apiResource == nil {
@@ -57,7 +59,7 @@ func (cs *dynamicClientset) Kind(apiVersion, kind, namespace string) (*dynamicRe
 	return cs.resource(apiResource, namespace)
 }
 
-func (cs *dynamicClientset) resource(apiResource *APIResource, namespace string) (*dynamicResourceClient, error) {
+func (cs *Clientset) resource(apiResource *dynamicdiscovery.APIResource, namespace string) (*ResourceClient, error) {
 	// Create dynamic client for this apiVersion/resource.
 	gv := apiResource.GroupVersion()
 	config := cs.config
@@ -69,33 +71,33 @@ func (cs *dynamicClientset) resource(apiResource *APIResource, namespace string)
 	if err != nil {
 		return nil, fmt.Errorf("can't create dynamic client for resource %v in apiVersion %v: %v", apiResource.Name, apiResource.APIVersion, err)
 	}
-	return &dynamicResourceClient{ResourceInterface: dc.Resource(&apiResource.APIResource, namespace), gv: gv, resource: apiResource}, nil
+	return &ResourceClient{ResourceInterface: dc.Resource(&apiResource.APIResource, namespace), gv: gv, resource: apiResource}, nil
 }
 
-type dynamicResourceClient struct {
+type ResourceClient struct {
 	dynamic.ResourceInterface
 
 	gv       schema.GroupVersion
-	resource *APIResource
+	resource *dynamicdiscovery.APIResource
 }
 
-func (rc *dynamicResourceClient) Kind() string {
+func (rc *ResourceClient) Kind() string {
 	return rc.resource.Kind
 }
 
-func (rc *dynamicResourceClient) GroupVersion() schema.GroupVersion {
+func (rc *ResourceClient) GroupVersion() schema.GroupVersion {
 	return rc.gv
 }
 
-func (rc *dynamicResourceClient) GroupVersionKind() schema.GroupVersionKind {
+func (rc *ResourceClient) GroupVersionKind() schema.GroupVersionKind {
 	return rc.gv.WithKind(rc.resource.Kind)
 }
 
-func (rc *dynamicResourceClient) APIResource() *APIResource {
+func (rc *ResourceClient) APIResource() *dynamicdiscovery.APIResource {
 	return rc.resource
 }
 
-func (rc *dynamicResourceClient) UpdateWithRetries(orig *unstructured.Unstructured, update func(obj *unstructured.Unstructured) bool) error {
+func (rc *ResourceClient) UpdateWithRetries(orig *unstructured.Unstructured, update func(obj *unstructured.Unstructured) bool) error {
 	name := orig.GetName()
 	return retry.RetryOnConflict(retry.DefaultBackoff, func() error {
 		current, err := rc.Get(name, metav1.GetOptions{})
@@ -112,4 +114,19 @@ func (rc *dynamicResourceClient) UpdateWithRetries(orig *unstructured.Unstructur
 		_, err = rc.Update(current)
 		return err
 	})
+}
+
+type uidError string
+
+func (e uidError) Error() string {
+	return string(e)
+}
+
+func newUIDError(format string, args ...interface{}) error {
+	return uidError(fmt.Sprintf(format, args...))
+}
+
+func IsUIDError(err error) bool {
+	_, ok := err.(uidError)
+	return ok
 }

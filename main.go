@@ -26,13 +26,17 @@ import (
 
 	"github.com/golang/glog"
 
-	"k8s.io/metacontroller/apis/metacontroller/v1alpha1"
-	internalclient "k8s.io/metacontroller/client/generated/clientset/internalclientset"
-	internalinformers "k8s.io/metacontroller/client/generated/informer/externalversions"
-
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
+
+	"k8s.io/metacontroller/apis/metacontroller/v1alpha1"
+	internalclient "k8s.io/metacontroller/client/generated/clientset/internalclientset"
+	internalinformers "k8s.io/metacontroller/client/generated/informer/externalversions"
+	"k8s.io/metacontroller/controller/composite"
+	"k8s.io/metacontroller/controller/initializer"
+	dynamicclientset "k8s.io/metacontroller/dynamic/clientset"
+	dynamicdiscovery "k8s.io/metacontroller/dynamic/discovery"
 )
 
 func resyncAll(config *rest.Config, mcInformerFactory internalinformers.SharedInformerFactory) error {
@@ -45,17 +49,17 @@ func resyncAll(config *rest.Config, mcInformerFactory internalinformers.SharedIn
 	if err != nil {
 		return fmt.Errorf("can't discover resources: %v", err)
 	}
-	dynClient := newDynamicClientset(config, newResourceMap(resources))
+	dynClient := dynamicclientset.New(config, dynamicdiscovery.NewResourceMap(resources))
 
 	// Sync all CompositeController objects.
 	ccLister := mcInformerFactory.Metacontroller().V1alpha1().CompositeControllers().Lister()
-	if err := syncAllCompositeControllers(dynClient, ccLister); err != nil {
+	if err := composite.SyncAll(dynClient, ccLister); err != nil {
 		glog.Errorf("can't sync CompositeControllers: %v", err)
 	}
 
 	// Sync all InitializerController objects.
 	icLister := mcInformerFactory.Metacontroller().V1alpha1().InitializerControllers().Lister()
-	if err := syncAllInitializerControllers(dynClient, icLister); err != nil {
+	if err := initializer.SyncAll(dynClient, icLister); err != nil {
 		glog.Errorf("can't sync InitializerControllers: %v", err)
 	}
 
