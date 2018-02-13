@@ -26,6 +26,8 @@ import (
 type Interface interface {
 	// CompositeControllers returns a CompositeControllerInformer.
 	CompositeControllers() CompositeControllerInformer
+	// ControllerRevisions returns a ControllerRevisionInformer.
+	ControllerRevisions() ControllerRevisionInformer
 	// InitializerControllers returns a InitializerControllerInformer.
 	InitializerControllers() InitializerControllerInformer
 }
@@ -44,6 +46,11 @@ func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakList
 // CompositeControllers returns a CompositeControllerInformer.
 func (v *version) CompositeControllers() CompositeControllerInformer {
 	return &compositeControllerInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+}
+
+// ControllerRevisions returns a ControllerRevisionInformer.
+func (v *version) ControllerRevisions() ControllerRevisionInformer {
+	return &controllerRevisionInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
 // InitializerControllers returns a InitializerControllerInformer.
