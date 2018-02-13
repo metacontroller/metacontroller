@@ -18,6 +18,4 @@ package v1alpha1
 
 type CompositeControllerExpansion interface{}
 
-type ControllerRevisionExpansion interface{}
-
 type InitializerControllerExpansion interface{}
