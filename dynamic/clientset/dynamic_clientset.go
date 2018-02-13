@@ -19,6 +19,7 @@ package clientset
 import (
 	"fmt"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -89,6 +90,13 @@ func (rc *ResourceClient) GroupVersion() schema.GroupVersion {
 	return rc.gv
 }
 
+func (rc *ResourceClient) GroupResource() schema.GroupResource {
+	return schema.GroupResource{
+		Group:    rc.gv.Group,
+		Resource: rc.resource.Name,
+	}
+}
+
 func (rc *ResourceClient) GroupVersionKind() schema.GroupVersionKind {
 	return rc.gv.WithKind(rc.resource.Kind)
 }
@@ -97,36 +105,24 @@ func (rc *ResourceClient) APIResource() *dynamicdiscovery.APIResource {
 	return rc.resource
 }
 
-func (rc *ResourceClient) UpdateWithRetries(orig *unstructured.Unstructured, update func(obj *unstructured.Unstructured) bool) error {
+func (rc *ResourceClient) UpdateWithRetries(orig *unstructured.Unstructured, update func(obj *unstructured.Unstructured) bool) (result *unstructured.Unstructured, err error) {
 	name := orig.GetName()
-	return retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+	err = retry.RetryOnConflict(retry.DefaultBackoff, func() error {
 		current, err := rc.Get(name, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
 		if current.GetUID() != orig.GetUID() {
-			return newUIDError("can't update %v %v/%v: original object is gone: got uid %v, want %v", rc.resource.Kind, orig.GetNamespace(), orig.GetName(), current.GetUID(), orig.GetUID())
+			// The original object was deleted and replaced with a new one.
+			return apierrors.NewNotFound(rc.GroupResource(), name)
 		}
 		if changed := update(current); !changed {
 			// There's nothing to do.
+			result = current
 			return nil
 		}
-		_, err = rc.Update(current)
+		result, err = rc.Update(current)
 		return err
 	})
-}
-
-type uidError string
-
-func (e uidError) Error() string {
-	return string(e)
-}
-
-func newUIDError(format string, args ...interface{}) error {
-	return uidError(fmt.Sprintf(format, args...))
-}
-
-func IsUIDError(err error) bool {
-	_, ok := err.(uidError)
-	return ok
+	return result, err
 }

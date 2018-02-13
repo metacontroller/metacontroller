@@ -120,7 +120,7 @@ func syncParentResource(clientset *dynamicclientset.Clientset, cc *v1alpha1.Comp
 
 	// Update parent status.
 	// We'll want to make sure this happens after manageChildren once we support observedGeneration.
-	if err := updateParentStatus(clientset, cc, parentResource, parent, syncResult.Status); err != nil {
+	if _, err := updateParentStatus(clientset, cc, parentResource, parent, syncResult.Status); err != nil {
 		return fmt.Errorf("can't update status for %v %v/%v: %v", parentResource.Kind, parent.GetNamespace(), parent.GetName(), err)
 	}
 
@@ -163,7 +163,7 @@ func claimChildren(clientset *dynamicclientset.Clientset, cc *v1alpha1.Composite
 			childList := obj.(*unstructured.UnstructuredList)
 
 			// Handle orphan/adopt and filter by owner+selector.
-			crm := dynamiccontrollerref.NewManager(childClient, parent, selector, parentGVK, childClient.GroupVersionKind(), canAdoptFunc)
+			crm := dynamiccontrollerref.NewUnstructuredManager(childClient, parent, selector, parentGVK, childClient.GroupVersionKind(), canAdoptFunc)
 			children, err := crm.ClaimChildren(childList.Items)
 			if err != nil {
 				return nil, fmt.Errorf("can't claim %v children: %v", childClient.Kind(), err)
@@ -181,10 +181,10 @@ func claimChildren(clientset *dynamicclientset.Clientset, cc *v1alpha1.Composite
 	return groups, nil
 }
 
-func updateParentStatus(clientset *dynamicclientset.Clientset, cc *v1alpha1.CompositeController, parentResource *dynamicdiscovery.APIResource, parent *unstructured.Unstructured, status map[string]interface{}) error {
+func updateParentStatus(clientset *dynamicclientset.Clientset, cc *v1alpha1.CompositeController, parentResource *dynamicdiscovery.APIResource, parent *unstructured.Unstructured, status map[string]interface{}) (*unstructured.Unstructured, error) {
 	parentClient, err := clientset.Resource(parentResource.APIVersion, parentResource.Name, parent.GetNamespace())
 	if err != nil {
-		return err
+		return nil, err
 	}
 	// Overwrite .status field of parent object without touching other parts.
 	// We can't use Patch() because we need to ensure that the UID matches.
