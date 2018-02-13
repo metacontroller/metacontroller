@@ -16,7 +16,10 @@ limitations under the License.
 
 package v1alpha1
 
-import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+)
 
 // +genclient
 // +genclient:noStatus
@@ -72,6 +75,33 @@ type CompositeControllerList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`
 	Items           []CompositeController `json:"items"`
+}
+
+// +genclient
+// +genclient:noStatus
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type ControllerRevision struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata"`
+
+	Revision    int64                        `json:"revision"`
+	ParentPatch runtime.RawExtension         `json:"parentPatch"`
+	Children    []ControllerRevisionChildren `json:"children,omitempty"`
+}
+
+type ControllerRevisionChildren struct {
+	APIGroup string   `json:"apiGroup"`
+	Kind     string   `json:"kind"`
+	Names    []string `json:"names"`
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type ControllerRevisionList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata"`
+	Items           []ControllerRevision `json:"items"`
 }
 
 // +genclient
