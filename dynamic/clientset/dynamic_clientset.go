@@ -32,10 +32,10 @@ import (
 
 type Clientset struct {
 	config    rest.Config
-	resources dynamicdiscovery.ResourceDiscovery
+	resources *dynamicdiscovery.ResourceMap
 }
 
-func New(config *rest.Config, resources dynamicdiscovery.ResourceDiscovery) *Clientset {
+func New(config *rest.Config, resources *dynamicdiscovery.ResourceMap) *Clientset {
 	return &Clientset{
 		config:    *config,
 		resources: resources,

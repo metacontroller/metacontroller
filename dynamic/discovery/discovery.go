@@ -18,11 +18,15 @@ package discovery
 
 import (
 	"fmt"
-
 	"strings"
+	"sync"
+	"time"
+
+	"github.com/golang/glog"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/discovery"
 )
 
 type APIResource struct {
@@ -43,33 +47,52 @@ func (r *APIResource) GroupVersionKind() schema.GroupVersionKind {
 	return r.GroupVersion().WithKind(r.Kind)
 }
 
-type ResourceDiscovery interface {
-	Get(groupVersion, resource string) *APIResource
-	GetKind(groupVersion, kind string) *APIResource
-}
-
 type groupVersionEntry struct {
 	resources, kinds map[string]*APIResource
 }
 
-type ResourceMap map[string]groupVersionEntry
+type ResourceMap struct {
+	mutex         sync.RWMutex
+	groupVersions map[string]groupVersionEntry
 
-func (r ResourceMap) Get(apiVersion, resource string) *APIResource {
-	if gv, ok := r[apiVersion]; ok {
-		return gv.resources[resource]
-	}
-	return nil
+	discoveryClient discovery.DiscoveryInterface
 }
 
-func (r ResourceMap) GetKind(apiVersion, kind string) *APIResource {
-	if gv, ok := r[apiVersion]; ok {
-		return gv.kinds[kind]
+func (rm *ResourceMap) Get(apiVersion, resource string) (result *APIResource) {
+	rm.mutex.RLock()
+	defer rm.mutex.RUnlock()
+
+	gv, ok := rm.groupVersions[apiVersion]
+	if !ok {
+		return nil
 	}
-	return nil
+	return gv.resources[resource]
 }
 
-func NewResourceMap(groups []*metav1.APIResourceList) ResourceMap {
-	r := make(ResourceMap, len(groups))
+func (rm *ResourceMap) GetKind(apiVersion, kind string) (result *APIResource) {
+	rm.mutex.RLock()
+	defer rm.mutex.RUnlock()
+
+	gv, ok := rm.groupVersions[apiVersion]
+	if !ok {
+		return nil
+	}
+	return gv.kinds[kind]
+}
+
+func (rm *ResourceMap) refresh() {
+	// Fetch all API Group-Versions and their resources from the server.
+	// We do this before acquiring the lock so we don't block readers.
+	glog.V(7).Info("Refreshing API discovery info")
+	groups, err := rm.discoveryClient.ServerResources()
+	if err != nil {
+		glog.Errorf("Failed to fetch discovery info: %v", err)
+		return
+	}
+
+	// Denormalize resource lists into maps for convenient lookup
+	// by either Group-Version-Kind or Group-Version-Resource.
+	groupVersions := make(map[string]groupVersionEntry, len(groups))
 	for _, group := range groups {
 		gv := groupVersionEntry{
 			resources: make(map[string]*APIResource, len(group.APIResources)),
@@ -89,7 +112,50 @@ func NewResourceMap(groups []*metav1.APIResourceList) ResourceMap {
 				gv.kinds[apiResource.Kind] = apiResource
 			}
 		}
-		r[group.GroupVersion] = gv
+		groupVersions[group.GroupVersion] = gv
 	}
-	return r
+
+	// Replace the local cache.
+	rm.mutex.Lock()
+	rm.groupVersions = groupVersions
+	rm.mutex.Unlock()
+}
+
+func (rm *ResourceMap) Start(refreshInterval time.Duration) (cancel func()) {
+	stop := make(chan struct{})
+	done := make(chan struct{})
+
+	go func() {
+		defer close(done)
+
+		ticker := time.NewTicker(refreshInterval)
+		defer ticker.Stop()
+
+		for {
+			rm.refresh()
+
+			select {
+			case <-stop:
+				return
+			case <-ticker.C:
+			}
+		}
+	}()
+
+	return func() {
+		close(stop)
+		<-done
+	}
+}
+
+func (rm *ResourceMap) HasSynced() bool {
+	rm.mutex.RLock()
+	defer rm.mutex.RUnlock()
+	return rm.groupVersions != nil
+}
+
+func NewResourceMap(discoveryClient discovery.DiscoveryInterface) *ResourceMap {
+	return &ResourceMap{
+		discoveryClient: discoveryClient,
+	}
 }
