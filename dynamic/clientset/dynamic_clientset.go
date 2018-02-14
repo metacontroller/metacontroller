@@ -42,6 +42,10 @@ func New(config *rest.Config, resources *dynamicdiscovery.ResourceMap) *Clientse
 	}
 }
 
+func (cs *Clientset) HasSynced() bool {
+	return cs.resources.HasSynced()
+}
+
 func (cs *Clientset) Resource(apiVersion, resource, namespace string) (*ResourceClient, error) {
 	// Look up the requested resource in discovery.
 	apiResource := cs.resources.Get(apiVersion, resource)
@@ -72,14 +76,27 @@ func (cs *Clientset) resource(apiResource *dynamicdiscovery.APIResource, namespa
 	if err != nil {
 		return nil, fmt.Errorf("can't create dynamic client for resource %v in apiVersion %v: %v", apiResource.Name, apiResource.APIVersion, err)
 	}
-	return &ResourceClient{ResourceInterface: dc.Resource(&apiResource.APIResource, namespace), gv: gv, resource: apiResource}, nil
+	return &ResourceClient{
+		ResourceInterface: dc.Resource(&apiResource.APIResource, namespace),
+		dc:                dc,
+		gv:                gv,
+		resource:          apiResource,
+	}, nil
 }
 
 type ResourceClient struct {
 	dynamic.ResourceInterface
 
+	dc       *dynamic.Client
 	gv       schema.GroupVersion
 	resource *dynamicdiscovery.APIResource
+}
+
+func (rc *ResourceClient) WithNamespace(namespace string) *ResourceClient {
+	// Make a shallow copy of self, then change the namespace.
+	rc2 := *rc
+	rc2.ResourceInterface = rc.dc.Resource(&rc.resource.APIResource, namespace)
+	return &rc2
 }
 
 func (rc *ResourceClient) Kind() string {

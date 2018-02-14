@@ -18,42 +18,80 @@ package initializer
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/golang/glog"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/labels"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
 	"k8s.io/metacontroller/apis/metacontroller/v1alpha1"
-	internallisters "k8s.io/metacontroller/client/generated/lister/metacontroller/v1alpha1"
 	dynamicclientset "k8s.io/metacontroller/dynamic/clientset"
 	k8s "k8s.io/metacontroller/third_party/kubernetes"
 )
 
-func SyncAll(dynClient *dynamicclientset.Clientset, icLister internallisters.InitializerControllerLister) error {
-	icList, err := icLister.List(labels.Everything())
-	if err != nil {
-		return fmt.Errorf("can't list InitializerControllers: %v", err)
-	}
+type initializerController struct {
+	ic        *v1alpha1.InitializerController
+	dynClient *dynamicclientset.Clientset
 
-	for _, ic := range icList {
-		if err := sync(dynClient, ic); err != nil {
-			glog.Errorf("sync InitializerController %v: %v", ic.Name, err)
-			continue
-		}
-	}
-	return nil
+	stopCh, doneCh chan struct{}
 }
 
-func sync(clientset *dynamicclientset.Clientset, ic *v1alpha1.InitializerController) error {
+func newInitializerController(dynClient *dynamicclientset.Clientset, ic *v1alpha1.InitializerController) (*initializerController, error) {
+	return &initializerController{
+		ic:        ic,
+		dynClient: dynClient,
+	}, nil
+}
+
+func (c *initializerController) Start() {
+	c.stopCh = make(chan struct{})
+	c.doneCh = make(chan struct{})
+
+	go func() {
+		defer close(c.doneCh)
+
+		glog.Infof("Starting %v InitializerController", c.ic.Name)
+		defer glog.Infof("Shutting down %v InitializerController", c.ic.Name)
+
+		// Wait for dynamic client to populate discovery cache.
+		if !k8s.WaitForCacheSync(c.ic.Name+"-initializer-controller", c.stopCh, c.dynClient.HasSynced) {
+			return
+		}
+
+		// Start polling in the background.
+		// This interval isn't configurable because polling is going away soon.
+		// TODO(kube-metacontroller#8): Replace with shared, dynamic informers.
+		ticker := time.NewTicker(5 * time.Second)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-c.stopCh:
+				return
+			case <-ticker.C:
+				if err := c.sync(); err != nil {
+					utilruntime.HandleError(fmt.Errorf("can't sync %v initializer controller: %v", c.ic.Name, err))
+				}
+			}
+		}
+	}()
+}
+
+func (c *initializerController) Stop() {
+	close(c.stopCh)
+	<-c.doneCh
+}
+
+func (c *initializerController) sync() error {
 	var errs []error
 	// Find all uninitialized objects of the requested kinds.
-	for _, group := range ic.Spec.UninitializedResources {
+	for _, group := range c.ic.Spec.UninitializedResources {
 		// Within each group/version, there can be multiple resources requested.
 		for _, resourceName := range group.Resources {
-			if err := initializeResource(clientset, ic, group.APIVersion, resourceName); err != nil {
+			if err := c.initializeResource(group.APIVersion, resourceName); err != nil {
 				errs = append(errs, err)
 				continue
 			}
@@ -62,9 +100,9 @@ func sync(clientset *dynamicclientset.Clientset, ic *v1alpha1.InitializerControl
 	return utilerrors.NewAggregate(errs)
 }
 
-func initializeResource(clientset *dynamicclientset.Clientset, ic *v1alpha1.InitializerController, apiVersion, resourceName string) error {
+func (c *initializerController) initializeResource(apiVersion, resourceName string) error {
 	// List all objects of the given kind in all namespaces.
-	client, err := clientset.Resource(apiVersion, resourceName, "")
+	client, err := c.dynClient.Resource(apiVersion, resourceName, "")
 	if err != nil {
 		return err
 	}
@@ -87,8 +125,8 @@ func initializeResource(clientset *dynamicclientset.Clientset, ic *v1alpha1.Init
 		if !ok {
 			continue
 		}
-		if k8s.GetNestedString(first, "name") == ic.Spec.InitializerName {
-			resp, err := callInitHook(ic, &initHookRequest{Object: uninitialized})
+		if k8s.GetNestedString(first, "name") == c.ic.Spec.InitializerName {
+			resp, err := callInitHook(c.ic, &initHookRequest{Object: uninitialized})
 			if err != nil {
 				// TODO(enisoc): Add this as an event on the uninitialized object?
 				errs = append(errs, fmt.Errorf("can't initialize %v %v/%v: %v", uninitialized.GetKind(), uninitialized.GetNamespace(), uninitialized.GetName(), err))
@@ -111,13 +149,8 @@ func initializeResource(clientset *dynamicclientset.Clientset, ic *v1alpha1.Init
 				k8s.SetNestedField(initialized.UnstructuredContent(), resp.Result, "metadata", "initializers", "result")
 			}
 
-			glog.Infof("InitializerController %v: updating %v %v/%v", ic.Name, initialized.GetKind(), initialized.GetNamespace(), initialized.GetName())
-			nsClient, err := clientset.Resource(apiVersion, resourceName, initialized.GetNamespace())
-			if err != nil {
-				errs = append(errs, err)
-				continue
-			}
-			if _, err := nsClient.Update(initialized); err != nil {
+			glog.Infof("InitializerController %v: updating %v %v/%v", c.ic.Name, initialized.GetKind(), initialized.GetNamespace(), initialized.GetName())
+			if _, err := client.WithNamespace(initialized.GetNamespace()).Update(initialized); err != nil {
 				errs = append(errs, fmt.Errorf("can't update %v %v/%v: %v", initialized.GetKind(), initialized.GetNamespace(), initialized.GetName(), err))
 				continue
 			}

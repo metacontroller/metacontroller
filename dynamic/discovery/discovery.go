@@ -56,6 +56,7 @@ type ResourceMap struct {
 	groupVersions map[string]groupVersionEntry
 
 	discoveryClient discovery.DiscoveryInterface
+	stopCh, doneCh  chan struct{}
 }
 
 func (rm *ResourceMap) Get(apiVersion, resource string) (result *APIResource) {
@@ -121,12 +122,12 @@ func (rm *ResourceMap) refresh() {
 	rm.mutex.Unlock()
 }
 
-func (rm *ResourceMap) Start(refreshInterval time.Duration) (cancel func()) {
-	stop := make(chan struct{})
-	done := make(chan struct{})
+func (rm *ResourceMap) Start(refreshInterval time.Duration) {
+	rm.stopCh = make(chan struct{})
+	rm.doneCh = make(chan struct{})
 
 	go func() {
-		defer close(done)
+		defer close(rm.doneCh)
 
 		ticker := time.NewTicker(refreshInterval)
 		defer ticker.Stop()
@@ -135,17 +136,17 @@ func (rm *ResourceMap) Start(refreshInterval time.Duration) (cancel func()) {
 			rm.refresh()
 
 			select {
-			case <-stop:
+			case <-rm.stopCh:
 				return
 			case <-ticker.C:
 			}
 		}
 	}()
+}
 
-	return func() {
-		close(stop)
-		<-done
-	}
+func (rm *ResourceMap) Stop() {
+	close(rm.stopCh)
+	<-rm.doneCh
 }
 
 func (rm *ResourceMap) HasSynced() bool {
