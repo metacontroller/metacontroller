@@ -20,6 +20,7 @@ import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 // +genclient
 // +genclient:noStatus
+// +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 type CompositeController struct {
@@ -77,6 +78,7 @@ type CompositeControllerList struct {
 
 // +genclient
 // +genclient:noStatus
+// +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 type InitializerController struct {

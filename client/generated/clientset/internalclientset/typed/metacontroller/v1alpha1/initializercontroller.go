@@ -28,7 +28,7 @@ import (
 // InitializerControllersGetter has a method to return a InitializerControllerInterface.
 // A group's client should implement this interface.
 type InitializerControllersGetter interface {
-	InitializerControllers(namespace string) InitializerControllerInterface
+	InitializerControllers() InitializerControllerInterface
 }
 
 // InitializerControllerInterface has methods to work with InitializerController resources.
@@ -47,14 +47,12 @@ type InitializerControllerInterface interface {
 // initializerControllers implements InitializerControllerInterface
 type initializerControllers struct {
 	client rest.Interface
-	ns     string
 }
 
 // newInitializerControllers returns a InitializerControllers
-func newInitializerControllers(c *MetacontrollerV1alpha1Client, namespace string) *initializerControllers {
+func newInitializerControllers(c *MetacontrollerV1alpha1Client) *initializerControllers {
 	return &initializerControllers{
 		client: c.RESTClient(),
-		ns:     namespace,
 	}
 }
 
@@ -62,7 +60,6 @@ func newInitializerControllers(c *MetacontrollerV1alpha1Client, namespace string
 func (c *initializerControllers) Get(name string, options v1.GetOptions) (result *v1alpha1.InitializerController, err error) {
 	result = &v1alpha1.InitializerController{}
 	err = c.client.Get().
-		Namespace(c.ns).
 		Resource("initializercontrollers").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
@@ -75,7 +72,6 @@ func (c *initializerControllers) Get(name string, options v1.GetOptions) (result
 func (c *initializerControllers) List(opts v1.ListOptions) (result *v1alpha1.InitializerControllerList, err error) {
 	result = &v1alpha1.InitializerControllerList{}
 	err = c.client.Get().
-		Namespace(c.ns).
 		Resource("initializercontrollers").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Do().
@@ -87,7 +83,6 @@ func (c *initializerControllers) List(opts v1.ListOptions) (result *v1alpha1.Ini
 func (c *initializerControllers) Watch(opts v1.ListOptions) (watch.Interface, error) {
 	opts.Watch = true
 	return c.client.Get().
-		Namespace(c.ns).
 		Resource("initializercontrollers").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Watch()
@@ -97,7 +92,6 @@ func (c *initializerControllers) Watch(opts v1.ListOptions) (watch.Interface, er
 func (c *initializerControllers) Create(initializerController *v1alpha1.InitializerController) (result *v1alpha1.InitializerController, err error) {
 	result = &v1alpha1.InitializerController{}
 	err = c.client.Post().
-		Namespace(c.ns).
 		Resource("initializercontrollers").
 		Body(initializerController).
 		Do().
@@ -109,7 +103,6 @@ func (c *initializerControllers) Create(initializerController *v1alpha1.Initiali
 func (c *initializerControllers) Update(initializerController *v1alpha1.InitializerController) (result *v1alpha1.InitializerController, err error) {
 	result = &v1alpha1.InitializerController{}
 	err = c.client.Put().
-		Namespace(c.ns).
 		Resource("initializercontrollers").
 		Name(initializerController.Name).
 		Body(initializerController).
@@ -121,7 +114,6 @@ func (c *initializerControllers) Update(initializerController *v1alpha1.Initiali
 // Delete takes name of the initializerController and deletes it. Returns an error if one occurs.
 func (c *initializerControllers) Delete(name string, options *v1.DeleteOptions) error {
 	return c.client.Delete().
-		Namespace(c.ns).
 		Resource("initializercontrollers").
 		Name(name).
 		Body(options).
@@ -132,7 +124,6 @@ func (c *initializerControllers) Delete(name string, options *v1.DeleteOptions) 
 // DeleteCollection deletes a collection of objects.
 func (c *initializerControllers) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
 	return c.client.Delete().
-		Namespace(c.ns).
 		Resource("initializercontrollers").
 		VersionedParams(&listOptions, scheme.ParameterCodec).
 		Body(options).
@@ -144,7 +135,6 @@ func (c *initializerControllers) DeleteCollection(options *v1.DeleteOptions, lis
 func (c *initializerControllers) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1alpha1.InitializerController, err error) {
 	result = &v1alpha1.InitializerController{}
 	err = c.client.Patch(pt).
-		Namespace(c.ns).
 		Resource("initializercontrollers").
 		SubResource(subresources...).
 		Name(name).

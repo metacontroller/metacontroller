@@ -29,8 +29,8 @@ import (
 type CompositeControllerLister interface {
 	// List lists all CompositeControllers in the indexer.
 	List(selector labels.Selector) (ret []*v1alpha1.CompositeController, err error)
-	// CompositeControllers returns an object that can list and get CompositeControllers.
-	CompositeControllers(namespace string) CompositeControllerNamespaceLister
+	// Get retrieves the CompositeController from the index for a given name.
+	Get(name string) (*v1alpha1.CompositeController, error)
 	CompositeControllerListerExpansion
 }
 
@@ -52,38 +52,9 @@ func (s *compositeControllerLister) List(selector labels.Selector) (ret []*v1alp
 	return ret, err
 }
 
-// CompositeControllers returns an object that can list and get CompositeControllers.
-func (s *compositeControllerLister) CompositeControllers(namespace string) CompositeControllerNamespaceLister {
-	return compositeControllerNamespaceLister{indexer: s.indexer, namespace: namespace}
-}
-
-// CompositeControllerNamespaceLister helps list and get CompositeControllers.
-type CompositeControllerNamespaceLister interface {
-	// List lists all CompositeControllers in the indexer for a given namespace.
-	List(selector labels.Selector) (ret []*v1alpha1.CompositeController, err error)
-	// Get retrieves the CompositeController from the indexer for a given namespace and name.
-	Get(name string) (*v1alpha1.CompositeController, error)
-	CompositeControllerNamespaceListerExpansion
-}
-
-// compositeControllerNamespaceLister implements the CompositeControllerNamespaceLister
-// interface.
-type compositeControllerNamespaceLister struct {
-	indexer   cache.Indexer
-	namespace string
-}
-
-// List lists all CompositeControllers in the indexer for a given namespace.
-func (s compositeControllerNamespaceLister) List(selector labels.Selector) (ret []*v1alpha1.CompositeController, err error) {
-	err = cache.ListAllByNamespace(s.indexer, s.namespace, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1alpha1.CompositeController))
-	})
-	return ret, err
-}
-
-// Get retrieves the CompositeController from the indexer for a given namespace and name.
-func (s compositeControllerNamespaceLister) Get(name string) (*v1alpha1.CompositeController, error) {
-	obj, exists, err := s.indexer.GetByKey(s.namespace + "/" + name)
+// Get retrieves the CompositeController from the index for a given name.
+func (s *compositeControllerLister) Get(name string) (*v1alpha1.CompositeController, error) {
+	obj, exists, err := s.indexer.GetByKey(name)
 	if err != nil {
 		return nil, err
 	}

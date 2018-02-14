@@ -41,33 +41,32 @@ type CompositeControllerInformer interface {
 type compositeControllerInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
-	namespace        string
 }
 
 // NewCompositeControllerInformer constructs a new informer for CompositeController type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func NewCompositeControllerInformer(client internalclientset.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
-	return NewFilteredCompositeControllerInformer(client, namespace, resyncPeriod, indexers, nil)
+func NewCompositeControllerInformer(client internalclientset.Interface, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
+	return NewFilteredCompositeControllerInformer(client, resyncPeriod, indexers, nil)
 }
 
 // NewFilteredCompositeControllerInformer constructs a new informer for CompositeController type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func NewFilteredCompositeControllerInformer(client internalclientset.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
+func NewFilteredCompositeControllerInformer(client internalclientset.Interface, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
 	return cache.NewSharedIndexInformer(
 		&cache.ListWatch{
 			ListFunc: func(options v1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.MetacontrollerV1alpha1().CompositeControllers(namespace).List(options)
+				return client.MetacontrollerV1alpha1().CompositeControllers().List(options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.MetacontrollerV1alpha1().CompositeControllers(namespace).Watch(options)
+				return client.MetacontrollerV1alpha1().CompositeControllers().Watch(options)
 			},
 		},
 		&metacontroller_v1alpha1.CompositeController{},
@@ -77,7 +76,7 @@ func NewFilteredCompositeControllerInformer(client internalclientset.Interface, 
 }
 
 func (f *compositeControllerInformer) defaultInformer(client internalclientset.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
-	return NewFilteredCompositeControllerInformer(client, f.namespace, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
+	return NewFilteredCompositeControllerInformer(client, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
 }
 
 func (f *compositeControllerInformer) Informer() cache.SharedIndexInformer {

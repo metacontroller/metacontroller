@@ -34,12 +34,12 @@ type MetacontrollerV1alpha1Client struct {
 	restClient rest.Interface
 }
 
-func (c *MetacontrollerV1alpha1Client) CompositeControllers(namespace string) CompositeControllerInterface {
-	return newCompositeControllers(c, namespace)
+func (c *MetacontrollerV1alpha1Client) CompositeControllers() CompositeControllerInterface {
+	return newCompositeControllers(c)
 }
 
-func (c *MetacontrollerV1alpha1Client) InitializerControllers(namespace string) InitializerControllerInterface {
-	return newInitializerControllers(c, namespace)
+func (c *MetacontrollerV1alpha1Client) InitializerControllers() InitializerControllerInterface {
+	return newInitializerControllers(c)
 }
 
 // NewForConfig creates a new MetacontrollerV1alpha1Client for the given config.

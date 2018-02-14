@@ -41,33 +41,32 @@ type InitializerControllerInformer interface {
 type initializerControllerInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
-	namespace        string
 }
 
 // NewInitializerControllerInformer constructs a new informer for InitializerController type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func NewInitializerControllerInformer(client internalclientset.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
-	return NewFilteredInitializerControllerInformer(client, namespace, resyncPeriod, indexers, nil)
+func NewInitializerControllerInformer(client internalclientset.Interface, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
+	return NewFilteredInitializerControllerInformer(client, resyncPeriod, indexers, nil)
 }
 
 // NewFilteredInitializerControllerInformer constructs a new informer for InitializerController type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func NewFilteredInitializerControllerInformer(client internalclientset.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
+func NewFilteredInitializerControllerInformer(client internalclientset.Interface, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
 	return cache.NewSharedIndexInformer(
 		&cache.ListWatch{
 			ListFunc: func(options v1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.MetacontrollerV1alpha1().InitializerControllers(namespace).List(options)
+				return client.MetacontrollerV1alpha1().InitializerControllers().List(options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.MetacontrollerV1alpha1().InitializerControllers(namespace).Watch(options)
+				return client.MetacontrollerV1alpha1().InitializerControllers().Watch(options)
 			},
 		},
 		&metacontroller_v1alpha1.InitializerController{},
@@ -77,7 +76,7 @@ func NewFilteredInitializerControllerInformer(client internalclientset.Interface
 }
 
 func (f *initializerControllerInformer) defaultInformer(client internalclientset.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
-	return NewFilteredInitializerControllerInformer(client, f.namespace, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
+	return NewFilteredInitializerControllerInformer(client, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
 }
 
 func (f *initializerControllerInformer) Informer() cache.SharedIndexInformer {

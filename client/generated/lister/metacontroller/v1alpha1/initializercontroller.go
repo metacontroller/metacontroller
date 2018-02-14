@@ -29,8 +29,8 @@ import (
 type InitializerControllerLister interface {
 	// List lists all InitializerControllers in the indexer.
 	List(selector labels.Selector) (ret []*v1alpha1.InitializerController, err error)
-	// InitializerControllers returns an object that can list and get InitializerControllers.
-	InitializerControllers(namespace string) InitializerControllerNamespaceLister
+	// Get retrieves the InitializerController from the index for a given name.
+	Get(name string) (*v1alpha1.InitializerController, error)
 	InitializerControllerListerExpansion
 }
 
@@ -52,38 +52,9 @@ func (s *initializerControllerLister) List(selector labels.Selector) (ret []*v1a
 	return ret, err
 }
 
-// InitializerControllers returns an object that can list and get InitializerControllers.
-func (s *initializerControllerLister) InitializerControllers(namespace string) InitializerControllerNamespaceLister {
-	return initializerControllerNamespaceLister{indexer: s.indexer, namespace: namespace}
-}
-
-// InitializerControllerNamespaceLister helps list and get InitializerControllers.
-type InitializerControllerNamespaceLister interface {
-	// List lists all InitializerControllers in the indexer for a given namespace.
-	List(selector labels.Selector) (ret []*v1alpha1.InitializerController, err error)
-	// Get retrieves the InitializerController from the indexer for a given namespace and name.
-	Get(name string) (*v1alpha1.InitializerController, error)
-	InitializerControllerNamespaceListerExpansion
-}
-
-// initializerControllerNamespaceLister implements the InitializerControllerNamespaceLister
-// interface.
-type initializerControllerNamespaceLister struct {
-	indexer   cache.Indexer
-	namespace string
-}
-
-// List lists all InitializerControllers in the indexer for a given namespace.
-func (s initializerControllerNamespaceLister) List(selector labels.Selector) (ret []*v1alpha1.InitializerController, err error) {
-	err = cache.ListAllByNamespace(s.indexer, s.namespace, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1alpha1.InitializerController))
-	})
-	return ret, err
-}
-
-// Get retrieves the InitializerController from the indexer for a given namespace and name.
-func (s initializerControllerNamespaceLister) Get(name string) (*v1alpha1.InitializerController, error) {
-	obj, exists, err := s.indexer.GetByKey(s.namespace + "/" + name)
+// Get retrieves the InitializerController from the index for a given name.
+func (s *initializerControllerLister) Get(name string) (*v1alpha1.InitializerController, error) {
+	obj, exists, err := s.indexer.GetByKey(name)
 	if err != nil {
 		return nil, err
 	}
