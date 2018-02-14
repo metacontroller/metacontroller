@@ -25,7 +25,6 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
-	"k8s.io/kubernetes/pkg/util/pointer"
 
 	dynamicclientset "k8s.io/metacontroller/dynamic/clientset"
 	k8s "k8s.io/metacontroller/third_party/kubernetes"
@@ -88,8 +87,8 @@ func (m *UnstructuredManager) adoptChild(obj *unstructured.Unstructured) error {
 		Kind:               m.parentKind.Kind,
 		Name:               m.Controller.GetName(),
 		UID:                m.Controller.GetUID(),
-		Controller:         pointer.BoolPtr(true),
-		BlockOwnerDeletion: pointer.BoolPtr(true),
+		Controller:         k8s.BoolPtr(true),
+		BlockOwnerDeletion: k8s.BoolPtr(true),
 	}
 
 	// We can't use strategic merge patch because we want this to work with custom resources.
