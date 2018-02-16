@@ -64,7 +64,7 @@ spec:
     resource: vitessclusters
   childResources:
   - apiVersion: vitess.io/v1alpha1
-    resources: ["vitesscells"]
+    resource: vitesscells
   clientConfig:
     service:
       name: vitess-operator
@@ -83,15 +83,17 @@ spec:
     resource: vitesscells
   childResources:
   - apiVersion: v1
-    resources: ["services", "configmaps"]
+    resource: services
+  - apiVersion: v1
+    resource: configmaps
   - apiVersion: apps/v1beta2
-    resources: ["deployments"]
+    resource: deployments
   - apiVersion: batch/v1
-    resources: ["jobs"]
+    resource: jobs
   - apiVersion: etcd.database.coreos.com/v1beta2
-    resources: ["etcdclusters"]
+    resource: etcdclusters
   - apiVersion: vitess.io/v1alpha1
-    resources: ["vitesskeyspaces"]
+    resource: vitesskeyspaces
   clientConfig:
     service:
       name: vitess-operator
@@ -110,7 +112,7 @@ spec:
     resource: vitesskeyspaces
   childResources:
   - apiVersion: vitess.io/v1alpha1
-    resources: ["vitessshards"]
+    resource: vitessshards
   clientConfig:
     service:
       name: vitess-operator
@@ -129,7 +131,9 @@ spec:
     resource: vitessshards
   childResources:
   - apiVersion: v1
-    resources: ["pods", "persistentvolumeclaims"]
+    resource: pods
+  - apiVersion: v1
+    resource: persistentvolumeclaims
   clientConfig:
     service:
       name: vitess-operator

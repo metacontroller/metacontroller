@@ -6,7 +6,7 @@ spec:
   initializerName: podhostname.enisoc.com
   uninitializedResources:
   - apiVersion: v1
-    resources: ["pods"]
+    resource: pods
   clientConfig:
     service:
       name: podhostname-initializer

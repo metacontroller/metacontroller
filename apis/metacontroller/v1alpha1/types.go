@@ -26,26 +26,24 @@ import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 type CompositeController struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
-	Spec              CompositeControllerSpec   `json:"spec"`
-	Status            CompositeControllerStatus `json:"status,omitempty"`
+
+	Spec   CompositeControllerSpec   `json:"spec"`
+	Status CompositeControllerStatus `json:"status,omitempty"`
 }
 
 type CompositeControllerSpec struct {
-	ParentResource   ResourceRule             `json:"parentResource"`
-	ChildResources   []ResourcesRule          `json:"childResources,omitempty"`
-	ClientConfig     ClientConfig             `json:"clientConfig,omitempty"`
-	Hooks            CompositeControllerHooks `json:"hooks,omitempty"`
-	GenerateSelector bool                     `json:"generateSelector,omitempty"`
+	ParentResource ResourceRule   `json:"parentResource"`
+	ChildResources []ResourceRule `json:"childResources,omitempty"`
+
+	ClientConfig ClientConfig             `json:"clientConfig,omitempty"`
+	Hooks        CompositeControllerHooks `json:"hooks,omitempty"`
+
+	GenerateSelector bool `json:"generateSelector,omitempty"`
 }
 
 type ResourceRule struct {
 	APIVersion string `json:"apiVersion"`
 	Resource   string `json:"resource"`
-}
-
-type ResourcesRule struct {
-	APIVersion string   `json:"apiVersion"`
-	Resources  []string `json:"resources"`
 }
 
 type ClientConfig struct {
@@ -90,7 +88,7 @@ type InitializerController struct {
 
 type InitializerControllerSpec struct {
 	InitializerName        string                     `json:"initializerName"`
-	UninitializedResources []ResourcesRule            `json:"uninitializedResources,omitempty"`
+	UninitializedResources []ResourceRule             `json:"uninitializedResources,omitempty"`
 	ClientConfig           ClientConfig               `json:"clientConfig,omitempty"`
 	Hooks                  InitializerControllerHooks `json:"hooks,omitempty"`
 }

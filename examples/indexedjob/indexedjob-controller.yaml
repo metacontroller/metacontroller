@@ -22,7 +22,7 @@ spec:
     resource: indexedjobs
   childResources:
     - apiVersion: v1
-      resources: ["pods"]
+      resource: pods
   clientConfig:
     service:
       name: indexedjob-controller

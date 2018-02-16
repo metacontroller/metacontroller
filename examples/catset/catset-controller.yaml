@@ -22,8 +22,10 @@ spec:
     apiVersion: ctl.enisoc.com/v1
     resource: catsets
   childResources:
-    - apiVersion: v1
-      resources: ["pods", "persistentvolumeclaims"]
+  - apiVersion: v1
+    resource: pods
+  - apiVersion: v1
+    resource: persistentvolumeclaims
   clientConfig:
     service:
       name: catset-controller
