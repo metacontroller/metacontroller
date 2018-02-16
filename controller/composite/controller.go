@@ -197,35 +197,32 @@ func (pc *parentController) claimChildren(parent *unstructured.Unstructured) (ch
 
 	// Claim all child types.
 	groups := make(childMap)
-	for _, group := range pc.cc.Spec.ChildResources {
-		// Within each group/version, there can be multiple resources requested.
-		for _, resourceName := range group.Resources {
-			// List all objects of the child kind in the parent object's namespace.
-			childClient, err := pc.dynClient.Resource(group.APIVersion, resourceName, parent.GetNamespace())
-			if err != nil {
-				return nil, err
-			}
-			obj, err := childClient.List(metav1.ListOptions{})
-			if err != nil {
-				return nil, fmt.Errorf("can't list %v children: %v", childClient.Kind(), err)
-			}
-			childList := obj.(*unstructured.UnstructuredList)
-
-			// Handle orphan/adopt and filter by owner+selector.
-			crm := dynamiccontrollerref.NewUnstructuredManager(childClient, parent, selector, parentGVK, childClient.GroupVersionKind(), canAdoptFunc)
-			children, err := crm.ClaimChildren(childList.Items)
-			if err != nil {
-				return nil, fmt.Errorf("can't claim %v children: %v", childClient.Kind(), err)
-			}
-
-			// Add children to map by name.
-			// Note that we limit each parent to only working within its own namespace.
-			groupMap := make(map[string]*unstructured.Unstructured)
-			for _, child := range children {
-				groupMap[child.GetName()] = child
-			}
-			groups[fmt.Sprintf("%s.%s", childClient.Kind(), group.APIVersion)] = groupMap
+	for _, child := range pc.cc.Spec.ChildResources {
+		// List all objects of the child kind in the parent object's namespace.
+		childClient, err := pc.dynClient.Resource(child.APIVersion, child.Resource, parent.GetNamespace())
+		if err != nil {
+			return nil, err
 		}
+		obj, err := childClient.List(metav1.ListOptions{})
+		if err != nil {
+			return nil, fmt.Errorf("can't list %v children: %v", childClient.Kind(), err)
+		}
+		childList := obj.(*unstructured.UnstructuredList)
+
+		// Handle orphan/adopt and filter by owner+selector.
+		crm := dynamiccontrollerref.NewUnstructuredManager(childClient, parent, selector, parentGVK, childClient.GroupVersionKind(), canAdoptFunc)
+		children, err := crm.ClaimChildren(childList.Items)
+		if err != nil {
+			return nil, fmt.Errorf("can't claim %v children: %v", childClient.Kind(), err)
+		}
+
+		// Add children to map by name.
+		// Note that we limit each parent to only working within its own namespace.
+		groupMap := make(map[string]*unstructured.Unstructured)
+		for _, child := range children {
+			groupMap[child.GetName()] = child
+		}
+		groups[fmt.Sprintf("%s.%s", childClient.Kind(), child.APIVersion)] = groupMap
 	}
 	return groups, nil
 }

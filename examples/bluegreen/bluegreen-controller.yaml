@@ -23,9 +23,9 @@ spec:
     resource: bluegreendeployments
   childResources:
   - apiVersion: v1
-    resources: ["services"]
+    resource: services
   - apiVersion: extensions/v1beta1
-    resources: ["replicasets"]
+    resource: replicasets
   clientConfig:
     service:
       name: bluegreen-controller

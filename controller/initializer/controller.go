@@ -88,13 +88,10 @@ func (c *initializerController) Stop() {
 func (c *initializerController) sync() error {
 	var errs []error
 	// Find all uninitialized objects of the requested kinds.
-	for _, group := range c.ic.Spec.UninitializedResources {
-		// Within each group/version, there can be multiple resources requested.
-		for _, resourceName := range group.Resources {
-			if err := c.initializeResource(group.APIVersion, resourceName); err != nil {
-				errs = append(errs, err)
-				continue
-			}
+	for _, rule := range c.ic.Spec.UninitializedResources {
+		if err := c.initializeResource(rule.APIVersion, rule.Resource); err != nil {
+			errs = append(errs, err)
+			continue
 		}
 	}
 	return utilerrors.NewAggregate(errs)
