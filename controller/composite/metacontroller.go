@@ -29,17 +29,24 @@ import (
 	"k8s.io/client-go/util/workqueue"
 
 	"k8s.io/metacontroller/apis/metacontroller/v1alpha1"
+	mcclientset "k8s.io/metacontroller/client/generated/clientset/internalclientset"
 	mcinformers "k8s.io/metacontroller/client/generated/informer/externalversions"
 	mclisters "k8s.io/metacontroller/client/generated/lister/metacontroller/v1alpha1"
 	"k8s.io/metacontroller/controller/common"
 	dynamicclientset "k8s.io/metacontroller/dynamic/clientset"
+	dynamicdiscovery "k8s.io/metacontroller/dynamic/discovery"
 	k8s "k8s.io/metacontroller/third_party/kubernetes"
 )
 
 type Metacontroller struct {
-	dynClient  *dynamicclientset.Clientset
-	ccLister   mclisters.CompositeControllerLister
-	ccInformer cache.SharedIndexInformer
+	resources *dynamicdiscovery.ResourceMap
+	mcClient  mcclientset.Interface
+	dynClient *dynamicclientset.Clientset
+
+	ccLister         mclisters.CompositeControllerLister
+	ccInformer       cache.SharedIndexInformer
+	revisionLister   mclisters.ControllerRevisionLister
+	revisionInformer cache.SharedIndexInformer
 
 	queue             workqueue.RateLimitingInterface
 	parentControllers map[string]*parentController
@@ -47,11 +54,17 @@ type Metacontroller struct {
 	stopCh, doneCh chan struct{}
 }
 
-func NewMetacontroller(dynClient *dynamicclientset.Clientset, mcInformerFactory mcinformers.SharedInformerFactory) *Metacontroller {
+func NewMetacontroller(resources *dynamicdiscovery.ResourceMap, dynClient *dynamicclientset.Clientset, mcInformerFactory mcinformers.SharedInformerFactory, mcClient mcclientset.Interface) *Metacontroller {
 	mc := &Metacontroller{
-		dynClient:         dynClient,
-		ccLister:          mcInformerFactory.Metacontroller().V1alpha1().CompositeControllers().Lister(),
-		ccInformer:        mcInformerFactory.Metacontroller().V1alpha1().CompositeControllers().Informer(),
+		resources: resources,
+		mcClient:  mcClient,
+		dynClient: dynClient,
+
+		ccLister:         mcInformerFactory.Metacontroller().V1alpha1().CompositeControllers().Lister(),
+		ccInformer:       mcInformerFactory.Metacontroller().V1alpha1().CompositeControllers().Informer(),
+		revisionLister:   mcInformerFactory.Metacontroller().V1alpha1().ControllerRevisions().Lister(),
+		revisionInformer: mcInformerFactory.Metacontroller().V1alpha1().ControllerRevisions().Informer(),
+
 		queue:             workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "CompositeController"),
 		parentControllers: make(map[string]*parentController),
 	}
@@ -159,7 +172,7 @@ func (mc *Metacontroller) syncCompositeController(cc *v1alpha1.CompositeControll
 		delete(mc.parentControllers, cc.Name)
 	}
 
-	pc, err := newParentController(mc.dynClient, cc)
+	pc, err := newParentController(mc.resources, mc.dynClient, mc.mcClient, mc.revisionLister, cc)
 	if err != nil {
 		return err
 	}

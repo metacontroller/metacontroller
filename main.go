@@ -75,7 +75,7 @@ func main() {
 	// Start metacontrollers (controllers that spawn controllers).
 	// Each one requests the informers it needs from the factory.
 	controllers := []controller{
-		composite.NewMetacontroller(dynClient, mcInformerFactory),
+		composite.NewMetacontroller(resources, dynClient, mcInformerFactory, mcClient),
 		initializer.NewMetacontroller(dynClient, mcInformerFactory),
 	}
 

@@ -65,6 +65,13 @@ func GetNestedArray(obj map[string]interface{}, fields ...string) []interface{} 
 	return nil
 }
 
+func GetNestedObject(obj map[string]interface{}, fields ...string) map[string]interface{} {
+	if obj, ok := GetNestedField(obj, fields...).(map[string]interface{}); ok {
+		return obj
+	}
+	return nil
+}
+
 func GetNestedInt64(obj map[string]interface{}, fields ...string) int64 {
 	if str, ok := GetNestedField(obj, fields...).(int64); ok {
 		return str

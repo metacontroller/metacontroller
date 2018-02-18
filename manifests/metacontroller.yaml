@@ -68,5 +68,5 @@ spec:
         command: ["/usr/bin/metacontroller"]
         args:
         - --logtostderr
-        - -v=5
+        - -v=4
         - --discovery-interval=10s

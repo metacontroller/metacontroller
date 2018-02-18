@@ -19,7 +19,6 @@ package composite
 import (
 	"fmt"
 	"reflect"
-	"strings"
 	"time"
 
 	"github.com/golang/glog"
@@ -32,6 +31,8 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
 	"k8s.io/metacontroller/apis/metacontroller/v1alpha1"
+	mcclientset "k8s.io/metacontroller/client/generated/clientset/internalclientset"
+	mclisters "k8s.io/metacontroller/client/generated/lister/metacontroller/v1alpha1"
 	dynamicapply "k8s.io/metacontroller/dynamic/apply"
 	dynamicclientset "k8s.io/metacontroller/dynamic/clientset"
 	dynamiccontrollerref "k8s.io/metacontroller/dynamic/controllerref"
@@ -40,27 +41,44 @@ import (
 )
 
 type parentController struct {
-	cc             *v1alpha1.CompositeController
+	cc *v1alpha1.CompositeController
+
+	resources      *dynamicdiscovery.ResourceMap
+	mcClient       mcclientset.Interface
 	dynClient      *dynamicclientset.Clientset
 	parentClient   *dynamicclientset.ResourceClient
 	parentResource *dynamicdiscovery.APIResource
 
+	revisionLister mclisters.ControllerRevisionLister
+
 	stopCh, doneCh chan struct{}
+
+	updateStrategy updateStrategyMap
 }
 
-func newParentController(dynClient *dynamicclientset.Clientset, cc *v1alpha1.CompositeController) (*parentController, error) {
+func newParentController(resources *dynamicdiscovery.ResourceMap, dynClient *dynamicclientset.Clientset, mcClient mcclientset.Interface, revisionLister mclisters.ControllerRevisionLister, cc *v1alpha1.CompositeController) (*parentController, error) {
 	// Make a dynamic client for the parent resource.
 	parentClient, err := dynClient.Resource(cc.Spec.ParentResource.APIVersion, cc.Spec.ParentResource.Resource, "")
 	if err != nil {
 		return nil, err
 	}
 
-	return &parentController{
+	pc := &parentController{
 		cc:             cc,
+		resources:      resources,
+		mcClient:       mcClient,
 		dynClient:      dynClient,
 		parentClient:   parentClient,
 		parentResource: parentClient.APIResource(),
-	}, nil
+		revisionLister: revisionLister,
+	}
+
+	pc.updateStrategy, err = makeUpdateStrategyMap(resources, cc)
+	if err != nil {
+		return nil, err
+	}
+
+	return pc, nil
 }
 
 func (pc *parentController) Start() {
@@ -111,7 +129,7 @@ func (pc *parentController) syncAll() error {
 	list := obj.(*unstructured.UnstructuredList)
 	for i := range list.Items {
 		parent := &list.Items[i]
-		if err := pc.syncParentResource(parent); err != nil {
+		if err := pc.syncParentObject(parent); err != nil {
 			glog.Errorf("can't sync %v %v/%v: %v", pc.parentResource.Kind, parent.GetNamespace(), parent.GetName(), err)
 			continue
 		}
@@ -120,54 +138,58 @@ func (pc *parentController) syncAll() error {
 	return nil
 }
 
-func (pc *parentController) syncParentResource(parent *unstructured.Unstructured) error {
+func (pc *parentController) syncParentObject(parent *unstructured.Unstructured) error {
 	// Claim all matching child resources, including orphan/adopt as necessary.
-	children, err := pc.claimChildren(parent)
+	observedChildren, err := pc.claimChildren(parent)
 	if err != nil {
-		return fmt.Errorf("can't claim children: %v", err)
+		return err
 	}
 
-	// Call the sync hook for this parent.
-	syncRequest := &syncHookRequest{
-		Controller: pc.cc,
-		Parent:     parent,
-		Children:   children,
-	}
-	syncResult, err := callSyncHook(pc.cc, syncRequest)
+	// Reconcile ControllerRevisions belonging to this parent.
+	// Call the sync hook for each revision, then compute the overall status and
+	// desired children, accounting for any rollout in progress.
+	parentStatus, desiredChildren, err := pc.syncRevisions(parent, observedChildren)
 	if err != nil {
-		return fmt.Errorf("sync hook failed for %v %v/%v: %v", pc.parentResource.Kind, parent.GetNamespace(), parent.GetName(), err)
+		return err
 	}
 
+	// Reconcile child objects belonging to this parent.
 	// Remember manage error, but continue to update status regardless.
 	var manageErr error
 	if parent.GetDeletionTimestamp() == nil {
 		// Reconcile children.
-		if err := pc.manageChildren(parent, children, makeChildMap(syncResult.Children)); err != nil {
+		if err := pc.manageChildren(parent, observedChildren, desiredChildren); err != nil {
 			manageErr = fmt.Errorf("can't reconcile children for %v %v/%v: %v", pc.parentResource.Kind, parent.GetNamespace(), parent.GetName(), err)
 		}
 	}
 
 	// Update parent status.
 	// We'll want to make sure this happens after manageChildren once we support observedGeneration.
-	if _, err := pc.updateParentStatus(parent, syncResult.Status); err != nil {
+	if _, err := pc.updateParentStatus(parent, parentStatus); err != nil {
 		return fmt.Errorf("can't update status for %v %v/%v: %v", pc.parentResource.Kind, parent.GetNamespace(), parent.GetName(), err)
 	}
 
 	return manageErr
 }
 
-func (pc *parentController) getSelector(parent *unstructured.Unstructured) (labels.Selector, error) {
+func (pc *parentController) makeSelector(parent *unstructured.Unstructured, extraMatchLabels map[string]string) (labels.Selector, error) {
 	labelSelector := &metav1.LabelSelector{}
+
 	if pc.cc.Spec.GenerateSelector {
 		// Select by controller-uid, like Job does.
 		// Any selector on the parent is ignored in this case.
 		labelSelector = metav1.AddLabelToSelector(labelSelector, "controller-uid", string(parent.GetUID()))
 	} else {
 		// Get the parent's LabelSelector.
-		if err := k8s.GetNestedFieldInto(&labelSelector, parent.UnstructuredContent(), "spec", "selector"); err != nil {
+		if err := k8s.GetNestedFieldInto(labelSelector, parent.UnstructuredContent(), "spec", "selector"); err != nil {
 			return nil, fmt.Errorf("can't get label selector from %v %v/%v", pc.parentResource.Kind, parent.GetNamespace(), parent.GetName())
 		}
 	}
+
+	for key, value := range extraMatchLabels {
+		labelSelector = metav1.AddLabelToSelector(labelSelector, key, value)
+	}
+
 	selector, err := metav1.LabelSelectorAsSelector(labelSelector)
 	if err != nil {
 		return nil, fmt.Errorf("can't convert label selector (%#v): %v", labelSelector, err)
@@ -175,15 +197,9 @@ func (pc *parentController) getSelector(parent *unstructured.Unstructured) (labe
 	return selector, nil
 }
 
-func (pc *parentController) claimChildren(parent *unstructured.Unstructured) (childMap, error) {
-	// Set up values common to all child types.
-	parentGVK := pc.parentResource.GroupVersionKind()
-	selector, err := pc.getSelector(parent)
-	if err != nil {
-		return nil, err
-	}
+func (pc *parentController) canAdoptFunc(parent *unstructured.Unstructured) func() error {
 	nsParentClient := pc.parentClient.WithNamespace(parent.GetNamespace())
-	canAdoptFunc := k8s.RecheckDeletionTimestamp(func() (metav1.Object, error) {
+	return k8s.RecheckDeletionTimestamp(func() (metav1.Object, error) {
 		// Make sure this is always an uncached read.
 		fresh, err := nsParentClient.Get(parent.GetName(), metav1.GetOptions{})
 		if err != nil {
@@ -194,6 +210,16 @@ func (pc *parentController) claimChildren(parent *unstructured.Unstructured) (ch
 		}
 		return fresh, nil
 	})
+}
+
+func (pc *parentController) claimChildren(parent *unstructured.Unstructured) (childMap, error) {
+	// Set up values common to all child types.
+	parentGVK := pc.parentResource.GroupVersionKind()
+	selector, err := pc.makeSelector(parent, nil)
+	if err != nil {
+		return nil, err
+	}
+	canAdoptFunc := pc.canAdoptFunc(parent)
 
 	// Claim all child types.
 	groups := make(childMap)
@@ -267,30 +293,53 @@ func deleteChildren(client *dynamicclientset.ResourceClient, parent *unstructure
 	return utilerrors.NewAggregate(errs)
 }
 
-func updateChildren(client *dynamicclientset.ResourceClient, parent *unstructured.Unstructured, observed, desired map[string]*unstructured.Unstructured) error {
+func (pc *parentController) updateChildren(client *dynamicclientset.ResourceClient, parent *unstructured.Unstructured, observed, desired map[string]*unstructured.Unstructured) error {
 	var errs []error
 	for name, obj := range desired {
 		if oldObj := observed[name]; oldObj != nil {
 			// Update
-			var newObj *unstructured.Unstructured
-
-			// The controller only returns a partial object.
-			// We compute the full updated object in the style of "kubectl apply".
-			lastApplied, err := dynamicapply.GetLastApplied(oldObj)
+			newObj, err := applyUpdate(oldObj, obj)
 			if err != nil {
 				errs = append(errs, err)
 				continue
 			}
-			newObj = &unstructured.Unstructured{}
-			newObj.Object, err = dynamicapply.Merge(oldObj.UnstructuredContent(), lastApplied, obj.UnstructuredContent())
-			if err != nil {
-				errs = append(errs, err)
-				continue
-			}
-			dynamicapply.SetLastApplied(newObj, obj.UnstructuredContent())
 
 			// Attempt an update, if the 3-way merge resulted in any changes.
-			if !reflect.DeepEqual(newObj.UnstructuredContent(), oldObj.UnstructuredContent()) {
+			if reflect.DeepEqual(newObj.UnstructuredContent(), oldObj.UnstructuredContent()) {
+				// Nothing changed.
+				continue
+			}
+
+			// Leave it alone if it's pending deletion.
+			if oldObj.GetDeletionTimestamp() != nil {
+				glog.Infof("%v %v/%v: not updating %v %v (pending deletion)", parent.GetKind(), parent.GetNamespace(), parent.GetName(), obj.GetKind(), obj.GetName())
+				continue
+			}
+
+			// Check the update strategy for this child kind.
+			strategy := pc.updateStrategy.get(client.GroupVersion().Group, client.Kind())
+			if strategy == nil {
+				// No update strategy specified, or OnDelete specified.
+				// This means we don't try to update anything unless it gets deleted
+				// by someone else (we won't delete it ourselves).
+				glog.V(2).Infof("%v %v/%v: not updating %v %v (OnDelete update strategy)", parent.GetKind(), parent.GetNamespace(), parent.GetName(), obj.GetKind(), obj.GetName())
+				continue
+			}
+
+			switch strategy.Method {
+			case v1alpha1.ChildUpdateRecreate, v1alpha1.ChildUpdateRollingRecreate:
+				// Delete the object (now) and recreate it (on the next sync).
+				glog.Infof("%v %v/%v: deleting %v %v for update", parent.GetKind(), parent.GetNamespace(), parent.GetName(), obj.GetKind(), obj.GetName())
+				uid := oldObj.GetUID()
+				err := client.Delete(name, &metav1.DeleteOptions{
+					Preconditions: &metav1.Preconditions{UID: &uid},
+				})
+				if err != nil {
+					errs = append(errs, err)
+					continue
+				}
+			case v1alpha1.ChildUpdateInPlace, v1alpha1.ChildUpdateRollingInPlace:
+				// Update the object in-place.
 				glog.Infof("%v %v/%v: updating %v %v", parent.GetKind(), parent.GetNamespace(), parent.GetName(), obj.GetKind(), obj.GetName())
 				if glog.V(5) {
 					glog.Infof("reflect diff: a=observed, b=desired:\n%s", diff.ObjectReflectDiff(oldObj.UnstructuredContent(), newObj.UnstructuredContent()))
@@ -299,6 +348,9 @@ func updateChildren(client *dynamicclientset.ResourceClient, parent *unstructure
 					errs = append(errs, err)
 					continue
 				}
+			default:
+				errs = append(errs, fmt.Errorf("invalid update strategy for %v: unknown method %q", client.Kind(), strategy.Method))
+				continue
 			}
 		} else {
 			// Create
@@ -315,17 +367,10 @@ func updateChildren(client *dynamicclientset.ResourceClient, parent *unstructure
 			}
 
 			// For CompositeController, we always claim everything we create.
-			controllerRef := map[string]interface{}{
-				"apiVersion":         parent.GetAPIVersion(),
-				"kind":               parent.GetKind(),
-				"name":               parent.GetName(),
-				"uid":                string(parent.GetUID()),
-				"controller":         true,
-				"blockOwnerDeletion": true,
-			}
-			ownerRefs, _ := k8s.GetNestedField(obj.UnstructuredContent(), "metadata", "ownerReferences").([]interface{})
-			ownerRefs = append(ownerRefs, controllerRef)
-			k8s.SetNestedField(obj.UnstructuredContent(), ownerRefs, "metadata", "ownerReferences")
+			controllerRef := makeControllerRef(parent)
+			ownerRefs := obj.GetOwnerReferences()
+			ownerRefs = append(ownerRefs, *controllerRef)
+			obj.SetOwnerReferences(ownerRefs)
 
 			if _, err := client.Create(obj); err != nil {
 				errs = append(errs, err)
@@ -336,7 +381,7 @@ func updateChildren(client *dynamicclientset.ResourceClient, parent *unstructure
 	return utilerrors.NewAggregate(errs)
 }
 
-func (pc *parentController) manageChildren(parent *unstructured.Unstructured, observedChildren childMap, desiredChildren childMap) error {
+func (pc *parentController) manageChildren(parent *unstructured.Unstructured, observedChildren, desiredChildren childMap) error {
 	// If some operations fail, keep trying others so, for example,
 	// we don't block recovery (create new Pod) on a failed delete.
 	var errs []error
@@ -377,7 +422,7 @@ func (pc *parentController) manageChildren(parent *unstructured.Unstructured, ob
 				obj.SetLabels(labels)
 			}
 		}
-		if err := updateChildren(client, parent, observedChildren[key], objects); err != nil {
+		if err := pc.updateChildren(client, parent, observedChildren[key], objects); err != nil {
 			errs = append(errs, err)
 			continue
 		}
@@ -386,22 +431,29 @@ func (pc *parentController) manageChildren(parent *unstructured.Unstructured, ob
 	return utilerrors.NewAggregate(errs)
 }
 
-func makeChildMap(list []*unstructured.Unstructured) childMap {
-	children := make(childMap)
-	for _, child := range list {
-		apiVersion := k8s.GetNestedString(child.UnstructuredContent(), "apiVersion")
-		kind := k8s.GetNestedString(child.UnstructuredContent(), "kind")
-		key := fmt.Sprintf("%s.%s", kind, apiVersion)
-
-		if children[key] == nil {
-			children[key] = make(map[string]*unstructured.Unstructured)
-		}
-		children[key][child.GetName()] = child
+func applyUpdate(orig, update *unstructured.Unstructured) (*unstructured.Unstructured, error) {
+	// The controller only returns a partial object.
+	// We compute the full updated object in the style of "kubectl apply".
+	lastApplied, err := dynamicapply.GetLastApplied(orig)
+	if err != nil {
+		return nil, err
 	}
-	return children
+	newObj := &unstructured.Unstructured{}
+	newObj.Object, err = dynamicapply.Merge(orig.UnstructuredContent(), lastApplied, update.UnstructuredContent())
+	if err != nil {
+		return nil, err
+	}
+	dynamicapply.SetLastApplied(newObj, update.UnstructuredContent())
+	return newObj, nil
 }
 
-func parseChildMapKey(key string) (apiVersion, kind string) {
-	parts := strings.SplitN(key, ".", 2)
-	return parts[1], parts[0]
+func makeControllerRef(parent *unstructured.Unstructured) *metav1.OwnerReference {
+	return &metav1.OwnerReference{
+		APIVersion:         parent.GetAPIVersion(),
+		Kind:               parent.GetKind(),
+		Name:               parent.GetName(),
+		UID:                parent.GetUID(),
+		Controller:         k8s.BoolPtr(true),
+		BlockOwnerDeletion: k8s.BoolPtr(true),
+	}
 }

@@ -61,9 +61,11 @@ type CompositeControllerRevisionHistory struct {
 type ChildUpdateMethod string
 
 const (
-	ChildUpdateOnDelete ChildUpdateMethod = "OnDelete"
-	ChildUpdateRecreate ChildUpdateMethod = "Recreate"
-	ChildUpdateInPlace  ChildUpdateMethod = "InPlace"
+	ChildUpdateOnDelete        ChildUpdateMethod = "OnDelete"
+	ChildUpdateRecreate        ChildUpdateMethod = "Recreate"
+	ChildUpdateInPlace         ChildUpdateMethod = "InPlace"
+	ChildUpdateRollingRecreate ChildUpdateMethod = "RollingRecreate"
+	ChildUpdateRollingInPlace  ChildUpdateMethod = "RollingInPlace"
 )
 
 type ChildResourceRule struct {
