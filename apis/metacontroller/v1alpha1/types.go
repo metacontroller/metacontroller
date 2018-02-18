@@ -35,8 +35,8 @@ type CompositeController struct {
 }
 
 type CompositeControllerSpec struct {
-	ParentResource ResourceRule   `json:"parentResource"`
-	ChildResources []ResourceRule `json:"childResources,omitempty"`
+	ParentResource ParentResourceRule  `json:"parentResource"`
+	ChildResources []ChildResourceRule `json:"childResources,omitempty"`
 
 	ClientConfig ClientConfig             `json:"clientConfig,omitempty"`
 	Hooks        CompositeControllerHooks `json:"hooks,omitempty"`
@@ -49,6 +49,43 @@ type ResourceRule struct {
 	Resource   string `json:"resource"`
 }
 
+type ParentResourceRule struct {
+	ResourceRule    `json:",inline"`
+	RevisionHistory *CompositeControllerRevisionHistory `json:"revisionHistory,omitempty"`
+}
+
+type CompositeControllerRevisionHistory struct {
+	FieldPaths []string `json:"fieldPaths,omitempty"`
+}
+
+type ChildUpdateMethod string
+
+const (
+	ChildUpdateOnDelete ChildUpdateMethod = "OnDelete"
+	ChildUpdateRecreate ChildUpdateMethod = "Recreate"
+	ChildUpdateInPlace  ChildUpdateMethod = "InPlace"
+)
+
+type ChildResourceRule struct {
+	ResourceRule   `json:",inline"`
+	UpdateStrategy *ChildUpdateStrategy `json:"updateStrategy,omitempty"`
+}
+
+type ChildUpdateStrategy struct {
+	Method       ChildUpdateMethod       `json:"method,omitempty"`
+	StatusChecks ChildUpdateStatusChecks `json:"statusChecks,omitempty"`
+}
+
+type ChildUpdateStatusChecks struct {
+	Conditions []StatusConditionCheck `json:"conditions,omitempty"`
+}
+
+type StatusConditionCheck struct {
+	Type   string  `json:"type"`
+	Status *string `json:"status,omitempty"`
+	Reason *string `json:"reason,omitempty"`
+}
+
 type ClientConfig struct {
 	Service ServiceReference `json:"service,omitempty"`
 }
@@ -59,10 +96,21 @@ type ServiceReference struct {
 }
 
 type CompositeControllerHooks struct {
-	Sync CompositeControllerSyncHook `json:"sync,omitempty"`
+	Sync *CompositeControllerSyncHook `json:"sync,omitempty"`
+
+	PreUpdateChild  *CompositeControllerPreUpdateChildHook  `json:"preUpdateChild,omitempty"`
+	PostUpdateChild *CompositeControllerPostUpdateChildHook `json:"postUpdateChild,omitempty"`
 }
 
 type CompositeControllerSyncHook struct {
+	Path string `json:"path"`
+}
+
+type CompositeControllerPreUpdateChildHook struct {
+	Path string `json:"path"`
+}
+
+type CompositeControllerPostUpdateChildHook struct {
 	Path string `json:"path"`
 }
 
@@ -85,7 +133,6 @@ type ControllerRevision struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
 
-	Revision    int64                        `json:"revision"`
 	ParentPatch runtime.RawExtension         `json:"parentPatch"`
 	Children    []ControllerRevisionChildren `json:"children,omitempty"`
 }
