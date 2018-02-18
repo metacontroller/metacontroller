@@ -19,6 +19,8 @@ package controllerref
 import (
 	"fmt"
 
+	"github.com/golang/glog"
+
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -80,6 +82,7 @@ func (m *ControllerRevisionManager) adoptControllerRevision(obj *v1alpha1.Contro
 	if err := m.CanAdopt(); err != nil {
 		return fmt.Errorf("can't adopt ControllerRevision %v/%v (%v): %v", obj.GetNamespace(), obj.GetName(), obj.GetUID(), err)
 	}
+	glog.Infof("%v %v/%v: adopting ControllerRevision %v", m.parentKind.Kind, m.Controller.GetNamespace(), m.Controller.GetName(), obj.GetName())
 	controllerRef := metav1.OwnerReference{
 		APIVersion:         m.parentKind.GroupVersion().String(),
 		Kind:               m.parentKind.Kind,
@@ -102,6 +105,7 @@ func (m *ControllerRevisionManager) adoptControllerRevision(obj *v1alpha1.Contro
 }
 
 func (m *ControllerRevisionManager) releaseControllerRevision(obj *v1alpha1.ControllerRevision) error {
+	glog.Infof("%v %v/%v: releasing ControllerRevision %v", m.parentKind.Kind, m.Controller.GetNamespace(), m.Controller.GetName(), obj.GetName())
 	_, err := m.client.UpdateWithRetries(obj, func(obj *v1alpha1.ControllerRevision) bool {
 		ownerRefs := removeOwnerReference(obj.GetOwnerReferences(), m.Controller.GetUID())
 		obj.SetOwnerReferences(ownerRefs)

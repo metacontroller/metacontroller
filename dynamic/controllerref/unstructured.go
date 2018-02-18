@@ -19,6 +19,8 @@ package controllerref
 import (
 	"fmt"
 
+	"github.com/golang/glog"
+
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -82,6 +84,7 @@ func (m *UnstructuredManager) adoptChild(obj *unstructured.Unstructured) error {
 	if err := m.CanAdopt(); err != nil {
 		return fmt.Errorf("can't adopt %v %v/%v (%v): %v", m.childKind.Kind, obj.GetNamespace(), obj.GetName(), obj.GetUID(), err)
 	}
+	glog.Infof("%v %v/%v: adopting %v %v", m.parentKind.Kind, m.Controller.GetNamespace(), m.Controller.GetName(), m.childKind.Kind, obj.GetName())
 	controllerRef := metav1.OwnerReference{
 		APIVersion:         m.parentKind.GroupVersion().String(),
 		Kind:               m.parentKind.Kind,
@@ -104,6 +107,7 @@ func (m *UnstructuredManager) adoptChild(obj *unstructured.Unstructured) error {
 }
 
 func (m *UnstructuredManager) releaseChild(obj *unstructured.Unstructured) error {
+	glog.Infof("%v %v/%v: releasing %v %v", m.parentKind.Kind, m.Controller.GetNamespace(), m.Controller.GetName(), m.childKind.Kind, obj.GetName())
 	_, err := m.client.UpdateWithRetries(obj, func(obj *unstructured.Unstructured) bool {
 		ownerRefs := removeOwnerReference(obj.GetOwnerReferences(), m.Controller.GetUID())
 		obj.SetOwnerReferences(ownerRefs)
