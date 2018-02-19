@@ -26,8 +26,6 @@ import (
 	"k8s.io/metacontroller/webhook"
 )
 
-type childMap map[string]map[string]*unstructured.Unstructured
-
 type syncHookRequest struct {
 	Controller runtime.Object             `json:"controller"`
 	Parent     *unstructured.Unstructured `json:"parent"`

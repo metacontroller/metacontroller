@@ -26,6 +26,7 @@ import (
 type MetacontrollerV1alpha1Interface interface {
 	RESTClient() rest.Interface
 	CompositeControllersGetter
+	ControllerRevisionsGetter
 	InitializerControllersGetter
 }
 
@@ -36,6 +37,10 @@ type MetacontrollerV1alpha1Client struct {
 
 func (c *MetacontrollerV1alpha1Client) CompositeControllers() CompositeControllerInterface {
 	return newCompositeControllers(c)
+}
+
+func (c *MetacontrollerV1alpha1Client) ControllerRevisions(namespace string) ControllerRevisionInterface {
+	return newControllerRevisions(c, namespace)
 }
 
 func (c *MetacontrollerV1alpha1Client) InitializerControllers() InitializerControllerInterface {

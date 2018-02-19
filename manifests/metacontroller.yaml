@@ -30,6 +30,19 @@ spec:
     - ic
     - ictl
 ---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: controllerrevisions.metacontroller.k8s.io
+spec:
+  group: metacontroller.k8s.io
+  version: v1alpha1
+  scope: Namespaced
+  names:
+    plural: controllerrevisions
+    singular: controllerrevision
+    kind: ControllerRevision
+---
 apiVersion: apps/v1beta1
 kind: Deployment
 metadata:
@@ -55,5 +68,5 @@ spec:
         command: ["/usr/bin/metacontroller"]
         args:
         - --logtostderr
-        - -v=5
+        - -v=4
         - --discovery-interval=10s

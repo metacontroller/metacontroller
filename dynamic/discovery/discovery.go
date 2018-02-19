@@ -95,7 +95,12 @@ func (rm *ResourceMap) refresh() {
 	// by either Group-Version-Kind or Group-Version-Resource.
 	groupVersions := make(map[string]groupVersionEntry, len(groups))
 	for _, group := range groups {
-		gv := groupVersionEntry{
+		gv, err := schema.ParseGroupVersion(group.GroupVersion)
+		if err != nil {
+			// This shouldn't happen because we get these values from the server.
+			panic(fmt.Errorf("received invalid GroupVersion from server: %v", err))
+		}
+		gve := groupVersionEntry{
 			resources: make(map[string]*APIResource, len(group.APIResources)),
 			kinds:     make(map[string]*APIResource, len(group.APIResources)),
 		}
@@ -104,16 +109,23 @@ func (rm *ResourceMap) refresh() {
 				APIResource: group.APIResources[i],
 				APIVersion:  group.GroupVersion,
 			}
-			gv.resources[apiResource.Name] = apiResource
+			// Materialize default values from the list into each entry.
+			if apiResource.Group == "" {
+				apiResource.Group = gv.Group
+			}
+			if apiResource.Version == "" {
+				apiResource.Version = gv.Version
+			}
+			gve.resources[apiResource.Name] = apiResource
 			// Remember how to map back from Kind to resource.
 			// This is different from what RESTMapper provides because we already know
 			// the full GroupVersionKind and just need the resource name.
 			// Make sure we don't choose a subresource like "pods/status".
 			if !strings.ContainsRune(apiResource.Name, '/') {
-				gv.kinds[apiResource.Kind] = apiResource
+				gve.kinds[apiResource.Kind] = apiResource
 			}
 		}
-		groupVersions[group.GroupVersion] = gv
+		groupVersions[group.GroupVersion] = gve
 	}
 
 	// Replace the local cache.
