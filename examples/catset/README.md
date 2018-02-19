@@ -1,6 +1,6 @@
 ## CatSet
 
-This is a reimplementation of StatefulSet (except for rolling updates) as a CompositeController.
+This is a reimplementation of StatefulSet (now including rolling updates) as a CompositeController.
 
 For this example, you need a cluster with a default storage class and a dynamic provisioner.
 
