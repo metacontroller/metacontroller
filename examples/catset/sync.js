@@ -98,7 +98,10 @@ module.exports = async function (context) {
         delete desiredPods[maxOrdinal];
       }
     }
-    desired.children.push(...Object.values(desiredPods));
+    // List Pods in descending order, since that determines rolling update order.
+    for (let ordinal of Object.keys(desiredPods).sort((a,b) => a-b).reverse()) {
+      desired.children.push(desiredPods[ordinal]);
+    }
 
     if (catset.spec.volumeClaimTemplates) {
       // Generate desired PVCs.

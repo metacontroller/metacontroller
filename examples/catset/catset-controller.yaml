@@ -21,9 +21,18 @@ spec:
   parentResource:
     apiVersion: ctl.enisoc.com/v1
     resource: catsets
+    revisionHistory:
+      fieldPaths:
+      - spec.template
   childResources:
   - apiVersion: v1
     resource: pods
+    updateStrategy:
+      method: RollingRecreate
+      statusChecks:
+        conditions:
+        - type: Ready
+          status: "True"
   - apiVersion: v1
     resource: persistentvolumeclaims
   clientConfig:
