@@ -94,3 +94,7 @@ func SetStatusCondition(obj map[string]interface{}, condition *StatusCondition) 
 	SetCondition(status, condition)
 	k8s.SetNestedField(obj, status, "status")
 }
+
+func GetObservedGeneration(obj map[string]interface{}) int64 {
+	return k8s.GetNestedInt64(obj, "status", "observedGeneration")
+}

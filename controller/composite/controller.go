@@ -309,6 +309,9 @@ func (pc *parentController) updateChildren(client *dynamicclientset.ResourceClie
 				// Nothing changed.
 				continue
 			}
+			if glog.V(5) {
+				glog.Infof("reflect diff: a=observed, b=desired:\n%s", diff.ObjectReflectDiff(oldObj.UnstructuredContent(), newObj.UnstructuredContent()))
+			}
 
 			// Leave it alone if it's pending deletion.
 			if oldObj.GetDeletionTimestamp() != nil {
@@ -341,9 +344,6 @@ func (pc *parentController) updateChildren(client *dynamicclientset.ResourceClie
 			case v1alpha1.ChildUpdateInPlace, v1alpha1.ChildUpdateRollingInPlace:
 				// Update the object in-place.
 				glog.Infof("%v %v/%v: updating %v %v", parent.GetKind(), parent.GetNamespace(), parent.GetName(), obj.GetKind(), obj.GetName())
-				if glog.V(5) {
-					glog.Infof("reflect diff: a=observed, b=desired:\n%s", diff.ObjectReflectDiff(oldObj.UnstructuredContent(), newObj.UnstructuredContent()))
-				}
 				if _, err := client.Update(newObj); err != nil {
 					errs = append(errs, err)
 					continue

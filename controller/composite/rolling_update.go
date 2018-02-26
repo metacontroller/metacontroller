@@ -120,6 +120,9 @@ func (pc *parentController) syncRollingUpdate(parentRevisions []*parentRevision,
 }
 
 func (pc *parentController) shouldContinueRolling(latest *parentRevision, observedChildren childMap) error {
+	// We continue rolling only if all children claimed by the latest revision
+	// are updated and were observed in a "happy" state, according to the
+	// user-supplied, resource-specific status checks.
 	for _, ck := range latest.revision.Children {
 		strategy := pc.updateStrategy.get(ck.APIGroup, ck.Kind)
 		if !isRollingStrategy(strategy) {
@@ -142,6 +145,21 @@ func (pc *parentController) shouldContinueRolling(latest *parentRevision, observ
 			}
 			if !reflect.DeepEqual(child, updated) {
 				return fmt.Errorf("child %v %v is not updated yet", ck.Kind, name)
+			}
+			// For RollingInPlace, we should check ObservedGeneration (if possible)
+			// before checking status, to make sure status reflects the latest spec.
+			if strategy.Method == v1alpha1.ChildUpdateRollingInPlace {
+				// Ideally every controller would support ObservedGeneration, but not
+				// all do, so we have to ignore it if it's not present.
+				if observedGeneration := dynamicobject.GetObservedGeneration(child.UnstructuredContent()); observedGeneration > 0 {
+					// Ideally we would remember the Generation from our own last Update,
+					// but we don't have a good place to persist that.
+					// Instead, we compare with the latest Generation, which should be
+					// fine as long as the object spec is not updated frequently.
+					if observedGeneration < child.GetGeneration() {
+						return fmt.Errorf("child %v %v with RollingInPlace update strategy hasn't observed latest spec", ck.Kind, name)
+					}
+				}
 			}
 			// Check the child status according to the updateStrategy.
 			if err := childStatusCheck(&strategy.StatusChecks, child); err != nil {
