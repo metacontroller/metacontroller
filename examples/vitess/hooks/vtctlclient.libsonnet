@@ -15,7 +15,6 @@ local metacontroller = import "metacontroller.libsonnet";
   jobs(observed, specs)::
     metacontroller.collection(observed, specs, "batch/v1", "Job", vtctlclient.job)
       + metacontroller.collectionFilter(vtctlclient.matchJob)
-      + metacontroller.collectionImmutable
       + {
         isComplete(specName)::
           local name = observed.parent.metadata.name + "-" + specName;

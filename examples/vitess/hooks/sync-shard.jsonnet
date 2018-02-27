@@ -25,17 +25,18 @@ function(request) {
     alias: self.cell + "-" + self.uidString,
     subdomain: "%s-vttablet-%s" % [self.cluster, self.cell],
   },
+  // List tablets in the desired order for rolling updates.
   local tabletSpecs = (
-    // "replica" type tablets
-    if "masterEligible" in observed.parent.spec.tablets then
-      local spec = tabletDefaults + observed.parent.spec.tablets.masterEligible;
-      [tabletSpec(spec + {type: "replica", index: i}) for i in std.range(0, spec.replicas - 1)]
-    else []
-  ) + (
     // "rdonly" type tablets
     if "batch" in observed.parent.spec.tablets then
       local spec = tabletDefaults + observed.parent.spec.tablets.batch;
       [tabletSpec(spec + {type: "rdonly", index: i}) for i in std.range(0, spec.replicas - 1)]
+    else []
+  ) + (
+    // "replica" type tablets
+    if "masterEligible" in observed.parent.spec.tablets then
+      local spec = tabletDefaults + observed.parent.spec.tablets.masterEligible;
+      [tabletSpec(spec + {type: "replica", index: i}) for i in std.range(0, spec.replicas - 1)]
     else []
   ),
 

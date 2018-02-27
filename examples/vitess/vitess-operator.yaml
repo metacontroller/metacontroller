@@ -65,6 +65,14 @@ spec:
   childResources:
   - apiVersion: vitess.io/v1alpha1
     resource: vitesscells
+    updateStrategy:
+      method: RollingInPlace
+      statusChecks:
+        conditions:
+        - type: Ready
+          status: "True"
+        - type: Updated
+          status: "True"
   clientConfig:
     service:
       name: vitess-operator
@@ -84,16 +92,45 @@ spec:
   childResources:
   - apiVersion: v1
     resource: services
+    updateStrategy:
+      method: InPlace
   - apiVersion: v1
     resource: configmaps
+    updateStrategy:
+      method: InPlace
   - apiVersion: apps/v1beta2
     resource: deployments
+    updateStrategy:
+      method: RollingInPlace
+      statusChecks:
+        conditions:
+        - type: Available
+          status: "True"
+        - type: Progressing
+          status: "True"
+          reason: NewReplicaSetAvailable
   - apiVersion: batch/v1
     resource: jobs
+    updateStrategy:
+      method: Recreate
   - apiVersion: etcd.database.coreos.com/v1beta2
     resource: etcdclusters
+    updateStrategy:
+      method: RollingInPlace
+      statusChecks:
+        conditions:
+        - type: Available
+          status: "True"
   - apiVersion: vitess.io/v1alpha1
     resource: vitesskeyspaces
+    updateStrategy:
+      method: RollingInPlace
+      statusChecks:
+        conditions:
+        - type: Ready
+          status: "True"
+        - type: Updated
+          status: "True"
   clientConfig:
     service:
       name: vitess-operator
@@ -113,6 +150,14 @@ spec:
   childResources:
   - apiVersion: vitess.io/v1alpha1
     resource: vitessshards
+    updateStrategy:
+      method: RollingInPlace
+      statusChecks:
+        conditions:
+        - type: Ready
+          status: "True"
+        - type: Updated
+          status: "True"
   clientConfig:
     service:
       name: vitess-operator
@@ -132,6 +177,12 @@ spec:
   childResources:
   - apiVersion: v1
     resource: pods
+    updateStrategy:
+      method: RollingRecreate
+      statusChecks:
+        conditions:
+        - type: Ready
+          status: "True"
   - apiVersion: v1
     resource: persistentvolumeclaims
   clientConfig:
