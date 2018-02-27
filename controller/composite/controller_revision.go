@@ -97,12 +97,12 @@ func (pc *parentController) syncRevisions(parent *unstructured.Unstructured, obs
 
 	// Extract the fields from parent that the controller author
 	// said are relevant for revision history.
-	// If nothing was specified, default to "spec.template".
+	// If nothing was specified, default to all of "spec".
 	var fieldPaths []string
 	if rh := pc.cc.Spec.ParentResource.RevisionHistory; rh != nil && len(rh.FieldPaths) > 0 {
 		fieldPaths = rh.FieldPaths
 	} else {
-		fieldPaths = []string{"spec.template"}
+		fieldPaths = []string{"spec"}
 	}
 	latestPatch := makePatch(parent.UnstructuredContent(), fieldPaths)
 
