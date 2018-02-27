@@ -44,45 +44,6 @@ local k8s = import "k8s.libsonnet";
     observed: std.filter(filter, super.observed),
   },
 
-  // Mix-in for collection that causes the child objects to be treated as
-  // "immutable". That is, they will be created if they don't exist, but left
-  // untouched if they do.
-  //
-  // Since Metacontroller treats our output like `kubectl apply`, the way to
-  // specify "no change" is to return the last applied config.
-  // Note that Metacontroller might still attempt an update in response,
-  // if a third party has mutated fields to which we've previously
-  // applied values. In other words, it continues to actively maintain the last
-  // applied config; it doesn't become totally passive.
-  collectionImmutable:: {
-    desired: [
-      local observed = super.getObserved(desired.metadata.name);
-      if observed == null then
-        desired
-      else
-        metacontroller.getLastApplied(observed)
-      for desired in super.desired
-    ],
-  },
-
-  // Unmarshal the Metacontroller last applied config annotation from an object.
-  // If the annotation doesn't exist, it returns an "empty" last applied config.
-  // Returning an empty config when using the "Apply" strategy will tell
-  // Metacontroller, "I want this to exist, but I don't care what's in it."
-  getLastApplied(obj)::
-    local lastApplied = k8s.getAnnotation(obj, "metacontroller.k8s.io/last-applied-configuration");
-    if lastApplied != null then
-      metacontroller.jsonUnmarshal(lastApplied)
-    else {
-      apiVersion: obj.apiVersion,
-      kind: obj.kind,
-      metadata: {name: obj.metadata.name},
-    },
-
-  // Unmarshal JSON into a Jsonnet value.
-  // This function is defined as a native extension in jsonnetd.
-  jsonUnmarshal(jsonString):: std.native("jsonUnmarshal")(jsonString),
-
   // Convert an integer string in the given base to "int" (actually double).
   // Should be precise up to 2^53.
   // This function is defined as a native extension in jsonnetd.

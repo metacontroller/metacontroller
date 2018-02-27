@@ -114,9 +114,8 @@ function(request) {
   },
 
   // Child objects for this cell.
+  // List in the desired order for rolling updates.
   children:
-    keyspaces.desired +
-
     etcdClusters.desired +
 
     vtctldServices.desired +
@@ -128,5 +127,9 @@ function(request) {
 
     vttabletServices.desired +
 
-    vtctlclientJobs.desired,
+    vtctlclientJobs.desired +
+
+    // Update keyspaces last, after any cell-level updates.
+    keyspaces.desired
+    ,
 }

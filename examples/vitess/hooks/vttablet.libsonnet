@@ -12,8 +12,7 @@ local metacontroller = import "metacontroller.libsonnet";
   // Collections of vttablet objects.
   pods(observed, specs)::
     metacontroller.collection(observed, specs, "v1", "Pod", vttablet.pod)
-      + metacontroller.collectionFilter(vttablet.matchLabels)
-      + metacontroller.collectionImmutable,
+      + metacontroller.collectionFilter(vttablet.matchLabels),
   volumes(observed, specs)::
     metacontroller.collection(observed, specs, "v1", "PersistentVolumeClaim", vttablet.volume)
       + metacontroller.collectionFilter(vttablet.matchLabels),
