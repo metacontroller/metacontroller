@@ -31,7 +31,8 @@ func (pc *parentController) syncRollingUpdate(parentRevisions []*parentRevision,
 	// Reconcile the set of existing child claims in ControllerRevisions.
 	claimed := pc.syncRevisionClaims(parentRevisions)
 
-	// Give the latest revision any children it desires that aren't claimed yet.
+	// Give the latest revision any children it desires that aren't claimed yet,
+	// or that don't need any changes to match the desired state.
 	latest := parentRevisions[0]
 	for gvk, objects := range latest.desiredChildMap {
 		apiVersion, kind := parseChildMapKey(gvk)
@@ -45,9 +46,37 @@ func (pc *parentController) syncRollingUpdate(parentRevisions []*parentRevision,
 		}
 
 		claimMap := claimed[key]
-		for name := range objects {
-			if _, found := claimMap[name]; !found {
+		for name, desiredChild := range objects {
+			pr, found := claimMap[name]
+			if !found {
+				// No revision claims this child, so give it to the latest revision.
 				latest.addChild(apiGroup, kind, name)
+				continue
+			}
+			if pr == latest {
+				// It's already owned by the latest revision. Nothing to do.
+				continue
+			}
+			// This child is claimed by another revision, but if it already matches
+			// the desired state in the latest revision, we can move it immediately.
+			child := observedChildren.findGroupKindName(apiGroup, kind, name)
+			if child == nil {
+				// The child wasn't observed, so we don't know if it'll match latest.
+				continue
+			}
+			updated, err := applyUpdate(child, desiredChild)
+			if err != nil {
+				// We can't prove it'll be a no-op, so don't move it to latest.
+				continue
+			}
+			if reflect.DeepEqual(child, updated) {
+				// This will be a no-op update, so move it immediately instead of
+				// waiting until the next sync. In addition to reducing unnecessary
+				// ControllerRevision updates, this helps ensure that the overall sync
+				// won't be a no-op, which would mean there's nothing changing that
+				// would trigger a resync to continue the rollout.
+				latest.addChild(apiGroup, kind, name)
+				pr.removeChild(apiGroup, kind, name)
 			}
 		}
 	}
