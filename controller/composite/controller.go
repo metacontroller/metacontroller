@@ -19,24 +19,31 @@ package composite
 import (
 	"fmt"
 	"reflect"
+	"sync"
 	"time"
 
 	"github.com/golang/glog"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/diff"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/util/workqueue"
 
 	"k8s.io/metacontroller/apis/metacontroller/v1alpha1"
 	mcclientset "k8s.io/metacontroller/client/generated/clientset/internalclientset"
 	mclisters "k8s.io/metacontroller/client/generated/lister/metacontroller/v1alpha1"
+	"k8s.io/metacontroller/controller/common"
 	dynamicapply "k8s.io/metacontroller/dynamic/apply"
 	dynamicclientset "k8s.io/metacontroller/dynamic/clientset"
 	dynamiccontrollerref "k8s.io/metacontroller/dynamic/controllerref"
 	dynamicdiscovery "k8s.io/metacontroller/dynamic/discovery"
+	dynamicinformer "k8s.io/metacontroller/dynamic/informer"
 	k8s "k8s.io/metacontroller/third_party/kubernetes"
 )
 
@@ -44,38 +51,73 @@ type parentController struct {
 	cc *v1alpha1.CompositeController
 
 	resources      *dynamicdiscovery.ResourceMap
+	parentResource *dynamicdiscovery.APIResource
+
 	mcClient       mcclientset.Interface
 	dynClient      *dynamicclientset.Clientset
 	parentClient   *dynamicclientset.ResourceClient
-	parentResource *dynamicdiscovery.APIResource
+	parentInformer *dynamicinformer.ResourceInformer
 
 	revisionLister mclisters.ControllerRevisionLister
 
 	stopCh, doneCh chan struct{}
+	queue          workqueue.RateLimitingInterface
 
 	updateStrategy updateStrategyMap
+	childInformers childInformerMap
 }
 
-func newParentController(resources *dynamicdiscovery.ResourceMap, dynClient *dynamicclientset.Clientset, mcClient mcclientset.Interface, revisionLister mclisters.ControllerRevisionLister, cc *v1alpha1.CompositeController) (*parentController, error) {
+func newParentController(resources *dynamicdiscovery.ResourceMap, dynClient *dynamicclientset.Clientset, dynInformers *dynamicinformer.SharedInformerFactory, mcClient mcclientset.Interface, revisionLister mclisters.ControllerRevisionLister, cc *v1alpha1.CompositeController) (pc *parentController, newErr error) {
 	// Make a dynamic client for the parent resource.
 	parentClient, err := dynClient.Resource(cc.Spec.ParentResource.APIVersion, cc.Spec.ParentResource.Resource, "")
 	if err != nil {
 		return nil, err
 	}
+	parentResource := parentClient.APIResource()
 
-	pc := &parentController{
+	updateStrategy, err := makeUpdateStrategyMap(resources, cc)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create informer for the parent resource.
+	parentInformer, err := dynInformers.Resource(cc.Spec.ParentResource.APIVersion, cc.Spec.ParentResource.Resource)
+	if err != nil {
+		return nil, fmt.Errorf("can't create informer for parent resource: %v", err)
+	}
+
+	// Create informers for all child resources.
+	childInformers := make(childInformerMap)
+	defer func() {
+		if newErr != nil {
+			// If newParentController fails, Close() any informers we created
+			// since Stop() will never be called.
+			for _, childInformer := range childInformers {
+				childInformer.Close()
+			}
+			parentInformer.Close()
+		}
+	}()
+	for _, child := range cc.Spec.ChildResources {
+		childInformer, err := dynInformers.Resource(child.APIVersion, child.Resource)
+		if err != nil {
+			return nil, fmt.Errorf("can't create informer for child resource: %v", err)
+		}
+		childInformers.set(child.APIVersion, child.Resource, childInformer)
+	}
+
+	pc = &parentController{
 		cc:             cc,
 		resources:      resources,
 		mcClient:       mcClient,
 		dynClient:      dynClient,
+		childInformers: childInformers,
 		parentClient:   parentClient,
-		parentResource: parentClient.APIResource(),
+		parentInformer: parentInformer,
+		parentResource: parentResource,
 		revisionLister: revisionLister,
-	}
-
-	pc.updateStrategy, err = makeUpdateStrategyMap(resources, cc)
-	if err != nil {
-		return nil, err
+		updateStrategy: updateStrategy,
+		queue:          workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "CompositeController-"+cc.Name),
 	}
 
 	return pc, nil
@@ -85,57 +127,250 @@ func (pc *parentController) Start() {
 	pc.stopCh = make(chan struct{})
 	pc.doneCh = make(chan struct{})
 
+	// Install event handlers. CompositeControllers can be created at any time,
+	// so we have to assume the shared informers are already running. We can't
+	// add event handlers in newParentController() since pc might be incomplete.
+	// TODO(metacontroller#27): Support configurable resync period.
+	pc.parentInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    pc.enqueueParentObject,
+		UpdateFunc: pc.updateParentObject,
+		DeleteFunc: pc.enqueueParentObject,
+	})
+	for _, childInformer := range pc.childInformers {
+		childInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+			AddFunc:    pc.onChildAdd,
+			UpdateFunc: pc.onChildUpdate,
+			DeleteFunc: pc.onChildDelete,
+		})
+	}
+
 	go func() {
 		defer close(pc.doneCh)
+		defer utilruntime.HandleCrash()
 
 		glog.Infof("Starting %v CompositeController", pc.parentResource.Kind)
 		defer glog.Infof("Shutting down %v CompositeController", pc.parentResource.Kind)
 
-		// Wait for dynamic client to populate discovery cache.
-		if !k8s.WaitForCacheSync(pc.parentResource.Kind, pc.stopCh, pc.dynClient.HasSynced) {
+		// Wait for dynamic client and all informers.
+		glog.Infof("Waiting for %v CompositeController caches to sync", pc.parentResource.Kind)
+		syncFuncs := make([]cache.InformerSynced, 0, 2+len(pc.cc.Spec.ChildResources))
+		syncFuncs = append(syncFuncs, pc.dynClient.HasSynced, pc.parentInformer.Informer().HasSynced)
+		for _, childInformer := range pc.childInformers {
+			syncFuncs = append(syncFuncs, childInformer.Informer().HasSynced)
+		}
+		if !k8s.WaitForCacheSync(pc.parentResource.Kind, pc.stopCh, syncFuncs...) {
+			// We wait forever unless Stop() is called, so this isn't an error.
+			glog.Warningf("%v CompositeController cache sync never finished", pc.parentResource.Kind)
 			return
 		}
 
-		// Start polling in the background.
-		// This interval isn't configurable because polling is going away soon.
-		// TODO(kube-metacontroller#8): Replace with shared, dynamic informers.
-		ticker := time.NewTicker(5 * time.Second)
-		defer ticker.Stop()
-
-		for {
-			select {
-			case <-pc.stopCh:
-				return
-			case <-ticker.C:
-				if err := pc.syncAll(); err != nil {
-					utilruntime.HandleError(fmt.Errorf("can't sync %v: %v", pc.parentResource.Kind, err))
-				}
-			}
+		// 5 workers ought to be enough for anyone.
+		var wg sync.WaitGroup
+		for i := 0; i < 5; i++ {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				wait.Until(pc.worker, time.Second, pc.stopCh)
+			}()
 		}
+		wg.Wait()
 	}()
 }
 
 func (pc *parentController) Stop() {
 	close(pc.stopCh)
+	pc.queue.ShutDown()
 	<-pc.doneCh
+
+	// Remove event handlers and close informers for all child resources.
+	for _, informer := range pc.childInformers {
+		informer.Informer().RemoveEventHandlers()
+		informer.Close()
+	}
+	// Remove event handlers and close informer for the parent resource.
+	pc.parentInformer.Informer().RemoveEventHandlers()
+	pc.parentInformer.Close()
 }
 
-func (pc *parentController) syncAll() error {
-	// Sync all objects of the parent type, in all namespaces.
-	obj, err := pc.parentClient.List(metav1.ListOptions{})
-	if err != nil {
-		return fmt.Errorf("can't list %vs: %v", pc.parentResource.Kind, err)
+func (pc *parentController) worker() {
+	for pc.processNextWorkItem() {
 	}
-	list := obj.(*unstructured.UnstructuredList)
-	for i := range list.Items {
-		parent := &list.Items[i]
-		if err := pc.syncParentObject(parent); err != nil {
-			glog.Errorf("can't sync %v %v/%v: %v", pc.parentResource.Kind, parent.GetNamespace(), parent.GetName(), err)
-			continue
+}
+
+func (pc *parentController) processNextWorkItem() bool {
+	key, quit := pc.queue.Get()
+	if quit {
+		return false
+	}
+	defer pc.queue.Done(key)
+
+	err := pc.sync(key.(string))
+	if err != nil {
+		utilruntime.HandleError(fmt.Errorf("failed to sync %v %q: %v", pc.parentResource.Kind, key, err))
+		pc.queue.AddRateLimited(key)
+		return true
+	}
+
+	pc.queue.Forget(key)
+	return true
+}
+
+func (pc *parentController) enqueueParentObject(obj interface{}) {
+	key, err := common.KeyFunc(obj)
+	if err != nil {
+		utilruntime.HandleError(fmt.Errorf("couldn't get key for object %+v: %v", obj, err))
+		return
+	}
+	pc.queue.Add(key)
+}
+
+func (pc *parentController) updateParentObject(old, cur interface{}) {
+	// Ignore updates where the ResourceVersion changed (not a resync)
+	// but the spec hasn't changed (e.g. our own status updates).
+	// TODO(metacontroller#26): Use ObservedGeneration instead of this.
+	oldParent := old.(*unstructured.Unstructured)
+	curParent := cur.(*unstructured.Unstructured)
+	if curParent.GetResourceVersion() != oldParent.GetResourceVersion() {
+		oldSpec := k8s.GetNestedField(oldParent.UnstructuredContent(), "spec")
+		curSpec := k8s.GetNestedField(curParent.UnstructuredContent(), "spec")
+		if reflect.DeepEqual(oldSpec, curSpec) {
+			return
 		}
 	}
 
-	return nil
+	pc.enqueueParentObject(cur)
+}
+
+// resolveControllerRef returns the controller referenced by a ControllerRef,
+// or nil if the ControllerRef could not be resolved to a matching controller
+// of the correct Kind.
+func (pc *parentController) resolveControllerRef(namespace string, controllerRef *metav1.OwnerReference) *unstructured.Unstructured {
+	// We can't look up by UID, so look up by Name and then verify UID.
+	// Don't even try to look up by Name if it's the wrong APIGroup or Kind.
+	if apiGroup, _ := parseAPIVersion(controllerRef.APIVersion); apiGroup != pc.parentResource.Group {
+		return nil
+	}
+	if controllerRef.Kind != pc.parentResource.Kind {
+		return nil
+	}
+	parent, err := pc.parentInformer.Lister().Get(namespace, controllerRef.Name)
+	if err != nil {
+		return nil
+	}
+	if parent.GetUID() != controllerRef.UID {
+		// The controller we found with this Name is not the same one that the
+		// ControllerRef points to.
+		return nil
+	}
+	return parent
+}
+
+func (pc *parentController) onChildAdd(obj interface{}) {
+	child := obj.(*unstructured.Unstructured)
+
+	// If it has a ControllerRef, that's all that matters.
+	if controllerRef := metav1.GetControllerOf(child); controllerRef != nil {
+		parent := pc.resolveControllerRef(child.GetNamespace(), controllerRef)
+		if parent == nil {
+			// The controllerRef isn't a parent we know about.
+			return
+		}
+		glog.V(4).Infof("%v %v/%v: child %v %v created or updated", pc.parentResource.Kind, parent.GetNamespace(), parent.GetName(), child.GetKind(), child.GetName())
+		pc.enqueueParentObject(parent)
+		return
+	}
+
+	if child.GetDeletionTimestamp() != nil {
+		pc.onChildDelete(child)
+		return
+	}
+
+	// Otherwise, it's an orphan. Get a list of all matching parents and sync
+	// them to see if anyone wants to adopt it.
+	parents := pc.findPotentialParents(child)
+	if len(parents) == 0 {
+		return
+	}
+	glog.V(4).Infof("%v: orphan child %v %s created or updated", pc.parentResource.Kind, child.GetKind(), child.GetName())
+	for _, parent := range parents {
+		pc.enqueueParentObject(parent)
+	}
+}
+
+func (pc *parentController) onChildUpdate(old, cur interface{}) {
+	oldChild := old.(*unstructured.Unstructured)
+	curChild := cur.(*unstructured.Unstructured)
+
+	// Don't sync if it's a no-op update (probably a relist/resync).
+	// We don't care about resyncs for children; we rely on the parent resync.
+	if oldChild.GetResourceVersion() == curChild.GetResourceVersion() {
+		return
+	}
+
+	// Other than that, we treat updates the same as creates.
+	// Level-triggered controllers shouldn't care what the old state was.
+	pc.onChildAdd(cur)
+}
+
+func (pc *parentController) onChildDelete(obj interface{}) {
+	child := obj.(*unstructured.Unstructured)
+
+	// If it's an orphan, there's nothing to do because we never adopt orphans
+	// that are being deleted.
+	controllerRef := metav1.GetControllerOf(child)
+	if controllerRef == nil {
+		return
+	}
+
+	// Sync the parent of this child (if it's ours).
+	parent := pc.resolveControllerRef(child.GetNamespace(), controllerRef)
+	if parent == nil {
+		// The controllerRef isn't a parent we know about.
+		return
+	}
+	glog.V(4).Infof("%v %v/%v: child %v %v deleted", pc.parentResource.Kind, parent.GetNamespace(), parent.GetName(), child.GetKind(), child.GetName())
+	pc.enqueueParentObject(parent)
+}
+
+func (pc *parentController) findPotentialParents(child *unstructured.Unstructured) []*unstructured.Unstructured {
+	childLabels := labels.Set(child.GetLabels())
+
+	parents, err := pc.parentInformer.Lister().ListNamespace(child.GetNamespace(), labels.Everything())
+	if err != nil {
+		return nil
+	}
+
+	var matchingParents []*unstructured.Unstructured
+	for _, parent := range parents {
+		selector, err := pc.makeSelector(parent, nil)
+		if err != nil || selector.Empty() {
+			continue
+		}
+		if selector.Matches(childLabels) {
+			matchingParents = append(matchingParents, parent)
+		}
+	}
+	return matchingParents
+}
+
+func (pc *parentController) sync(key string) error {
+	namespace, name, err := cache.SplitMetaNamespaceKey(key)
+	if err != nil {
+		return err
+	}
+
+	glog.V(4).Infof("sync %v %v", pc.parentResource.Kind, name)
+
+	parent, err := pc.parentInformer.Lister().Get(namespace, name)
+	if apierrors.IsNotFound(err) {
+		// Swallow the error since there's no point retrying if the parent is gone.
+		glog.V(4).Infof("%v %v has been deleted", pc.parentResource.Kind, name)
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	return pc.syncParentObject(parent)
 }
 
 func (pc *parentController) syncParentObject(parent *unstructured.Unstructured) error {

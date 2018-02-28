@@ -36,11 +36,12 @@ import (
 	"k8s.io/metacontroller/controller/initializer"
 	dynamicclientset "k8s.io/metacontroller/dynamic/clientset"
 	dynamicdiscovery "k8s.io/metacontroller/dynamic/discovery"
+	dynamicinformer "k8s.io/metacontroller/dynamic/informer"
 )
 
 var (
 	discoveryInterval = flag.Duration("discovery-interval", 30*time.Second, "How often to refresh discovery cache to pick up newly-installed resources")
-	informerResync    = flag.Duration("informer-resync", 5*time.Minute, "Default resync period for shared informer caches")
+	informerRelist    = flag.Duration("cache-flush-interval", 30*time.Minute, "How often to flush local caches and relist objects from the API server")
 )
 
 type controller interface {
@@ -50,6 +51,9 @@ type controller interface {
 
 func main() {
 	flag.Parse()
+
+	glog.Infof("Discovery cache flush interval: %v", *discoveryInterval)
+	glog.Infof("API server object cache flush interval: %v", *informerRelist)
 
 	config, err := rest.InClusterConfig()
 	if err != nil {
@@ -67,15 +71,17 @@ func main() {
 	if err != nil {
 		glog.Fatalf("Can't create client for api %s: %v", v1alpha1.SchemeGroupVersion, err)
 	}
-	mcInformerFactory := mcinformers.NewSharedInformerFactory(mcClient, *informerResync)
+	mcInformerFactory := mcinformers.NewSharedInformerFactory(mcClient, *informerRelist)
 
 	// Create dynamic clientset (factory for dynamic clients).
 	dynClient := dynamicclientset.New(config, resources)
+	// Create dynamic informer factory (for sharing dynamic informers).
+	dynInformers := dynamicinformer.NewSharedInformerFactory(dynClient, *informerRelist)
 
 	// Start metacontrollers (controllers that spawn controllers).
 	// Each one requests the informers it needs from the factory.
 	controllers := []controller{
-		composite.NewMetacontroller(resources, dynClient, mcInformerFactory, mcClient),
+		composite.NewMetacontroller(resources, dynClient, dynInformers, mcInformerFactory, mcClient),
 		initializer.NewMetacontroller(dynClient, mcInformerFactory),
 	}
 

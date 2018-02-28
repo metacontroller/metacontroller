@@ -21,6 +21,8 @@ import (
 	"strings"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	dynamicinformer "k8s.io/metacontroller/dynamic/informer"
 )
 
 type childMap map[string]map[string]*unstructured.Unstructured
@@ -88,6 +90,30 @@ func parseAPIVersion(apiVersion string) (group, version string) {
 
 type childClaimMap map[string]map[string]*parentRevision
 
+func (m childClaimMap) getKind(apiGroup, kind string) map[string]*parentRevision {
+	return m[claimMapKey(apiGroup, kind)]
+}
+
+func (m childClaimMap) setParentRevision(apiGroup, kind, name string, pr *parentRevision) {
+	key := claimMapKey(apiGroup, kind)
+	claimMap := m[key]
+	if claimMap == nil {
+		claimMap = make(map[string]*parentRevision)
+		m[key] = claimMap
+	}
+	claimMap[name] = pr
+}
+
 func claimMapKey(apiGroup, kind string) string {
 	return fmt.Sprintf("%s.%s", kind, apiGroup)
+}
+
+type childInformerMap map[string]*dynamicinformer.ResourceInformer
+
+func (m childInformerMap) set(apiVersion, resource string, informer *dynamicinformer.ResourceInformer) {
+	m[informerMapKey(apiVersion, resource)] = informer
+}
+
+func informerMapKey(apiVersion, resource string) string {
+	return fmt.Sprintf("%s.%s", resource, apiVersion)
 }
