@@ -38,19 +38,19 @@ func (pc *parentController) syncRollingUpdate(parentRevisions []*parentRevision,
 		apiVersion, kind := parseChildMapKey(gvk)
 		// Ignore the API version, because the 'claimed' map is version-agnostic.
 		apiGroup, _ := parseAPIVersion(apiVersion)
-		key := claimMapKey(apiGroup, kind)
 
 		// Skip if rolling update isn't enabled for this child type.
 		if !pc.updateStrategy.isRolling(apiGroup, kind) {
 			continue
 		}
 
-		claimMap := claimed[key]
+		claimMap := claimed.getKind(apiGroup, kind)
 		for name, desiredChild := range objects {
 			pr, found := claimMap[name]
 			if !found {
 				// No revision claims this child, so give it to the latest revision.
 				latest.addChild(apiGroup, kind, name)
+				claimed.setParentRevision(apiGroup, kind, name, latest)
 				continue
 			}
 			if pr == latest {
@@ -77,6 +77,7 @@ func (pc *parentController) syncRollingUpdate(parentRevisions []*parentRevision,
 				// would trigger a resync to continue the rollout.
 				latest.addChild(apiGroup, kind, name)
 				pr.removeChild(apiGroup, kind, name)
+				claimed.setParentRevision(apiGroup, kind, name, latest)
 			}
 		}
 	}
@@ -88,7 +89,6 @@ func (pc *parentController) syncRollingUpdate(parentRevisions []*parentRevision,
 		apiGroup, _ := parseAPIVersion(child.GetAPIVersion())
 		kind := child.GetKind()
 		name := child.GetName()
-		key := claimMapKey(apiGroup, kind)
 
 		// Skip if rolling update isn't enabled for this child type.
 		if !pc.updateStrategy.isRolling(apiGroup, kind) {
@@ -97,7 +97,7 @@ func (pc *parentController) syncRollingUpdate(parentRevisions []*parentRevision,
 
 		// Look up which revision claims this child, if any.
 		var pr *parentRevision
-		if claimMap := claimed[key]; claimMap != nil {
+		if claimMap := claimed.getKind(apiGroup, kind); claimMap != nil {
 			pr = claimMap[name]
 		}
 
