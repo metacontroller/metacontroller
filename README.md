@@ -2,14 +2,8 @@
 
 This is not an official Google product.
 
-This is a prototype for an add-on that can be installed in any Kubernetes
+This is an alpha-quality add-on that can be installed in any Kubernetes
 cluster to make it easier to write and deploy custom controllers.
-
-Note: This code is in proof-of-concept, pre-alpha stage, and could bring down a
-cluster.
-In particular, it currently "fakes" watches by polling, resulting in extreme
-traffic to the API server.
-It should only be installed on a test cluster.
 
 ### Lambda Controllers
 
