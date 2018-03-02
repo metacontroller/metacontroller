@@ -28,8 +28,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/util/diff"
-	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/cache"
@@ -39,7 +37,6 @@ import (
 	mcclientset "k8s.io/metacontroller/client/generated/clientset/internalclientset"
 	mclisters "k8s.io/metacontroller/client/generated/lister/metacontroller/v1alpha1"
 	"k8s.io/metacontroller/controller/common"
-	dynamicapply "k8s.io/metacontroller/dynamic/apply"
 	dynamicclientset "k8s.io/metacontroller/dynamic/clientset"
 	dynamiccontrollerref "k8s.io/metacontroller/dynamic/controllerref"
 	dynamicdiscovery "k8s.io/metacontroller/dynamic/discovery"
@@ -64,7 +61,7 @@ type parentController struct {
 	queue          workqueue.RateLimitingInterface
 
 	updateStrategy updateStrategyMap
-	childInformers childInformerMap
+	childInformers common.InformerMap
 }
 
 func newParentController(resources *dynamicdiscovery.ResourceMap, dynClient *dynamicclientset.Clientset, dynInformers *dynamicinformer.SharedInformerFactory, mcClient mcclientset.Interface, revisionLister mclisters.ControllerRevisionLister, cc *v1alpha1.CompositeController) (pc *parentController, newErr error) {
@@ -87,7 +84,7 @@ func newParentController(resources *dynamicdiscovery.ResourceMap, dynClient *dyn
 	}
 
 	// Create informers for all child resources.
-	childInformers := make(childInformerMap)
+	childInformers := make(common.InformerMap)
 	defer func() {
 		if newErr != nil {
 			// If newParentController fails, Close() any informers we created
@@ -103,7 +100,7 @@ func newParentController(resources *dynamicdiscovery.ResourceMap, dynClient *dyn
 		if err != nil {
 			return nil, fmt.Errorf("can't create informer for child resource: %v", err)
 		}
-		childInformers.set(child.APIVersion, child.Resource, childInformer)
+		childInformers.Set(child.APIVersion, child.Resource, childInformer)
 	}
 
 	pc = &parentController{
@@ -247,7 +244,7 @@ func (pc *parentController) updateParentObject(old, cur interface{}) {
 func (pc *parentController) resolveControllerRef(namespace string, controllerRef *metav1.OwnerReference) *unstructured.Unstructured {
 	// We can't look up by UID, so look up by Name and then verify UID.
 	// Don't even try to look up by Name if it's the wrong APIGroup or Kind.
-	if apiGroup, _ := parseAPIVersion(controllerRef.APIVersion); apiGroup != pc.parentResource.Group {
+	if apiGroup, _ := common.ParseAPIVersion(controllerRef.APIVersion); apiGroup != pc.parentResource.Group {
 		return nil
 	}
 	if controllerRef.Kind != pc.parentResource.Kind {
@@ -268,6 +265,11 @@ func (pc *parentController) resolveControllerRef(namespace string, controllerRef
 func (pc *parentController) onChildAdd(obj interface{}) {
 	child := obj.(*unstructured.Unstructured)
 
+	if child.GetDeletionTimestamp() != nil {
+		pc.onChildDelete(child)
+		return
+	}
+
 	// If it has a ControllerRef, that's all that matters.
 	if controllerRef := metav1.GetControllerOf(child); controllerRef != nil {
 		parent := pc.resolveControllerRef(child.GetNamespace(), controllerRef)
@@ -277,11 +279,6 @@ func (pc *parentController) onChildAdd(obj interface{}) {
 		}
 		glog.V(4).Infof("%v %v/%v: child %v %v created or updated", pc.parentResource.Kind, parent.GetNamespace(), parent.GetName(), child.GetKind(), child.GetName())
 		pc.enqueueParentObject(parent)
-		return
-	}
-
-	if child.GetDeletionTimestamp() != nil {
-		pc.onChildDelete(child)
 		return
 	}
 
@@ -313,7 +310,20 @@ func (pc *parentController) onChildUpdate(old, cur interface{}) {
 }
 
 func (pc *parentController) onChildDelete(obj interface{}) {
-	child := obj.(*unstructured.Unstructured)
+	child, ok := obj.(*unstructured.Unstructured)
+
+	if !ok {
+		tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
+		if !ok {
+			utilruntime.HandleError(fmt.Errorf("couldn't get object from tombstone %+v", obj))
+			return
+		}
+		child, ok = tombstone.Obj.(*unstructured.Unstructured)
+		if !ok {
+			utilruntime.HandleError(fmt.Errorf("tombstone contained object that is not *unstructured.Unstructured %#v", obj))
+			return
+		}
+	}
 
 	// If it's an orphan, there's nothing to do because we never adopt orphans
 	// that are being deleted.
@@ -359,12 +369,12 @@ func (pc *parentController) sync(key string) error {
 		return err
 	}
 
-	glog.V(4).Infof("sync %v %v", pc.parentResource.Kind, name)
+	glog.V(4).Infof("sync %v %v/%v", pc.parentResource.Kind, namespace, name)
 
 	parent, err := pc.parentInformer.Lister().Get(namespace, name)
 	if apierrors.IsNotFound(err) {
 		// Swallow the error since there's no point retrying if the parent is gone.
-		glog.V(4).Infof("%v %v has been deleted", pc.parentResource.Kind, name)
+		glog.V(4).Infof("%v %v/%v has been deleted", pc.parentResource.Kind, namespace, name)
 		return nil
 	}
 	if err != nil {
@@ -388,12 +398,30 @@ func (pc *parentController) syncParentObject(parent *unstructured.Unstructured) 
 		return err
 	}
 
+	// If selector generation is enabled, add the controller-uid label to all
+	// desired children.
+	if pc.cc.Spec.GenerateSelector {
+		for _, group := range desiredChildren {
+			for _, obj := range group {
+				labels := obj.GetLabels()
+				if labels == nil {
+					labels = make(map[string]string, 1)
+				}
+				if _, ok := labels["controller-uid"]; ok {
+					continue
+				}
+				labels["controller-uid"] = string(parent.GetUID())
+				obj.SetLabels(labels)
+			}
+		}
+	}
+
 	// Reconcile child objects belonging to this parent.
 	// Remember manage error, but continue to update status regardless.
 	var manageErr error
 	if parent.GetDeletionTimestamp() == nil {
 		// Reconcile children.
-		if err := pc.manageChildren(parent, observedChildren, desiredChildren); err != nil {
+		if err := common.ManageChildren(pc.dynClient, pc.updateStrategy, parent, observedChildren, desiredChildren); err != nil {
 			manageErr = fmt.Errorf("can't reconcile children for %v %v/%v: %v", pc.parentResource.Kind, parent.GetNamespace(), parent.GetName(), err)
 		}
 	}
@@ -447,8 +475,9 @@ func (pc *parentController) canAdoptFunc(parent *unstructured.Unstructured) func
 	})
 }
 
-func (pc *parentController) claimChildren(parent *unstructured.Unstructured) (childMap, error) {
+func (pc *parentController) claimChildren(parent *unstructured.Unstructured) (common.ChildMap, error) {
 	// Set up values common to all child types.
+	namespace := parent.GetNamespace()
 	parentGVK := pc.parentResource.GroupVersionKind()
 	selector, err := pc.makeSelector(parent, nil)
 	if err != nil {
@@ -457,35 +486,39 @@ func (pc *parentController) claimChildren(parent *unstructured.Unstructured) (ch
 	canAdoptFunc := pc.canAdoptFunc(parent)
 
 	// Claim all child types.
-	groups := make(childMap)
+	childMap := make(common.ChildMap)
 	for _, child := range pc.cc.Spec.ChildResources {
 		// List all objects of the child kind in the parent object's namespace.
-		childClient, err := pc.dynClient.Resource(child.APIVersion, child.Resource, parent.GetNamespace())
+		childClient, err := pc.dynClient.Resource(child.APIVersion, child.Resource, namespace)
 		if err != nil {
 			return nil, err
 		}
-		obj, err := childClient.List(metav1.ListOptions{})
+		informer := pc.childInformers.Get(child.APIVersion, child.Resource)
+		if informer == nil {
+			return nil, fmt.Errorf("no informer for resource %q in apiVersion %q", child.Resource, child.APIVersion)
+		}
+		all, err := informer.Lister().ListNamespace(namespace, labels.Everything())
 		if err != nil {
 			return nil, fmt.Errorf("can't list %v children: %v", childClient.Kind(), err)
 		}
-		childList := obj.(*unstructured.UnstructuredList)
+
+		// Always include the requested groups, even if there are no entries.
+		childMap.InitGroup(child.APIVersion, childClient.Kind())
 
 		// Handle orphan/adopt and filter by owner+selector.
 		crm := dynamiccontrollerref.NewUnstructuredManager(childClient, parent, selector, parentGVK, childClient.GroupVersionKind(), canAdoptFunc)
-		children, err := crm.ClaimChildren(childList.Items)
+		children, err := crm.ClaimChildren(all)
 		if err != nil {
 			return nil, fmt.Errorf("can't claim %v children: %v", childClient.Kind(), err)
 		}
 
 		// Add children to map by name.
 		// Note that we limit each parent to only working within its own namespace.
-		groupMap := make(map[string]*unstructured.Unstructured)
-		for _, child := range children {
-			groupMap[child.GetName()] = child
+		for _, obj := range children {
+			childMap.Insert(obj)
 		}
-		groups[fmt.Sprintf("%s.%s", childClient.Kind(), child.APIVersion)] = groupMap
 	}
-	return groups, nil
+	return childMap, nil
 }
 
 func (pc *parentController) updateParentStatus(parent *unstructured.Unstructured, status map[string]interface{}) (*unstructured.Unstructured, error) {
@@ -503,192 +536,4 @@ func (pc *parentController) updateParentStatus(parent *unstructured.Unstructured
 		k8s.SetNestedField(obj.UnstructuredContent(), status, "status")
 		return true
 	})
-}
-
-func deleteChildren(client *dynamicclientset.ResourceClient, parent *unstructured.Unstructured, observed, desired map[string]*unstructured.Unstructured) error {
-	var errs []error
-	for name, obj := range observed {
-		if obj.GetDeletionTimestamp() != nil {
-			// Skip objects that are already pending deletion.
-			continue
-		}
-		if desired == nil || desired[name] == nil {
-			// This observed object wasn't listed as desired.
-			glog.Infof("%v %v/%v: deleting %v %v", parent.GetKind(), parent.GetNamespace(), parent.GetName(), obj.GetKind(), obj.GetName())
-			uid := obj.GetUID()
-			err := client.Delete(name, &metav1.DeleteOptions{
-				Preconditions: &metav1.Preconditions{UID: &uid},
-			})
-			if err != nil {
-				errs = append(errs, fmt.Errorf("can't delete %v %v/%v: %v", obj.GetKind(), obj.GetNamespace(), obj.GetName(), err))
-				continue
-			}
-		}
-	}
-	return utilerrors.NewAggregate(errs)
-}
-
-func (pc *parentController) updateChildren(client *dynamicclientset.ResourceClient, parent *unstructured.Unstructured, observed, desired map[string]*unstructured.Unstructured) error {
-	var errs []error
-	for name, obj := range desired {
-		if oldObj := observed[name]; oldObj != nil {
-			// Update
-			newObj, err := applyUpdate(oldObj, obj)
-			if err != nil {
-				errs = append(errs, err)
-				continue
-			}
-
-			// Attempt an update, if the 3-way merge resulted in any changes.
-			if reflect.DeepEqual(newObj.UnstructuredContent(), oldObj.UnstructuredContent()) {
-				// Nothing changed.
-				continue
-			}
-			if glog.V(5) {
-				glog.Infof("reflect diff: a=observed, b=desired:\n%s", diff.ObjectReflectDiff(oldObj.UnstructuredContent(), newObj.UnstructuredContent()))
-			}
-
-			// Leave it alone if it's pending deletion.
-			if oldObj.GetDeletionTimestamp() != nil {
-				glog.Infof("%v %v/%v: not updating %v %v (pending deletion)", parent.GetKind(), parent.GetNamespace(), parent.GetName(), obj.GetKind(), obj.GetName())
-				continue
-			}
-
-			// Check the update strategy for this child kind.
-			strategy := pc.updateStrategy.get(client.GroupVersion().Group, client.Kind())
-			if strategy == nil {
-				// No update strategy specified, or OnDelete specified.
-				// This means we don't try to update anything unless it gets deleted
-				// by someone else (we won't delete it ourselves).
-				glog.V(2).Infof("%v %v/%v: not updating %v %v (OnDelete update strategy)", parent.GetKind(), parent.GetNamespace(), parent.GetName(), obj.GetKind(), obj.GetName())
-				continue
-			}
-
-			switch strategy.Method {
-			case v1alpha1.ChildUpdateRecreate, v1alpha1.ChildUpdateRollingRecreate:
-				// Delete the object (now) and recreate it (on the next sync).
-				glog.Infof("%v %v/%v: deleting %v %v for update", parent.GetKind(), parent.GetNamespace(), parent.GetName(), obj.GetKind(), obj.GetName())
-				uid := oldObj.GetUID()
-				err := client.Delete(name, &metav1.DeleteOptions{
-					Preconditions: &metav1.Preconditions{UID: &uid},
-				})
-				if err != nil {
-					errs = append(errs, err)
-					continue
-				}
-			case v1alpha1.ChildUpdateInPlace, v1alpha1.ChildUpdateRollingInPlace:
-				// Update the object in-place.
-				glog.Infof("%v %v/%v: updating %v %v", parent.GetKind(), parent.GetNamespace(), parent.GetName(), obj.GetKind(), obj.GetName())
-				if _, err := client.Update(newObj); err != nil {
-					errs = append(errs, err)
-					continue
-				}
-			default:
-				errs = append(errs, fmt.Errorf("invalid update strategy for %v: unknown method %q", client.Kind(), strategy.Method))
-				continue
-			}
-		} else {
-			// Create
-			glog.Infof("%v %v/%v: creating %v %v", parent.GetKind(), parent.GetNamespace(), parent.GetName(), obj.GetKind(), obj.GetName())
-
-			// The controller should return a partial object containing only the
-			// fields it cares about. We save this partial object so we can do
-			// a 3-way merge upon update, in the style of "kubectl apply".
-			//
-			// Make sure this happens before we add anything else to the object.
-			if err := dynamicapply.SetLastApplied(obj, obj.UnstructuredContent()); err != nil {
-				errs = append(errs, err)
-				continue
-			}
-
-			// For CompositeController, we always claim everything we create.
-			controllerRef := makeControllerRef(parent)
-			ownerRefs := obj.GetOwnerReferences()
-			ownerRefs = append(ownerRefs, *controllerRef)
-			obj.SetOwnerReferences(ownerRefs)
-
-			if _, err := client.Create(obj); err != nil {
-				errs = append(errs, err)
-				continue
-			}
-		}
-	}
-	return utilerrors.NewAggregate(errs)
-}
-
-func (pc *parentController) manageChildren(parent *unstructured.Unstructured, observedChildren, desiredChildren childMap) error {
-	// If some operations fail, keep trying others so, for example,
-	// we don't block recovery (create new Pod) on a failed delete.
-	var errs []error
-
-	// Delete observed, owned objects that are not desired.
-	for key, objects := range observedChildren {
-		apiVersion, kind := parseChildMapKey(key)
-		client, err := pc.dynClient.Kind(apiVersion, kind, parent.GetNamespace())
-		if err != nil {
-			errs = append(errs, err)
-			continue
-		}
-		if err := deleteChildren(client, parent, objects, desiredChildren[key]); err != nil {
-			errs = append(errs, err)
-			continue
-		}
-	}
-
-	// Create or update desired objects.
-	for key, objects := range desiredChildren {
-		apiVersion, kind := parseChildMapKey(key)
-		client, err := pc.dynClient.Kind(apiVersion, kind, parent.GetNamespace())
-		if err != nil {
-			errs = append(errs, err)
-			continue
-		}
-		if pc.cc.Spec.GenerateSelector {
-			// Add the controller-uid label if there's none.
-			for _, obj := range objects {
-				labels := obj.GetLabels()
-				if labels == nil {
-					labels = make(map[string]string, 1)
-				}
-				if _, ok := labels["controller-uid"]; ok {
-					continue
-				}
-				labels["controller-uid"] = string(parent.GetUID())
-				obj.SetLabels(labels)
-			}
-		}
-		if err := pc.updateChildren(client, parent, observedChildren[key], objects); err != nil {
-			errs = append(errs, err)
-			continue
-		}
-	}
-
-	return utilerrors.NewAggregate(errs)
-}
-
-func applyUpdate(orig, update *unstructured.Unstructured) (*unstructured.Unstructured, error) {
-	// The controller only returns a partial object.
-	// We compute the full updated object in the style of "kubectl apply".
-	lastApplied, err := dynamicapply.GetLastApplied(orig)
-	if err != nil {
-		return nil, err
-	}
-	newObj := &unstructured.Unstructured{}
-	newObj.Object, err = dynamicapply.Merge(orig.UnstructuredContent(), lastApplied, update.UnstructuredContent())
-	if err != nil {
-		return nil, err
-	}
-	dynamicapply.SetLastApplied(newObj, update.UnstructuredContent())
-	return newObj, nil
-}
-
-func makeControllerRef(parent *unstructured.Unstructured) *metav1.OwnerReference {
-	return &metav1.OwnerReference{
-		APIVersion:         parent.GetAPIVersion(),
-		Kind:               parent.GetKind(),
-		Name:               parent.GetName(),
-		UID:                parent.GetUID(),
-		Controller:         k8s.BoolPtr(true),
-		BlockOwnerDeletion: k8s.BoolPtr(true),
-	}
 }

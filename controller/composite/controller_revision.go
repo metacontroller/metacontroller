@@ -25,6 +25,7 @@ import (
 	"sync"
 
 	"github.com/golang/glog"
+	"k8s.io/metacontroller/controller/common"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -72,7 +73,7 @@ func (pc *parentController) claimRevisions(parent *unstructured.Unstructured) ([
 	return revisions, nil
 }
 
-func (pc *parentController) syncRevisions(parent *unstructured.Unstructured, observedChildren childMap) (map[string]interface{}, childMap, error) {
+func (pc *parentController) syncRevisions(parent *unstructured.Unstructured, observedChildren common.ChildMap) (map[string]interface{}, common.ChildMap, error) {
 	// If no child resources use rolling updates, just sync the latest parent.
 	// If the parent object is being deleted, just sync the latest parent to get
 	// the status; we don't manage children while being deleted anyway.
@@ -86,7 +87,7 @@ func (pc *parentController) syncRevisions(parent *unstructured.Unstructured, obs
 		if err != nil {
 			return nil, nil, fmt.Errorf("sync hook failed for %v %v/%v: %v", pc.parentResource.Kind, parent.GetNamespace(), parent.GetName(), err)
 		}
-		return syncResult.Status, makeChildMap(syncResult.Children), nil
+		return syncResult.Status, common.MakeChildMap(syncResult.Children), nil
 	}
 
 	// Claim all matching ControllerRevisions for the parent.
@@ -159,7 +160,7 @@ func (pc *parentController) syncRevisions(parent *unstructured.Unstructured, obs
 			}
 			pr.status = syncResult.Status
 			pr.desiredChildList = syncResult.Children
-			pr.desiredChildMap = makeChildMap(syncResult.Children)
+			pr.desiredChildMap = common.MakeChildMap(syncResult.Children)
 		}(pr)
 	}
 	wg.Wait()
@@ -203,9 +204,9 @@ func (pc *parentController) syncRevisions(parent *unstructured.Unstructured, obs
 	for _, pr := range parentRevisions[1:] {
 		for _, ck := range pr.revision.Children {
 			for _, name := range ck.Names {
-				child := pr.desiredChildMap.findGroupKindName(ck.APIGroup, ck.Kind, name)
+				child := pr.desiredChildMap.FindGroupKindName(ck.APIGroup, ck.Kind, name)
 				if child != nil {
-					desiredChildren.replaceChild(child)
+					desiredChildren.ReplaceChild(child)
 				}
 			}
 		}
@@ -254,7 +255,7 @@ func (pc *parentController) manageRevisions(parent *unstructured.Unstructured, o
 			}
 		} else {
 			// Create
-			controllerRef := makeControllerRef(parent)
+			controllerRef := common.MakeControllerRef(parent)
 			revision.OwnerReferences = append(revision.OwnerReferences, *controllerRef)
 			glog.Infof("%v %v/%v: creating ControllerRevision %v", parent.GetKind(), parent.GetNamespace(), parent.GetName(), revision.GetName())
 			if _, err := client.Create(revision); err != nil {
@@ -354,7 +355,7 @@ type parentRevision struct {
 
 	status           map[string]interface{}
 	desiredChildList []*unstructured.Unstructured
-	desiredChildMap  childMap
+	desiredChildMap  common.ChildMap
 	syncError        error
 }
 
@@ -432,4 +433,24 @@ func pruneParentRevisions(parentRevisions []*parentRevision) []*parentRevision {
 		}
 	}
 	return result
+}
+
+type childClaimMap map[string]map[string]*parentRevision
+
+func (m childClaimMap) getKind(apiGroup, kind string) map[string]*parentRevision {
+	return m[claimMapKey(apiGroup, kind)]
+}
+
+func (m childClaimMap) setParentRevision(apiGroup, kind, name string, pr *parentRevision) {
+	key := claimMapKey(apiGroup, kind)
+	claimMap := m[key]
+	if claimMap == nil {
+		claimMap = make(map[string]*parentRevision)
+		m[key] = claimMap
+	}
+	claimMap[name] = pr
+}
+
+func claimMapKey(apiGroup, kind string) string {
+	return fmt.Sprintf("%s.%s", kind, apiGroup)
 }

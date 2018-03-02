@@ -21,13 +21,14 @@ import (
 	"reflect"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/metacontroller/controller/common"
 
 	"k8s.io/metacontroller/apis/metacontroller/v1alpha1"
 	dynamicdiscovery "k8s.io/metacontroller/dynamic/discovery"
 	dynamicobject "k8s.io/metacontroller/dynamic/object"
 )
 
-func (pc *parentController) syncRollingUpdate(parentRevisions []*parentRevision, observedChildren childMap) error {
+func (pc *parentController) syncRollingUpdate(parentRevisions []*parentRevision, observedChildren common.ChildMap) error {
 	// Reconcile the set of existing child claims in ControllerRevisions.
 	claimed := pc.syncRevisionClaims(parentRevisions)
 
@@ -35,9 +36,9 @@ func (pc *parentController) syncRollingUpdate(parentRevisions []*parentRevision,
 	// or that don't need any changes to match the desired state.
 	latest := parentRevisions[0]
 	for gvk, objects := range latest.desiredChildMap {
-		apiVersion, kind := parseChildMapKey(gvk)
+		apiVersion, kind := common.ParseChildMapKey(gvk)
 		// Ignore the API version, because the 'claimed' map is version-agnostic.
-		apiGroup, _ := parseAPIVersion(apiVersion)
+		apiGroup, _ := common.ParseAPIVersion(apiVersion)
 
 		// Skip if rolling update isn't enabled for this child type.
 		if !pc.updateStrategy.isRolling(apiGroup, kind) {
@@ -59,12 +60,12 @@ func (pc *parentController) syncRollingUpdate(parentRevisions []*parentRevision,
 			}
 			// This child is claimed by another revision, but if it already matches
 			// the desired state in the latest revision, we can move it immediately.
-			child := observedChildren.findGroupKindName(apiGroup, kind, name)
+			child := observedChildren.FindGroupKindName(apiGroup, kind, name)
 			if child == nil {
 				// The child wasn't observed, so we don't know if it'll match latest.
 				continue
 			}
-			updated, err := applyUpdate(child, desiredChild)
+			updated, err := common.ApplyUpdate(child, desiredChild)
 			if err != nil {
 				// We can't prove it'll be a no-op, so don't move it to latest.
 				continue
@@ -86,7 +87,7 @@ func (pc *parentController) syncRollingUpdate(parentRevisions []*parentRevision,
 	// We go one by one, in the order in which the controller returned them
 	// in the latest sync hook result.
 	for _, child := range latest.desiredChildList {
-		apiGroup, _ := parseAPIVersion(child.GetAPIVersion())
+		apiGroup, _ := common.ParseAPIVersion(child.GetAPIVersion())
 		kind := child.GetKind()
 		name := child.GetName()
 
@@ -148,7 +149,7 @@ func (pc *parentController) syncRollingUpdate(parentRevisions []*parentRevision,
 	return nil
 }
 
-func (pc *parentController) shouldContinueRolling(latest *parentRevision, observedChildren childMap) error {
+func (pc *parentController) shouldContinueRolling(latest *parentRevision, observedChildren common.ChildMap) error {
 	// We continue rolling only if all children claimed by the latest revision
 	// are updated and were observed in a "happy" state, according to the
 	// user-supplied, resource-specific status checks.
@@ -160,15 +161,15 @@ func (pc *parentController) shouldContinueRolling(latest *parentRevision, observ
 		}
 
 		for _, name := range ck.Names {
-			child := observedChildren.findGroupKindName(ck.APIGroup, ck.Kind, name)
+			child := observedChildren.FindGroupKindName(ck.APIGroup, ck.Kind, name)
 			if child == nil {
 				// We didn't observe this child at all, so it's not happy.
 				return fmt.Errorf("missing child %v %v", ck.Kind, name)
 			}
 			// Is this child up-to-date with what the latest revision wants?
 			// Apply the latest update to it and see if anything changes.
-			update := latest.desiredChildMap.findGroupKindName(ck.APIGroup, ck.Kind, name)
-			updated, err := applyUpdate(child, update)
+			update := latest.desiredChildMap.FindGroupKindName(ck.APIGroup, ck.Kind, name)
+			updated, err := common.ApplyUpdate(child, update)
 			if err != nil {
 				return fmt.Errorf("can't check if child %v %v is updated: %v", ck.Kind, name, err)
 			}
@@ -223,7 +224,7 @@ func (pc *parentController) syncRevisionClaims(parentRevisions []*parentRevision
 			for _, name := range ck.Names {
 				// Remove claims for any children that the latest revision no longer desires.
 				// Such children will be deleted immediately, so we can forget the claim.
-				if latest.desiredChildMap.findGroupKindName(ck.APIGroup, ck.Kind, name) == nil {
+				if latest.desiredChildMap.FindGroupKindName(ck.APIGroup, ck.Kind, name) == nil {
 					continue
 				}
 
@@ -283,9 +284,17 @@ func childStatusCheck(checks *v1alpha1.ChildUpdateStatusChecks, child *unstructu
 	return nil
 }
 
-type updateStrategyMap map[string]*v1alpha1.ChildUpdateStrategy
+type updateStrategyMap map[string]*v1alpha1.CompositeControllerChildUpdateStrategy
 
-func (m updateStrategyMap) get(apiGroup, kind string) *v1alpha1.ChildUpdateStrategy {
+func (m updateStrategyMap) GetMethod(apiGroup, kind string) v1alpha1.ChildUpdateMethod {
+	strategy := m.get(apiGroup, kind)
+	if strategy == nil || strategy.Method == "" {
+		return v1alpha1.ChildUpdateOnDelete
+	}
+	return strategy.Method
+}
+
+func (m updateStrategyMap) get(apiGroup, kind string) *v1alpha1.CompositeControllerChildUpdateStrategy {
 	return m[claimMapKey(apiGroup, kind)]
 }
 
@@ -302,7 +311,7 @@ func (m updateStrategyMap) anyRolling() bool {
 	return false
 }
 
-func isRollingStrategy(strategy *v1alpha1.ChildUpdateStrategy) bool {
+func isRollingStrategy(strategy *v1alpha1.CompositeControllerChildUpdateStrategy) bool {
 	if strategy == nil {
 		// This child kind uses OnDelete (don't update at all).
 		return false
@@ -324,7 +333,7 @@ func makeUpdateStrategyMap(resources *dynamicdiscovery.ResourceMap, cc *v1alpha1
 				return nil, fmt.Errorf("can't find child resource %q in %v", child.Resource, child.APIVersion)
 			}
 			// Ignore API version.
-			apiGroup, _ := parseAPIVersion(child.APIVersion)
+			apiGroup, _ := common.ParseAPIVersion(child.APIVersion)
 			key := claimMapKey(apiGroup, resource.Kind)
 			m[key] = child.UpdateStrategy
 		}

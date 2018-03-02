@@ -23,13 +23,14 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 
 	"k8s.io/metacontroller/apis/metacontroller/v1alpha1"
+	"k8s.io/metacontroller/controller/common"
 	"k8s.io/metacontroller/webhook"
 )
 
 type syncHookRequest struct {
 	Controller runtime.Object             `json:"controller"`
 	Parent     *unstructured.Unstructured `json:"parent"`
-	Children   childMap                   `json:"children"`
+	Children   common.ChildMap            `json:"children"`
 }
 
 type syncHookResponse struct {
