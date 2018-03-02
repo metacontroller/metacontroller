@@ -1,0 +1,41 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx
+  labels:
+    app: nginx
+spec:
+  ports:
+  - port: 80
+    name: web
+  clusterIP: None
+  selector:
+    app: nginx
+---
+apiVersion: apps/v1beta2
+kind: StatefulSet
+metadata:
+  name: nginx
+  annotations:
+    service-per-pod-label: pod-name
+    service-per-pod-ports: "80:80"
+spec:
+  selector:
+    matchLabels:
+      app: nginx
+  serviceName: nginx
+  replicas: 3
+  template:
+    metadata:
+      labels:
+        app: nginx
+      annotations:
+        pod-name-label: pod-name
+    spec:
+      terminationGracePeriodSeconds: 1
+      containers:
+      - name: nginx
+        image: gcr.io/google_containers/nginx-slim:0.8
+        ports:
+        - containerPort: 80
+          name: web
