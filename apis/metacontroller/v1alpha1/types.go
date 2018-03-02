@@ -35,8 +35,8 @@ type CompositeController struct {
 }
 
 type CompositeControllerSpec struct {
-	ParentResource ParentResourceRule  `json:"parentResource"`
-	ChildResources []ChildResourceRule `json:"childResources,omitempty"`
+	ParentResource CompositeControllerParentResourceRule  `json:"parentResource"`
+	ChildResources []CompositeControllerChildResourceRule `json:"childResources,omitempty"`
 
 	ClientConfig ClientConfig             `json:"clientConfig,omitempty"`
 	Hooks        CompositeControllerHooks `json:"hooks,omitempty"`
@@ -49,7 +49,7 @@ type ResourceRule struct {
 	Resource   string `json:"resource"`
 }
 
-type ParentResourceRule struct {
+type CompositeControllerParentResourceRule struct {
 	ResourceRule    `json:",inline"`
 	RevisionHistory *CompositeControllerRevisionHistory `json:"revisionHistory,omitempty"`
 }
@@ -68,12 +68,12 @@ const (
 	ChildUpdateRollingInPlace  ChildUpdateMethod = "RollingInPlace"
 )
 
-type ChildResourceRule struct {
+type CompositeControllerChildResourceRule struct {
 	ResourceRule   `json:",inline"`
-	UpdateStrategy *ChildUpdateStrategy `json:"updateStrategy,omitempty"`
+	UpdateStrategy *CompositeControllerChildUpdateStrategy `json:"updateStrategy,omitempty"`
 }
 
-type ChildUpdateStrategy struct {
+type CompositeControllerChildUpdateStrategy struct {
 	Method       ChildUpdateMethod       `json:"method,omitempty"`
 	StatusChecks ChildUpdateStatusChecks `json:"statusChecks,omitempty"`
 }
@@ -151,6 +151,66 @@ type ControllerRevisionList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`
 	Items           []ControllerRevision `json:"items"`
+}
+
+// +genclient
+// +genclient:noStatus
+// +genclient:nonNamespaced
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type DecoratorController struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata"`
+
+	Spec   DecoratorControllerSpec   `json:"spec"`
+	Status DecoratorControllerStatus `json:"status,omitempty"`
+}
+
+type DecoratorControllerSpec struct {
+	Resources   []DecoratorControllerResourceRule   `json:"resources"`
+	Attachments []DecoratorControllerAttachmentRule `json:"attachments,omitempty"`
+
+	ClientConfig ClientConfig             `json:"clientConfig,omitempty"`
+	Hooks        DecoratorControllerHooks `json:"hooks,omitempty"`
+}
+
+type DecoratorControllerResourceRule struct {
+	ResourceRule       `json:",inline"`
+	LabelSelector      *metav1.LabelSelector `json:"labelSelector,omitempty"`
+	AnnotationSelector *AnnotationSelector   `json:"annotationSelector,omitempty"`
+}
+
+type AnnotationSelector struct {
+	MatchAnnotations map[string]string                 `json:"matchAnnotations,omitempty"`
+	MatchExpressions []metav1.LabelSelectorRequirement `json:"matchExpressions,omitempty"`
+}
+
+type DecoratorControllerAttachmentRule struct {
+	ResourceRule   `json:",inline"`
+	UpdateStrategy *DecoratorControllerAttachmentUpdateStrategy `json:"updateStrategy,omitempty"`
+}
+
+type DecoratorControllerAttachmentUpdateStrategy struct {
+	Method ChildUpdateMethod `json:"method,omitempty"`
+}
+
+type DecoratorControllerHooks struct {
+	Sync *DecoratorControllerSyncHook `json:"sync,omitempty"`
+}
+
+type DecoratorControllerSyncHook struct {
+	Path string `json:"path"`
+}
+
+type DecoratorControllerStatus struct {
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type DecoratorControllerList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata"`
+	Items           []DecoratorController `json:"items"`
 }
 
 // +genclient
