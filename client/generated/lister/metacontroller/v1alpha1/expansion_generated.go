@@ -33,7 +33,3 @@ type ControllerRevisionNamespaceListerExpansion interface{}
 // DecoratorControllerListerExpansion allows custom methods to be added to
 // DecoratorControllerLister.
 type DecoratorControllerListerExpansion interface{}
-
-// InitializerControllerListerExpansion allows custom methods to be added to
-// InitializerControllerLister.
-type InitializerControllerListerExpansion interface{}

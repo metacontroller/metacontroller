@@ -28,7 +28,6 @@ type MetacontrollerV1alpha1Interface interface {
 	CompositeControllersGetter
 	ControllerRevisionsGetter
 	DecoratorControllersGetter
-	InitializerControllersGetter
 }
 
 // MetacontrollerV1alpha1Client is used to interact with features provided by the metacontroller group.
@@ -46,10 +45,6 @@ func (c *MetacontrollerV1alpha1Client) ControllerRevisions(namespace string) Con
 
 func (c *MetacontrollerV1alpha1Client) DecoratorControllers() DecoratorControllerInterface {
 	return newDecoratorControllers(c)
-}
-
-func (c *MetacontrollerV1alpha1Client) InitializerControllers() InitializerControllerInterface {
-	return newInitializerControllers(c)
 }
 
 // NewForConfig creates a new MetacontrollerV1alpha1Client for the given config.
