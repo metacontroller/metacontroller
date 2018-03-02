@@ -52,7 +52,7 @@ func NewUnstructuredManager(client *dynamicclientset.ResourceClient, parent meta
 	}
 }
 
-func (m *UnstructuredManager) ClaimChildren(children []unstructured.Unstructured) ([]*unstructured.Unstructured, error) {
+func (m *UnstructuredManager) ClaimChildren(children []*unstructured.Unstructured) ([]*unstructured.Unstructured, error) {
 	var claimed []*unstructured.Unstructured
 	var errlist []error
 
@@ -66,8 +66,7 @@ func (m *UnstructuredManager) ClaimChildren(children []unstructured.Unstructured
 		return m.releaseChild(obj.(*unstructured.Unstructured))
 	}
 
-	for i := range children {
-		child := &children[i]
+	for _, child := range children {
 		ok, err := m.ClaimObject(child, match, adopt, release)
 		if err != nil {
 			errlist = append(errlist, err)
