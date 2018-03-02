@@ -28,6 +28,8 @@ type Interface interface {
 	CompositeControllers() CompositeControllerInformer
 	// ControllerRevisions returns a ControllerRevisionInformer.
 	ControllerRevisions() ControllerRevisionInformer
+	// DecoratorControllers returns a DecoratorControllerInformer.
+	DecoratorControllers() DecoratorControllerInformer
 	// InitializerControllers returns a InitializerControllerInformer.
 	InitializerControllers() InitializerControllerInformer
 }
@@ -51,6 +53,11 @@ func (v *version) CompositeControllers() CompositeControllerInformer {
 // ControllerRevisions returns a ControllerRevisionInformer.
 func (v *version) ControllerRevisions() ControllerRevisionInformer {
 	return &controllerRevisionInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// DecoratorControllers returns a DecoratorControllerInformer.
+func (v *version) DecoratorControllers() DecoratorControllerInformer {
+	return &decoratorControllerInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
 // InitializerControllers returns a InitializerControllerInformer.

@@ -57,6 +57,8 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Metacontroller().V1alpha1().CompositeControllers().Informer()}, nil
 	case v1alpha1.SchemeGroupVersion.WithResource("controllerrevisions"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Metacontroller().V1alpha1().ControllerRevisions().Informer()}, nil
+	case v1alpha1.SchemeGroupVersion.WithResource("decoratorcontrollers"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Metacontroller().V1alpha1().DecoratorControllers().Informer()}, nil
 	case v1alpha1.SchemeGroupVersion.WithResource("initializercontrollers"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Metacontroller().V1alpha1().InitializerControllers().Informer()}, nil
 

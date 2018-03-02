@@ -33,6 +33,7 @@ import (
 	mcclientset "k8s.io/metacontroller/client/generated/clientset/internalclientset"
 	mcinformers "k8s.io/metacontroller/client/generated/informer/externalversions"
 	"k8s.io/metacontroller/controller/composite"
+	"k8s.io/metacontroller/controller/decorator"
 	"k8s.io/metacontroller/controller/initializer"
 	dynamicclientset "k8s.io/metacontroller/dynamic/clientset"
 	dynamicdiscovery "k8s.io/metacontroller/dynamic/discovery"
@@ -82,6 +83,7 @@ func main() {
 	// Each one requests the informers it needs from the factory.
 	controllers := []controller{
 		composite.NewMetacontroller(resources, dynClient, dynInformers, mcInformerFactory, mcClient),
+		decorator.NewMetacontroller(resources, dynClient, dynInformers, mcInformerFactory),
 		initializer.NewMetacontroller(dynClient, mcInformerFactory),
 	}
 
