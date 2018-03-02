@@ -27,6 +27,7 @@ type MetacontrollerV1alpha1Interface interface {
 	RESTClient() rest.Interface
 	CompositeControllersGetter
 	ControllerRevisionsGetter
+	DecoratorControllersGetter
 	InitializerControllersGetter
 }
 
@@ -41,6 +42,10 @@ func (c *MetacontrollerV1alpha1Client) CompositeControllers() CompositeControlle
 
 func (c *MetacontrollerV1alpha1Client) ControllerRevisions(namespace string) ControllerRevisionInterface {
 	return newControllerRevisions(c, namespace)
+}
+
+func (c *MetacontrollerV1alpha1Client) DecoratorControllers() DecoratorControllerInterface {
+	return newDecoratorControllers(c)
 }
 
 func (c *MetacontrollerV1alpha1Client) InitializerControllers() InitializerControllerInterface {
