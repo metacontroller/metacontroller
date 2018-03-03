@@ -1,0 +1,10 @@
+language: go
+go:
+- "1.10"
+go_import_path: k8s.io/metacontroller
+install:
+- go get -u github.com/golang/dep/cmd/dep
+- go get -u k8s.io/code-generator/cmd/{lister,client,informer,deepcopy}-gen
+- dep ensure
+script:
+- make
