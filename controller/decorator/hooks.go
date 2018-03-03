@@ -24,7 +24,7 @@ import (
 
 	"k8s.io/metacontroller/apis/metacontroller/v1alpha1"
 	"k8s.io/metacontroller/controller/common"
-	"k8s.io/metacontroller/webhook"
+	"k8s.io/metacontroller/hooks"
 )
 
 type syncHookRequest struct {
@@ -40,9 +40,11 @@ type syncHookResponse struct {
 }
 
 func callSyncHook(dc *v1alpha1.DecoratorController, request *syncHookRequest) (*syncHookResponse, error) {
-	url := fmt.Sprintf("http://%s.%s%s", dc.Spec.ClientConfig.Service.Name, dc.Spec.ClientConfig.Service.Namespace, dc.Spec.Hooks.Sync.Path)
+	if dc.Spec.Hooks == nil || dc.Spec.Hooks.Sync == nil {
+		return nil, fmt.Errorf("sync hook not defined")
+	}
 	var response syncHookResponse
-	if err := webhook.Call(url, request, &response); err != nil {
+	if err := hooks.Call(dc.Spec.Hooks.Sync, request, &response); err != nil {
 		return nil, fmt.Errorf("sync hook failed: %v", err)
 	}
 	return &response, nil

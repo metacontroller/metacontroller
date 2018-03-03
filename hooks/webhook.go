@@ -14,10 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package webhook
+package hooks
 
 import (
 	"bytes"
+	gojson "encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -25,19 +26,29 @@ import (
 
 	"github.com/golang/glog"
 	"k8s.io/apimachinery/pkg/util/json"
+
+	"k8s.io/metacontroller/apis/metacontroller/v1alpha1"
 )
 
 const (
 	hookTimeout = 10 * time.Second
 )
 
-func Call(url string, request interface{}, response interface{}) error {
+func callWebhook(webhook *v1alpha1.Webhook, request interface{}, response interface{}) error {
+	url, err := webhookURL(webhook)
+	if err != nil {
+		return err
+	}
+
 	// Encode request.
 	reqBody, err := json.Marshal(request)
 	if err != nil {
 		return fmt.Errorf("can't marshal request: %v", err)
 	}
-	glog.V(6).Infof("DEBUG: request body: %s", reqBody)
+	if glog.V(6) {
+		reqBodyIndent, _ := gojson.MarshalIndent(request, "", "  ")
+		glog.Infof("DEBUG: webhook url: %s request body: %s", url, reqBodyIndent)
+	}
 
 	// Send request.
 	client := &http.Client{Timeout: hookTimeout}
@@ -52,7 +63,7 @@ func Call(url string, request interface{}, response interface{}) error {
 	if err != nil {
 		return fmt.Errorf("can't read response body: %v", err)
 	}
-	glog.V(6).Infof("DEBUG: response body: %s", respBody)
+	glog.V(6).Infof("DEBUG: webhook url: %s response body: %s", url, respBody)
 
 	// Check status code.
 	if resp.StatusCode != http.StatusOK {
@@ -64,4 +75,29 @@ func Call(url string, request interface{}, response interface{}) error {
 		return fmt.Errorf("can't unmarshal response: %v", err)
 	}
 	return nil
+}
+
+func webhookURL(webhook *v1alpha1.Webhook) (string, error) {
+	if webhook.URL != nil {
+		// Full URL overrides everything else.
+		return *webhook.URL, nil
+	}
+	if webhook.Service == nil || webhook.Path == nil {
+		return "", fmt.Errorf("invalid webhook config: must specify either full 'url', or both 'service' and 'path'")
+	}
+
+	// For now, just use cluster DNS to resolve Services.
+	// If necessary, we can use a Lister to get more info about Services.
+	if webhook.Service.Name == "" || webhook.Service.Namespace == "" {
+		return "", fmt.Errorf("invalid client config: must specify service 'name' and 'namespace'")
+	}
+	port := int32(80)
+	if webhook.Service.Port != nil {
+		port = *webhook.Service.Port
+	}
+	protocol := "http"
+	if webhook.Service.Protocol != nil {
+		protocol = *webhook.Service.Protocol
+	}
+	return fmt.Sprintf("%s://%s.%s:%v%s", protocol, webhook.Service.Name, webhook.Service.Namespace, port, *webhook.Path), nil
 }
