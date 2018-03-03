@@ -35,14 +35,10 @@ spec:
           status: "True"
   - apiVersion: v1
     resource: persistentvolumeclaims
-  clientConfig:
-    service:
-      name: catset-controller
-      namespace: metacontroller
-    caBundle: ...
   hooks:
     sync:
-      path: /sync
+      webhook:
+        url: http://catset-controller.metacontroller/sync
 ---
 apiVersion: apps/v1beta1
 kind: Deployment

@@ -26,14 +26,10 @@ spec:
     resource: services
   - apiVersion: extensions/v1beta1
     resource: replicasets
-  clientConfig:
-    service:
-      name: bluegreen-controller
-      namespace: metacontroller
-    caBundle: ...
   hooks:
     sync:
-      path: /sync
+      webhook:
+        url: http://bluegreen-controller.metacontroller/sync
 ---
 apiVersion: apps/v1beta1
 kind: Deployment
