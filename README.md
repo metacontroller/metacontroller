@@ -25,7 +25,6 @@ a specific controller pattern, such as:
 
 * CompositeController: *objects composed of other objects*
 * DecoratorController: *attach new behavior to existing objects*
-* InitializerController: *asynchronous object initialization*
 
 Support for other types of controller patterns will be added in the future.
 
@@ -102,38 +101,12 @@ when the main object is deleted.
   every Pod in a StatefulSet (e.g. to give them static IPs), effectively adding
   new behavior to StatefulSet without having to reimplement it.
 
-#### InitializerController
-
-InitializerController is another API provided by Metacontroller, designed to
-facilitate custom controllers that implement [initializers](https://kubernetes.io/docs/admin/extensible-admission-controllers/#initializers).
-
-Similar to CompositeControllers, Metacontroller will handle watching
-uninitialized objects and other interactions with the Kubernetes API.
-However, in this case the hook you implement is even simpler.
-You just accept a single uninitialized object and return a modified form of it.
-
-Metacontroller will only call your initializer hook when it's at the top of the
-Pending list, and will automatically remove you from the Pending list upon
-success in a single, atomic update.
-The watch stream will be shared among all custom controllers served through
-Metacontroller, including both InitializerControllers and CompositeControllers.
-
-**Examples**
-
-* [**podhostname**](examples/initializer)
-
-  This is an InitializerController that fixes Pods for compatibility with newer
-  clusters.
-
 ## Install
 
 ### Prerequisites
 
-* Kubernetes v1.8+
-  * Most things will work in v1.7, except garbage collection on custom resources
-    and mutating Pod initializers.
-  * Initializers are alpha in v1.7-v1.9 and must be enabled by a feature flag on
-    the API server in order to use InitializerControllers.
+* Kubernetes v1.8+ is recommended for the improved CRD support, especially
+  garbage collection on custom resources.
 
 ### Grant yourself cluster-admin
 

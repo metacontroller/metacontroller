@@ -45,8 +45,6 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&CompositeControllerList{},
 		&DecoratorController{},
 		&DecoratorControllerList{},
-		&InitializerController{},
-		&InitializerControllerList{},
 		&ControllerRevision{},
 		&ControllerRevisionList{},
 	)
