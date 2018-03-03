@@ -13,13 +13,10 @@ spec:
   attachments:
   - apiVersion: v1
     resource: services
-  clientConfig:
-    service:
-      name: service-per-pod
-      namespace: metacontroller
   hooks:
     sync:
-      path: /sync-service-per-pod
+      webhook:
+        url: http://service-per-pod.metacontroller/sync-service-per-pod
 ---
 apiVersion: metacontroller.k8s.io/v1alpha1
 kind: DecoratorController
@@ -35,13 +32,10 @@ spec:
     annotationSelector:
       matchExpressions:
       - {key: pod-name-label, operator: Exists}
-  clientConfig:
-    service:
-      name: service-per-pod
-      namespace: metacontroller
   hooks:
     sync:
-      path: /sync-pod-name-label
+      webhook:
+        url: http://service-per-pod.metacontroller/sync-pod-name-label
 ---
 apiVersion: apps/v1beta1
 kind: Deployment

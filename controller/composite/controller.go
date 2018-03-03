@@ -400,7 +400,7 @@ func (pc *parentController) syncParentObject(parent *unstructured.Unstructured) 
 
 	// If selector generation is enabled, add the controller-uid label to all
 	// desired children.
-	if pc.cc.Spec.GenerateSelector {
+	if pc.cc.Spec.GenerateSelector != nil && *pc.cc.Spec.GenerateSelector {
 		for _, group := range desiredChildren {
 			for _, obj := range group {
 				labels := obj.GetLabels()
@@ -438,7 +438,7 @@ func (pc *parentController) syncParentObject(parent *unstructured.Unstructured) 
 func (pc *parentController) makeSelector(parent *unstructured.Unstructured, extraMatchLabels map[string]string) (labels.Selector, error) {
 	labelSelector := &metav1.LabelSelector{}
 
-	if pc.cc.Spec.GenerateSelector {
+	if pc.cc.Spec.GenerateSelector != nil && *pc.cc.Spec.GenerateSelector {
 		// Select by controller-uid, like Job does.
 		// Any selector on the parent is ignored in this case.
 		labelSelector = metav1.AddLabelToSelector(labelSelector, "controller-uid", string(parent.GetUID()))

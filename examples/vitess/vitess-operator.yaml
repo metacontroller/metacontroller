@@ -73,13 +73,10 @@ spec:
           status: "True"
         - type: Updated
           status: "True"
-  clientConfig:
-    service:
-      name: vitess-operator
-      namespace: metacontroller
   hooks:
     sync:
-      path: /sync-cluster
+      webhook:
+        url: http://vitess-operator.metacontroller/sync-cluster
 ---
 apiVersion: metacontroller.k8s.io/v1alpha1
 kind: CompositeController
@@ -131,13 +128,10 @@ spec:
           status: "True"
         - type: Updated
           status: "True"
-  clientConfig:
-    service:
-      name: vitess-operator
-      namespace: metacontroller
   hooks:
     sync:
-      path: /sync-cell
+      webhook:
+        url: http://vitess-operator.metacontroller/sync-cell
 ---
 apiVersion: metacontroller.k8s.io/v1alpha1
 kind: CompositeController
@@ -158,13 +152,10 @@ spec:
           status: "True"
         - type: Updated
           status: "True"
-  clientConfig:
-    service:
-      name: vitess-operator
-      namespace: metacontroller
   hooks:
     sync:
-      path: /sync-keyspace
+      webhook:
+        url: http://vitess-operator.metacontroller/sync-keyspace
 ---
 apiVersion: metacontroller.k8s.io/v1alpha1
 kind: CompositeController
@@ -185,13 +176,10 @@ spec:
           status: "True"
   - apiVersion: v1
     resource: persistentvolumeclaims
-  clientConfig:
-    service:
-      name: vitess-operator
-      namespace: metacontroller
   hooks:
     sync:
-      path: /sync-shard
+      webhook:
+        url: http://vitess-operator.metacontroller/sync-shard
 ---
 apiVersion: apps/v1beta1
 kind: Deployment

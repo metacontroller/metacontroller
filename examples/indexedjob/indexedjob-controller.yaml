@@ -17,21 +17,17 @@ kind: CompositeController
 metadata:
   name: indexedjob-controller
 spec:
+  generateSelector: true
   parentResource:
     apiVersion: ctl.enisoc.com/v1
     resource: indexedjobs
   childResources:
     - apiVersion: v1
       resource: pods
-  clientConfig:
-    service:
-      name: indexedjob-controller
-      namespace: metacontroller
-    caBundle: ...
   hooks:
     sync:
-      path: /sync
-  generateSelector: true
+      webhook:
+        url: http://indexedjob-controller.metacontroller/sync
 ---
 apiVersion: apps/v1beta1
 kind: Deployment

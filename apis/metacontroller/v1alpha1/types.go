@@ -38,10 +38,9 @@ type CompositeControllerSpec struct {
 	ParentResource CompositeControllerParentResourceRule  `json:"parentResource"`
 	ChildResources []CompositeControllerChildResourceRule `json:"childResources,omitempty"`
 
-	ClientConfig ClientConfig             `json:"clientConfig,omitempty"`
-	Hooks        CompositeControllerHooks `json:"hooks,omitempty"`
+	Hooks *CompositeControllerHooks `json:"hooks,omitempty"`
 
-	GenerateSelector bool `json:"generateSelector,omitempty"`
+	GenerateSelector *bool `json:"generateSelector,omitempty"`
 }
 
 type ResourceRule struct {
@@ -88,32 +87,29 @@ type StatusConditionCheck struct {
 	Reason *string `json:"reason,omitempty"`
 }
 
-type ClientConfig struct {
-	Service ServiceReference `json:"service,omitempty"`
-}
-
 type ServiceReference struct {
-	Name      string `json:"name"`
-	Namespace string `json:"namespace"`
+	Name      string  `json:"name"`
+	Namespace string  `json:"namespace"`
+	Port      *int32  `json:"port,omitempty"`
+	Protocol  *string `json:"protocol,omitempty"`
 }
 
 type CompositeControllerHooks struct {
-	Sync *CompositeControllerSyncHook `json:"sync,omitempty"`
+	Sync *Hook `json:"sync,omitempty"`
 
-	PreUpdateChild  *CompositeControllerPreUpdateChildHook  `json:"preUpdateChild,omitempty"`
-	PostUpdateChild *CompositeControllerPostUpdateChildHook `json:"postUpdateChild,omitempty"`
+	PreUpdateChild  *Hook `json:"preUpdateChild,omitempty"`
+	PostUpdateChild *Hook `json:"postUpdateChild,omitempty"`
 }
 
-type CompositeControllerSyncHook struct {
-	Path string `json:"path"`
+type Hook struct {
+	Webhook *Webhook `json:"webhook,omitempty"`
 }
 
-type CompositeControllerPreUpdateChildHook struct {
-	Path string `json:"path"`
-}
+type Webhook struct {
+	URL *string `json:"url,omitempty"`
 
-type CompositeControllerPostUpdateChildHook struct {
-	Path string `json:"path"`
+	Path    *string           `json:"path,omitempty"`
+	Service *ServiceReference `json:"service,omitempty"`
 }
 
 type CompositeControllerStatus struct {
@@ -170,8 +166,7 @@ type DecoratorControllerSpec struct {
 	Resources   []DecoratorControllerResourceRule   `json:"resources"`
 	Attachments []DecoratorControllerAttachmentRule `json:"attachments,omitempty"`
 
-	ClientConfig ClientConfig             `json:"clientConfig,omitempty"`
-	Hooks        DecoratorControllerHooks `json:"hooks,omitempty"`
+	Hooks *DecoratorControllerHooks `json:"hooks,omitempty"`
 }
 
 type DecoratorControllerResourceRule struct {
@@ -195,11 +190,7 @@ type DecoratorControllerAttachmentUpdateStrategy struct {
 }
 
 type DecoratorControllerHooks struct {
-	Sync *DecoratorControllerSyncHook `json:"sync,omitempty"`
-}
-
-type DecoratorControllerSyncHook struct {
-	Path string `json:"path"`
+	Sync *Hook `json:"sync,omitempty"`
 }
 
 type DecoratorControllerStatus struct {

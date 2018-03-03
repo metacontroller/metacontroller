@@ -1,4 +1,4 @@
-TAG = 0.1
+TAG = 0.2
 
 PKG        := k8s.io/metacontroller
 API_GROUPS := metacontroller/v1alpha1
