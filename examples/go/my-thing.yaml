@@ -1,0 +1,6 @@
+apiVersion: ctl.enisoc.com/v1
+kind: Thing
+metadata:
+  name: thing-1
+spec:
+  message: Hello, World!
