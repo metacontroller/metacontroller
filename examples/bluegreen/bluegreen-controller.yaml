@@ -24,8 +24,12 @@ spec:
   childResources:
   - apiVersion: v1
     resource: services
+    updateStrategy:
+      method: InPlace
   - apiVersion: extensions/v1beta1
     resource: replicasets
+    updateStrategy:
+      method: InPlace
   hooks:
     sync:
       webhook:
