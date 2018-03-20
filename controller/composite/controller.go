@@ -127,12 +127,22 @@ func (pc *parentController) Start() {
 	// Install event handlers. CompositeControllers can be created at any time,
 	// so we have to assume the shared informers are already running. We can't
 	// add event handlers in newParentController() since pc might be incomplete.
-	// TODO(metacontroller#27): Support configurable resync period.
-	pc.parentInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+	parentHandlers := cache.ResourceEventHandlerFuncs{
 		AddFunc:    pc.enqueueParentObject,
 		UpdateFunc: pc.updateParentObject,
 		DeleteFunc: pc.enqueueParentObject,
-	})
+	}
+	if pc.cc.Spec.ResyncPeriodSeconds != nil {
+		// Use a custom resync period if requested. This only applies to the parent.
+		resyncPeriod := time.Duration(*pc.cc.Spec.ResyncPeriodSeconds) * time.Second
+		// Put a reasonable limit on it.
+		if resyncPeriod < time.Second {
+			resyncPeriod = time.Second
+		}
+		pc.parentInformer.Informer().AddEventHandlerWithResyncPeriod(parentHandlers, resyncPeriod)
+	} else {
+		pc.parentInformer.Informer().AddEventHandler(parentHandlers)
+	}
 	for _, childInformer := range pc.childInformers {
 		childInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 			AddFunc:    pc.onChildAdd,

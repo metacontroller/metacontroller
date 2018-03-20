@@ -138,13 +138,26 @@ func (c *decoratorController) Start() {
 	// Install event handlers. DecoratorControllers can be created at any time,
 	// so we have to assume the shared informers are already running. We can't
 	// add event handlers in newParentController() since c might be incomplete.
-	// TODO(metacontroller#27): Support configurable resync period.
+	parentHandlers := cache.ResourceEventHandlerFuncs{
+		AddFunc:    c.enqueueParentObject,
+		UpdateFunc: c.updateParentObject,
+		DeleteFunc: c.enqueueParentObject,
+	}
+	var resyncPeriod time.Duration
+	if c.dc.Spec.ResyncPeriodSeconds != nil {
+		// Use a custom resync period if requested. This only applies to the parent.
+		resyncPeriod = time.Duration(*c.dc.Spec.ResyncPeriodSeconds) * time.Second
+		// Put a reasonable limit on it.
+		if resyncPeriod < time.Second {
+			resyncPeriod = time.Second
+		}
+	}
 	for _, informer := range c.parentInformers {
-		informer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-			AddFunc:    c.enqueueParentObject,
-			UpdateFunc: c.updateParentObject,
-			DeleteFunc: c.enqueueParentObject,
-		})
+		if resyncPeriod != 0 {
+			informer.Informer().AddEventHandlerWithResyncPeriod(parentHandlers, resyncPeriod)
+		} else {
+			informer.Informer().AddEventHandler(parentHandlers)
+		}
 	}
 	for _, informer := range c.childInformers {
 		informer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
