@@ -64,8 +64,8 @@ type decoratorController struct {
 	childInformers  common.InformerMap
 }
 
-func newDecoratorController(resources *dynamicdiscovery.ResourceMap, dynClient *dynamicclientset.Clientset, dynInformers *dynamicinformer.SharedInformerFactory, dc *v1alpha1.DecoratorController) (c *decoratorController, newErr error) {
-	c = &decoratorController{
+func newDecoratorController(resources *dynamicdiscovery.ResourceMap, dynClient *dynamicclientset.Clientset, dynInformers *dynamicinformer.SharedInformerFactory, dc *v1alpha1.DecoratorController) (controller *decoratorController, newErr error) {
+	c := &decoratorController{
 		dc:              dc,
 		resources:       resources,
 		dynClient:       dynClient,
