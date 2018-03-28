@@ -43,7 +43,7 @@ spec:
 
 * Kubernetes 1.8+ is recommended for its improved CRD support,
   especially garbage collection.
-* Install [kube-metacontroller](https://github.com/GoogleCloudPlatform/kube-metacontroller).
+* Install [Metacontroller](https://github.com/GoogleCloudPlatform/metacontroller).
 
 ### Deploy the DecoratorControllers
 

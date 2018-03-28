@@ -10,7 +10,7 @@ Finally, it scales down the old ReplicaSet.
 
 ### Prerequisites
 
-* [Install Metacontroller](https://github.com/GoogleCloudPlatform/kube-metacontroller#install)
+* Install [Metacontroller](https://github.com/GoogleCloudPlatform/metacontroller)
 
 ### Deploy the controller
 
