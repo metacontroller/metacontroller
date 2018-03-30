@@ -52,7 +52,7 @@ spec:
     spec:
       containers:
       - name: controller
-        image: gcr.io/enisoc-kubernetes/nodejs-server:0.1
+        image: metacontroller/nodejs-server:0.1
         imagePullPolicy: Always
         volumeMounts:
         - name: hooks
