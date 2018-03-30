@@ -3,17 +3,16 @@ TAG = 0.2
 PKG        := k8s.io/metacontroller
 API_GROUPS := metacontroller/v1alpha1
 
-all: build
+all: install
 
-build: generated_files
-	go build -i
-	go build
+install: generated_files
+	go install
 
-image: build
-	docker build -t gcr.io/enisoc-kubernetes/metacontroller:$(TAG) .
+image: generated_files
+	docker build -t metacontroller/metacontroller:$(TAG) .
 
 push: image
-	gcloud docker -- push gcr.io/enisoc-kubernetes/metacontroller:$(TAG)
+	docker push metacontroller/metacontroller:$(TAG)
 
 # Code generators
 # https://github.com/kubernetes/community/blob/master/contributors/devel/api_changes.md#generate-code

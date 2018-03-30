@@ -198,7 +198,7 @@ spec:
     spec:
       containers:
       - name: hooks
-        image: gcr.io/enisoc-kubernetes/jsonnetd:0.1
+        image: metacontroller/jsonnetd:0.1
         imagePullPolicy: Always
         workingDir: /vt/operator/hooks
         volumeMounts:

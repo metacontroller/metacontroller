@@ -63,7 +63,7 @@ spec:
       serviceAccountName: metacontroller
       containers:
       - name: metacontroller
-        image: gcr.io/enisoc-kubernetes/metacontroller:0.2
+        image: metacontroller/metacontroller:0.2
         imagePullPolicy: Always
         command: ["/usr/bin/metacontroller"]
         args:
