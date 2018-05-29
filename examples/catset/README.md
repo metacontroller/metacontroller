@@ -6,7 +6,7 @@ For this example, you need a cluster with a default storage class and a dynamic 
 
 ### Prerequisites
 
-* [Install Metacontroller](https://github.com/GoogleCloudPlatform/kube-metacontroller#install)
+* Install [Metacontroller](https://github.com/GoogleCloudPlatform/metacontroller)
 
 ### Deploy the controller
 
