@@ -20,33 +20,12 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/google/gofuzz"
 	"k8s.io/apimachinery/pkg/api/testing/fuzzer"
 	roundtrip "k8s.io/apimachinery/pkg/api/testing/roundtrip"
 	metafuzzer "k8s.io/apimachinery/pkg/apis/meta/fuzzer"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
-	runtimeserializer "k8s.io/apimachinery/pkg/runtime/serializer"
 )
-
-var _ runtime.Object = &CompositeController{}
-var _ metav1.ObjectMetaAccessor = &CompositeController{}
-
-var _ runtime.Object = &CompositeControllerList{}
-var _ metav1.ListMetaAccessor = &CompositeControllerList{}
-
-func CompositeControllerFuzzerFuncs(codecs runtimeserializer.CodecFactory) []interface{} {
-	return []interface{}{
-		func(obj *CompositeControllerList, c fuzz.Continue) {
-			c.FuzzNoCustom(obj)
-			obj.Items = make([]CompositeController, c.Intn(10))
-			for i := range obj.Items {
-				c.Fuzz(&obj.Items[i])
-			}
-		},
-	}
-}
 
 // TestRoundTrip tests that the third-party kinds can be marshaled and unmarshaled correctly to/from JSON
 // without the loss of information. Moreover, deep copy is tested.
@@ -56,10 +35,12 @@ func TestRoundTrip(t *testing.T) {
 
 	AddToScheme(scheme)
 
-	seed := rand.Int63()
-	fuzzerFuncs := fuzzer.MergeFuzzerFuncs(metafuzzer.Funcs, CompositeControllerFuzzerFuncs)
-	fuzzer := fuzzer.FuzzerFor(fuzzerFuncs, rand.NewSource(seed), codecs)
+	fuzzer := fuzzer.FuzzerFor(metafuzzer.Funcs, rand.NewSource(1), codecs)
 
 	roundtrip.RoundTripSpecificKindWithoutProtobuf(t, SchemeGroupVersion.WithKind("CompositeController"), scheme, codecs, fuzzer, nil)
 	roundtrip.RoundTripSpecificKindWithoutProtobuf(t, SchemeGroupVersion.WithKind("CompositeControllerList"), scheme, codecs, fuzzer, nil)
+	roundtrip.RoundTripSpecificKindWithoutProtobuf(t, SchemeGroupVersion.WithKind("DecoratorController"), scheme, codecs, fuzzer, nil)
+	roundtrip.RoundTripSpecificKindWithoutProtobuf(t, SchemeGroupVersion.WithKind("DecoratorControllerList"), scheme, codecs, fuzzer, nil)
+	roundtrip.RoundTripSpecificKindWithoutProtobuf(t, SchemeGroupVersion.WithKind("ControllerRevision"), scheme, codecs, fuzzer, nil)
+	roundtrip.RoundTripSpecificKindWithoutProtobuf(t, SchemeGroupVersion.WithKind("ControllerRevisionList"), scheme, codecs, fuzzer, nil)
 }
