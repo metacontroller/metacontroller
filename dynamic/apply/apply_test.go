@@ -17,10 +17,10 @@ limitations under the License.
 package apply
 
 import (
+	"reflect"
 	"testing"
 
-	"reflect"
-
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/diff"
 	"k8s.io/apimachinery/pkg/util/json"
 )
@@ -122,6 +122,33 @@ func TestMerge(t *testing.T) {
 				]
       }`,
 		},
+		{
+			name: "replace list of objects that's not a list-map",
+			observed: `{
+        "notListMap": [
+          {"name": "keep", "value": "other"},
+          {"notName": "remove", "value": "other"},
+          {"name": "merge", "nested": {"keep": "other"}}
+        ]
+      }`,
+			lastApplied: `{
+        "notListMap": [
+          {"name": "remove", "value": "old"}
+        ]
+      }`,
+			desired: `{
+        "notListMap": [
+          {"name": "add", "value": "new"},
+          {"name": "merge", "nested": {"add": "new"}}
+        ]
+      }`,
+			want: `{
+        "notListMap": [
+          {"name": "add", "value": "new"},
+          {"name": "merge", "nested": {"add": "new"}}
+        ]
+      }`,
+		},
 	}
 
 	for _, tc := range table {
@@ -156,5 +183,27 @@ func TestMerge(t *testing.T) {
 			t.Logf("reflect diff: a=got, b=want:\n%s", diff.ObjectReflectDiff(got, want))
 			t.Errorf("%v: Merge() = %#v, want %#v", tc.name, got, want)
 		}
+	}
+}
+
+func TestLastAppliedAnnotation(t *testing.T) {
+	// Round-trip some JSON through Set/Get methods.
+	inJSON := `{
+		"testing": "123"
+	}`
+	var in map[string]interface{}
+	if err := json.Unmarshal([]byte(inJSON), &in); err != nil {
+		t.Fatalf("can't unmarshal input: %v", err)
+	}
+	obj := &unstructured.Unstructured{}
+	if err := SetLastApplied(obj, in); err != nil {
+		t.Fatalf("SetLastApplied error: %v", err)
+	}
+	out, err := GetLastApplied(obj)
+	if err != nil {
+		t.Fatalf("GetLastApplied error: %v", err)
+	}
+	if !reflect.DeepEqual(in, out) {
+		t.Errorf("got %#v, want %#v", out, in)
 	}
 }
