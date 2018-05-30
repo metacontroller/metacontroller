@@ -8,6 +8,10 @@ all: install
 install: generated_files
 	go install
 
+unit-test:
+	go test -i ./...
+	go test ./...
+
 image: generated_files
 	docker build -t metacontroller/metacontroller:$(TAG) .
 
