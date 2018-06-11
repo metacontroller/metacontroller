@@ -6,6 +6,9 @@ spec:
   completions: 10
   parallelism: 2
   template:
+    metadata:
+      labels:
+        app: print-index
     spec:
       restartPolicy: OnFailure
       containers:

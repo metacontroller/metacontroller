@@ -8,3 +8,4 @@ install:
 - dep ensure
 script:
 - make
+- make unit-test

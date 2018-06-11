@@ -9,7 +9,8 @@ function(request) {
       apiVersion: "v1",
       kind: "Service",
       metadata: {
-        name: statefulset.metadata.name + "-" + index
+        name: statefulset.metadata.name + "-" + index,
+        labels: {app: "service-per-pod"}
       },
       spec: {
         selector: {
