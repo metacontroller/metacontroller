@@ -36,6 +36,7 @@ spec:
     sync:
       webhook:
         url: http://service-per-pod.metacontroller/sync-service-per-pod
+        timeout: 10s
 ```
 
 ## Spec
@@ -303,3 +304,7 @@ response because they're in different forms.
 Instead, you should think of each entry in the list of `attachments` as being
 sent to [`kubectl apply`][kubectl apply].
 That is, you should [set only the fields that you care about](/api/apply/).
+
+Note that your webhook handler must return a response with a status code of `200`
+to be considered successful. Metacontroller will wait for a response for up to the
+amount defined in the [Webhook spec](/api/hook/#webhook).

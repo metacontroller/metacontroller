@@ -25,6 +25,7 @@ Each Webhook has the following fields:
 | Field | Description |
 | ----- | ----------- |
 | url | A full URL for the webhook (e.g. `http://my-controller-svc/hook`). If present, this overrides any values provided for `path` and `service`. |
+| timeout | A duration (in the format of Go's time.Duration) indicating the time that Metacontroller should wait for a response. If the webhook takes longer than this time, the webhook call is aborted and retried later. Defaults to 10s. |
 | path | A path to be appended to the accompanying `service` to reach this hook (e.g. `/hook`). Ignored if full `url` is specified. |
 | [service](#service-reference) | A reference to a Kubernetes Service through which this hook can be reached. |
 

@@ -108,6 +108,7 @@ type Hook struct {
 
 type Webhook struct {
 	URL *string `json:"url,omitempty"`
+	Timeout *metav1.Duration `json:"timeout,omitempty"`
 
 	Path    *string           `json:"path,omitempty"`
 	Service *ServiceReference `json:"service,omitempty"`
