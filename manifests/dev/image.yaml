@@ -1,0 +1,12 @@
+# Override image for development mode (skaffold fills in the tag).
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: metacontroller
+  namespace: metacontroller
+spec:
+  template:
+    spec:
+      containers:
+      - name: metacontroller
+        image: enisoc/metacontroller

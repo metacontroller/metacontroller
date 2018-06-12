@@ -1,0 +1,11 @@
+# This is the same as Dockerfile, but skips `dep ensure`.
+# It assumes you already ran that locally.
+FROM golang:1.10 AS build
+
+COPY . /go/src/k8s.io/metacontroller/
+WORKDIR /go/src/k8s.io/metacontroller/
+RUN go install
+
+FROM debian:stretch-slim
+COPY --from=build /go/bin/metacontroller /usr/bin/
+CMD ["/usr/bin/metacontroller"]

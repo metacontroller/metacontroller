@@ -37,6 +37,32 @@ dep ensure
 go install
 ```
 
+## Skaffold Build
+
+If you're working on changes to Metacontroller itself, you can use
+[Skaffold][] and [Kustomize][] to make iterating more fluid.
+
+First use `dep` as described in the [Local Build](#local-build) section to
+populate the `vendor` directory.
+Rather than running `dep ensure` on every build, the development version of the
+Dockerfile expects you to have already run `dep ensure` locally.
+
+Next make sure your local Docker client is signed in to push to Docker Hub.
+Then change `enisoc/metacontroller` to point to `<yourname>/metacontroller`
+in these files:
+
+* `skaffold.yaml`
+* `manifests/dev/image.yaml`
+
+Now you can build and deploy your latest changes with:
+
+```sh
+skaffold run
+```
+
+[skaffold]: https://github.com/GoogleContainerTools/skaffold
+[kustomize]: https://github.com/kubernetes-sigs/kustomize
+
 ## Generated Files
 
 If you make changes to the [Metacontroller API types]({{ site.repo_dir }}/apis/metacontroller/),
