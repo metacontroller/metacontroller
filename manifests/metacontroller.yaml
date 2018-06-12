@@ -64,9 +64,8 @@ spec:
       containers:
       - name: metacontroller
         image: metacontroller/metacontroller:0.2
-        imagePullPolicy: Always
         command: ["/usr/bin/metacontroller"]
         args:
         - --logtostderr
         - -v=4
-        - --discovery-interval=10s
+        - --discovery-interval=20s

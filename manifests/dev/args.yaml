@@ -1,0 +1,15 @@
+# Override args for development mode.
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: metacontroller
+  namespace: metacontroller
+spec:
+  template:
+    spec:
+      containers:
+      - name: metacontroller
+        args:
+        - --logtostderr
+        - -v=5
+        - --discovery-interval=5s
