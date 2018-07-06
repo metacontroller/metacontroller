@@ -53,7 +53,11 @@ func (l *Lister) ListNamespace(namespace string, selector labels.Selector) (ret 
 }
 
 func (l *Lister) Get(namespace, name string) (*unstructured.Unstructured, error) {
-	obj, exists, err := l.indexer.GetByKey(fmt.Sprintf("%s/%s", namespace, name))
+	key := name
+	if namespace != "" {
+		key = fmt.Sprintf("%s/%s", namespace, name)
+	}
+	obj, exists, err := l.indexer.GetByKey(key)
 	if err != nil {
 		return nil, err
 	}
