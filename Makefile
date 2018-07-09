@@ -23,15 +23,17 @@ push: image
 
 generated_files: deepcopy clientset lister informer
 
-# requires deepcopy-gen tool (`go get k8s.io/code-generator/cmd/deepcopy-gen`)
+# also builds vendored version of deepcopy-gen tool
 deepcopy:
+	@go install ./vendor/k8s.io/code-generator/cmd/deepcopy-gen
 	@echo "+ Generating deepcopy funcs for $(API_GROUPS)"
 	@deepcopy-gen \
 		--input-dirs $(PKG)/apis/$(API_GROUPS) \
 		--output-file-base zz_generated.deepcopy
 
-# requires client-gen tool (`go get k8s.io/code-generator/cmd/client-gen`)
+# also builds vendored version of client-gen tool
 clientset:
+	@go install ./vendor/k8s.io/code-generator/cmd/client-gen
 	@echo "+ Generating clientsets for $(API_GROUPS)"
 	@client-gen \
 		--fake-clientset=false \
@@ -39,15 +41,17 @@ clientset:
 		--input-base $(PKG)/apis \
 		--clientset-path $(PKG)/client/generated/clientset
 
-# requires lister-gen tool (`go get k8s.io/code-generator/cmd/lister-gen`)
+# also builds vendored version of lister-gen tool
 lister:
+	@go install ./vendor/k8s.io/code-generator/cmd/lister-gen
 	@echo "+ Generating lister for $(API_GROUPS)"
 	@lister-gen \
 		--input-dirs $(PKG)/apis/$(API_GROUPS) \
 		--output-package $(PKG)/client/generated/lister
 
-# requires informer-gen tool (`go get k8s.io/code-generator/cmd/informer-gen`)
+# also builds vendored version of informer-gen tool
 informer:
+	@go install ./vendor/k8s.io/code-generator/cmd/informer-gen
 	@echo "+ Generating informer for $(API_GROUPS)"
 	@informer-gen \
 		--input-dirs $(PKG)/apis/$(API_GROUPS) \

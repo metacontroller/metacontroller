@@ -4,8 +4,8 @@ go:
 go_import_path: k8s.io/metacontroller
 install:
 - go get -u github.com/golang/dep/cmd/dep
-- go get -u k8s.io/code-generator/cmd/{lister,client,informer,deepcopy}-gen
 - dep ensure
 script:
-- make
+# We intentionally don't generate files in CI, since we check them in.
+- go install
 - make unit-test
