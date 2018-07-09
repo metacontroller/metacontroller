@@ -1,5 +1,5 @@
 /*
-Copyright The Kubernetes Authors.
+Copyright 2018 The Kubernetes Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -40,7 +40,7 @@ func init() {
 //
 //   import (
 //     "k8s.io/client-go/kubernetes"
-//     clientsetscheme "k8s.io/client-go/kubernetes/scheme"
+//     clientsetscheme "k8s.io/client-go/kuberentes/scheme"
 //     aggregatorclientsetscheme "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset/scheme"
 //   )
 //
@@ -51,4 +51,5 @@ func init() {
 // correctly.
 func AddToScheme(scheme *runtime.Scheme) {
 	metacontrollerv1alpha1.AddToScheme(scheme)
+
 }
