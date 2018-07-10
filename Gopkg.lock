@@ -25,8 +25,8 @@
     ".",
     "log"
   ]
-  revision = "26b41036311f2da8242db402557a0dbd09dc83da"
-  version = "v2.6.0"
+  revision = "3eb9738c1697594ea6e71a7156a9bb32ed216cf0"
+  version = "v2.8.0"
 
 [[projects]]
   name = "github.com/ghodss/yaml"
@@ -50,13 +50,13 @@
   branch = "master"
   name = "github.com/go-openapi/spec"
   packages = ["."]
-  revision = "a3092263d8b39f66ff6fe87b0109668eca1e24ff"
+  revision = "90cb6221326a6e7a2ae375729b6f724c7ae66899"
 
 [[projects]]
   branch = "master"
   name = "github.com/go-openapi/swag"
   packages = ["."]
-  revision = "ceb469cb0fdf2d792f28d771bc05da6c606f55e5"
+  revision = "2b0bd4f193d011c203529df626a65d63cb8a79e8"
 
 [[projects]]
   name = "github.com/gogo/protobuf"
@@ -138,8 +138,8 @@
 [[projects]]
   name = "github.com/json-iterator/go"
   packages = ["."]
-  revision = "3353055b2a1a5ae1b6a8dfde887a524e7088f3a2"
-  version = "1.1.2"
+  revision = "ab8a2e0c74be9d3be70b3184d9acc634935ded82"
+  version = "1.1.4"
 
 [[projects]]
   name = "github.com/juju/ratelimit"
@@ -155,7 +155,7 @@
     "jlexer",
     "jwriter"
   ]
-  revision = "8b799c424f57fa123fc63a99d6383bc6e4c02578"
+  revision = "3fdea8d05856a0c8df22ed4bc71b3219245e4485"
 
 [[projects]]
   name = "github.com/modern-go/concurrent"
@@ -166,8 +166,8 @@
 [[projects]]
   name = "github.com/modern-go/reflect2"
   packages = ["."]
-  revision = "1df9eeb2bb81f327b96228865c5687bc2194af3f"
-  version = "1.0.0"
+  revision = "4b7aa43c6742a2c18fdef89dd197aaae7dac7ccd"
+  version = "1.0.1"
 
 [[projects]]
   branch = "master"
@@ -220,6 +220,16 @@
   ]
   revision = "f21a4dfb5e38f5895301dc265a8def02365cc3d0"
   version = "v0.3.0"
+
+[[projects]]
+  branch = "master"
+  name = "golang.org/x/tools"
+  packages = [
+    "go/ast/astutil",
+    "imports",
+    "internal/fastwalk"
+  ]
+  revision = "d600f31f815368e57b551e524b0169bd175f7edb"
 
 [[projects]]
   name = "gopkg.in/inf.v0"
@@ -318,8 +328,8 @@
     "pkg/watch",
     "third_party/forked/golang/reflect"
   ]
-  revision = "68f9c3a1feb3140df59c67ced62d3a5df8e6c9c2"
-  version = "kubernetes-1.9.1"
+  revision = "fb40df2b502912cbe3a93aa61c2b2487f39cb42f"
+  version = "kubernetes-1.9.9"
 
 [[projects]]
   name = "k8s.io/client-go"
@@ -346,10 +356,44 @@
   version = "v6.0.0"
 
 [[projects]]
+  name = "k8s.io/code-generator"
+  packages = [
+    "cmd/client-gen",
+    "cmd/client-gen/args",
+    "cmd/client-gen/generators",
+    "cmd/client-gen/generators/fake",
+    "cmd/client-gen/generators/scheme",
+    "cmd/client-gen/generators/util",
+    "cmd/client-gen/path",
+    "cmd/client-gen/types",
+    "cmd/deepcopy-gen",
+    "cmd/informer-gen",
+    "cmd/informer-gen/generators",
+    "cmd/lister-gen",
+    "cmd/lister-gen/generators"
+  ]
+  revision = "0ab89e584187c20cc7c1a3f30db69f3b4ab64196"
+  version = "kubernetes-1.9.9"
+
+[[projects]]
+  branch = "master"
+  name = "k8s.io/gengo"
+  packages = [
+    "args",
+    "examples/deepcopy-gen/generators",
+    "examples/set-gen/sets",
+    "generator",
+    "namer",
+    "parser",
+    "types"
+  ]
+  revision = "fdcf9f9480fdd5bf2b3c3df9bf4ecd22b25b87e2"
+
+[[projects]]
   branch = "master"
   name = "k8s.io/kube-openapi"
   packages = ["pkg/common"]
-  revision = "50ae88d24ede7b8bad68e23c805b5d3da5c8abaf"
+  revision = "d83b052f768a50a309c692a9c271da3f3276ff88"
 
 [[projects]]
   name = "k8s.io/kubernetes"
@@ -360,6 +404,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "0a0f93a3564fe03b9b3bc39120f999037c0994cdc70859abb6b6a8b39553119a"
+  inputs-digest = "b61d80b6a391ef6b4edad0fdd2dc3a9f9186a1c790353533c85d18b0aef09cd8"
   solver-name = "gps-cdcl"
   solver-version = 1
