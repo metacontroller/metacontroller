@@ -29,7 +29,7 @@ Replace `<user>` and `<domain>` above based on the account you use to authentica
 ```sh
 # Create 'metacontroller' namespace, service account, and role/binding.
 kubectl apply -f {{ site.repo_raw }}/manifests/metacontroller-rbac.yaml
-# Create CRDs for Metacontroller APIs, and the Metacontroller Deployment.
+# Create CRDs for Metacontroller APIs, and the Metacontroller StatefulSet.
 kubectl apply -f {{ site.repo_raw }}/manifests/metacontroller.yaml
 ```
 
@@ -39,7 +39,7 @@ If you prefer to build and host your own images, please see the
 ## Configuration
 
 The Metacontroller server has a few settings that can be configured
-with command-line flags (by editing the Metacontroller Deployment
+with command-line flags (by editing the Metacontroller StatefulSet
 in `manifests/metacontroller.yaml`):
 
 | Flag | Description |
