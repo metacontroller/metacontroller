@@ -12,18 +12,20 @@ trap cleanup EXIT
 
 set -ex
 
+ij="indexedjobs"
+
 echo "Install controller..."
 kubectl create configmap indexedjob-controller -n metacontroller --from-file=sync.py
 kubectl apply -f indexedjob-controller.yaml
 
 echo "Wait until CRD is available..."
-until kubectl get indexedjobs; do sleep 1; done
+until kubectl get $ij; do sleep 1; done
 
 echo "Create an object..."
 kubectl apply -f my-indexedjob.yaml
 
 echo "Wait for 10 successful completions..."
-until [[ "$(kubectl get indexedjob print-index -o 'jsonpath={.status.succeeded}')" -eq 10 ]]; do sleep 1; done
+until [[ "$(kubectl get $ij print-index -o 'jsonpath={.status.succeeded}')" -eq 10 ]]; do sleep 1; done
 
 echo "Check that correct index is printed..."
 if [[ "$(kubectl logs print-index-9)" != "9" ]]; then

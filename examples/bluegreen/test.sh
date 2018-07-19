@@ -12,12 +12,14 @@ trap cleanup EXIT
 
 set -ex
 
+bgd="bluegreendeployments"
+
 echo "Install controller..."
 kubectl create configmap bluegreen-controller -n metacontroller --from-file=sync.js
 kubectl apply -f bluegreen-controller.yaml
 
 echo "Wait until CRD is available..."
-until kubectl get bgd; do sleep 1; done
+until kubectl get $bgd; do sleep 1; done
 
 echo "Create an object..."
 kubectl apply -f my-bluegreen.yaml
@@ -27,14 +29,14 @@ until [[ "$(kubectl get rs nginx-blue -o 'jsonpath={.status.readyReplicas}')" -e
 until [[ "$(kubectl get rs nginx-green -o 'jsonpath={.status.replicas}')" -eq 0 ]]; do sleep 1; done
 
 echo "Trigger a rollout..."
-kubectl patch bgd nginx --type=merge -p '{"spec":{"template":{"metadata":{"labels":{"new":"label"}}}}}'
+kubectl patch $bgd nginx --type=merge -p '{"spec":{"template":{"metadata":{"labels":{"new":"label"}}}}}'
 
 echo "Wait for nginx-green RS to be active..."
 until [[ "$(kubectl get rs nginx-green -o 'jsonpath={.status.readyReplicas}')" -eq 3 ]]; do sleep 1; done
 until [[ "$(kubectl get rs nginx-blue -o 'jsonpath={.status.replicas}')" -eq 0 ]]; do sleep 1; done
 
 echo "Trigger another rollout..."
-kubectl patch bgd nginx --type=merge -p '{"spec":{"template":{"metadata":{"labels":{"new2":"label2"}}}}}'
+kubectl patch $bgd nginx --type=merge -p '{"spec":{"template":{"metadata":{"labels":{"new2":"label2"}}}}}'
 
 echo "Wait for nginx-blue RS to be active..."
 until [[ "$(kubectl get rs nginx-blue -o 'jsonpath={.status.readyReplicas}')" -eq 3 ]]; do sleep 1; done

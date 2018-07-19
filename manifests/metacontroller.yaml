@@ -55,6 +55,7 @@ spec:
   selector:
     matchLabels:
       app: metacontroller
+  serviceName: ""
   template:
     metadata:
       labels:
