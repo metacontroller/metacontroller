@@ -524,7 +524,7 @@ func (pc *parentController) claimChildren(parent *unstructured.Unstructured) (co
 		// Add children to map by name.
 		// Note that we limit each parent to only working within its own namespace.
 		for _, obj := range children {
-			childMap.Insert(obj)
+			childMap.Insert(parent, obj)
 		}
 	}
 	return childMap, nil
