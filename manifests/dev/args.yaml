@@ -5,7 +5,6 @@ metadata:
   name: metacontroller
   namespace: metacontroller
 spec:
-  serviceName: ""
   template:
     spec:
       containers:
