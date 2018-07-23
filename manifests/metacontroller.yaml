@@ -43,8 +43,8 @@ spec:
     singular: controllerrevision
     kind: ControllerRevision
 ---
-apiVersion: apps/v1beta1
-kind: Deployment
+apiVersion: apps/v1beta2
+kind: StatefulSet
 metadata:
   name: metacontroller
   namespace: metacontroller
@@ -55,6 +55,7 @@ spec:
   selector:
     matchLabels:
       app: metacontroller
+  serviceName: ""
   template:
     metadata:
       labels:
