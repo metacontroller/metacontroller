@@ -30,20 +30,24 @@ required = [
 
 [[constraint]]
   name = "k8s.io/client-go"
-  version = "~6.0"
+  version = "8.0.0"
 
 [[constraint]]
   name = "k8s.io/apimachinery"
-  version = "kubernetes-1.9.9"
+  version = "kubernetes-1.11.0"
 
 [[constraint]]
   name = "k8s.io/code-generator"
-  version = "kubernetes-1.9.9"
+  version = "kubernetes-1.11.0"
 
 [[override]]
   name = "github.com/json-iterator/go"
-  version = "1.1.4" # as used by apimachinery@kubernetes-1.9.9
+  version = "1.1.5" # same minor version track as used by apimachinery@kubernetes-1.11.0
 
 [prune]
   go-tests = true
   unused-packages = true
+
+  [[prune.project]]
+    name = "k8s.io/code-generator"
+    unused-packages = false
