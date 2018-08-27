@@ -72,7 +72,7 @@ func ManageChildren(dynClient *dynamicclientset.Clientset, updateStrategy ChildU
 	// Delete observed, owned objects that are not desired.
 	for key, objects := range observedChildren {
 		apiVersion, kind := ParseChildMapKey(key)
-		client, err := dynClient.Kind(apiVersion, kind, parent.GetNamespace())
+		client, err := dynClient.Kind(apiVersion, kind)
 		if err != nil {
 			errs = append(errs, err)
 			continue
@@ -86,7 +86,7 @@ func ManageChildren(dynClient *dynamicclientset.Clientset, updateStrategy ChildU
 	// Create or update desired objects.
 	for key, objects := range desiredChildren {
 		apiVersion, kind := ParseChildMapKey(key)
-		client, err := dynClient.Kind(apiVersion, kind, parent.GetNamespace())
+		client, err := dynClient.Kind(apiVersion, kind)
 		if err != nil {
 			errs = append(errs, err)
 			continue
@@ -111,7 +111,7 @@ func deleteChildren(client *dynamicclientset.ResourceClient, parent *unstructure
 			// This observed object wasn't listed as desired.
 			glog.Infof("%v %v/%v: deleting %v %v", parent.GetKind(), parent.GetNamespace(), parent.GetName(), obj.GetKind(), obj.GetName())
 			uid := obj.GetUID()
-			err := client.Delete(name, &metav1.DeleteOptions{
+			err := client.Namespace(parent.GetNamespace()).Delete(name, &metav1.DeleteOptions{
 				Preconditions: &metav1.Preconditions{UID: &uid},
 			})
 			if err != nil {
@@ -160,7 +160,7 @@ func updateChildren(client *dynamicclientset.ResourceClient, updateStrategy Chil
 				// Delete the object (now) and recreate it (on the next sync).
 				glog.Infof("%v %v/%v: deleting %v %v for update", parent.GetKind(), parent.GetNamespace(), parent.GetName(), obj.GetKind(), obj.GetName())
 				uid := oldObj.GetUID()
-				err := client.Delete(name, &metav1.DeleteOptions{
+				err := client.Namespace(parent.GetNamespace()).Delete(name, &metav1.DeleteOptions{
 					Preconditions: &metav1.Preconditions{UID: &uid},
 				})
 				if err != nil {
@@ -170,7 +170,7 @@ func updateChildren(client *dynamicclientset.ResourceClient, updateStrategy Chil
 			case v1alpha1.ChildUpdateInPlace, v1alpha1.ChildUpdateRollingInPlace:
 				// Update the object in-place.
 				glog.Infof("%v %v/%v: updating %v %v", parent.GetKind(), parent.GetNamespace(), parent.GetName(), obj.GetKind(), obj.GetName())
-				if _, err := client.Update(newObj); err != nil {
+				if _, err := client.Namespace(parent.GetNamespace()).Update(newObj); err != nil {
 					errs = append(errs, err)
 					continue
 				}
@@ -198,7 +198,8 @@ func updateChildren(client *dynamicclientset.ResourceClient, updateStrategy Chil
 			ownerRefs = append(ownerRefs, *controllerRef)
 			obj.SetOwnerReferences(ownerRefs)
 
-			if _, err := client.Create(obj); err != nil {
+			if _, err := client.Namespace(parent.GetNamespace()).Create(obj); err != nil {
+				fmt.Printf("\n\n6: %+v\n\n", errs)
 				errs = append(errs, err)
 				continue
 			}

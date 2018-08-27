@@ -443,12 +443,12 @@ func (c *decoratorController) syncParentObject(parent *unstructured.Unstructured
 		updatedParent.SetLabels(parentLabels)
 		updatedParent.SetAnnotations(parentAnnotations)
 
-		parentClient, err := c.dynClient.Kind(parent.GetAPIVersion(), parent.GetKind(), parent.GetNamespace())
+		parentClient, err := c.dynClient.Kind(parent.GetAPIVersion(), parent.GetKind())
 		if err != nil {
 			return fmt.Errorf("can't update %v %v/%v: %v", parent.GetKind(), parent.GetNamespace(), parent.GetName(), err)
 		}
 		glog.V(4).Infof("DecoratorController %v: updating %v %v/%v", c.dc.Name, parent.GetKind(), parent.GetNamespace(), parent.GetName())
-		_, err = parentClient.Update(updatedParent)
+		_, err = parentClient.Namespace(parent.GetNamespace()).Update(updatedParent)
 		if err != nil {
 			return fmt.Errorf("can't update %v %v/%v: %v", parent.GetKind(), parent.GetNamespace(), parent.GetName(), err)
 		}

@@ -33,70 +33,71 @@ import (
 type Clientset struct {
 	config    rest.Config
 	resources *dynamicdiscovery.ResourceMap
+	dc        dynamic.Interface
 }
 
-func New(config *rest.Config, resources *dynamicdiscovery.ResourceMap) *Clientset {
+func New(config *rest.Config, resources *dynamicdiscovery.ResourceMap) (*Clientset, error) {
+	dc, err := dynamic.NewForConfig(config)
+	if err != nil {
+		return nil, fmt.Errorf("can't create dynamic client when creating clientset: %v", err)
+	}
 	return &Clientset{
 		config:    *config,
 		resources: resources,
-	}
+		dc:        dc,
+	}, nil
 }
 
 func (cs *Clientset) HasSynced() bool {
 	return cs.resources.HasSynced()
 }
 
-func (cs *Clientset) Resource(apiVersion, resource, namespace string) (*ResourceClient, error) {
+func (cs *Clientset) Resource(apiVersion, resource string) (*ResourceClient, error) {
 	// Look up the requested resource in discovery.
 	apiResource := cs.resources.Get(apiVersion, resource)
 	if apiResource == nil {
 		return nil, fmt.Errorf("discovery: can't find resource %s in apiVersion %s", resource, apiVersion)
 	}
-	return cs.resource(apiResource, namespace)
+	return cs.resource(apiResource), nil
 }
 
-func (cs *Clientset) Kind(apiVersion, kind, namespace string) (*ResourceClient, error) {
+func (cs *Clientset) Kind(apiVersion, kind string) (*ResourceClient, error) {
 	// Look up the requested resource in discovery.
 	apiResource := cs.resources.GetKind(apiVersion, kind)
 	if apiResource == nil {
 		return nil, fmt.Errorf("discovery: can't find kind %s in apiVersion %s", kind, apiVersion)
 	}
-	return cs.resource(apiResource, namespace)
+	return cs.resource(apiResource), nil
 }
 
-func (cs *Clientset) resource(apiResource *dynamicdiscovery.APIResource, namespace string) (*ResourceClient, error) {
-	// Create dynamic client for this apiVersion/resource.
-	gv := apiResource.GroupVersion()
-	config := cs.config
-	config.GroupVersion = &gv
-	if gv.Group != "" {
-		config.APIPath = "/apis"
-	}
-	dc, err := dynamic.NewClient(&config)
-	if err != nil {
-		return nil, fmt.Errorf("can't create dynamic client for resource %v in apiVersion %v: %v", apiResource.Name, apiResource.APIVersion, err)
-	}
+func (cs *Clientset) resource(apiResource *dynamicdiscovery.APIResource) *ResourceClient {
 	return &ResourceClient{
-		ResourceInterface: dc.Resource(&apiResource.APIResource, namespace),
-		dc:                dc,
-		gv:                gv,
-		resource:          apiResource,
-	}, nil
+		NamespaceableResourceInterface: cs.dc.Resource(apiResource.GroupVersionResource()),
+		gv:                             apiResource.GroupVersion(),
+		resource:                       apiResource,
+	}
 }
 
 type ResourceClient struct {
-	dynamic.ResourceInterface
+	dynamic.NamespaceableResourceInterface
 
-	dc       *dynamic.Client
 	gv       schema.GroupVersion
 	resource *dynamicdiscovery.APIResource
 }
 
-func (rc *ResourceClient) WithNamespace(namespace string) *ResourceClient {
-	// Make a shallow copy of self, then change the namespace.
-	rc2 := *rc
-	rc2.ResourceInterface = rc.dc.Resource(&rc.resource.APIResource, namespace)
-	return &rc2
+type NamespacedResourceClient struct {
+	dynamic.ResourceInterface
+
+	gv       schema.GroupVersion
+	resource *dynamicdiscovery.APIResource
+}
+
+func (rc *ResourceClient) Namespace(namespace string) *NamespacedResourceClient {
+	return &NamespacedResourceClient{
+		ResourceInterface: rc.NamespaceableResourceInterface.Namespace(namespace),
+		gv:                rc.gv,
+		resource:          rc.resource,
+	}
 }
 
 func (rc *ResourceClient) Kind() string {
@@ -116,6 +117,10 @@ func (rc *ResourceClient) GroupResource() schema.GroupResource {
 
 func (rc *ResourceClient) GroupVersionKind() schema.GroupVersionKind {
 	return rc.gv.WithKind(rc.resource.Kind)
+}
+
+func (rc *ResourceClient) GroupVersionResource() schema.GroupVersionResource {
+	return rc.gv.WithResource(rc.resource.Name)
 }
 
 func (rc *ResourceClient) APIResource() *dynamicdiscovery.APIResource {
@@ -139,6 +144,35 @@ func (rc *ResourceClient) UpdateWithRetries(orig *unstructured.Unstructured, upd
 			return nil
 		}
 		result, err = rc.Update(current)
+		return err
+	})
+	return result, err
+}
+
+func (nrc *NamespacedResourceClient) GroupResource() schema.GroupResource {
+	return schema.GroupResource{
+		Group:    nrc.gv.Group,
+		Resource: nrc.resource.Name,
+	}
+}
+
+func (nrc *NamespacedResourceClient) UpdateWithRetries(orig *unstructured.Unstructured, update func(obj *unstructured.Unstructured) bool) (result *unstructured.Unstructured, err error) {
+	name := orig.GetName()
+	err = retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+		current, err := nrc.Get(name, metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+		if current.GetUID() != orig.GetUID() {
+			// The original object was deleted and replaced with a new one.
+			return apierrors.NewNotFound(nrc.GroupResource(), name)
+		}
+		if changed := update(current); !changed {
+			// There's nothing to do.
+			result = current
+			return nil
+		}
+		result, err = nrc.Update(current)
 		return err
 	})
 	return result, err
