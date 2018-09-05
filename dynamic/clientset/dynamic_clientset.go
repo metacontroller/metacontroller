@@ -73,29 +73,23 @@ func (cs *Clientset) Kind(apiVersion, kind string) (*ResourceClient, error) {
 func (cs *Clientset) resource(apiResource *dynamicdiscovery.APIResource) *ResourceClient {
 	return &ResourceClient{
 		NamespaceableResourceInterface: cs.dc.Resource(apiResource.GroupVersionResource()),
-		gv:                             apiResource.GroupVersion(),
 		resource:                       apiResource,
 	}
 }
 
 type ResourceClient struct {
 	dynamic.NamespaceableResourceInterface
-
-	gv       schema.GroupVersion
 	resource *dynamicdiscovery.APIResource
 }
 
 type NamespacedResourceClient struct {
 	dynamic.ResourceInterface
-
-	gv       schema.GroupVersion
 	resource *dynamicdiscovery.APIResource
 }
 
 func (rc *ResourceClient) Namespace(namespace string) *NamespacedResourceClient {
 	return &NamespacedResourceClient{
 		ResourceInterface: rc.NamespaceableResourceInterface.Namespace(namespace),
-		gv:                rc.gv,
 		resource:          rc.resource,
 	}
 }
@@ -105,22 +99,22 @@ func (rc *ResourceClient) Kind() string {
 }
 
 func (rc *ResourceClient) GroupVersion() schema.GroupVersion {
-	return rc.gv
+	return rc.resource.GroupVersion()
 }
 
 func (rc *ResourceClient) GroupResource() schema.GroupResource {
 	return schema.GroupResource{
-		Group:    rc.gv.Group,
+		Group:    rc.resource.GroupVersion().Group,
 		Resource: rc.resource.Name,
 	}
 }
 
 func (rc *ResourceClient) GroupVersionKind() schema.GroupVersionKind {
-	return rc.gv.WithKind(rc.resource.Kind)
+	return rc.resource.GroupVersion().WithKind(rc.resource.Kind)
 }
 
 func (rc *ResourceClient) GroupVersionResource() schema.GroupVersionResource {
-	return rc.gv.WithResource(rc.resource.Name)
+	return rc.resource.GroupVersion().WithResource(rc.resource.Name)
 }
 
 func (rc *ResourceClient) APIResource() *dynamicdiscovery.APIResource {
@@ -128,51 +122,34 @@ func (rc *ResourceClient) APIResource() *dynamicdiscovery.APIResource {
 }
 
 func (rc *ResourceClient) UpdateWithRetries(orig *unstructured.Unstructured, update func(obj *unstructured.Unstructured) bool) (result *unstructured.Unstructured, err error) {
-	name := orig.GetName()
-	err = retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-		current, err := rc.Get(name, metav1.GetOptions{})
-		if err != nil {
-			return err
-		}
-		if current.GetUID() != orig.GetUID() {
-			// The original object was deleted and replaced with a new one.
-			return apierrors.NewNotFound(rc.GroupResource(), name)
-		}
-		if changed := update(current); !changed {
-			// There's nothing to do.
-			result = current
-			return nil
-		}
-		result, err = rc.Update(current)
-		return err
-	})
-	return result, err
-}
-
-func (nrc *NamespacedResourceClient) GroupResource() schema.GroupResource {
-	return schema.GroupResource{
-		Group:    nrc.gv.Group,
-		Resource: nrc.resource.Name,
-	}
+	return updateWithRetries(rc, rc.resource, orig, update)
 }
 
 func (nrc *NamespacedResourceClient) UpdateWithRetries(orig *unstructured.Unstructured, update func(obj *unstructured.Unstructured) bool) (result *unstructured.Unstructured, err error) {
+	return updateWithRetries(nrc, nrc.resource, orig, update)
+}
+
+func updateWithRetries(ri dynamic.ResourceInterface, resource *dynamicdiscovery.APIResource, orig *unstructured.Unstructured, update func(obj *unstructured.Unstructured) bool) (result *unstructured.Unstructured, err error) {
 	name := orig.GetName()
 	err = retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-		current, err := nrc.Get(name, metav1.GetOptions{})
+		current, err := ri.Get(name, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
 		if current.GetUID() != orig.GetUID() {
 			// The original object was deleted and replaced with a new one.
-			return apierrors.NewNotFound(nrc.GroupResource(), name)
+			groupResource := schema.GroupResource{
+				Group:    resource.GroupVersion().Group,
+				Resource: resource.Name,
+			}
+			return apierrors.NewNotFound(groupResource, name)
 		}
 		if changed := update(current); !changed {
 			// There's nothing to do.
 			result = current
 			return nil
 		}
-		result, err = nrc.Update(current)
+		result, err = ri.Update(current)
 		return err
 	})
 	return result, err
