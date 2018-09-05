@@ -8,4 +8,5 @@ RUN go install
 
 FROM debian:stretch-slim
 COPY --from=build /go/bin/metacontroller /usr/bin/
+RUN apt-get update && apt-get install --no-install-recommends -y ca-certificates && rm -rf /var/lib/apt/lists/*
 CMD ["/usr/bin/metacontroller"]
