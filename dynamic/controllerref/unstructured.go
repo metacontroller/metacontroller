@@ -79,6 +79,20 @@ func (m *UnstructuredManager) ClaimChildren(children []*unstructured.Unstructure
 	return claimed, utilerrors.NewAggregate(errlist)
 }
 
+func updateWithRetries(rc *dynamicclientset.ResourceClient, obj *unstructured.Unstructured, updateFunc func(obj *unstructured.Unstructured) bool) error {
+	var err error
+	// We can't use strategic merge patch because we want this to work with custom resources.
+	// We can't use merge patch because that would replace the whole list.
+	// We can't use JSON patch ops because that wouldn't be idempotent.
+	// The only option is GET/PUT with ResourceVersion.
+	if obj.GetNamespace() != "" {
+		_, err = rc.Namespace(obj.GetNamespace()).UpdateWithRetries(obj, updateFunc)
+	} else {
+		_, err = rc.UpdateWithRetries(obj, updateFunc)
+	}
+	return err
+}
+
 func (m *UnstructuredManager) adoptChild(obj *unstructured.Unstructured) error {
 	if err := m.CanAdopt(); err != nil {
 		return fmt.Errorf("can't adopt %v %v/%v (%v): %v", m.childKind.Kind, obj.GetNamespace(), obj.GetName(), obj.GetUID(), err)
@@ -92,41 +106,20 @@ func (m *UnstructuredManager) adoptChild(obj *unstructured.Unstructured) error {
 		Controller:         k8s.BoolPtr(true),
 		BlockOwnerDeletion: k8s.BoolPtr(true),
 	}
-
-	updateFunc := func(obj *unstructured.Unstructured) bool {
+	return updateWithRetries(m.client, obj, func(obj *unstructured.Unstructured) bool {
 		ownerRefs := addOwnerReference(obj.GetOwnerReferences(), controllerRef)
 		obj.SetOwnerReferences(ownerRefs)
 		return true
-	}
-
-	// We can't use strategic merge patch because we want this to work with custom resources.
-	// We can't use merge patch because that would replace the whole list.
-	// We can't use JSON patch ops because that wouldn't be idempotent.
-	// The only option is GET/PUT with ResourceVersion.
-	var err error
-	if obj.GetNamespace() != "" {
-		_, err = m.client.Namespace(obj.GetNamespace()).UpdateWithRetries(obj, updateFunc)
-	} else {
-		_, err = m.client.UpdateWithRetries(obj, updateFunc)
-	}
-	return err
+	})
 }
 
 func (m *UnstructuredManager) releaseChild(obj *unstructured.Unstructured) error {
 	glog.Infof("%v %v/%v: releasing %v %v", m.parentKind.Kind, m.Controller.GetNamespace(), m.Controller.GetName(), m.childKind.Kind, obj.GetName())
-	updateFunc := func(obj *unstructured.Unstructured) bool {
+	err := updateWithRetries(m.client, obj, func(obj *unstructured.Unstructured) bool {
 		ownerRefs := removeOwnerReference(obj.GetOwnerReferences(), m.Controller.GetUID())
 		obj.SetOwnerReferences(ownerRefs)
 		return true
-	}
-
-	var err error
-	if obj.GetNamespace() != "" {
-		_, err = m.client.Namespace(obj.GetNamespace()).UpdateWithRetries(obj, updateFunc)
-	} else {
-		_, err = m.client.UpdateWithRetries(obj, updateFunc)
-	}
-
+	})
 	if apierrors.IsNotFound(err) || apierrors.IsGone(err) {
 		// If the original object is gone, that's fine because we're giving up on this child anyway.
 		return nil
