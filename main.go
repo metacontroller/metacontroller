@@ -74,7 +74,10 @@ func main() {
 	mcInformerFactory := mcinformers.NewSharedInformerFactory(mcClient, *informerRelist)
 
 	// Create dynamic clientset (factory for dynamic clients).
-	dynClient := dynamicclientset.New(config, resources)
+	dynClient, err := dynamicclientset.New(config, resources)
+	if err != nil {
+		glog.Fatal(err)
+	}
 	// Create dynamic informer factory (for sharing dynamic informers).
 	dynInformers := dynamicinformer.NewSharedInformerFactory(dynClient, *informerRelist)
 

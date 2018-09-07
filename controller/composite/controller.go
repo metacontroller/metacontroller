@@ -66,7 +66,7 @@ type parentController struct {
 
 func newParentController(resources *dynamicdiscovery.ResourceMap, dynClient *dynamicclientset.Clientset, dynInformers *dynamicinformer.SharedInformerFactory, mcClient mcclientset.Interface, revisionLister mclisters.ControllerRevisionLister, cc *v1alpha1.CompositeController) (pc *parentController, newErr error) {
 	// Make a dynamic client for the parent resource.
-	parentClient, err := dynClient.Resource(cc.Spec.ParentResource.APIVersion, cc.Spec.ParentResource.Resource, "")
+	parentClient, err := dynClient.Resource(cc.Spec.ParentResource.APIVersion, cc.Spec.ParentResource.Resource)
 	if err != nil {
 		return nil, err
 	}
@@ -471,10 +471,9 @@ func (pc *parentController) makeSelector(parent *unstructured.Unstructured, extr
 }
 
 func (pc *parentController) canAdoptFunc(parent *unstructured.Unstructured) func() error {
-	nsParentClient := pc.parentClient.WithNamespace(parent.GetNamespace())
 	return k8s.RecheckDeletionTimestamp(func() (metav1.Object, error) {
 		// Make sure this is always an uncached read.
-		fresh, err := nsParentClient.Get(parent.GetName(), metav1.GetOptions{})
+		fresh, err := pc.parentClient.Namespace(parent.GetNamespace()).Get(parent.GetName(), metav1.GetOptions{})
 		if err != nil {
 			return nil, err
 		}
@@ -499,7 +498,7 @@ func (pc *parentController) claimChildren(parent *unstructured.Unstructured) (co
 	childMap := make(common.ChildMap)
 	for _, child := range pc.cc.Spec.ChildResources {
 		// List all objects of the child kind in the parent object's namespace.
-		childClient, err := pc.dynClient.Resource(child.APIVersion, child.Resource, namespace)
+		childClient, err := pc.dynClient.Resource(child.APIVersion, child.Resource)
 		if err != nil {
 			return nil, err
 		}
@@ -536,8 +535,7 @@ func (pc *parentController) updateParentStatus(parent *unstructured.Unstructured
 	// We can't use Patch() because we need to ensure that the UID matches.
 	// TODO(enisoc): Use /status subresource when that exists.
 	// TODO(enisoc): Update status.observedGeneration when spec.generation starts working.
-	nsParentClient := pc.parentClient.WithNamespace(parent.GetNamespace())
-	return nsParentClient.UpdateWithRetries(parent, func(obj *unstructured.Unstructured) bool {
+	return pc.parentClient.Namespace(parent.GetNamespace()).UpdateWithRetries(parent, func(obj *unstructured.Unstructured) bool {
 		oldStatus := k8s.GetNestedField(obj.UnstructuredContent(), "status")
 		if reflect.DeepEqual(oldStatus, status) {
 			// Nothing to do.
