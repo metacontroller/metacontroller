@@ -17,17 +17,23 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"flag"
+	"net/http"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
 	"time"
 
+	"github.com/0xRLG/ocworkqueue"
 	"github.com/golang/glog"
+	"go.opencensus.io/exporter/prometheus"
+	"go.opencensus.io/stats/view"
 
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/util/workqueue"
 
 	"k8s.io/metacontroller/apis/metacontroller/v1alpha1"
 	mcclientset "k8s.io/metacontroller/client/generated/clientset/internalclientset"
@@ -42,6 +48,7 @@ import (
 var (
 	discoveryInterval = flag.Duration("discovery-interval", 30*time.Second, "How often to refresh discovery cache to pick up newly-installed resources")
 	informerRelist    = flag.Duration("cache-flush-interval", 30*time.Minute, "How often to flush local caches and relist objects from the API server")
+	debugAddr         = flag.String("debug-addr", ":9999", "The address to bind the debug http endpoints")
 )
 
 type controller interface {
@@ -54,6 +61,7 @@ func main() {
 
 	glog.Infof("Discovery cache flush interval: %v", *discoveryInterval)
 	glog.Infof("API server object cache flush interval: %v", *informerRelist)
+	glog.Infof("Debug http server address: %v", *debugAddr)
 
 	config, err := rest.InClusterConfig()
 	if err != nil {
@@ -81,6 +89,9 @@ func main() {
 	// Create dynamic informer factory (for sharing dynamic informers).
 	dynInformers := dynamicinformer.NewSharedInformerFactory(dynClient, *informerRelist)
 
+	workqueue.SetProvider(ocworkqueue.MetricsProvider())
+	view.Register(ocworkqueue.DefaultViews...)
+
 	// Start metacontrollers (controllers that spawn controllers).
 	// Each one requests the informers it needs from the factory.
 	controllers := []controller{
@@ -97,6 +108,22 @@ func main() {
 		c.Start()
 	}
 
+	exporter, err := prometheus.NewExporter(prometheus.Options{})
+	if err != nil {
+		glog.Fatalf("can't create prometheus exporter: %v", err)
+	}
+	view.RegisterExporter(exporter)
+
+	mux := http.NewServeMux()
+	mux.Handle("/metrics", exporter)
+	srv := &http.Server{
+		Addr:    *debugAddr,
+		Handler: mux,
+	}
+	go func() {
+		glog.Errorf("Error serving debug endpoint: %v", srv.ListenAndServe())
+	}()
+
 	// On SIGTERM, stop all controllers gracefully.
 	sigchan := make(chan os.Signal, 2)
 	signal.Notify(sigchan, os.Interrupt, syscall.SIGTERM)
@@ -111,5 +138,10 @@ func main() {
 			c.Stop()
 		}(c)
 	}
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		srv.Shutdown(context.Background())
+	}()
 	wg.Wait()
 }
