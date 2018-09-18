@@ -424,7 +424,7 @@ func (c *decoratorController) syncParentObject(parent *unstructured.Unstructured
 	if err != nil {
 		return err
 	}
-	desiredChildren = common.MakeChildMap(syncResult.Attachments)
+	desiredChildren = common.MakeChildMap(parent, syncResult.Attachments)
 
 	// Set desired labels and annotations on parent.
 	// Make a copy since parent is from the cache.
@@ -516,9 +516,7 @@ func (c *decoratorController) getChildren(parent *unstructured.Unstructured) (co
 			if obj.GetAnnotations()[decoratorControllerAnnotation] != c.dc.Name {
 				continue
 			}
-			// Add children to map by name.
-			// Note that we limit each parent to only working within its own namespace.
-			childMap.Insert(obj)
+			childMap.Insert(parent, obj)
 		}
 	}
 	return childMap, nil

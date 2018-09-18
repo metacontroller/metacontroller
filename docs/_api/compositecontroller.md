@@ -297,15 +297,30 @@ Metacontroller requires you to be explicit about the version you expect
 because it does conversion for you as needed, so your hook doesn't need
 to know how to convert between different versions of a given resource.
 
-Within each child type (e.g. in `children['Pod.v1']`),
-there is another associative array that maps from the child's
-`metadata.name` to the JSON representation, like what you might get
-from `kubectl get <child-resource> <child-name> -o json`.
+Within each child type (e.g. in `children['Pod.v1']`), there is another
+associative array that maps from the child's path relative to the parent
+to the JSON representation,  like what you might get from
+`kubectl get <child-resource> <child-name> -o json`.
 
-For example, a Pod named `my-pod` could be accessed as:
+If the parent and child are of the same scope - both cluster or both namespace
+- then the key is only the object's `.metadata.name`. If the parent is
+cluster scoped and the child is namespace scoped then the key will be of the
+form: `{.metadata.namespace}/{.metadata.name}`. This is to disambiguate between
+two children with the same name in different namespaces. A parent may never be
+namespace scoped while a child is cluster scoped.
+
+For example, a Pod named `my-pod` in the `my-namespace` namespace could be
+accessed as the following if the parent is also in `my-namespace
 
 ```js
 request.children['Pod.v1']['my-pod']
+```
+
+Alternatively, if the parent resource is cluster scoped, the Pod could be
+accessed as:
+
+```js
+request.children['Pod.v1']['my-namespace/my-pod']
 ```
 
 Note that you will only be sent children that you "own" according to the
@@ -360,6 +375,10 @@ It's important to include the `apiVersion` and `kind` in objects
 you return, and also to ensure that you list every type of
 [child resource][child resources] you plan to create in the
 CompositeController spec.
+
+If the parent resource is cluster scoped and the child resource is namespaced
+it's important to include the `.metadata.namespace` since the namespace cannot
+be inferred by the parent's namespace.
 
 Any objects sent as children in the request that you decline to return
 in your response list **will be deleted**.
