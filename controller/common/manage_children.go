@@ -199,7 +199,6 @@ func updateChildren(client *dynamicclientset.ResourceClient, updateStrategy Chil
 			obj.SetOwnerReferences(ownerRefs)
 
 			if _, err := client.Namespace(parent.GetNamespace()).Create(obj); err != nil {
-				fmt.Printf("\n\n6: %+v\n\n", errs)
 				errs = append(errs, err)
 				continue
 			}
