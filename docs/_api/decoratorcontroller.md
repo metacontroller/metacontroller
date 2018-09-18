@@ -229,20 +229,20 @@ Metacontroller requires you to be explicit about the version you expect
 because it does conversion for you as needed, so your hook doesn't need
 to know how to convert between different versions of a given resource.
 
-Within each child type (e.g. in `attachment['Pod.v1']`), there is another
-associative array that maps from the child's path relative to the parent to
-the JSON representation,  like what you might get from
-`kubectl get <child-resource> <child-name> -o json`.
+Within each attachment type (e.g. in `attachments['Pod.v1']`), there is another
+associative array that maps from the attachment's path relative to the parent to
+the JSON representation, like what you might get from
+`kubectl get <attachment-resource> <attachment-name> -o json`.
 
-If the parent and child are of the same scope - both cluster or both namespace
-- then the key is only the object's `.metadata.name`. If the parent is
-cluster scoped and the child is namespace scoped then the key will be of the
-form: `{.metadata.namespace}/{.metadata.name}`. This is to disambiguate between
-two children with the same name in different namespaces. A parent may never
-be namespace scoped while a child is cluster scoped.
+If the parent and attachment are of the same scope - both cluster or both namespace -
+then the key is only the object's `.metadata.name`. If the parent is
+cluster scoped and the attachment is namespace scoped, then the key will be of the
+form `{.metadata.namespace}/{.metadata.name}`. This is to disambiguate between
+two attachments with the same name in different namespaces. A parent may never
+be namespace scoped while an attachment is cluster scoped.
 
 For example, a Pod named `my-pod` in the `my-namespace` namespace could be
-accessed as the following if the parent is also in `my-namespace`:
+accessed as follows if the parent is also in `my-namespace`:
 
 ```js
 request.attachments['Pod.v1']['my-pod']
@@ -311,9 +311,9 @@ you return, and also to ensure that you list every type of
 [attachment resource](#attachments) you plan to create in the
 DecoratorController spec.
 
-If the parent resource is cluster scoped and the child resource is namespaced
+If the parent resource is cluster scoped and the child resource is namespaced,
 it's important to include the `.metadata.namespace` since the namespace cannot
-be inferred by the parent's namespace.
+be inferred from the parent's namespace.
 
 Any objects sent as attachments in the request that you decline to return
 in your response list **will be deleted**.
