@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"strings"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/tools/cache"
 
@@ -37,14 +38,15 @@ func (m ChildMap) InitGroup(apiVersion, kind string) {
 	m[childMapKey(apiVersion, kind)] = make(map[string]*unstructured.Unstructured)
 }
 
-func (m ChildMap) Insert(obj *unstructured.Unstructured) {
+func (m ChildMap) Insert(parent metav1.Object, obj *unstructured.Unstructured) {
 	key := childMapKey(obj.GetAPIVersion(), obj.GetKind())
 	group := m[key]
 	if group == nil {
 		group = make(map[string]*unstructured.Unstructured)
 		m[key] = group
 	}
-	group[obj.GetName()] = obj
+	name := relativeName(parent, obj)
+	group[name] = obj
 }
 
 func (m ChildMap) FindGroupKindName(apiGroup, kind, name string) *unstructured.Unstructured {
@@ -64,28 +66,58 @@ func (m ChildMap) FindGroupKindName(apiGroup, kind, name string) *unstructured.U
 	return nil
 }
 
-func (m ChildMap) ReplaceChild(child *unstructured.Unstructured) {
+
+// relativeName returns the name of the child relative to the parent.
+// If the parent is cluster scoped and the child namespaced scoped the
+// name is of the format <namespace>/<name>. Otherwise the name of the child
+// is returned.
+func relativeName(parent metav1.Object, child *unstructured.Unstructured) string {
+	if parent.GetNamespace() == "" && child.GetNamespace() != "" {
+		return fmt.Sprintf("%s/%s", child.GetNamespace(), child.GetName())
+	} else {
+		return child.GetName()
+	}
+}
+
+// ReplaceChild replaces the child object with the same name & namespace as
+// the given child with the contents of the given child. If no child exists
+// in the existing map then no action is taken.
+func (m ChildMap) ReplaceChild(parent metav1.Object, child *unstructured.Unstructured) {
 	key := childMapKey(child.GetAPIVersion(), child.GetKind())
 	children := m[key]
 	if children == nil {
 		// We only want to replace if it already exists, so do nothing.
 		return
 	}
-	name := child.GetName()
+
+	name := relativeName(parent, child)
 	if _, found := children[name]; found {
 		children[name] = child
 	}
 }
 
-func MakeChildMap(list []*unstructured.Unstructured) ChildMap {
+// MakeChildMap builds the map of children resources that is suitable for use
+// in the `children` field of a CompositeController SyncRequest or
+// `attachments` field of  the  DecoratorControllers SyncRequest.
+//
+// This function returns a ChildMap which is a map of maps. The outer most map
+// is keyed  using the child's type and the inner map is keyed using the
+// child's name. If the parent resource is clustered and the child resource
+// is namespaced the inner map's keys are prefixed by the namespace of the
+// child resource.
+//
+// This function requires parent resources has the meta.Namespace accurately
+// set. If the namespace of the pareent is empty it's considered a clustered
+// resource.
+//
+// If a user returns a namespaced as a child of a clustered resources without
+// the namespace set this is considered a user error but it's not handled here
+// since the api errorstrying to create the child is clear.
+func MakeChildMap(parent metav1.Object, list []*unstructured.Unstructured) ChildMap {
 	children := make(ChildMap)
-	for _, child := range list {
-		key := childMapKey(child.GetAPIVersion(), child.GetKind())
 
-		if children[key] == nil {
-			children[key] = make(map[string]*unstructured.Unstructured)
-		}
-		children[key][child.GetName()] = child
+	for _, child := range list {
+		children.Insert(parent, child)
 	}
 	return children
 }

@@ -1,0 +1,14 @@
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name:  my-tests.ctl.rlg.io
+  annotations:
+    enable-default-roles: "yes"
+spec:
+  group: ctl.rlg.io
+  version: v1
+  scope: Cluster
+  names:
+    plural: my-tests
+    singular: my-test
+    kind: MyTest

@@ -87,7 +87,7 @@ func (pc *parentController) syncRevisions(parent *unstructured.Unstructured, obs
 		if err != nil {
 			return nil, nil, fmt.Errorf("sync hook failed for %v %v/%v: %v", pc.parentResource.Kind, parent.GetNamespace(), parent.GetName(), err)
 		}
-		return syncResult.Status, common.MakeChildMap(syncResult.Children), nil
+		return syncResult.Status, common.MakeChildMap(parent, syncResult.Children), nil
 	}
 
 	// Claim all matching ControllerRevisions for the parent.
@@ -160,7 +160,7 @@ func (pc *parentController) syncRevisions(parent *unstructured.Unstructured, obs
 			}
 			pr.status = syncResult.Status
 			pr.desiredChildList = syncResult.Children
-			pr.desiredChildMap = common.MakeChildMap(syncResult.Children)
+			pr.desiredChildMap = common.MakeChildMap(parent, syncResult.Children)
 		}(pr)
 	}
 	wg.Wait()
@@ -206,7 +206,7 @@ func (pc *parentController) syncRevisions(parent *unstructured.Unstructured, obs
 			for _, name := range ck.Names {
 				child := pr.desiredChildMap.FindGroupKindName(ck.APIGroup, ck.Kind, name)
 				if child != nil {
-					desiredChildren.ReplaceChild(child)
+					desiredChildren.ReplaceChild(parent, child)
 				}
 			}
 		}
