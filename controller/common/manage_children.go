@@ -45,8 +45,54 @@ func ApplyUpdate(orig, update *unstructured.Unstructured) (*unstructured.Unstruc
 	if err != nil {
 		return nil, err
 	}
+	// Revert metadata fields that are known to be read-only, system fields,
+	// so that attempts to change those fields will never cause a diff to be found
+	// by DeepEqual, which would cause needless, no-op updates or recreates.
+	// See: https://github.com/GoogleCloudPlatform/metacontroller/issues/76
+	if err := revertObjectMetaSystemFields(newObj, orig); err != nil {
+		return nil, fmt.Errorf("failed to revert ObjectMeta system fields: %v", err)
+	}
 	dynamicapply.SetLastApplied(newObj, update.UnstructuredContent())
 	return newObj, nil
+}
+
+// objectMetaSystemFields is a list of JSON field names within ObjectMeta that
+// are both read-only and system-populated according to the comments in
+// k8s.io/apimachinery/pkg/apis/meta/v1/types.go.
+var objectMetaSystemFields = []string{
+	"selfLink",
+	"uid",
+	"resourceVersion",
+	"generation",
+	"creationTimestamp",
+	"deletionTimestamp",
+}
+
+// revertObjectMetaSystemFields overwrites the read-only, system-populated
+// fields of ObjectMeta in newObj to match what they were in orig.
+// If the field existed before, we create it if necessary and set the value.
+// If the field was unset before, we delete it if necessary.
+func revertObjectMetaSystemFields(newObj, orig *unstructured.Unstructured) error {
+	for _, fieldName := range objectMetaSystemFields {
+		val, found, err := unstructured.NestedFieldNoCopy(orig.UnstructuredContent(), "metadata", fieldName)
+		if err != nil {
+			return fmt.Errorf("can't traverse UnstructuredContent to look for metadata.%s: %v", fieldName, err)
+		}
+		if found {
+			// The original had this field set, so make sure it remains the same.
+			// SetNestedField will recursively ensure the field and all its parent
+			// fields exist, and then set the value.
+			if err := unstructured.SetNestedField(newObj.UnstructuredContent(), val, "metadata", fieldName); err != nil {
+				return fmt.Errorf("can't revert value of metadata.%s: %v", fieldName, err)
+			}
+		} else {
+			// The original had this field unset, so make sure it remains unset.
+			// RemoveNestedField is a no-op if the field or any of its parents
+			// don't exist.
+			unstructured.RemoveNestedField(newObj.UnstructuredContent(), "metadata", fieldName)
+		}
+	}
+	return nil
 }
 
 func MakeControllerRef(parent *unstructured.Unstructured) *metav1.OwnerReference {

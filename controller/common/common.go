@@ -66,7 +66,6 @@ func (m ChildMap) FindGroupKindName(apiGroup, kind, name string) *unstructured.U
 	return nil
 }
 
-
 // relativeName returns the name of the child relative to the parent.
 // If the parent is cluster scoped and the child namespaced scoped the
 // name is of the format <namespace>/<name>. Otherwise the name of the child
