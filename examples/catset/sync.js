@@ -78,6 +78,13 @@ module.exports = async function (context) {
       if (ordinal >= 0) observedPods[ordinal] = pod;
     }
 
+    if (observed.finalizing) {
+      // If the parent is being deleted, scale down to zero replicas.
+      catset.spec.replicas = 0;
+      // Mark the finalizer as done if there are no more Pods.
+      desired.finalized = (Object.keys(observedPods).length == 0);
+    }
+
     // Compute controller status.
     for (var ready = 0; ready < catset.spec.replicas && isRunningAndReady(observedPods[ready]); ready++);
     desired.status = {replicas: Object.keys(observedPods).length, readyReplicas: ready};
