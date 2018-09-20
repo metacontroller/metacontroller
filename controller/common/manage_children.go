@@ -155,13 +155,13 @@ func deleteChildren(client *dynamicclientset.ResourceClient, parent *unstructure
 		}
 		if desired == nil || desired[name] == nil {
 			// This observed object wasn't listed as desired.
-			glog.Infof("%v %v/%v: deleting %v %v", parent.GetKind(), parent.GetNamespace(), parent.GetName(), obj.GetKind(), obj.GetName())
+			glog.Infof("%v: deleting %v", describeObject(parent), describeObject(obj))
 			uid := obj.GetUID()
 			err := client.Namespace(obj.GetNamespace()).Delete(name, &metav1.DeleteOptions{
 				Preconditions: &metav1.Preconditions{UID: &uid},
 			})
 			if err != nil {
-				errs = append(errs, fmt.Errorf("can't delete %v %v/%v: %v", obj.GetKind(), obj.GetNamespace(), obj.GetName(), err))
+				errs = append(errs, fmt.Errorf("can't delete %v: %v", describeObject(obj), err))
 				continue
 			}
 		}
@@ -176,7 +176,6 @@ func updateChildren(client *dynamicclientset.ResourceClient, updateStrategy Chil
 		if ns == "" {
 			ns = parent.GetNamespace()
 		}
-		nsClient := client.Namespace(ns)
 		if oldObj := observed[name]; oldObj != nil {
 			// Update
 			newObj, err := ApplyUpdate(oldObj, obj)
@@ -196,22 +195,22 @@ func updateChildren(client *dynamicclientset.ResourceClient, updateStrategy Chil
 
 			// Leave it alone if it's pending deletion.
 			if oldObj.GetDeletionTimestamp() != nil {
-				glog.Infof("%v %v/%v: not updating %v %v (pending deletion)", parent.GetKind(), parent.GetNamespace(), parent.GetName(), obj.GetKind(), obj.GetName())
+				glog.Infof("%v: not updating %v (pending deletion)", describeObject(parent), describeObject(obj))
 				continue
 			}
 
 			// Check the update strategy for this child kind.
-			switch method := updateStrategy.GetMethod(client.GroupVersion().Group, client.Kind()); method {
+			switch method := updateStrategy.GetMethod(client.Group, client.Kind); method {
 			case v1alpha1.ChildUpdateOnDelete, "":
 				// This means we don't try to update anything unless it gets deleted
 				// by someone else (we won't delete it ourselves).
-				glog.V(5).Infof("%v %v/%v: not updating %v %v (OnDelete update strategy)", parent.GetKind(), parent.GetNamespace(), parent.GetName(), obj.GetKind(), obj.GetName())
+				glog.V(5).Infof("%v: not updating %v (OnDelete update strategy)", describeObject(parent), describeObject(obj))
 				continue
 			case v1alpha1.ChildUpdateRecreate, v1alpha1.ChildUpdateRollingRecreate:
 				// Delete the object (now) and recreate it (on the next sync).
-				glog.Infof("%v %v/%v: deleting %v %v for update", parent.GetKind(), parent.GetNamespace(), parent.GetName(), obj.GetKind(), obj.GetName())
+				glog.Infof("%v: deleting %v for update", describeObject(parent), describeObject(obj))
 				uid := oldObj.GetUID()
-				err := nsClient.Delete(name, &metav1.DeleteOptions{
+				err := client.Namespace(ns).Delete(name, &metav1.DeleteOptions{
 					Preconditions: &metav1.Preconditions{UID: &uid},
 				})
 				if err != nil {
@@ -220,18 +219,18 @@ func updateChildren(client *dynamicclientset.ResourceClient, updateStrategy Chil
 				}
 			case v1alpha1.ChildUpdateInPlace, v1alpha1.ChildUpdateRollingInPlace:
 				// Update the object in-place.
-				glog.Infof("%v %v/%v: updating %v %v", parent.GetKind(), parent.GetNamespace(), parent.GetName(), obj.GetKind(), obj.GetName())
-				if _, err := nsClient.Update(newObj); err != nil {
+				glog.Infof("%v: updating %v", describeObject(parent), describeObject(obj))
+				if _, err := client.Namespace(ns).Update(newObj); err != nil {
 					errs = append(errs, err)
 					continue
 				}
 			default:
-				errs = append(errs, fmt.Errorf("invalid update strategy for %v: unknown method %q", client.Kind(), method))
+				errs = append(errs, fmt.Errorf("invalid update strategy for %v: unknown method %q", client.Kind, method))
 				continue
 			}
 		} else {
 			// Create
-			glog.Infof("%v %v/%v: creating %v %v/%v", parent.GetKind(), parent.GetNamespace(), parent.GetName(), obj.GetKind(), obj.GetNamespace(), obj.GetName())
+			glog.Infof("%v: creating %v", describeObject(parent), describeObject(obj))
 
 			// The controller should return a partial object containing only the
 			// fields it cares about. We save this partial object so we can do
@@ -249,7 +248,7 @@ func updateChildren(client *dynamicclientset.ResourceClient, updateStrategy Chil
 			ownerRefs = append(ownerRefs, *controllerRef)
 			obj.SetOwnerReferences(ownerRefs)
 
-			if _, err := nsClient.Create(obj); err != nil {
+			if _, err := client.Namespace(ns).Create(obj); err != nil {
 				errs = append(errs, err)
 				continue
 			}

@@ -73,9 +73,16 @@ func (m ChildMap) FindGroupKindName(apiGroup, kind, name string) *unstructured.U
 func relativeName(parent metav1.Object, child *unstructured.Unstructured) string {
 	if parent.GetNamespace() == "" && child.GetNamespace() != "" {
 		return fmt.Sprintf("%s/%s", child.GetNamespace(), child.GetName())
-	} else {
-		return child.GetName()
 	}
+	return child.GetName()
+}
+
+// describeObject returns a human-readable string to identify a given object.
+func describeObject(obj *unstructured.Unstructured) string {
+	if ns := obj.GetNamespace(); ns != "" {
+		return fmt.Sprintf("%s %s/%s", obj.GetKind(), ns, obj.GetName())
+	}
+	return fmt.Sprintf("%s %s", obj.GetKind(), obj.GetName())
 }
 
 // ReplaceChild replaces the child object with the same name & namespace as

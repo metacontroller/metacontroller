@@ -70,7 +70,7 @@ func newParentController(resources *dynamicdiscovery.ResourceMap, dynClient *dyn
 	if err != nil {
 		return nil, err
 	}
-	parentResource := parentClient.APIResource()
+	parentResource := parentClient.APIResource
 
 	updateStrategy, err := makeUpdateStrategyMap(resources, cc)
 	if err != nil {
@@ -508,17 +508,17 @@ func (pc *parentController) claimChildren(parent *unstructured.Unstructured) (co
 		}
 		all, err := informer.Lister().ListNamespace(namespace, labels.Everything())
 		if err != nil {
-			return nil, fmt.Errorf("can't list %v children: %v", childClient.Kind(), err)
+			return nil, fmt.Errorf("can't list %v children: %v", childClient.Kind, err)
 		}
 
 		// Always include the requested groups, even if there are no entries.
-		childMap.InitGroup(child.APIVersion, childClient.Kind())
+		childMap.InitGroup(child.APIVersion, childClient.Kind)
 
 		// Handle orphan/adopt and filter by owner+selector.
 		crm := dynamiccontrollerref.NewUnstructuredManager(childClient, parent, selector, parentGVK, childClient.GroupVersionKind(), canAdoptFunc)
 		children, err := crm.ClaimChildren(all)
 		if err != nil {
-			return nil, fmt.Errorf("can't claim %v children: %v", childClient.Kind(), err)
+			return nil, fmt.Errorf("can't claim %v children: %v", childClient.Kind, err)
 		}
 
 		// Add children to map by name.
@@ -535,7 +535,7 @@ func (pc *parentController) updateParentStatus(parent *unstructured.Unstructured
 	// We can't use Patch() because we need to ensure that the UID matches.
 	// TODO(enisoc): Use /status subresource when that exists.
 	// TODO(enisoc): Update status.observedGeneration when spec.generation starts working.
-	return pc.parentClient.Namespace(parent.GetNamespace()).UpdateWithRetries(parent, func(obj *unstructured.Unstructured) bool {
+	return pc.parentClient.Namespace(parent.GetNamespace()).AtomicUpdate(parent, func(obj *unstructured.Unstructured) bool {
 		oldStatus := k8s.GetNestedField(obj.UnstructuredContent(), "status")
 		if reflect.DeepEqual(oldStatus, status) {
 			// Nothing to do.
