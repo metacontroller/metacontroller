@@ -51,6 +51,7 @@ spec:
     kind: HelloWorld
     plural: helloworlds
     singular: helloworld
+  scope: Namespaced
 ```
 
 Then apply it to your cluster:
