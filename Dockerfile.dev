@@ -7,6 +7,6 @@ WORKDIR /go/src/k8s.io/metacontroller/
 RUN go install
 
 FROM debian:stretch-slim
-COPY --from=build /go/bin/metacontroller /usr/bin/
 RUN apt-get update && apt-get install --no-install-recommends -y ca-certificates && rm -rf /var/lib/apt/lists/*
+COPY --from=build /go/bin/metacontroller /usr/bin/
 CMD ["/usr/bin/metacontroller"]
