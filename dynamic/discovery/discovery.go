@@ -48,7 +48,11 @@ func (r *APIResource) GroupVersionKind() schema.GroupVersionKind {
 }
 
 func (r *APIResource) GroupVersionResource() schema.GroupVersionResource {
-	return r.GroupVersion().WithResource(r.APIResource.Name)
+	return r.GroupVersion().WithResource(r.Name)
+}
+
+func (r *APIResource) GroupResource() schema.GroupResource {
+	return schema.GroupResource{Group: r.Group, Resource: r.Name}
 }
 
 type groupVersionEntry struct {

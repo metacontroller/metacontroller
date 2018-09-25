@@ -22,7 +22,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/util/retry"
@@ -71,85 +70,82 @@ func (cs *Clientset) Kind(apiVersion, kind string) (*ResourceClient, error) {
 }
 
 func (cs *Clientset) resource(apiResource *dynamicdiscovery.APIResource) *ResourceClient {
+	client := cs.dc.Resource(apiResource.GroupVersionResource())
 	return &ResourceClient{
-		NamespaceableResourceInterface: cs.dc.Resource(apiResource.GroupVersionResource()),
-		resource:                       apiResource,
+		ResourceInterface: client,
+		APIResource:       apiResource,
+		rootClient:        client,
 	}
 }
 
+// ResourceClient is a combination of APIResource and a dynamic Client.
+//
+// Passing this around makes it easier to write code that deals with arbitrary
+// resource types and often needs to know the API discovery details.
+// This wrapper also adds convenience functions that are useful for any client.
+//
+// It can be used on either namespaced or cluster-scoped resources.
+// Call Namespace() to return a client that's scoped down to a given namespace.
 type ResourceClient struct {
-	dynamic.NamespaceableResourceInterface
-	resource *dynamicdiscovery.APIResource
-}
-
-type NamespacedResourceClient struct {
 	dynamic.ResourceInterface
-	resource *dynamicdiscovery.APIResource
+	*dynamicdiscovery.APIResource
+
+	rootClient dynamic.NamespaceableResourceInterface
 }
 
-func (rc *ResourceClient) Namespace(namespace string) *NamespacedResourceClient {
-	return &NamespacedResourceClient{
-		ResourceInterface: rc.NamespaceableResourceInterface.Namespace(namespace),
-		resource:          rc.resource,
+// Namespace returns a copy of the ResourceClient with the client namespace set.
+//
+// This can be chained to set the namespace to something else.
+// Pass "" to return a client with the namespace cleared.
+// If the resource is cluster-scoped, this is a no-op.
+func (rc *ResourceClient) Namespace(namespace string) *ResourceClient {
+	// Ignore the namespace if the resource is cluster-scoped.
+	if !rc.Namespaced {
+		return rc
+	}
+	// Reset to cluster-scoped if provided namespace is empty.
+	ri := dynamic.ResourceInterface(rc.rootClient)
+	if namespace != "" {
+		ri = rc.rootClient.Namespace(namespace)
+	}
+	return &ResourceClient{
+		ResourceInterface: ri,
+		APIResource:       rc.APIResource,
+		rootClient:        rc.rootClient,
 	}
 }
 
-func (rc *ResourceClient) Kind() string {
-	return rc.resource.Kind
-}
-
-func (rc *ResourceClient) GroupVersion() schema.GroupVersion {
-	return rc.resource.GroupVersion()
-}
-
-func (rc *ResourceClient) GroupResource() schema.GroupResource {
-	return schema.GroupResource{
-		Group:    rc.resource.GroupVersion().Group,
-		Resource: rc.resource.Name,
-	}
-}
-
-func (rc *ResourceClient) GroupVersionKind() schema.GroupVersionKind {
-	return rc.resource.GroupVersion().WithKind(rc.resource.Kind)
-}
-
-func (rc *ResourceClient) GroupVersionResource() schema.GroupVersionResource {
-	return rc.resource.GroupVersion().WithResource(rc.resource.Name)
-}
-
-func (rc *ResourceClient) APIResource() *dynamicdiscovery.APIResource {
-	return rc.resource
-}
-
-func (rc *ResourceClient) UpdateWithRetries(orig *unstructured.Unstructured, update func(obj *unstructured.Unstructured) bool) (result *unstructured.Unstructured, err error) {
-	return updateWithRetries(rc, rc.resource, orig, update)
-}
-
-func (nrc *NamespacedResourceClient) UpdateWithRetries(orig *unstructured.Unstructured, update func(obj *unstructured.Unstructured) bool) (result *unstructured.Unstructured, err error) {
-	return updateWithRetries(nrc, nrc.resource, orig, update)
-}
-
-func updateWithRetries(ri dynamic.ResourceInterface, resource *dynamicdiscovery.APIResource, orig *unstructured.Unstructured, update func(obj *unstructured.Unstructured) bool) (result *unstructured.Unstructured, err error) {
+// AtomicUpdate performs an atomic read-modify-write loop, retrying on
+// optimistic concurrency conflicts.
+//
+// It only uses the identity (name/namespace/uid) of the provided 'orig' object,
+// not the contents. The object passed to the update() func will be from a live
+// GET against the API server.
+//
+// This should only be used for unconditional writes, as in, "I want to make
+// this change right now regardless of what else may have changed since I last
+// read the object."
+//
+// The update() func should modify the passed object and return true to go ahead
+// with the update, or false if no update is required.
+func (rc *ResourceClient) AtomicUpdate(orig *unstructured.Unstructured, update func(obj *unstructured.Unstructured) bool) (result *unstructured.Unstructured, err error) {
 	name := orig.GetName()
+
 	err = retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-		current, err := ri.Get(name, metav1.GetOptions{})
+		current, err := rc.Get(name, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
 		if current.GetUID() != orig.GetUID() {
 			// The original object was deleted and replaced with a new one.
-			groupResource := schema.GroupResource{
-				Group:    resource.GroupVersion().Group,
-				Resource: resource.Name,
-			}
-			return apierrors.NewNotFound(groupResource, name)
+			return apierrors.NewNotFound(rc.GroupResource(), name)
 		}
 		if changed := update(current); !changed {
 			// There's nothing to do.
 			result = current
 			return nil
 		}
-		result, err = ri.Update(current)
+		result, err = rc.Update(current)
 		return err
 	})
 	return result, err
