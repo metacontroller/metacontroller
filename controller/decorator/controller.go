@@ -35,9 +35,11 @@ import (
 
 	"k8s.io/metacontroller/apis/metacontroller/v1alpha1"
 	"k8s.io/metacontroller/controller/common"
+	"k8s.io/metacontroller/controller/common/finalizer"
 	dynamicclientset "k8s.io/metacontroller/dynamic/clientset"
 	dynamicdiscovery "k8s.io/metacontroller/dynamic/discovery"
 	dynamicinformer "k8s.io/metacontroller/dynamic/informer"
+	dynamicobject "k8s.io/metacontroller/dynamic/object"
 	k8s "k8s.io/metacontroller/third_party/kubernetes"
 )
 
@@ -62,6 +64,8 @@ type decoratorController struct {
 
 	parentInformers common.InformerMap
 	childInformers  common.InformerMap
+
+	finalizer *finalizer.Manager
 }
 
 func newDecoratorController(resources *dynamicdiscovery.ResourceMap, dynClient *dynamicclientset.Clientset, dynInformers *dynamicinformer.SharedInformerFactory, dc *v1alpha1.DecoratorController) (controller *decoratorController, newErr error) {
@@ -74,6 +78,10 @@ func newDecoratorController(resources *dynamicdiscovery.ResourceMap, dynClient *
 		childInformers:  make(common.InformerMap),
 
 		queue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "DecoratorController-"+dc.Name),
+		finalizer: &finalizer.Manager{
+			Name:    "metacontroller.app/decoratorcontroller-" + dc.Name,
+			Enabled: dc.Spec.Hooks.Finalize != nil,
+		},
 	}
 
 	var err error
@@ -243,10 +251,10 @@ func (c *decoratorController) processNextWorkItem() bool {
 }
 
 func (c *decoratorController) enqueueParentObject(obj interface{}) {
-	// If the parent doesn't match our selector, or if it's being deleted,
-	// we don't care about it.
+	// If the parent doesn't match our selector, and it doesn't have our
+	// finalizer, we don't care about it.
 	if parent, ok := obj.(*unstructured.Unstructured); ok {
-		if !c.parentSelector.Matches(parent) || parent.GetDeletionTimestamp() != nil {
+		if !c.parentSelector.Matches(parent) && !dynamicobject.HasFinalizer(parent, c.finalizer.Name) {
 			return
 		}
 	}
@@ -292,8 +300,9 @@ func (c *decoratorController) resolveControllerRef(namespace string, controllerR
 		// ControllerRef points to.
 		return nil
 	}
-	if !c.parentSelector.Matches(parent) {
-		// If the parent doesn't match our selector, we don't care about it.
+	if !c.parentSelector.Matches(parent) && !dynamicobject.HasFinalizer(parent, c.finalizer.Name) {
+		// If the parent doesn't match our selector and doesn't have our finalizer,
+		// we don't care about it.
 		return nil
 	}
 	return parent
@@ -398,12 +407,31 @@ func (c *decoratorController) sync(key string) error {
 }
 
 func (c *decoratorController) syncParentObject(parent *unstructured.Unstructured) error {
-	// If it doesn't match our selector, or is being deleted, ignore it.
-	if !c.parentSelector.Matches(parent) || parent.GetDeletionTimestamp() != nil {
+	// If it doesn't match our selector, and it doesn't have our finalizer, ignore it.
+	if !c.parentSelector.Matches(parent) && !dynamicobject.HasFinalizer(parent, c.finalizer.Name) {
 		return nil
 	}
 
 	glog.V(4).Infof("DecoratorController %v: sync %v %v/%v", c.dc.Name, parent.GetKind(), parent.GetNamespace(), parent.GetName())
+
+	parentClient, err := c.dynClient.Kind(parent.GetAPIVersion(), parent.GetKind())
+	if err != nil {
+		return fmt.Errorf("can't get client for %v %v/%v: %v", parent.GetKind(), parent.GetNamespace(), parent.GetName(), err)
+	}
+
+	// Before taking any other action, add our finalizer (if desired).
+	// This ensures we have a chance to clean up after any action we later take.
+	updatedParent, err := c.finalizer.SyncObject(parentClient, parent)
+	if err != nil {
+		// If we fail to do this, abort before doing anything else and requeue.
+		return fmt.Errorf("can't sync finalizer for %v %v/%v: %v", parent.GetKind(), parent.GetNamespace(), parent.GetName(), err)
+	}
+	parent = updatedParent
+
+	// Check the finalizer again in case we just removed it.
+	if !c.parentSelector.Matches(parent) && !dynamicobject.HasFinalizer(parent, c.finalizer.Name) {
+		return nil
+	}
 
 	// List all children belonging to this parent, of the kinds we care about.
 	// This only lists the children we created. Existing children are ignored.
@@ -420,15 +448,16 @@ func (c *decoratorController) syncParentObject(parent *unstructured.Unstructured
 		Object:      parent,
 		Attachments: observedChildren,
 	}
-	syncResult, err := callSyncHook(c.dc, syncRequest)
+	syncResult, err := c.callSyncHook(syncRequest)
 	if err != nil {
 		return err
 	}
 	desiredChildren = common.MakeChildMap(parent, syncResult.Attachments)
 
 	// Set desired labels and annotations on parent.
+	// Also remove finalizer if requested.
 	// Make a copy since parent is from the cache.
-	updatedParent := parent.DeepCopy()
+	updatedParent = parent.DeepCopy()
 	parentLabels := updatedParent.GetLabels()
 	if parentLabels == nil {
 		parentLabels = make(map[string]string)
@@ -439,14 +468,17 @@ func (c *decoratorController) syncParentObject(parent *unstructured.Unstructured
 	}
 	labelsChanged := updateStringMap(parentLabels, syncResult.Labels)
 	annotationsChanged := updateStringMap(parentAnnotations, syncResult.Annotations)
-	if labelsChanged || annotationsChanged {
+
+	// Only do the update if something changed.
+	if labelsChanged || annotationsChanged ||
+		(syncResult.Finalized && dynamicobject.HasFinalizer(parent, c.finalizer.Name)) {
 		updatedParent.SetLabels(parentLabels)
 		updatedParent.SetAnnotations(parentAnnotations)
 
-		parentClient, err := c.dynClient.Kind(parent.GetAPIVersion(), parent.GetKind())
-		if err != nil {
-			return fmt.Errorf("can't update %v %v/%v: %v", parent.GetKind(), parent.GetNamespace(), parent.GetName(), err)
+		if syncResult.Finalized {
+			dynamicobject.RemoveFinalizer(updatedParent, c.finalizer.Name)
 		}
+
 		glog.V(4).Infof("DecoratorController %v: updating %v %v/%v", c.dc.Name, parent.GetKind(), parent.GetNamespace(), parent.GetName())
 		_, err = parentClient.Namespace(parent.GetNamespace()).Update(updatedParent)
 		if err != nil {
@@ -472,8 +504,11 @@ func (c *decoratorController) syncParentObject(parent *unstructured.Unstructured
 
 	// Reconcile child objects belonging to this parent.
 	// Remember manage error, but continue to update status regardless.
+	//
+	// We only manage children if the parent is "alive" (not pending deletion),
+	// or if it's pending deletion and we have a `finalize` hook.
 	var manageErr error
-	if parent.GetDeletionTimestamp() == nil {
+	if parent.GetDeletionTimestamp() == nil || c.finalizer.ShouldFinalize(parent) {
 		// Reconcile children.
 		if err := common.ManageChildren(c.dynClient, c.updateStrategy, parent, observedChildren, desiredChildren); err != nil {
 			manageErr = fmt.Errorf("can't reconcile children for %v %v/%v: %v", parent.GetKind(), parent.GetNamespace(), parent.GetName(), err)

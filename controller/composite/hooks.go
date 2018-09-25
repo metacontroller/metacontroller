@@ -31,20 +31,44 @@ type syncHookRequest struct {
 	Controller runtime.Object             `json:"controller"`
 	Parent     *unstructured.Unstructured `json:"parent"`
 	Children   common.ChildMap            `json:"children"`
+	Finalizing bool                       `json:"finalizing"`
 }
 
 type syncHookResponse struct {
 	Status   map[string]interface{}       `json:"status"`
 	Children []*unstructured.Unstructured `json:"children"`
+
+	// Finalized is only used by the finalize hook.
+	Finalized bool `json:"finalized"`
 }
 
 func callSyncHook(cc *v1alpha1.CompositeController, request *syncHookRequest) (*syncHookResponse, error) {
-	if cc.Spec.Hooks == nil || cc.Spec.Hooks.Sync == nil {
-		return nil, fmt.Errorf("sync hook not defined")
+	if cc.Spec.Hooks == nil {
+		return nil, fmt.Errorf("no hooks defined")
 	}
+
 	var response syncHookResponse
-	if err := hooks.Call(cc.Spec.Hooks.Sync, request, &response); err != nil {
-		return nil, fmt.Errorf("sync hook failed: %v", err)
+
+	// First check if we should instead call the finalize hook,
+	// which has the same API as the sync hook except that it's
+	// called while the object is pending deletion.
+	if request.Parent.GetDeletionTimestamp() != nil && cc.Spec.Hooks.Finalize != nil {
+		// Finalize
+		request.Finalizing = true
+		if err := hooks.Call(cc.Spec.Hooks.Finalize, request, &response); err != nil {
+			return nil, fmt.Errorf("finalize hook failed: %v", err)
+		}
+	} else {
+		// Sync
+		request.Finalizing = false
+		if cc.Spec.Hooks.Sync == nil {
+			return nil, fmt.Errorf("sync hook not defined")
+		}
+
+		if err := hooks.Call(cc.Spec.Hooks.Sync, request, &response); err != nil {
+			return nil, fmt.Errorf("sync hook failed: %v", err)
+		}
 	}
+
 	return &response, nil
 }
