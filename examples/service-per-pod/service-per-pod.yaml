@@ -17,6 +17,9 @@ spec:
     sync:
       webhook:
         url: http://service-per-pod.metacontroller/sync-service-per-pod
+    finalize:
+      webhook:
+        url: http://service-per-pod.metacontroller/finalize-service-per-pod
 ---
 apiVersion: metacontroller.k8s.io/v1alpha1
 kind: DecoratorController

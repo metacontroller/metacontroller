@@ -39,6 +39,9 @@ spec:
 ...
 ```
 
+If the StatefulSet is then deleted, or if the `service-per-pod-label` annotation
+is removed to opt out of the decorator, any Services created will be cleaned up.
+
 ### Prerequisites
 
 * Kubernetes 1.8+ is recommended for its improved CRD support,
