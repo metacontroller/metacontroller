@@ -96,7 +96,8 @@ type ServiceReference struct {
 }
 
 type CompositeControllerHooks struct {
-	Sync *Hook `json:"sync,omitempty"`
+	Sync     *Hook `json:"sync,omitempty"`
+	Finalize *Hook `json:"finalize,omitempty"`
 
 	PreUpdateChild  *Hook `json:"preUpdateChild,omitempty"`
 	PostUpdateChild *Hook `json:"postUpdateChild,omitempty"`
@@ -194,7 +195,8 @@ type DecoratorControllerAttachmentUpdateStrategy struct {
 }
 
 type DecoratorControllerHooks struct {
-	Sync *Hook `json:"sync,omitempty"`
+	Sync     *Hook `json:"sync,omitempty"`
+	Finalize *Hook `json:"finalize,omitempty"`
 }
 
 type DecoratorControllerStatus struct {
