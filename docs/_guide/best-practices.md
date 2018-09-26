@@ -4,7 +4,7 @@ title: Best Practices
 This is a collection of recommendations for writing controllers with Metacontroller.
 
 If you have something to add to the collection, please send a pull request against
-[this document]({{ site.repo_file }}/docs/guide/best-practices.md).
+[this document]({{ site.repo_file }}/docs/_guide/best-practices.md).
 
 ## Lambda Hooks
 
