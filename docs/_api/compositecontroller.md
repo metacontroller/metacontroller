@@ -240,7 +240,8 @@ Within the CompositeController `spec`, the `hooks` field has the following subfi
 
 | Field | Description |
 | ----- | ----------- |
-| [`sync`](#sync-hook) | Specifies how to call your sync hook. |
+| [`sync`](#sync-hook) | Specifies how to call your sync hook, if any. |
+| [`finalize`](#finalize-hook) | Specifies how to call your finalize hook, if any. |
 
 Each field of `hooks` contains [subfields][hook] that specify how to invoke
 that hook, such as by sending a request to a [webhook][].
@@ -281,6 +282,7 @@ will be a JSON object with the following fields:
 | `controller` | The whole CompositeController object, like what you might get from `kubectl get compositecontroller <name> -o json`. |
 | `parent` | The parent object, like what you might get from `kubectl get <parent-resource> <parent-name> -o json`. |
 | `children` | An associative array of child objects that already exist. |
+| `finalizing` | This is always `false` for the `sync` hook. See the [`finalize` hook](#finalize-hook) for details. |
 
 Each field of the `children` object represents one of the types of [child resources][]
 you specified in your CompositeController [spec][].
@@ -392,3 +394,90 @@ That is, you should [set only the fields that you care about](/api/apply/).
 Note that your webhook handler must return a response with a status code of `200`
 to be considered successful. Metacontroller will wait for a response for up to the
 amount defined in the [Webhook spec](/api/hook/#webhook).
+
+### Finalize Hook
+
+If the `finalize` hook is defined, Metacontroller will add a finalizer to the
+parent object, which will prevent it from being deleted until your hook has had
+a chance to run and the response indicates that you're done cleaning up.
+
+This is useful for doing ordered teardown of children, or for cleaning up
+resources you may have created in an external system.
+If you don't define a `finalize` hook, then when a parent object is deleted,
+the garbage collector will delete all your children immediately,
+and no hooks will be called.
+
+The semantics of the `finalize` hook are mostly equivalent to those of
+the [`sync` hook](#sync-hook).
+Metacontroller will attempt to reconcile the desired states you return in the
+`children` field, and will set `status` on the parent.
+The main difference is that `finalize` will be called instead of `sync` when
+it's time to clean up because the parent object is pending deletion.
+
+Note that, just like `sync`, your `finalize` handler must be idempotent.
+Metacontroller might call your hook multiple times as the observed state
+changes, possibly even after you first indicate that you're done finalizing.
+Your handler should know how to check what still needs to be done
+and report success if there's nothing left to do.
+
+Both `sync` and `finalize` have a request field called `finalizing` that
+indicates which hook was actually called.
+This lets you implement `finalize` either as a separate handler or as a check
+within your `sync` handler, depending on how much logic they share.
+To use the same handler for both, just define a `finalize` hook and set it to
+the same value as your `sync` hook.
+
+#### Finalize Hook Request
+
+The `finalize` hook request has all the same fields as the
+[`sync` hook request](#sync-hook-request), with the following changes:
+
+| Field | Description |
+| ----- | ----------- |
+| `finalizing` | This is always `true` for the `finalize` hook. See the [`finalize` hook](#finalize-hook) for details. |
+
+If you share the same handler for both `sync` and `finalize`, you can use the
+`finalizing` field to tell whether it's time to clean up or whether it's a
+normal sync.
+If you define a separate handler just for `finalize`, there's no need to check
+the `finalizing` field since it will always be `true`.
+
+#### Finalize Hook Response
+
+The `finalize` hook response has all the same fields as the
+[`sync` hook response](#sync-hook-response), with the following additions:
+
+| Field | Description |
+| ----- | ----------- |
+| `finalized` | A boolean indicating whether you are done finalizing. |
+
+To perform ordered teardown, you can generate children just like you would for
+`sync`, but omit some children from the desired state depending on the observed
+set of children that are left.
+For example, if you observe `[A,B,C]`, generate only `[A,B]` as your desired
+state; if you observe `[A,B]`, generate only `[A]`; if you observe `[A]`,
+return an empty desired list `[]`.
+
+Once the observed state passed in with the `finalize` request meets all your
+criteria (e.g. no more children were observed), and you have checked all
+other criteria (e.g. no corresponding external resource exists), return `true`
+for the `finalized` field in your response.
+
+Note that you should *not* return `finalized: true` the first time you return
+a desired state that you consider "final", since there's no guarantee that your
+desired state will be reached immediately.
+Instead, you should wait until the *observed* state matches what you want.
+
+If the observed state passed in with the request doesn't meet your criteria,
+you can return a successful response (HTTP code 200) with `finalized: false`,
+and Metacontroller will call your hook again automatically if anything changes
+in the observed state.
+
+If the only thing you're still waiting for is a state change in an external
+system, and you don't need to assert any new desired state for your children,
+consider returning an error from your `finalize` hook instead of success.
+This will cause Metacontroller to requeue and retry the hook later, giving you
+a chance to recheck the external state without holding up a slot in the work
+queue.
+If you return success, Metacontroller won't call your hook again until the next
+[periodic resync](#resync-period).

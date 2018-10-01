@@ -27,6 +27,7 @@ import (
 	"k8s.io/client-go/util/retry"
 
 	dynamicdiscovery "k8s.io/metacontroller/dynamic/discovery"
+	dynamicobject "k8s.io/metacontroller/dynamic/object"
 )
 
 type Clientset struct {
@@ -149,4 +150,28 @@ func (rc *ResourceClient) AtomicUpdate(orig *unstructured.Unstructured, update f
 		return err
 	})
 	return result, err
+}
+
+// AddFinalizer adds the given finalizer to the list, if it isn't there already.
+func (rc *ResourceClient) AddFinalizer(orig *unstructured.Unstructured, name string) (*unstructured.Unstructured, error) {
+	return rc.AtomicUpdate(orig, func(obj *unstructured.Unstructured) bool {
+		if dynamicobject.HasFinalizer(obj, name) {
+			// Nothing to do. Abort update.
+			return false
+		}
+		dynamicobject.AddFinalizer(obj, name)
+		return true
+	})
+}
+
+// RemoveFinalizer removes the given finalizer from the list, if it's there.
+func (rc *ResourceClient) RemoveFinalizer(orig *unstructured.Unstructured, name string) (*unstructured.Unstructured, error) {
+	return rc.AtomicUpdate(orig, func(obj *unstructured.Unstructured) bool {
+		if !dynamicobject.HasFinalizer(obj, name) {
+			// Nothing to do. Abort update.
+			return false
+		}
+		dynamicobject.RemoveFinalizer(obj, name)
+		return true
+	})
 }

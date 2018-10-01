@@ -153,6 +153,11 @@ func (in *CompositeControllerHooks) DeepCopyInto(out *CompositeControllerHooks) 
 		*out = new(Hook)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.Finalize != nil {
+		in, out := &in.Finalize, &out.Finalize
+		*out = new(Hook)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.PreUpdateChild != nil {
 		in, out := &in.PreUpdateChild, &out.PreUpdateChild
 		*out = new(Hook)
@@ -466,6 +471,11 @@ func (in *DecoratorControllerHooks) DeepCopyInto(out *DecoratorControllerHooks) 
 	*out = *in
 	if in.Sync != nil {
 		in, out := &in.Sync, &out.Sync
+		*out = new(Hook)
+		(*in).DeepCopyInto(*out)
+	}
+	if in.Finalize != nil {
+		in, out := &in.Finalize, &out.Finalize
 		*out = new(Hook)
 		(*in).DeepCopyInto(*out)
 	}

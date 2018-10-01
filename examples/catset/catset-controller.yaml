@@ -39,6 +39,9 @@ spec:
     sync:
       webhook:
         url: http://catset-controller.metacontroller/sync
+    finalize:
+      webhook:
+        url: http://catset-controller.metacontroller/sync
 ---
 apiVersion: apps/v1beta1
 kind: Deployment

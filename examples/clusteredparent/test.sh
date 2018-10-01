@@ -26,4 +26,4 @@ echo "Deleting ClusterRole..."
 kubectl delete -f my-clusterrole.yaml
 
 echo "Wait for Namespaced child cleanup..."
-until [[ "$(kubectl get clusterrole.rbac.authorization.k8s.io -n default  my-clusterrole 2>&1 )" == 'Error from server (NotFound): clusterroles.rbac.authorization.k8s.io "my-clusterrole" not found' ]]; do sleep 1; done
+until [[ "$(kubectl get clusterrole.rbac.authorization.k8s.io -n default  my-clusterrole 2>&1 )" == *NotFound* ]]; do sleep 1; done

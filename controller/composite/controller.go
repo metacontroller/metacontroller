@@ -37,6 +37,7 @@ import (
 	mcclientset "k8s.io/metacontroller/client/generated/clientset/internalclientset"
 	mclisters "k8s.io/metacontroller/client/generated/lister/metacontroller/v1alpha1"
 	"k8s.io/metacontroller/controller/common"
+	"k8s.io/metacontroller/controller/common/finalizer"
 	dynamicclientset "k8s.io/metacontroller/dynamic/clientset"
 	dynamiccontrollerref "k8s.io/metacontroller/dynamic/controllerref"
 	dynamicdiscovery "k8s.io/metacontroller/dynamic/discovery"
@@ -62,6 +63,8 @@ type parentController struct {
 
 	updateStrategy updateStrategyMap
 	childInformers common.InformerMap
+
+	finalizer *finalizer.Manager
 }
 
 func newParentController(resources *dynamicdiscovery.ResourceMap, dynClient *dynamicclientset.Clientset, dynInformers *dynamicinformer.SharedInformerFactory, mcClient mcclientset.Interface, revisionLister mclisters.ControllerRevisionLister, cc *v1alpha1.CompositeController) (pc *parentController, newErr error) {
@@ -115,6 +118,10 @@ func newParentController(resources *dynamicdiscovery.ResourceMap, dynClient *dyn
 		revisionLister: revisionLister,
 		updateStrategy: updateStrategy,
 		queue:          workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "CompositeController-"+cc.Name),
+		finalizer: &finalizer.Manager{
+			Name:    "metacontroller.app/compositecontroller-" + cc.Name,
+			Enabled: cc.Spec.Hooks.Finalize != nil,
+		},
 	}
 
 	return pc, nil
@@ -394,6 +401,15 @@ func (pc *parentController) sync(key string) error {
 }
 
 func (pc *parentController) syncParentObject(parent *unstructured.Unstructured) error {
+	// Before taking any other action, add our finalizer (if desired).
+	// This ensures we have a chance to clean up after any action we later take.
+	updatedParent, err := pc.finalizer.SyncObject(pc.parentClient, parent)
+	if err != nil {
+		// If we fail to do this, abort before doing anything else and requeue.
+		return fmt.Errorf("can't sync finalizer for %v %v/%v: %v", parent.GetKind(), parent.GetNamespace(), parent.GetName(), err)
+	}
+	parent = updatedParent
+
 	// Claim all matching child resources, including orphan/adopt as necessary.
 	observedChildren, err := pc.claimChildren(parent)
 	if err != nil {
@@ -403,9 +419,19 @@ func (pc *parentController) syncParentObject(parent *unstructured.Unstructured) 
 	// Reconcile ControllerRevisions belonging to this parent.
 	// Call the sync hook for each revision, then compute the overall status and
 	// desired children, accounting for any rollout in progress.
-	parentStatus, desiredChildren, err := pc.syncRevisions(parent, observedChildren)
+	parentStatus, desiredChildren, finalized, err := pc.syncRevisions(parent, observedChildren)
 	if err != nil {
 		return err
+	}
+
+	// If all revisions agree that they've finished finalizing,
+	// remove our finalizer.
+	if finalized {
+		updatedParent, err := pc.parentClient.Namespace(parent.GetNamespace()).RemoveFinalizer(parent, pc.finalizer.Name)
+		if err != nil {
+			return fmt.Errorf("can't remove finalizer for %v %v/%v: %v", parent.GetKind(), parent.GetNamespace(), parent.GetName(), err)
+		}
+		parent = updatedParent
 	}
 
 	// If selector generation is enabled, add the controller-uid label to all
@@ -428,8 +454,11 @@ func (pc *parentController) syncParentObject(parent *unstructured.Unstructured) 
 
 	// Reconcile child objects belonging to this parent.
 	// Remember manage error, but continue to update status regardless.
+	//
+	// We only manage children if the parent is "alive" (not pending deletion),
+	// or if it's pending deletion and we have a `finalize` hook.
 	var manageErr error
-	if parent.GetDeletionTimestamp() == nil {
+	if parent.GetDeletionTimestamp() == nil || pc.finalizer.ShouldFinalize(parent) {
 		// Reconcile children.
 		if err := common.ManageChildren(pc.dynClient, pc.updateStrategy, parent, observedChildren, desiredChildren); err != nil {
 			manageErr = fmt.Errorf("can't reconcile children for %v %v/%v: %v", pc.parentResource.Kind, parent.GetNamespace(), parent.GetName(), err)

@@ -22,7 +22,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 
-	"k8s.io/metacontroller/apis/metacontroller/v1alpha1"
 	"k8s.io/metacontroller/controller/common"
 	"k8s.io/metacontroller/hooks"
 )
@@ -31,21 +30,51 @@ type syncHookRequest struct {
 	Controller  runtime.Object             `json:"controller"`
 	Object      *unstructured.Unstructured `json:"object"`
 	Attachments common.ChildMap            `json:"attachments"`
+	Finalizing  bool                       `json:"finalizing"`
 }
 
 type syncHookResponse struct {
 	Labels      map[string]*string           `json:"labels"`
 	Annotations map[string]*string           `json:"annotations"`
 	Attachments []*unstructured.Unstructured `json:"attachments"`
+
+	// Finalized is only used by the finalize hook.
+	Finalized bool `json:"finalized"`
 }
 
-func callSyncHook(dc *v1alpha1.DecoratorController, request *syncHookRequest) (*syncHookResponse, error) {
-	if dc.Spec.Hooks == nil || dc.Spec.Hooks.Sync == nil {
-		return nil, fmt.Errorf("sync hook not defined")
+func (c *decoratorController) callSyncHook(request *syncHookRequest) (*syncHookResponse, error) {
+	if c.dc.Spec.Hooks == nil {
+		return nil, fmt.Errorf("no hooks defined")
 	}
+
 	var response syncHookResponse
-	if err := hooks.Call(dc.Spec.Hooks.Sync, request, &response); err != nil {
-		return nil, fmt.Errorf("sync hook failed: %v", err)
+
+	// First check if we should instead call the finalize hook,
+	// which has the same API as the sync hook except that it's
+	// called while the object is pending deletion.
+	//
+	// In addition to finalizing when the object is deleted, we also finalize
+	// when the object no longer matches our decorator selector.
+	// This allows the decorator to clean up after itself if the object has been
+	// updated to disable the functionality added by the decorator.
+	if c.dc.Spec.Hooks.Finalize != nil &&
+		(request.Object.GetDeletionTimestamp() != nil || !c.parentSelector.Matches(request.Object)) {
+		// Finalize
+		request.Finalizing = true
+		if err := hooks.Call(c.dc.Spec.Hooks.Finalize, request, &response); err != nil {
+			return nil, fmt.Errorf("finalize hook failed: %v", err)
+		}
+	} else {
+		// Sync
+		request.Finalizing = false
+		if c.dc.Spec.Hooks.Sync == nil {
+			return nil, fmt.Errorf("sync hook not defined")
+		}
+
+		if err := hooks.Call(c.dc.Spec.Hooks.Sync, request, &response); err != nil {
+			return nil, fmt.Errorf("sync hook failed: %v", err)
+		}
 	}
+
 	return &response, nil
 }
