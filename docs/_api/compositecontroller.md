@@ -214,23 +214,39 @@ a no-op (no CRUD operations needed to achieve desired state).
 
 ## Generate Selector
 
-Usually, each parent object managed by a CompositeController has its own
+Usually, each parent object managed by a CompositeController must have its own
 user-specified [label selector](#label-selector), just like each
-Deployment has its own label selector.
+Deployment has its own label selector in `spec.selector`.
+However, sometimes it makes more sense to let the user of your API pretend there
+are no labels or label selectors.
 
-However, sometimes it makes more sense to let the controller create a
-unique label selector for each parent object, instead of requiring
-the user to set one.
-For example, the built-in [Job][] API generates a unique selector because
-it assumes that users never want Pods to change ownership from one Job
-to another.
-Each Job is considered a unique invocation at a point in time,
-so it should ignore any Pods that weren't created specifically by
-that Job instance.
+For example, the built-in [Job][] API doesn't make you specify labels for your
+Pods, and you can leave `spec.selector` unset.
+Because each Job object represents a unique invocation at a point in time,
+you wouldn't expect a newly-created Job to be satisfied by finding a
+pre-existing Pod that just happens to have the right labels.
+On the other hand, a ReplicaSet assumes all Pods that match its selector are
+interchangeable, so it would be happy to have one less replica it has to create.
 
-If these semantics make sense for your controller as well,
-you can enable this behavior by setting `generateSelector` to `true`
-in your CompositeController's `spec`.
+If you set `spec.generateSelector` to `true` in your CompositeController
+definition, Metacontroller will do the following:
+
+* When creating children for you, Metacontroller will automatically add a label
+  that points to the parent object's unique ID (`metadata.uid`).
+* Metacontroller will *not* expect each parent object to contain a
+  `spec.selector`, and will ignore the value even if one is set.
+* Metacontroller will manage children as if each parent object had an
+  "imaginary" label selector that points to the unique ID label that
+  Metacontroller added to all your children.
+
+The end result is that you and the users of your API don't have to think about
+labels or selectors, similar to the Job API.
+The downside is that your API won't support all the same capabilities as
+built-in APIs.
+For example, with ReplicaSet or StatefulSet, you can delete the controller with
+`kubectl delete --cascade=false` to keep the Pods around, and later create a new
+controller with the same selector to adopt those existing Pods instead of making
+new ones from scratch.
 
 [Job]: https://kubernetes.io/docs/concepts/workloads/controllers/jobs-run-to-completion/
 
