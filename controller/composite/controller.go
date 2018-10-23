@@ -490,6 +490,11 @@ func (pc *parentController) makeSelector(parent *unstructured.Unstructured, extr
 		if err := k8s.GetNestedFieldInto(labelSelector, parent.UnstructuredContent(), "spec", "selector"); err != nil {
 			return nil, fmt.Errorf("can't get label selector from %v %v/%v", pc.parentResource.Kind, parent.GetNamespace(), parent.GetName())
 		}
+		// An empty selector doesn't make sense for a CompositeController parent.
+		// This is likely user error, and could be dangerous (selecting everything).
+		if len(labelSelector.MatchLabels) == 0 && len(labelSelector.MatchExpressions) == 0 {
+			return nil, fmt.Errorf(".spec.selector must have either matchLabels, matchExpressions, or both")
+		}
 	}
 
 	for key, value := range extraMatchLabels {
