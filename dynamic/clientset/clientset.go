@@ -175,3 +175,34 @@ func (rc *ResourceClient) RemoveFinalizer(orig *unstructured.Unstructured, name 
 		return true
 	})
 }
+
+// AtomicStatusUpdate is similar to AtomicUpdate, except that it updates status.
+func (rc *ResourceClient) AtomicStatusUpdate(orig *unstructured.Unstructured, update func(obj *unstructured.Unstructured) bool) (result *unstructured.Unstructured, err error) {
+	name := orig.GetName()
+
+	// We should call GetStatus (if it HasSubresource) to respect subresource
+	// RBAC rules, but the dynamic client does not support this yet.
+	err = retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+		current, err := rc.Get(name, metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+		if current.GetUID() != orig.GetUID() {
+			// The original object was deleted and replaced with a new one.
+			return apierrors.NewNotFound(rc.GroupResource(), name)
+		}
+		if changed := update(current); !changed {
+			// There's nothing to do.
+			result = current
+			return nil
+		}
+
+		if rc.HasSubresource("status") {
+			result, err = rc.UpdateStatus(current)
+		} else {
+			result, err = rc.Update(current)
+		}
+		return err
+	})
+	return result, err
+}

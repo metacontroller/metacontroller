@@ -31,7 +31,8 @@ import (
 
 type APIResource struct {
 	metav1.APIResource
-	APIVersion string
+	APIVersion     string
+	subresourceMap map[string]bool
 }
 
 func (r *APIResource) GroupVersion() schema.GroupVersion {
@@ -55,8 +56,12 @@ func (r *APIResource) GroupResource() schema.GroupResource {
 	return schema.GroupResource{Group: r.Group, Resource: r.Name}
 }
 
+func (r *APIResource) HasSubresource(subresourceKey string) bool {
+	return r.subresourceMap[subresourceKey]
+}
+
 type groupVersionEntry struct {
-	resources, kinds map[string]*APIResource
+	resources, kinds, subresources map[string]*APIResource
 }
 
 type ResourceMap struct {
@@ -109,9 +114,11 @@ func (rm *ResourceMap) refresh() {
 			panic(fmt.Errorf("received invalid GroupVersion from server: %v", err))
 		}
 		gve := groupVersionEntry{
-			resources: make(map[string]*APIResource, len(group.APIResources)),
-			kinds:     make(map[string]*APIResource, len(group.APIResources)),
+			resources:    make(map[string]*APIResource, len(group.APIResources)),
+			kinds:        make(map[string]*APIResource, len(group.APIResources)),
+			subresources: make(map[string]*APIResource, len(group.APIResources)),
 		}
+
 		for i := range group.APIResources {
 			apiResource := &APIResource{
 				APIResource: group.APIResources[i],
@@ -125,14 +132,31 @@ func (rm *ResourceMap) refresh() {
 				apiResource.Version = gv.Version
 			}
 			gve.resources[apiResource.Name] = apiResource
-			// Remember how to map back from Kind to resource.
+			// Remember which resources are subresources, and map the kind to the main resource.
 			// This is different from what RESTMapper provides because we already know
 			// the full GroupVersionKind and just need the resource name.
-			// Make sure we don't choose a subresource like "pods/status".
-			if !strings.ContainsRune(apiResource.Name, '/') {
+			if strings.ContainsRune(apiResource.Name, '/') {
+				gve.subresources[apiResource.Name] = apiResource
+			} else {
 				gve.kinds[apiResource.Kind] = apiResource
 			}
 		}
+
+		// Group all subresources for a resource.
+		for apiSubresourceName, _ := range gve.subresources {
+			arr := strings.Split(apiSubresourceName, "/")
+			apiResourceName := arr[0]
+			subresourceKey := arr[1]
+			apiResource := gve.resources[apiResourceName]
+			if apiResource == nil {
+				continue
+			}
+			if apiResource.subresourceMap == nil {
+				apiResource.subresourceMap = make(map[string]bool)
+			}
+			apiResource.subresourceMap[subresourceKey] = true
+		}
+
 		groupVersions[group.GroupVersion] = gve
 	}
 

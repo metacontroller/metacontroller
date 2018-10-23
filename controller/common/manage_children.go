@@ -52,6 +52,11 @@ func ApplyUpdate(orig, update *unstructured.Unstructured) (*unstructured.Unstruc
 	if err := revertObjectMetaSystemFields(newObj, orig); err != nil {
 		return nil, fmt.Errorf("failed to revert ObjectMeta system fields: %v", err)
 	}
+	// Revert status because we don't currently support a parent changing status of
+	// its children, so we need to ensure no diffs on the children involve status.
+	if err := revertField(newObj, orig, "status"); err != nil {
+		return nil, fmt.Errorf("failed to revert .status: %v", err)
+	}
 	dynamicapply.SetLastApplied(newObj, update.UnstructuredContent())
 	return newObj, nil
 }
@@ -74,23 +79,31 @@ var objectMetaSystemFields = []string{
 // If the field was unset before, we delete it if necessary.
 func revertObjectMetaSystemFields(newObj, orig *unstructured.Unstructured) error {
 	for _, fieldName := range objectMetaSystemFields {
-		val, found, err := unstructured.NestedFieldNoCopy(orig.UnstructuredContent(), "metadata", fieldName)
-		if err != nil {
-			return fmt.Errorf("can't traverse UnstructuredContent to look for metadata.%s: %v", fieldName, err)
+		if err := revertField(newObj, orig, "metadata", fieldName); err != nil {
+			return err
 		}
-		if found {
-			// The original had this field set, so make sure it remains the same.
-			// SetNestedField will recursively ensure the field and all its parent
-			// fields exist, and then set the value.
-			if err := unstructured.SetNestedField(newObj.UnstructuredContent(), val, "metadata", fieldName); err != nil {
-				return fmt.Errorf("can't revert value of metadata.%s: %v", fieldName, err)
-			}
-		} else {
-			// The original had this field unset, so make sure it remains unset.
-			// RemoveNestedField is a no-op if the field or any of its parents
-			// don't exist.
-			unstructured.RemoveNestedField(newObj.UnstructuredContent(), "metadata", fieldName)
+	}
+	return nil
+}
+
+// revertField reverts field in newObj to match what it was in orig.
+func revertField(newObj, orig *unstructured.Unstructured, fieldPath ...string) error {
+	field, found, err := unstructured.NestedFieldNoCopy(orig.UnstructuredContent(), fieldPath...)
+	if err != nil {
+		return fmt.Errorf("can't traverse UnstructuredContent to look for field %v: %v", fieldPath, err)
+	}
+	if found {
+		// The original had this field set, so make sure it remains the same.
+		// SetNestedField will recursively ensure the field and all its parent
+		// fields exist, and then set the value.
+		if err := unstructured.SetNestedField(newObj.UnstructuredContent(), field, fieldPath...); err != nil {
+			return fmt.Errorf("can't revert field %v: %v", fieldPath, err)
 		}
+	} else {
+		// The original had this field unset, so make sure it remains unset.
+		// RemoveNestedField is a no-op if the field or any of its parents
+		// don't exist.
+		unstructured.RemoveNestedField(newObj.UnstructuredContent(), fieldPath...)
 	}
 	return nil
 }

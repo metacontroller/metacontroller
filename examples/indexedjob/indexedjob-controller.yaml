@@ -11,6 +11,8 @@ spec:
     singular: indexedjob
     kind: IndexedJob
     shortNames: ["ij", "idxj"]
+  subresources:
+    status: {}
 ---
 apiVersion: metacontroller.k8s.io/v1alpha1
 kind: CompositeController
