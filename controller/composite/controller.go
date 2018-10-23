@@ -439,7 +439,11 @@ func (pc *parentController) syncParentObject(parent *unstructured.Unstructured) 
 	if pc.cc.Spec.GenerateSelector != nil && *pc.cc.Spec.GenerateSelector {
 		for _, group := range desiredChildren {
 			for _, obj := range group {
-				labels := obj.GetLabels()
+				// We don't use GetLabels() because that swallows conversion errors.
+				labels, _, err := unstructured.NestedStringMap(obj.UnstructuredContent(), "metadata", "labels")
+				if err != nil {
+					return fmt.Errorf("invalid labels on desired child %v %v/%v: %v", obj.GetKind(), obj.GetNamespace(), obj.GetName(), err)
+				}
 				if labels == nil {
 					labels = make(map[string]string, 1)
 				}
