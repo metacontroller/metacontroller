@@ -434,20 +434,34 @@ func (pc *parentController) syncParentObject(parent *unstructured.Unstructured) 
 		parent = updatedParent
 	}
 
-	// If selector generation is enabled, add the controller-uid label to all
-	// desired children.
-	if pc.cc.Spec.GenerateSelector != nil && *pc.cc.Spec.GenerateSelector {
-		for _, group := range desiredChildren {
-			for _, obj := range group {
-				labels := obj.GetLabels()
-				if labels == nil {
-					labels = make(map[string]string, 1)
+	// Enforce invariants between parent selector and child labels.
+	selector, err := pc.makeSelector(parent, nil)
+	if err != nil {
+		return err
+	}
+	for _, group := range desiredChildren {
+		for _, obj := range group {
+			// We don't use GetLabels() because that swallows conversion errors.
+			objLabels, _, err := unstructured.NestedStringMap(obj.UnstructuredContent(), "metadata", "labels")
+			if err != nil {
+				return fmt.Errorf("invalid labels on desired child %v %v/%v: %v", obj.GetKind(), obj.GetNamespace(), obj.GetName(), err)
+			}
+			// If selector generation is enabled, add the controller-uid label to all
+			// desired children so they match the generated selector.
+			if pc.cc.Spec.GenerateSelector != nil && *pc.cc.Spec.GenerateSelector {
+				if objLabels == nil {
+					objLabels = make(map[string]string, 1)
 				}
-				if _, ok := labels["controller-uid"]; ok {
-					continue
+				if _, ok := objLabels["controller-uid"]; !ok {
+					objLabels["controller-uid"] = string(parent.GetUID())
+					obj.SetLabels(objLabels)
 				}
-				labels["controller-uid"] = string(parent.GetUID())
-				obj.SetLabels(labels)
+			}
+			// Make sure all desired children match the parent's selector.
+			// We consider it user error to try to create children that would be
+			// immediately orphaned.
+			if !selector.Matches(labels.Set(objLabels)) {
+				return fmt.Errorf("labels on desired child %v %v/%v don't match parent selector", obj.GetKind(), obj.GetNamespace(), obj.GetName())
 			}
 		}
 	}
@@ -485,6 +499,11 @@ func (pc *parentController) makeSelector(parent *unstructured.Unstructured, extr
 		// Get the parent's LabelSelector.
 		if err := k8s.GetNestedFieldInto(labelSelector, parent.UnstructuredContent(), "spec", "selector"); err != nil {
 			return nil, fmt.Errorf("can't get label selector from %v %v/%v", pc.parentResource.Kind, parent.GetNamespace(), parent.GetName())
+		}
+		// An empty selector doesn't make sense for a CompositeController parent.
+		// This is likely user error, and could be dangerous (selecting everything).
+		if len(labelSelector.MatchLabels) == 0 && len(labelSelector.MatchExpressions) == 0 {
+			return nil, fmt.Errorf(".spec.selector must have either matchLabels, matchExpressions, or both")
 		}
 	}
 
