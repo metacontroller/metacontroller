@@ -33,6 +33,7 @@ import (
 
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/workqueue"
 
 	"k8s.io/metacontroller/apis/metacontroller/v1alpha1"
@@ -49,6 +50,7 @@ var (
 	discoveryInterval = flag.Duration("discovery-interval", 30*time.Second, "How often to refresh discovery cache to pick up newly-installed resources")
 	informerRelist    = flag.Duration("cache-flush-interval", 30*time.Minute, "How often to flush local caches and relist objects from the API server")
 	debugAddr         = flag.String("debug-addr", ":9999", "The address to bind the debug http endpoints")
+	clientConfigPath  = flag.String("client-config-path", "", "Path to kubeconfig file (same format as used by kubectl); if not specified, use in-cluster config")
 )
 
 type controller interface {
@@ -63,7 +65,15 @@ func main() {
 	glog.Infof("API server object cache flush interval: %v", *informerRelist)
 	glog.Infof("Debug http server address: %v", *debugAddr)
 
-	config, err := rest.InClusterConfig()
+	var config *rest.Config
+	var err error
+	if *clientConfigPath != "" {
+		glog.Infof("Using current context from kubeconfig file: %v", *clientConfigPath)
+		config, err = clientcmd.BuildConfigFromFlags("", *clientConfigPath)
+	} else {
+		glog.Info("No kubeconfig file specified; trying in-cluster auto-config...")
+		config, err = rest.InClusterConfig()
+	}
 	if err != nil {
 		glog.Fatal(err)
 	}
