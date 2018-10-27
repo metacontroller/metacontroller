@@ -289,18 +289,14 @@ The body of your response should be a JSON object with the following fields:
 | ----- | ----------- |
 | `labels` | A map of key-value pairs for labels to set on the target object. |
 | `annotations` | A map of key-value pairs for annotations to set on the target object. |
+| `status` | A JSON object that will completely replace the `status` field within the target object. |
 | `attachments` | A list of JSON objects representing all the desired attachments for this target object. |
 
-Unlike the parent of a [CompositeController](/api/compositecontroller/),
-DecoratorController assumes that each target object already has its own
-controller, so you can't mutate the target's status.
-
-In addition, decorators are conceptually adding behavior to the target's
-controller. By convention, the controller for a given resource should not
+By convention, the controller for a given resource should not
 modify its own spec, so your decorator also can't mutate the target's spec.
 
 As a result, decorators currently cannot modify the target object except
-to optionally set labels and annotations on it.
+to optionally set labels, annotations and status on it.
 
 The `attachments` field should contain a flat list of objects,
 not an associative array.

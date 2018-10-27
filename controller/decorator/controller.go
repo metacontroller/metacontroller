@@ -18,6 +18,7 @@ package decorator
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 	"sync"
 	"time"
@@ -466,14 +467,18 @@ func (c *decoratorController) syncParentObject(parent *unstructured.Unstructured
 	if parentAnnotations == nil {
 		parentAnnotations = make(map[string]string)
 	}
+	parentStatus := k8s.GetNestedObject(updatedParent.Object, "status")
+
 	labelsChanged := updateStringMap(parentLabels, syncResult.Labels)
 	annotationsChanged := updateStringMap(parentAnnotations, syncResult.Annotations)
+	statusChanged := !reflect.DeepEqual(parentStatus, syncResult.Status)
 
 	// Only do the update if something changed.
-	if labelsChanged || annotationsChanged ||
+	if labelsChanged || annotationsChanged || statusChanged ||
 		(syncResult.Finalized && dynamicobject.HasFinalizer(parent, c.finalizer.Name)) {
 		updatedParent.SetLabels(parentLabels)
 		updatedParent.SetAnnotations(parentAnnotations)
+		k8s.SetNestedField(updatedParent.Object, syncResult.Status, "status")
 
 		if syncResult.Finalized {
 			dynamicobject.RemoveFinalizer(updatedParent, c.finalizer.Name)
