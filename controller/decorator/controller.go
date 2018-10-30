@@ -468,6 +468,10 @@ func (c *decoratorController) syncParentObject(parent *unstructured.Unstructured
 		parentAnnotations = make(map[string]string)
 	}
 	parentStatus := k8s.GetNestedObject(updatedParent.Object, "status")
+	if syncResult.Status == nil {
+		// A null .status in the sync response means leave it unchanged.
+		syncResult.Status = parentStatus
+	}
 
 	labelsChanged := updateStringMap(parentLabels, syncResult.Labels)
 	annotationsChanged := updateStringMap(parentAnnotations, syncResult.Annotations)
