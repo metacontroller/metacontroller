@@ -44,6 +44,8 @@ import (
 	dynamicclientset "k8s.io/metacontroller/dynamic/clientset"
 	dynamicdiscovery "k8s.io/metacontroller/dynamic/discovery"
 	dynamicinformer "k8s.io/metacontroller/dynamic/informer"
+
+	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
 )
 
 var (
