@@ -484,6 +484,16 @@ func (c *decoratorController) syncParentObject(parent *unstructured.Unstructured
 		updatedParent.SetAnnotations(parentAnnotations)
 		k8s.SetNestedField(updatedParent.Object, syncResult.Status, "status")
 
+		if statusChanged && parentClient.HasSubresource("status") {
+			// The regular Update below will ignore changes to .status so we do it separately.
+			result, err = parentClient.Namespace(parent.GetNamespace()).UpdateStatus(updatedParent)
+			if err != nil {
+				return fmt.Errorf("can't update status: %v", err)
+			}
+			// The Update below needs to use the latest ResourceVersion.
+			updatedParent.SetResourceVersion(result.GetResourceVersion())
+		}
+
 		if syncResult.Finalized {
 			dynamicobject.RemoveFinalizer(updatedParent, c.finalizer.Name)
 		}
