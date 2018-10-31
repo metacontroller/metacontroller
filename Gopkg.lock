@@ -262,10 +262,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:b41f13f4d5dbbd63abe9bf646575e4f83d2637ca243b97ea79b7807242518e8c"
+  digest = "1:56f32737eb70d1269f66f18284487a443295e200ce9a5a3fff7a2d544eeca665"
   name = "golang.org/x/net"
   packages = [
     "context",
+    "context/ctxhttp",
     "http/httpguts",
     "http2",
     "http2/hpack",
@@ -273,6 +274,17 @@
   ]
   pruneopts = "UT"
   revision = "146acd28ed5894421fb5aac80ca93bc1b1f46f87"
+
+[[projects]]
+  branch = "master"
+  digest = "1:70afbb0d0abb4b9f7d4a6616dab26f6a74e35d6fbbcb37de72876a49df6d7361"
+  name = "golang.org/x/oauth2"
+  packages = [
+    ".",
+    "internal",
+  ]
+  pruneopts = "UT"
+  revision = "8527f56f71077909d6ead7facfe18fbf05ebdf83"
 
 [[projects]]
   branch = "master"
@@ -327,6 +339,22 @@
   ]
   pruneopts = "UT"
   revision = "29f11e2b93f4d66f7c335bd7b2892836d4944f5c"
+
+[[projects]]
+  digest = "1:6247f76e55a1e1a5c19a81e2d4b4dff6730461eeb5bbb0a16dd4a8ec8637ee93"
+  name = "google.golang.org/appengine"
+  packages = [
+    "internal",
+    "internal/base",
+    "internal/datastore",
+    "internal/log",
+    "internal/remote_api",
+    "internal/urlfetch",
+    "urlfetch",
+  ]
+  pruneopts = "UT"
+  revision = "ae0ab99deb4dc413a2b4bd6c8bdd0eb67f1e4d06"
+  version = "v1.2.0"
 
 [[projects]]
   digest = "1:2d1fbdc6777e5408cabeb02bf336305e724b925ff4546ded0fa8715a7267922a"
@@ -435,7 +463,7 @@
   version = "kubernetes-1.11.0"
 
 [[projects]]
-  digest = "1:46fdbab099bee58b273d4833b68b4f316275b72c934638e68f8ca4ee77e34788"
+  digest = "1:31c3daaf5b7b57ef44259ba11f90763df87f60c3289cddeda870233390f963e7"
   name = "k8s.io/client-go"
   packages = [
     "discovery",
@@ -446,6 +474,7 @@
     "pkg/apis/clientauthentication/v1beta1",
     "pkg/version",
     "plugin/pkg/client/auth/exec",
+    "plugin/pkg/client/auth/oidc",
     "rest",
     "rest/watch",
     "tools/auth",
@@ -550,6 +579,7 @@
     "k8s.io/apimachinery/pkg/watch",
     "k8s.io/client-go/discovery",
     "k8s.io/client-go/dynamic",
+    "k8s.io/client-go/plugin/pkg/client/auth/oidc",
     "k8s.io/client-go/rest",
     "k8s.io/client-go/tools/cache",
     "k8s.io/client-go/tools/clientcmd",
