@@ -486,7 +486,7 @@ func (c *decoratorController) syncParentObject(parent *unstructured.Unstructured
 
 		if statusChanged && parentClient.HasSubresource("status") {
 			// The regular Update below will ignore changes to .status so we do it separately.
-			result, err = parentClient.Namespace(parent.GetNamespace()).UpdateStatus(updatedParent)
+			result, err := parentClient.Namespace(parent.GetNamespace()).UpdateStatus(updatedParent)
 			if err != nil {
 				return fmt.Errorf("can't update status: %v", err)
 			}
