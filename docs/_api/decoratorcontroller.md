@@ -296,7 +296,9 @@ By convention, the controller for a given resource should not
 modify its own spec, so your decorator also can't mutate the target's spec.
 
 As a result, decorators currently cannot modify the target object except
-to optionally set labels, annotations and status on it.
+to optionally set labels, annotations, and status on it.
+Note that if the target resource already has its own controller,
+that controller might ignore and overwrite any status updates you make.
 
 The `attachments` field should contain a flat list of objects,
 not an associative array.
