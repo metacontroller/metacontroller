@@ -293,7 +293,7 @@ The body of your response should be a JSON object with the following fields:
 | `attachments` | A list of JSON objects representing all the desired attachments for this target object. |
 
 By convention, the controller for a given resource should not
-modify its own spec, so your decorator also can't mutate the target's spec.
+modify its own spec, so your decorator can't mutate the target's spec.
 
 As a result, decorators currently cannot modify the target object except
 to optionally set labels, annotations, and status on it.
