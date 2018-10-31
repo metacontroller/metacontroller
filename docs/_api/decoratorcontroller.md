@@ -289,7 +289,7 @@ The body of your response should be a JSON object with the following fields:
 | ----- | ----------- |
 | `labels` | A map of key-value pairs for labels to set on the target object. |
 | `annotations` | A map of key-value pairs for annotations to set on the target object. |
-| `status` | A JSON object that will completely replace the `status` field within the target object. |
+| `status` | A JSON object that will completely replace the `status` field within the target object. Leave unspecified or `null` to avoid changing `status`. |
 | `attachments` | A list of JSON objects representing all the desired attachments for this target object. |
 
 By convention, the controller for a given resource should not
