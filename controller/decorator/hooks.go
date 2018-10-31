@@ -36,6 +36,7 @@ type syncHookRequest struct {
 type syncHookResponse struct {
 	Labels      map[string]*string           `json:"labels"`
 	Annotations map[string]*string           `json:"annotations"`
+	Status      map[string]interface{}       `json:"status"`
 	Attachments []*unstructured.Unstructured `json:"attachments"`
 
 	// Finalized is only used by the finalize hook.

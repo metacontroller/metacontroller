@@ -18,6 +18,7 @@ package decorator
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 	"sync"
 	"time"
@@ -466,14 +467,32 @@ func (c *decoratorController) syncParentObject(parent *unstructured.Unstructured
 	if parentAnnotations == nil {
 		parentAnnotations = make(map[string]string)
 	}
+	parentStatus := k8s.GetNestedObject(updatedParent.Object, "status")
+	if syncResult.Status == nil {
+		// A null .status in the sync response means leave it unchanged.
+		syncResult.Status = parentStatus
+	}
+
 	labelsChanged := updateStringMap(parentLabels, syncResult.Labels)
 	annotationsChanged := updateStringMap(parentAnnotations, syncResult.Annotations)
+	statusChanged := !reflect.DeepEqual(parentStatus, syncResult.Status)
 
 	// Only do the update if something changed.
-	if labelsChanged || annotationsChanged ||
+	if labelsChanged || annotationsChanged || statusChanged ||
 		(syncResult.Finalized && dynamicobject.HasFinalizer(parent, c.finalizer.Name)) {
 		updatedParent.SetLabels(parentLabels)
 		updatedParent.SetAnnotations(parentAnnotations)
+		k8s.SetNestedField(updatedParent.Object, syncResult.Status, "status")
+
+		if statusChanged && parentClient.HasSubresource("status") {
+			// The regular Update below will ignore changes to .status so we do it separately.
+			result, err = parentClient.Namespace(parent.GetNamespace()).UpdateStatus(updatedParent)
+			if err != nil {
+				return fmt.Errorf("can't update status: %v", err)
+			}
+			// The Update below needs to use the latest ResourceVersion.
+			updatedParent.SetResourceVersion(result.GetResourceVersion())
+		}
 
 		if syncResult.Finalized {
 			dynamicobject.RemoveFinalizer(updatedParent, c.finalizer.Name)
