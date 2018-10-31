@@ -1,0 +1,66 @@
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: noops.metacontroller.k8s.io
+spec:
+  group: metacontroller.k8s.io
+  version: v1
+  scope: Namespaced
+  names:
+    plural: noops
+    singular: noop
+    kind: Noop
+  subresources:
+    status: {}
+---
+apiVersion: metacontroller.k8s.io/v1alpha1
+kind: DecoratorController
+metadata:
+  name: noop-controller
+spec:
+  resources:
+  - apiVersion: metacontroller.k8s.io/v1
+    resource: noops
+  hooks:
+    sync:
+      webhook:
+        url: http://noop-controller.metacontroller/sync
+---
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: noop-controller
+  namespace: metacontroller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: noop-controller
+  template:
+    metadata:
+      labels:
+        app: noop-controller
+    spec:
+      containers:
+      - name: controller
+        image: metacontroller/nodejs-server:0.1
+        imagePullPolicy: Always
+        volumeMounts:
+        - name: hooks
+          mountPath: /node/hooks
+      volumes:
+      - name: hooks
+        configMap:
+          name: noop-controller
+     
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: noop-controller
+  namespace: metacontroller
+spec:
+  selector:
+    app: noop-controller
+  ports:
+  - port: 80
