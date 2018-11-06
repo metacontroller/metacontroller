@@ -17,7 +17,7 @@ limitations under the License.
 package object
 
 import (
-	k8s "k8s.io/metacontroller/third_party/kubernetes"
+	k8s "metacontroller.app/third_party/kubernetes"
 )
 
 type StatusCondition struct {

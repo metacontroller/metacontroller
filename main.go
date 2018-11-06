@@ -36,14 +36,14 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/workqueue"
 
-	"k8s.io/metacontroller/apis/metacontroller/v1alpha1"
-	mcclientset "k8s.io/metacontroller/client/generated/clientset/internalclientset"
-	mcinformers "k8s.io/metacontroller/client/generated/informer/externalversions"
-	"k8s.io/metacontroller/controller/composite"
-	"k8s.io/metacontroller/controller/decorator"
-	dynamicclientset "k8s.io/metacontroller/dynamic/clientset"
-	dynamicdiscovery "k8s.io/metacontroller/dynamic/discovery"
-	dynamicinformer "k8s.io/metacontroller/dynamic/informer"
+	"metacontroller.app/apis/metacontroller/v1alpha1"
+	mcclientset "metacontroller.app/client/generated/clientset/internalclientset"
+	mcinformers "metacontroller.app/client/generated/informer/externalversions"
+	"metacontroller.app/controller/composite"
+	"metacontroller.app/controller/decorator"
+	dynamicclientset "metacontroller.app/dynamic/clientset"
+	dynamicdiscovery "metacontroller.app/dynamic/discovery"
+	dynamicinformer "metacontroller.app/dynamic/informer"
 
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
 )

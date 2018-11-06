@@ -33,16 +33,16 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 
-	"k8s.io/metacontroller/apis/metacontroller/v1alpha1"
-	mcclientset "k8s.io/metacontroller/client/generated/clientset/internalclientset"
-	mclisters "k8s.io/metacontroller/client/generated/lister/metacontroller/v1alpha1"
-	"k8s.io/metacontroller/controller/common"
-	"k8s.io/metacontroller/controller/common/finalizer"
-	dynamicclientset "k8s.io/metacontroller/dynamic/clientset"
-	dynamiccontrollerref "k8s.io/metacontroller/dynamic/controllerref"
-	dynamicdiscovery "k8s.io/metacontroller/dynamic/discovery"
-	dynamicinformer "k8s.io/metacontroller/dynamic/informer"
-	k8s "k8s.io/metacontroller/third_party/kubernetes"
+	"metacontroller.app/apis/metacontroller/v1alpha1"
+	mcclientset "metacontroller.app/client/generated/clientset/internalclientset"
+	mclisters "metacontroller.app/client/generated/lister/metacontroller/v1alpha1"
+	"metacontroller.app/controller/common"
+	"metacontroller.app/controller/common/finalizer"
+	dynamicclientset "metacontroller.app/dynamic/clientset"
+	dynamiccontrollerref "metacontroller.app/dynamic/controllerref"
+	dynamicdiscovery "metacontroller.app/dynamic/discovery"
+	dynamicinformer "metacontroller.app/dynamic/informer"
+	k8s "metacontroller.app/third_party/kubernetes"
 )
 
 type parentController struct {

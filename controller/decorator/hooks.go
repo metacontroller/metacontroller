@@ -22,8 +22,8 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 
-	"k8s.io/metacontroller/controller/common"
-	"k8s.io/metacontroller/hooks"
+	"metacontroller.app/controller/common"
+	"metacontroller.app/hooks"
 )
 
 type syncHookRequest struct {

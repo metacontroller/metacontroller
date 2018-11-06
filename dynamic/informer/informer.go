@@ -28,8 +28,8 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/tools/cache"
 
-	dynamicclientset "k8s.io/metacontroller/dynamic/clientset"
-	dynamiclister "k8s.io/metacontroller/dynamic/lister"
+	dynamicclientset "metacontroller.app/dynamic/clientset"
+	dynamiclister "metacontroller.app/dynamic/lister"
 )
 
 // SharedIndexInformer is an extension of the standard interface of the same

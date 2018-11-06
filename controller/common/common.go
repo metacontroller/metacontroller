@@ -24,8 +24,8 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/tools/cache"
 
-	dynamicdiscovery "k8s.io/metacontroller/dynamic/discovery"
-	dynamicinformer "k8s.io/metacontroller/dynamic/informer"
+	dynamicdiscovery "metacontroller.app/dynamic/discovery"
+	dynamicinformer "metacontroller.app/dynamic/informer"
 )
 
 var (

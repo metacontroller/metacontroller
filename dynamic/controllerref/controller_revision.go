@@ -28,9 +28,9 @@ import (
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/kubernetes/pkg/util/pointer"
 
-	"k8s.io/metacontroller/apis/metacontroller/v1alpha1"
-	client "k8s.io/metacontroller/client/generated/clientset/internalclientset/typed/metacontroller/v1alpha1"
-	k8s "k8s.io/metacontroller/third_party/kubernetes"
+	"metacontroller.app/apis/metacontroller/v1alpha1"
+	client "metacontroller.app/client/generated/clientset/internalclientset/typed/metacontroller/v1alpha1"
+	k8s "metacontroller.app/third_party/kubernetes"
 )
 
 type ControllerRevisionManager struct {

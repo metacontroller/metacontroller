@@ -28,14 +28,14 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 
-	"k8s.io/metacontroller/apis/metacontroller/v1alpha1"
-	mcinformers "k8s.io/metacontroller/client/generated/informer/externalversions"
-	mclisters "k8s.io/metacontroller/client/generated/lister/metacontroller/v1alpha1"
-	"k8s.io/metacontroller/controller/common"
-	dynamicclientset "k8s.io/metacontroller/dynamic/clientset"
-	dynamicdiscovery "k8s.io/metacontroller/dynamic/discovery"
-	dynamicinformer "k8s.io/metacontroller/dynamic/informer"
-	k8s "k8s.io/metacontroller/third_party/kubernetes"
+	"metacontroller.app/apis/metacontroller/v1alpha1"
+	mcinformers "metacontroller.app/client/generated/informer/externalversions"
+	mclisters "metacontroller.app/client/generated/lister/metacontroller/v1alpha1"
+	"metacontroller.app/controller/common"
+	dynamicclientset "metacontroller.app/dynamic/clientset"
+	dynamicdiscovery "metacontroller.app/dynamic/discovery"
+	dynamicinformer "metacontroller.app/dynamic/informer"
+	k8s "metacontroller.app/third_party/kubernetes"
 )
 
 type Metacontroller struct {

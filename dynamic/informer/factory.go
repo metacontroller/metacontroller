@@ -23,7 +23,7 @@ import (
 
 	"github.com/golang/glog"
 
-	dynamicclientset "k8s.io/metacontroller/dynamic/clientset"
+	dynamicclientset "metacontroller.app/dynamic/clientset"
 )
 
 // SharedInformerFactory is a factory for requesting dynamic informers from a

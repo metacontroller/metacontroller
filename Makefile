@@ -1,6 +1,6 @@
 TAG = dev
 
-PKG        := k8s.io/metacontroller
+PKG        := metacontroller.app
 API_GROUPS := metacontroller/v1alpha1
 
 all: install

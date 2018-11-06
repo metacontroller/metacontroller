@@ -22,7 +22,7 @@ import (
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"
 	flowcontrol "k8s.io/client-go/util/flowcontrol"
-	metacontrollerv1alpha1 "k8s.io/metacontroller/client/generated/clientset/internalclientset/typed/metacontroller/v1alpha1"
+	metacontrollerv1alpha1 "metacontroller.app/client/generated/clientset/internalclientset/typed/metacontroller/v1alpha1"
 )
 
 type Interface interface {
