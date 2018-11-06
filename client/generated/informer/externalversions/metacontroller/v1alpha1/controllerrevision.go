@@ -25,10 +25,10 @@ import (
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
 	cache "k8s.io/client-go/tools/cache"
-	metacontrollerv1alpha1 "k8s.io/metacontroller/apis/metacontroller/v1alpha1"
-	internalclientset "k8s.io/metacontroller/client/generated/clientset/internalclientset"
-	internalinterfaces "k8s.io/metacontroller/client/generated/informer/externalversions/internalinterfaces"
-	v1alpha1 "k8s.io/metacontroller/client/generated/lister/metacontroller/v1alpha1"
+	metacontrollerv1alpha1 "metacontroller.app/apis/metacontroller/v1alpha1"
+	internalclientset "metacontroller.app/client/generated/clientset/internalclientset"
+	internalinterfaces "metacontroller.app/client/generated/informer/externalversions/internalinterfaces"
+	v1alpha1 "metacontroller.app/client/generated/lister/metacontroller/v1alpha1"
 )
 
 // ControllerRevisionInformer provides access to a shared informer and lister for

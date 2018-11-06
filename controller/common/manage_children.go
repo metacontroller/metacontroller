@@ -27,10 +27,10 @@ import (
 	"k8s.io/apimachinery/pkg/util/diff"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 
-	"k8s.io/metacontroller/apis/metacontroller/v1alpha1"
-	dynamicapply "k8s.io/metacontroller/dynamic/apply"
-	dynamicclientset "k8s.io/metacontroller/dynamic/clientset"
-	k8s "k8s.io/metacontroller/third_party/kubernetes"
+	"metacontroller.app/apis/metacontroller/v1alpha1"
+	dynamicapply "metacontroller.app/dynamic/apply"
+	dynamicclientset "metacontroller.app/dynamic/clientset"
+	k8s "metacontroller.app/third_party/kubernetes"
 )
 
 func ApplyUpdate(orig, update *unstructured.Unstructured) (*unstructured.Unstructured, error) {

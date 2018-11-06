@@ -23,9 +23,9 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 
-	"k8s.io/metacontroller/apis/metacontroller/v1alpha1"
-	"k8s.io/metacontroller/controller/common"
-	dynamicdiscovery "k8s.io/metacontroller/dynamic/discovery"
+	"metacontroller.app/apis/metacontroller/v1alpha1"
+	"metacontroller.app/controller/common"
+	dynamicdiscovery "metacontroller.app/dynamic/discovery"
 )
 
 type decoratorSelector struct {

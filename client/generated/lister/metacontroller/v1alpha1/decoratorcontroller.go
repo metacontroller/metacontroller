@@ -22,7 +22,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/tools/cache"
-	v1alpha1 "k8s.io/metacontroller/apis/metacontroller/v1alpha1"
+	v1alpha1 "metacontroller.app/apis/metacontroller/v1alpha1"
 )
 
 // DecoratorControllerLister helps list DecoratorControllers.

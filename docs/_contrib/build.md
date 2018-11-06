@@ -10,10 +10,10 @@ First, check out the code:
 ```sh
 # If you're going to build locally, make sure to
 # place the repo according to the Go import path:
-#   $GOPATH/src/k8s.io/metacontroller
+#   $GOPATH/src/metacontroller.app
 cd $GOPATH/src
-git clone {{ site.repo_url }}.git k8s.io/metacontroller
-cd k8s.io/metacontroller
+git clone {{ site.repo_url }}.git metacontroller.app
+cd metacontroller.app
 ```
 
 ## Docker Build
@@ -23,7 +23,7 @@ Metacontroller server without any dependencies on the local build environment
 except for Docker 17.05+ (for multi-stage support):
 
 ```console
-src/k8s.io/metacontroller$ docker build -t <yourtag> .
+src/metacontroller.app$ docker build -t <yourtag> .
 ```
 
 ## Local Build

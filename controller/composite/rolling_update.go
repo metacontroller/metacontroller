@@ -21,11 +21,11 @@ import (
 	"reflect"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/metacontroller/controller/common"
+	"metacontroller.app/controller/common"
 
-	"k8s.io/metacontroller/apis/metacontroller/v1alpha1"
-	dynamicdiscovery "k8s.io/metacontroller/dynamic/discovery"
-	dynamicobject "k8s.io/metacontroller/dynamic/object"
+	"metacontroller.app/apis/metacontroller/v1alpha1"
+	dynamicdiscovery "metacontroller.app/dynamic/discovery"
+	dynamicobject "metacontroller.app/dynamic/object"
 )
 
 func (pc *parentController) syncRollingUpdate(parentRevisions []*parentRevision, observedChildren common.ChildMap) error {

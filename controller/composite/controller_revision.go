@@ -25,7 +25,7 @@ import (
 	"sync"
 
 	"github.com/golang/glog"
-	"k8s.io/metacontroller/controller/common"
+	"metacontroller.app/controller/common"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -33,9 +33,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/json"
 
-	"k8s.io/metacontroller/apis/metacontroller/v1alpha1"
-	dynamiccontrollerref "k8s.io/metacontroller/dynamic/controllerref"
-	k8s "k8s.io/metacontroller/third_party/kubernetes"
+	"metacontroller.app/apis/metacontroller/v1alpha1"
+	dynamiccontrollerref "metacontroller.app/dynamic/controllerref"
+	k8s "metacontroller.app/third_party/kubernetes"
 )
 
 const (

@@ -20,8 +20,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	dynamicclientset "k8s.io/metacontroller/dynamic/clientset"
-	dynamicobject "k8s.io/metacontroller/dynamic/object"
+	dynamicclientset "metacontroller.app/dynamic/clientset"
+	dynamicobject "metacontroller.app/dynamic/object"
 )
 
 // Manager encapsulates controller logic for dealing with finalizers.

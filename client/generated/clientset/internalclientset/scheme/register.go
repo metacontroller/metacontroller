@@ -23,7 +23,7 @@ import (
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	serializer "k8s.io/apimachinery/pkg/runtime/serializer"
-	metacontrollerv1alpha1 "k8s.io/metacontroller/apis/metacontroller/v1alpha1"
+	metacontrollerv1alpha1 "metacontroller.app/apis/metacontroller/v1alpha1"
 )
 
 var Scheme = runtime.NewScheme()
