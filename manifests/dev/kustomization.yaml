@@ -1,0 +1,5 @@
+bases:
+- ../..
+patches:
+- image.yaml
+- args.yaml

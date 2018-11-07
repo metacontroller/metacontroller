@@ -48,11 +48,11 @@ Rather than running `dep ensure` on every build, the development version of the
 Dockerfile expects you to have already run `dep ensure` locally.
 
 Next make sure your local Docker client is signed in to push to Docker Hub.
-Then change `enisoc/metacontroller` to point to `<yourname>/metacontroller`
-in these files:
+Then tell Skaffold to push to your own personal image repository:
 
-* `skaffold.yaml`
-* `manifests/dev/image.yaml`
+```sh
+skaffold config set --global default-repo <your-docker-hub-username>
+```
 
 Now you can build and deploy your latest changes with:
 
