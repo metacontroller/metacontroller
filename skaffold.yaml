@@ -1,4 +1,4 @@
-apiVersion: skaffold/v1alpha2
+apiVersion: skaffold/v1alpha5
 kind: Config
 build:
   artifacts:
@@ -6,4 +6,5 @@ build:
     docker:
       dockerfilePath: Dockerfile.dev
 deploy:
-  kustomize: {}
+  kustomize:
+    kustomizePath: manifests/dev

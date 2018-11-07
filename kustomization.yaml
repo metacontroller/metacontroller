@@ -3,6 +3,3 @@ commonLabels:
 resources:
 - manifests/metacontroller-rbac.yaml
 - manifests/metacontroller.yaml
-patches:
-- manifests/dev/image.yaml
-- manifests/dev/args.yaml
