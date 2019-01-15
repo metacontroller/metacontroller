@@ -243,7 +243,9 @@ func (pc *parentController) updateParentObject(old, cur interface{}) {
 	// but the spec hasn't changed (e.g. our own status updates).
 	oldParent := old.(*unstructured.Unstructured)
 	curParent := cur.(*unstructured.Unstructured)
-	if curParent.GetResourceVersion() != oldParent.GetResourceVersion() {
+	if curParent.GetDeletionTimestamp() == nil &&
+		oldParent.GetDeletionTimestamp() == nil &&
+		curParent.GetResourceVersion() != oldParent.GetResourceVersion() {
 		oldSpec := k8s.GetNestedField(oldParent.UnstructuredContent(), "spec")
 		curSpec := k8s.GetNestedField(curParent.UnstructuredContent(), "spec")
 		if reflect.DeepEqual(oldSpec, curSpec) {
