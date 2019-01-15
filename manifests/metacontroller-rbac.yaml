@@ -1,9 +1,4 @@
 apiVersion: v1
-kind: Namespace
-metadata:
-  name: metacontroller
----
-apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: metacontroller
