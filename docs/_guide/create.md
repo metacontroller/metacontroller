@@ -8,8 +8,7 @@ with Metacontroller.
 
 ## Prerequisites
 
-* Kubernetes v1.8+ is recommended for the improved CRD support, especially
-  garbage collection on custom resources.
+* Kubernetes v1.9+
 * You should have `kubectl` available and configured to talk to the desired cluster.
 * You should have already [installed Metacontroller](/guide/install/).
 
