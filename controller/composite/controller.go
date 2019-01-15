@@ -580,17 +580,23 @@ func (pc *parentController) claimChildren(parent *unstructured.Unstructured) (co
 }
 
 func (pc *parentController) updateParentStatus(parent *unstructured.Unstructured, status map[string]interface{}) (*unstructured.Unstructured, error) {
+	// Inject ObservedGeneration before comparing with old status,
+	// so we're comparing against the final form we desire.
+	if status == nil {
+		status = make(map[string]interface{})
+	}
+	status["observedGeneration"] = parent.GetGeneration()
+
 	// Overwrite .status field of parent object without touching other parts.
 	// We can't use Patch() because we need to ensure that the UID matches.
 	return pc.parentClient.Namespace(parent.GetNamespace()).AtomicStatusUpdate(parent, func(obj *unstructured.Unstructured) bool {
-		oldStatus := k8s.GetNestedField(obj.UnstructuredContent(), "status")
+		oldStatus := obj.UnstructuredContent()["status"]
 		if reflect.DeepEqual(oldStatus, status) {
 			// Nothing to do.
 			return false
 		}
 
-		k8s.SetNestedField(obj.UnstructuredContent(), status, "status")
-		k8s.SetNestedField(obj.UnstructuredContent(), parent.GetGeneration(), "status", "observedGeneration")
+		obj.UnstructuredContent()["status"] = status
 		return true
 	})
 }
