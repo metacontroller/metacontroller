@@ -276,7 +276,7 @@ func (c *decoratorController) updateParentObject(old, cur interface{}) {
 // resolveControllerRef returns the controller referenced by a ControllerRef,
 // or nil if the ControllerRef could not be resolved to a matching controller
 // of the correct Kind.
-func (c *decoratorController) resolveControllerRef(namespace string, controllerRef *metav1.OwnerReference) *unstructured.Unstructured {
+func (c *decoratorController) resolveControllerRef(childNamespace string, controllerRef *metav1.OwnerReference) *unstructured.Unstructured {
 	// Is the controllerRef pointing to one of the parent resources we care about?
 	// Only look at the group and kind; it doesn't matter if the controller uses
 	// a different version than we do.
@@ -291,8 +291,15 @@ func (c *decoratorController) resolveControllerRef(namespace string, controllerR
 	if informer == nil {
 		return nil
 	}
-	// We can't look up by UID, so look up by Name and then verify UID.
-	parent, err := informer.Lister().Get(namespace, controllerRef.Name)
+	// We can't look up by UID, so look up by Namespace/Name and then verify UID.
+	parentNamespace := ""
+	if resource.Namespaced {
+		// If the parent is namespaced, it must be in the same namespace as the
+		// child because controllerRef does not support cross-namespace references
+		// (except for namespaced child -> cluster-scoped parent).
+		parentNamespace = childNamespace
+	}
+	parent, err := informer.Lister().Get(parentNamespace, controllerRef.Name)
 	if err != nil {
 		return nil
 	}
@@ -539,16 +546,23 @@ func (c *decoratorController) syncParentObject(parent *unstructured.Unstructured
 
 func (c *decoratorController) getChildren(parent *unstructured.Unstructured) (common.ChildMap, error) {
 	parentUID := parent.GetUID()
-	namespace := parent.GetNamespace()
+	parentNamespace := parent.GetNamespace()
 	childMap := make(common.ChildMap)
 
 	for _, child := range c.dc.Spec.Attachments {
-		// List all objects of the child kind in the parent object's namespace.
+		// List all objects of the child kind in the parent object's namespace,
+		// or in all namespaces if the parent is cluster-scoped.
 		informer := c.childInformers.Get(child.APIVersion, child.Resource)
 		if informer == nil {
 			return nil, fmt.Errorf("no informer for resource %q in apiVersion %q", child.Resource, child.APIVersion)
 		}
-		all, err := informer.Lister().ListNamespace(namespace, labels.Everything())
+		var all []*unstructured.Unstructured
+		var err error
+		if parentNamespace != "" {
+			all, err = informer.Lister().ListNamespace(parentNamespace, labels.Everything())
+		} else {
+			all, err = informer.Lister().List(labels.Everything())
+		}
 		if err != nil {
 			return nil, fmt.Errorf("can't list children for resource %q in apiVersion %q: %v", child.Resource, child.APIVersion, err)
 		}
