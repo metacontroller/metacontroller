@@ -259,7 +259,7 @@ func (pc *parentController) updateParentObject(old, cur interface{}) {
 // resolveControllerRef returns the controller referenced by a ControllerRef,
 // or nil if the ControllerRef could not be resolved to a matching controller
 // of the correct Kind.
-func (pc *parentController) resolveControllerRef(namespace string, controllerRef *metav1.OwnerReference) *unstructured.Unstructured {
+func (pc *parentController) resolveControllerRef(childNamespace string, controllerRef *metav1.OwnerReference) *unstructured.Unstructured {
 	// We can't look up by UID, so look up by Name and then verify UID.
 	// Don't even try to look up by Name if it's the wrong APIGroup or Kind.
 	if apiGroup, _ := common.ParseAPIVersion(controllerRef.APIVersion); apiGroup != pc.parentResource.Group {
@@ -268,7 +268,14 @@ func (pc *parentController) resolveControllerRef(namespace string, controllerRef
 	if controllerRef.Kind != pc.parentResource.Kind {
 		return nil
 	}
-	parent, err := pc.parentInformer.Lister().Get(namespace, controllerRef.Name)
+	parentNamespace := ""
+	if pc.parentResource.Namespaced {
+		// If the parent is namespaced, it must be in the same namespace as the
+		// child because controllerRef does not support cross-namespace references
+		// (except for namespaced child -> cluster-scoped parent).
+		parentNamespace = childNamespace
+	}
+	parent, err := pc.parentInformer.Lister().Get(parentNamespace, controllerRef.Name)
 	if err != nil {
 		return nil
 	}
@@ -363,7 +370,14 @@ func (pc *parentController) onChildDelete(obj interface{}) {
 func (pc *parentController) findPotentialParents(child *unstructured.Unstructured) []*unstructured.Unstructured {
 	childLabels := labels.Set(child.GetLabels())
 
-	parents, err := pc.parentInformer.Lister().ListNamespace(child.GetNamespace(), labels.Everything())
+	var parents []*unstructured.Unstructured
+	var err error
+	if pc.parentResource.Namespaced {
+		// If the parent is namespaced, it must be in the same namespace as the child.
+		parents, err = pc.parentInformer.Lister().ListNamespace(child.GetNamespace(), labels.Everything())
+	} else {
+		parents, err = pc.parentInformer.Lister().List(labels.Everything())
+	}
 	if err != nil {
 		return nil
 	}
@@ -535,7 +549,7 @@ func (pc *parentController) canAdoptFunc(parent *unstructured.Unstructured) func
 
 func (pc *parentController) claimChildren(parent *unstructured.Unstructured) (common.ChildMap, error) {
 	// Set up values common to all child types.
-	namespace := parent.GetNamespace()
+	parentNamespace := parent.GetNamespace()
 	parentGVK := pc.parentResource.GroupVersionKind()
 	selector, err := pc.makeSelector(parent, nil)
 	if err != nil {
@@ -546,7 +560,8 @@ func (pc *parentController) claimChildren(parent *unstructured.Unstructured) (co
 	// Claim all child types.
 	childMap := make(common.ChildMap)
 	for _, child := range pc.cc.Spec.ChildResources {
-		// List all objects of the child kind in the parent object's namespace.
+		// List all objects of the child kind in the parent object's namespace,
+		// or in all namespaces if the parent is cluster-scoped.
 		childClient, err := pc.dynClient.Resource(child.APIVersion, child.Resource)
 		if err != nil {
 			return nil, err
@@ -555,7 +570,12 @@ func (pc *parentController) claimChildren(parent *unstructured.Unstructured) (co
 		if informer == nil {
 			return nil, fmt.Errorf("no informer for resource %q in apiVersion %q", child.Resource, child.APIVersion)
 		}
-		all, err := informer.Lister().ListNamespace(namespace, labels.Everything())
+		var all []*unstructured.Unstructured
+		if pc.parentResource.Namespaced {
+			all, err = informer.Lister().ListNamespace(parentNamespace, labels.Everything())
+		} else {
+			all, err = informer.Lister().List(labels.Everything())
+		}
 		if err != nil {
 			return nil, fmt.Errorf("can't list %v children: %v", childClient.Kind, err)
 		}

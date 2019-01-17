@@ -21,6 +21,13 @@ kubectl apply -f my-clusterrole.yaml
 echo "Wait for Namespaced child..."
 until [[ "$(kubectl get rolebinding -n default my-clusterrole -o 'jsonpath={.metadata.name}')" == "my-clusterrole" ]]; do sleep 1; done
 
+echo "Delete Namespaced child..."
+kubectl delete rolebinding -n default my-clusterrole --wait=true
+
+# Test that the controller with cluster-scoped parent notices the namespaced child got deleted.
+echo "Wait for Namespaced child to be recreated..."
+until [[ "$(kubectl get rolebinding -n default my-clusterrole -o 'jsonpath={.metadata.name}')" == "my-clusterrole" ]]; do sleep 1; done
+
 # Test to make sure cascading deletion of cross namespaces resources works.
 echo "Deleting ClusterRole..."
 kubectl delete -f my-clusterrole.yaml
