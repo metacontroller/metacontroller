@@ -64,7 +64,7 @@ spec:
       serviceAccountName: metacontroller
       containers:
       - name: metacontroller
-        image: metacontroller/metacontroller:v0.3.0
+        image: metacontroller/metacontroller:v0.3.1
         command: ["/usr/bin/metacontroller"]
         args:
         - --logtostderr
