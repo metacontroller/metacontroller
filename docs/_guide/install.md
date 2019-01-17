@@ -26,7 +26,9 @@ Replace `<user>` and `<domain>` above based on the account you use to authentica
 ## Install Metacontroller
 
 ```sh
-# Create 'metacontroller' namespace, service account, and role/binding.
+# Create metacontroller namespace.
+kubectl create namespace metacontroller
+# Create metacontroller service account and role/binding.
 kubectl apply -f {{ site.repo_raw }}/manifests/metacontroller-rbac.yaml
 # Create CRDs for Metacontroller APIs, and the Metacontroller StatefulSet.
 kubectl apply -f {{ site.repo_raw }}/manifests/metacontroller.yaml
