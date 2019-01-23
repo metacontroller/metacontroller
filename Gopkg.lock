@@ -411,6 +411,19 @@
   revision = "e3c5c37695fbce2b0b46845e3bb4806c4b8faf47"
 
 [[projects]]
+  digest = "1:db049c35b74f8eeb4a14b7de4876550c24e609998fea82a54e9414691538a471"
+  name = "k8s.io/apiextensions-apiserver"
+  packages = [
+    "pkg/apis/apiextensions",
+    "pkg/apis/apiextensions/v1beta1",
+    "pkg/client/clientset/clientset/scheme",
+    "pkg/client/clientset/clientset/typed/apiextensions/v1beta1",
+  ]
+  pruneopts = "UT"
+  revision = "3de98c57bc05a81cf463e0ad7a0af4cec8a5b510"
+  version = "kubernetes-1.11.0"
+
+[[projects]]
   digest = "1:aef7be7cede51fe9d6238dce8aeaa281aaefbfd51fd539e20be01712f1fb7383"
   name = "k8s.io/apimachinery"
   packages = [
@@ -463,12 +476,42 @@
   version = "kubernetes-1.11.0"
 
 [[projects]]
-  digest = "1:31c3daaf5b7b57ef44259ba11f90763df87f60c3289cddeda870233390f963e7"
+  digest = "1:84d71e4f41f2e03b966dcba2e3e94a653af791097984c7a7b4229bdd3baf4111"
   name = "k8s.io/client-go"
   packages = [
     "discovery",
     "dynamic",
+    "kubernetes",
     "kubernetes/scheme",
+    "kubernetes/typed/admissionregistration/v1alpha1",
+    "kubernetes/typed/admissionregistration/v1beta1",
+    "kubernetes/typed/apps/v1",
+    "kubernetes/typed/apps/v1beta1",
+    "kubernetes/typed/apps/v1beta2",
+    "kubernetes/typed/authentication/v1",
+    "kubernetes/typed/authentication/v1beta1",
+    "kubernetes/typed/authorization/v1",
+    "kubernetes/typed/authorization/v1beta1",
+    "kubernetes/typed/autoscaling/v1",
+    "kubernetes/typed/autoscaling/v2beta1",
+    "kubernetes/typed/batch/v1",
+    "kubernetes/typed/batch/v1beta1",
+    "kubernetes/typed/batch/v2alpha1",
+    "kubernetes/typed/certificates/v1beta1",
+    "kubernetes/typed/core/v1",
+    "kubernetes/typed/events/v1beta1",
+    "kubernetes/typed/extensions/v1beta1",
+    "kubernetes/typed/networking/v1",
+    "kubernetes/typed/policy/v1beta1",
+    "kubernetes/typed/rbac/v1",
+    "kubernetes/typed/rbac/v1alpha1",
+    "kubernetes/typed/rbac/v1beta1",
+    "kubernetes/typed/scheduling/v1alpha1",
+    "kubernetes/typed/scheduling/v1beta1",
+    "kubernetes/typed/settings/v1alpha1",
+    "kubernetes/typed/storage/v1",
+    "kubernetes/typed/storage/v1alpha1",
+    "kubernetes/typed/storage/v1beta1",
     "pkg/apis/clientauthentication",
     "pkg/apis/clientauthentication/v1alpha1",
     "pkg/apis/clientauthentication/v1beta1",
@@ -485,6 +528,7 @@
     "tools/clientcmd/api/v1",
     "tools/metrics",
     "tools/pager",
+    "tools/reference",
     "transport",
     "util/buffer",
     "util/cert",
@@ -542,6 +586,14 @@
   revision = "4242d8e6c5dba56827bb7bcf14ad11cda38f3991"
 
 [[projects]]
+  digest = "1:e2999bf1bb6eddc2a6aa03fe5e6629120a53088926520ca3b4765f77d7ff7eab"
+  name = "k8s.io/klog"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "a5bc97fbc634d635061f3146511332c7e313a55a"
+  version = "v0.1.0"
+
+[[projects]]
   digest = "1:29062cae7f41050794c47913d342e73180c64dbc6628db930726fee5dac10474"
   name = "k8s.io/kubernetes"
   packages = ["pkg/util/pointer"]
@@ -559,6 +611,9 @@
     "github.com/google/go-jsonnet/ast",
     "go.opencensus.io/exporter/prometheus",
     "go.opencensus.io/stats/view",
+    "k8s.io/api/core/v1",
+    "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1",
+    "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/typed/apiextensions/v1beta1",
     "k8s.io/apimachinery/pkg/api/equality",
     "k8s.io/apimachinery/pkg/api/errors",
     "k8s.io/apimachinery/pkg/api/testing/fuzzer",
@@ -579,6 +634,7 @@
     "k8s.io/apimachinery/pkg/watch",
     "k8s.io/client-go/discovery",
     "k8s.io/client-go/dynamic",
+    "k8s.io/client-go/kubernetes",
     "k8s.io/client-go/plugin/pkg/client/auth/oidc",
     "k8s.io/client-go/rest",
     "k8s.io/client-go/tools/cache",
@@ -590,6 +646,7 @@
     "k8s.io/code-generator/cmd/deepcopy-gen",
     "k8s.io/code-generator/cmd/informer-gen",
     "k8s.io/code-generator/cmd/lister-gen",
+    "k8s.io/klog",
     "k8s.io/kubernetes/pkg/util/pointer",
   ]
   solver-name = "gps-cdcl"

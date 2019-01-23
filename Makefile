@@ -12,6 +12,10 @@ unit-test:
 	go test -i ./...
 	go test ./...
 
+integration-test:
+	go test -i ./test/integration/...
+	go test ./test/integration/... -args -v=6
+
 image: generated_files
 	docker build -t metacontroller/metacontroller:$(TAG) .
 
