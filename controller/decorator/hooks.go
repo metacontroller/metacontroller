@@ -20,20 +20,22 @@ import (
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
 
+	"metacontroller.app/apis/metacontroller/v1alpha1"
 	"metacontroller.app/controller/common"
 	"metacontroller.app/hooks"
 )
 
-type syncHookRequest struct {
-	Controller  runtime.Object             `json:"controller"`
-	Object      *unstructured.Unstructured `json:"object"`
-	Attachments common.ChildMap            `json:"attachments"`
-	Finalizing  bool                       `json:"finalizing"`
+// SyncHookRequest is the object sent as JSON to the sync hook.
+type SyncHookRequest struct {
+	Controller  *v1alpha1.DecoratorController `json:"controller"`
+	Object      *unstructured.Unstructured    `json:"object"`
+	Attachments common.ChildMap               `json:"attachments"`
+	Finalizing  bool                          `json:"finalizing"`
 }
 
-type syncHookResponse struct {
+// SyncHookResponse is the expected format of the JSON response from the sync hook.
+type SyncHookResponse struct {
 	Labels      map[string]*string           `json:"labels"`
 	Annotations map[string]*string           `json:"annotations"`
 	Status      map[string]interface{}       `json:"status"`
@@ -43,12 +45,12 @@ type syncHookResponse struct {
 	Finalized bool `json:"finalized"`
 }
 
-func (c *decoratorController) callSyncHook(request *syncHookRequest) (*syncHookResponse, error) {
+func (c *decoratorController) callSyncHook(request *SyncHookRequest) (*SyncHookResponse, error) {
 	if c.dc.Spec.Hooks == nil {
 		return nil, fmt.Errorf("no hooks defined")
 	}
 
-	var response syncHookResponse
+	var response SyncHookResponse
 
 	// First check if we should instead call the finalize hook,
 	// which has the same API as the sync hook except that it's
