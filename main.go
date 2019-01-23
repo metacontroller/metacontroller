@@ -22,28 +22,17 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"sync"
 	"syscall"
 	"time"
 
-	"github.com/0xRLG/ocworkqueue"
 	"github.com/golang/glog"
 	"go.opencensus.io/exporter/prometheus"
 	"go.opencensus.io/stats/view"
 
-	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
-	"k8s.io/client-go/util/workqueue"
 
-	"metacontroller.app/apis/metacontroller/v1alpha1"
-	mcclientset "metacontroller.app/client/generated/clientset/internalclientset"
-	mcinformers "metacontroller.app/client/generated/informer/externalversions"
-	"metacontroller.app/controller/composite"
-	"metacontroller.app/controller/decorator"
-	dynamicclientset "metacontroller.app/dynamic/clientset"
-	dynamicdiscovery "metacontroller.app/dynamic/discovery"
-	dynamicinformer "metacontroller.app/dynamic/informer"
+	"metacontroller.app/server"
 
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
 )
@@ -54,11 +43,6 @@ var (
 	debugAddr         = flag.String("debug-addr", ":9999", "The address to bind the debug http endpoints")
 	clientConfigPath  = flag.String("client-config-path", "", "Path to kubeconfig file (same format as used by kubectl); if not specified, use in-cluster config")
 )
-
-type controller interface {
-	Start()
-	Stop()
-}
 
 func main() {
 	flag.Parse()
@@ -80,44 +64,9 @@ func main() {
 		glog.Fatal(err)
 	}
 
-	// Periodically refresh discovery to pick up newly-installed resources.
-	dc := discovery.NewDiscoveryClientForConfigOrDie(config)
-	resources := dynamicdiscovery.NewResourceMap(dc)
-	// We don't care about stopping this cleanly since it has no external effects.
-	resources.Start(*discoveryInterval)
-
-	// Create informerfactory for metacontroller api objects.
-	mcClient, err := mcclientset.NewForConfig(config)
-	if err != nil {
-		glog.Fatalf("Can't create client for api %s: %v", v1alpha1.SchemeGroupVersion, err)
-	}
-	mcInformerFactory := mcinformers.NewSharedInformerFactory(mcClient, *informerRelist)
-
-	// Create dynamic clientset (factory for dynamic clients).
-	dynClient, err := dynamicclientset.New(config, resources)
+	stopServer, err := server.Start(config, *discoveryInterval, *informerRelist)
 	if err != nil {
 		glog.Fatal(err)
-	}
-	// Create dynamic informer factory (for sharing dynamic informers).
-	dynInformers := dynamicinformer.NewSharedInformerFactory(dynClient, *informerRelist)
-
-	workqueue.SetProvider(ocworkqueue.MetricsProvider())
-	view.Register(ocworkqueue.DefaultViews...)
-
-	// Start metacontrollers (controllers that spawn controllers).
-	// Each one requests the informers it needs from the factory.
-	controllers := []controller{
-		composite.NewMetacontroller(resources, dynClient, dynInformers, mcInformerFactory, mcClient),
-		decorator.NewMetacontroller(resources, dynClient, dynInformers, mcInformerFactory),
-	}
-
-	// Start all requested informers.
-	// We don't care about stopping this cleanly since it has no external effects.
-	mcInformerFactory.Start(nil)
-
-	// Start all controllers.
-	for _, c := range controllers {
-		c.Start()
 	}
 
 	exporter, err := prometheus.NewExporter(prometheus.Options{})
@@ -142,18 +91,6 @@ func main() {
 	sig := <-sigchan
 	glog.Infof("Received %q signal. Shutting down...", sig)
 
-	var wg sync.WaitGroup
-	for _, c := range controllers {
-		wg.Add(1)
-		go func(c controller) {
-			defer wg.Done()
-			c.Stop()
-		}(c)
-	}
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		srv.Shutdown(context.Background())
-	}()
-	wg.Wait()
+	stopServer()
+	srv.Shutdown(context.Background())
 }
