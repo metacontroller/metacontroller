@@ -9,8 +9,13 @@ install: generated_files
 	go install
 
 unit-test:
-	go test -i ./...
-	go test ./...
+	pkgs="$$(go list ./... | grep -v /test/integration/)" ; \
+		go test -i $${pkgs} && \
+		go test $${pkgs}
+
+integration-test:
+	go test -i ./test/integration/...
+	PATH="$(PWD)/hack/bin:$(PATH)" go test ./test/integration/... -v -timeout 5m -args -v=6
 
 image: generated_files
 	docker build -t metacontroller/metacontroller:$(TAG) .

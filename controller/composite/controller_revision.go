@@ -80,7 +80,7 @@ func (pc *parentController) syncRevisions(parent *unstructured.Unstructured, obs
 	// children anyway.
 	if !pc.updateStrategy.anyRolling() ||
 		(parent.GetDeletionTimestamp() != nil && !pc.finalizer.ShouldFinalize(parent)) {
-		syncRequest := &syncHookRequest{
+		syncRequest := &SyncHookRequest{
 			Controller: pc.cc,
 			Parent:     parent,
 			Children:   observedChildren,
@@ -150,7 +150,7 @@ func (pc *parentController) syncRevisions(parent *unstructured.Unstructured, obs
 		go func(pr *parentRevision) {
 			defer wg.Done()
 
-			syncRequest := &syncHookRequest{
+			syncRequest := &SyncHookRequest{
 				Controller: pc.cc,
 				Parent:     pr.parent,
 				Children:   observedChildren,

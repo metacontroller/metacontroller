@@ -451,7 +451,7 @@ func (c *decoratorController) syncParentObject(parent *unstructured.Unstructured
 	var desiredChildren common.ChildMap
 
 	// Call the sync hook to get the desired annotations and children.
-	syncRequest := &syncHookRequest{
+	syncRequest := &SyncHookRequest{
 		Controller:  c.dc,
 		Object:      parent,
 		Attachments: observedChildren,

@@ -1,11 +1,20 @@
 language: go
 go:
-- "1.10"
+- "1.11.x"
 go_import_path: metacontroller.app
+cache:
+  directories:
+  - vendor
+addons:
+  apt:
+    packages:
+    - wget
 install:
+- hack/get-kube-binaries.sh
 - go get -u github.com/golang/dep/cmd/dep
 - dep ensure
 script:
 # We intentionally don't generate files in CI, since we check them in.
 - go install
 - make unit-test
+- make integration-test
