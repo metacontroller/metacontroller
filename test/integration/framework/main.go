@@ -84,6 +84,11 @@ func TestMain(tests func() int) {
 		time.Sleep(time.Second)
 	}
 
+	// Create Metacontroller Namespace.
+	if err := execKubectl("apply", "-f", path.Join(manifestDir, "metacontroller-namespace.yaml")); err != nil {
+		klog.Fatalf("can't install metacontroller namespace: %v", err)
+	}
+
 	// Install Metacontroller RBAC.
 	if err := execKubectl("apply", "-f", path.Join(manifestDir, "metacontroller-rbac.yaml")); err != nil {
 		klog.Fatalf("can't install metacontroller RBAC: %v", err)
