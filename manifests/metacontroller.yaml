@@ -46,20 +46,20 @@ spec:
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
+  labels:
+    app.kubernetes.io/name: metacontroller
   name: metacontroller
   namespace: metacontroller
-  labels:
-    app: metacontroller
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: metacontroller
+      app.kubernetes.io/name: metacontroller
   serviceName: ""
   template:
     metadata:
       labels:
-        app: metacontroller
+        app.kubernetes.io/name: metacontroller
     spec:
       serviceAccountName: metacontroller
       containers:
