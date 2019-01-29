@@ -56,28 +56,31 @@ APIs that already exist as Kubernetes resources, such as:
 * ad hoc scripting ("make an X for every Y")
 * configuration abstraction ("when I say A, that means {X,Y,Z}")
 * higher-level automation of custom APIs added by [Operators][operator]
+* gluing an [external CRUD API][] into the Kubernetes control plane with a
+  simple translation layer
 
 [controllers]: /concepts/#controller
 [catset]: /examples/#catset-javascript
 [operator]: https://coreos.com/operators/
+[external CRUD API]: #can-i-call-external-apis-from-my-hook
 
 ### What is Metacontroller not good for?
 
-Metacontroller is currently not a good fit for "bridging" other APIs
-(like a cloud provider or app-specific API) into the Kubernetes API,
-for example by representing it as a CRD and doing 2-way reconciliation.
-If something changes in the external system, Metacontroller won't know
-that it needs to call your hook again unless you set it to [poll][resync period].
+Metacontroller is not a good fit when you need to examine a large number of
+objects to answer a single hook request.
+For example, if you need to be sent a list of all Pods or all Nodes in order to
+decide on your desired state, we'd have to call your hook with the full list of
+all Pods or Nodes any time any one of them changed.
+However, it might be a good fit if your desired behavior can be naturally
+broken down into per-Pod or per-Node tasks, since then we'd only need to call
+your hook with each object that changed.
 
-That's because the initial controller patterns we support are focused on use
-cases where both the inputs and outputs of your controller can be expressed as
-Kubernetes API objects (either built-in or custom).
-If you have a concrete use case that involves reconciling external state,
-we'd appreciate if you [file an issue][issues] describing it so we can
-work on defining additional patterns.
-
-[resync period]: /api/compositecontroller/#resync-period
-[issues]: {{ site.repo_url }}/issues
+Metacontroller is also not a good fit for writing controllers that perform long
+sequences of imperative steps -- for example, a single hook that executes many
+steps of a workflow by creating various children at the right times.
+That's because Metacontroller hooks work best when they use a functional style
+(no side effects, and output depends only on input), which is an awkward style
+for defining imperative sequences.
 
 ### Do I have to use CRD?
 
@@ -175,6 +178,30 @@ Metacontroller will take care of [reconciling your desired state][reconciling].
 
 [watches]: /features/#declarative-watches
 [reconciling]: /features/#declarative-reconcilitation
+
+### Can I call external APIs from my hook?
+
+Yes. Your hook code can do whatever it wants as part of computing a response to
+a Metacontroller hook request, including calling external APIs.
+
+The main thing to be careful of is to avoid synchronously waiting for
+long-running tasks to finish, since that will hold up one of a fixed number of
+concurrent slots in the queue of triggers for that hook.
+Instead, if your hook needs to wait for some condition that's checked through an
+external API, you should return a status that indicates this pending state,
+and set a [resync period][] so you get a chance to check the condition again
+later.
+
+[resync period]: /api/compositecontroller/#resync-period
+
+### How can I make sure external resources get cleaned up?
+
+If you allocate external resources as part of your hook, you should also
+implement a [finalzie hook][] to make sure you get a chance to clean up those
+external resources when the Kubernetes API object for which you created them
+goes away.
+
+[finalize hook]: /api/compositecontroller/#finalize-hook
 
 ### Does Metacontroller support "apply" semantics?
 
