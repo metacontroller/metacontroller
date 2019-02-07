@@ -438,7 +438,7 @@ func (pc *parentController) syncParentObject(parent *unstructured.Unstructured) 
 	// Reconcile ControllerRevisions belonging to this parent.
 	// Call the sync hook for each revision, then compute the overall status and
 	// desired children, accounting for any rollout in progress.
-	syncResult, err := pc.syncRevisions(parent, observedChildren)
+	syncResult, err := pc.syncRevisions(parent, observedChildren, relatedObjects)
 	if err != nil {
 		return err
 	}

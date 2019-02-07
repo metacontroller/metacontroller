@@ -31,6 +31,7 @@ type SyncHookRequest struct {
 	Controller *v1alpha1.CompositeController `json:"controller"`
 	Parent     *unstructured.Unstructured    `json:"parent"`
 	Children   common.ChildMap               `json:"children"`
+	Related    common.ChildMap               `json:"related"`
 	Finalizing bool                          `json:"finalizing"`
 }
 
@@ -43,6 +44,16 @@ type SyncHookResponse struct {
 
 	// Finalized is only used by the finalize hook.
 	Finalized bool `json:"finalized"`
+}
+
+// RelatedHookRequest is the object sent as JSON to the related hook.
+type RelatedHookRequest struct {
+	Controller *v1alpha1.CompositeController `json:"controller"`
+	Parent     *unstructured.Unstructured    `json:"parent"`
+}
+
+type RelatedHookResponse struct {
+	RelatedResourceRules []*RelatedResourceRule `json:"relatedResources,omitempty"`
 }
 
 func callSyncHook(cc *v1alpha1.CompositeController, request *SyncHookRequest) (*SyncHookResponse, error) {
@@ -71,6 +82,21 @@ func callSyncHook(cc *v1alpha1.CompositeController, request *SyncHookRequest) (*
 		if err := hooks.Call(cc.Spec.Hooks.Sync, request, &response); err != nil {
 			return nil, fmt.Errorf("sync hook failed: %v", err)
 		}
+	}
+
+	return &response, nil
+}
+
+func callRelatedHook(cc *v1alpha1.CompositeController, request *RelatedHookRequest) (*RelatedHookResponse, error) {
+	var response RelatedHookResponse
+
+  // As the related hook is optional, return nothing
+	if cc.Spec.Hooks == nil || cc.Spec.Hooks.Related == nil {
+		return &response, nil
+	}
+
+	if err := hooks.Call(cc.Spec.Hooks.Related, request, &response); err != nil {
+		return nil, fmt.Errorf("related hook failed: %v", err)
 	}
 
 	return &response, nil

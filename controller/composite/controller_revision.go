@@ -73,7 +73,7 @@ func (pc *parentController) claimRevisions(parent *unstructured.Unstructured) ([
 	return revisions, nil
 }
 
-func (pc *parentController) syncRevisions(parent *unstructured.Unstructured, observedChildren common.ChildMap) (*SyncHookResponse, error) {
+func (pc *parentController) syncRevisions(parent *unstructured.Unstructured, observedChildren common.ChildMap, relatedObjects common.ChildMap) (*SyncHookResponse, error) {
 	// If no child resources use rolling updates, just sync the latest parent.
 	// Also, if the parent object is being deleted and we don't have a finalizer,
 	// just sync the latest parent to get the status since we won't manage
@@ -84,6 +84,7 @@ func (pc *parentController) syncRevisions(parent *unstructured.Unstructured, obs
 			Controller: pc.cc,
 			Parent:     parent,
 			Children:   observedChildren,
+			Related:    relatedObjects,
 		}
 		syncResult, err := callSyncHook(pc.cc, syncRequest)
 		if err != nil {
