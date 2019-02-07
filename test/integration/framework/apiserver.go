@@ -78,6 +78,8 @@ func startApiserver() (func(), error) {
 		ctx,
 		apiserverPath,
 		"--cert-dir", apiserverDataDir,
+		// Disable secure port since we don't use it, so we don't conflict with other apiservers.
+		"--secure-port", "0",
 		"--insecure-port", strconv.Itoa(apiserverPort),
 		"--etcd-servers", etcdURL,
 	)

@@ -31,7 +31,7 @@ import (
 )
 
 const (
-	defaultWaitTimeout  = 10 * time.Second
+	defaultWaitTimeout  = 60 * time.Second
 	defaultWaitInterval = 250 * time.Millisecond
 )
 
