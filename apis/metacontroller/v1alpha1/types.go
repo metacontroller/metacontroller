@@ -99,6 +99,7 @@ type ServiceReference struct {
 }
 
 type CompositeControllerHooks struct {
+	Customize *Hook `json:"customize,omitempty"`
 	Sync     *Hook `json:"sync,omitempty"`
 	Finalize *Hook `json:"finalize,omitempty"`
 
@@ -214,4 +215,11 @@ type DecoratorControllerList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`
 	Items           []DecoratorController `json:"items"`
+}
+
+type RelatedResourceRule struct {
+	ResourceRule    `json:",inline"`
+	LabelSelector *labels.Selector `json:"labelSelector"`
+	Namespace string `json:"namespace,omitempty"`
+	Names    []string `json:"names"`
 }
