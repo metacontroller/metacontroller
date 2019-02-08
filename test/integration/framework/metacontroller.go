@@ -30,7 +30,7 @@ func (f *Fixture) CreateCompositeController(name, syncHookURL string, parentCRD,
 	cc := &v1alpha1.CompositeController{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "default",
-			Name:      "cc",
+			Name:      name,
 		},
 		Spec: v1alpha1.CompositeControllerSpec{
 			ParentResource: v1alpha1.CompositeControllerParentResourceRule{
@@ -66,4 +66,50 @@ func (f *Fixture) CreateCompositeController(name, syncHookURL string, parentCRD,
 	})
 
 	return cc
+}
+
+// CreateDecoratorController generates a test DecoratorController and installs
+// it in the test API server.
+func (f *Fixture) CreateDecoratorController(name, syncHookURL string, parentCRD, childCRD *apiextensions.CustomResourceDefinition) *v1alpha1.DecoratorController {
+	dc := &v1alpha1.DecoratorController{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "default",
+			Name:      name,
+		},
+		Spec: v1alpha1.DecoratorControllerSpec{
+			Resources: []v1alpha1.DecoratorControllerResourceRule{
+				{
+					ResourceRule: v1alpha1.ResourceRule{
+						APIVersion: parentCRD.Spec.Group + "/" + parentCRD.Spec.Versions[0].Name,
+						Resource:   parentCRD.Spec.Names.Plural,
+					},
+				},
+			},
+			Attachments: []v1alpha1.DecoratorControllerAttachmentRule{
+				{
+					ResourceRule: v1alpha1.ResourceRule{
+						APIVersion: childCRD.Spec.Group + "/" + childCRD.Spec.Versions[0].Name,
+						Resource:   childCRD.Spec.Names.Plural,
+					},
+				},
+			},
+			Hooks: &v1alpha1.DecoratorControllerHooks{
+				Sync: &v1alpha1.Hook{
+					Webhook: &v1alpha1.Webhook{
+						URL: &syncHookURL,
+					},
+				},
+			},
+		},
+	}
+
+	dc, err := f.metacontroller.MetacontrollerV1alpha1().DecoratorControllers().Create(dc)
+	if err != nil {
+		f.t.Fatal(err)
+	}
+	f.deferTeardown(func() error {
+		return f.metacontroller.MetacontrollerV1alpha1().DecoratorControllers().Delete(dc.Name, nil)
+	})
+
+	return dc
 }

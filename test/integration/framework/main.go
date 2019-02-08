@@ -17,6 +17,7 @@ limitations under the License.
 package framework
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -51,52 +52,55 @@ func getKubectlPath() (string, error) {
 
 // TestMain starts etcd, kube-apiserver, and metacontroller before running tests.
 func TestMain(tests func() int) {
-	result := 1
-	defer func() {
-		os.Exit(result)
-	}()
+	if err := testMain(tests); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+}
 
+func testMain(tests func() int) error {
 	if _, err := getKubectlPath(); err != nil {
-		klog.Fatal(installKubectl)
+		return errors.New(installKubectl)
 	}
 
 	stopEtcd, err := startEtcd()
 	if err != nil {
-		klog.Fatalf("cannot run integration tests: unable to start etcd: %v", err)
+		return fmt.Errorf("cannot run integration tests: unable to start etcd: %v", err)
 	}
 	defer stopEtcd()
 
 	stopApiserver, err := startApiserver()
 	if err != nil {
-		klog.Fatalf("cannot run integration tests: unable to start kube-apiserver: %v", err)
+		return fmt.Errorf("cannot run integration tests: unable to start kube-apiserver: %v", err)
 	}
 	defer stopApiserver()
 
 	klog.Info("Waiting for kube-apiserver to be ready...")
 	start := time.Now()
 	for {
-		if err := execKubectl("version"); err == nil {
+		kubectlErr := execKubectl("version")
+		if kubectlErr == nil {
 			break
 		}
 		if time.Since(start) > defaultWaitTimeout {
-			klog.Fatalf("timed out waiting for kube-apiserver to be ready: %v", err)
+			return fmt.Errorf("timed out waiting for kube-apiserver to be ready: %v", kubectlErr)
 		}
 		time.Sleep(time.Second)
 	}
 
 	// Create Metacontroller Namespace.
 	if err := execKubectl("apply", "-f", path.Join(manifestDir, "metacontroller-namespace.yaml")); err != nil {
-		klog.Fatalf("can't install metacontroller namespace: %v", err)
+		return fmt.Errorf("cannot install metacontroller namespace: %v", err)
 	}
 
 	// Install Metacontroller RBAC.
 	if err := execKubectl("apply", "-f", path.Join(manifestDir, "metacontroller-rbac.yaml")); err != nil {
-		klog.Fatalf("can't install metacontroller RBAC: %v", err)
+		return fmt.Errorf("cannot install metacontroller RBAC: %v", err)
 	}
 
 	// Install Metacontroller CRDs.
 	if err := execKubectl("apply", "-f", path.Join(manifestDir, "metacontroller.yaml")); err != nil {
-		klog.Fatalf("can't install metacontroller CRDs: %v", err)
+		return fmt.Errorf("cannot install metacontroller CRDs: %v", err)
 	}
 
 	// In this integration test environment, there are no Nodes, so the
@@ -105,7 +109,7 @@ func TestMain(tests func() int) {
 	// since that's part of the code under test.
 	stopServer, err := server.Start(ApiserverConfig(), 500*time.Millisecond, 30*time.Minute)
 	if err != nil {
-		klog.Fatalf("can't start metacontroller server: %v", err)
+		return fmt.Errorf("cannot start metacontroller server: %v", err)
 	}
 	defer stopServer()
 
@@ -115,13 +119,17 @@ func TestMain(tests func() int) {
 	// We don't care about stopping this cleanly since it has no external effects.
 	resourceMap.Start(500 * time.Millisecond)
 
-	result = tests()
+	// Now actually run the tests.
+	if exitCode := tests(); exitCode != 0 {
+		return fmt.Errorf("one or more tests failed with exit code: %v", exitCode)
+	}
+	return nil
 }
 
 func execKubectl(args ...string) error {
 	execPath, err := exec.LookPath("kubectl")
 	if err != nil {
-		return fmt.Errorf("can't exec kubectl: %v", err)
+		return fmt.Errorf("cannot exec kubectl: %v", err)
 	}
 	cmdline := append([]string{"--server", ApiserverURL()}, args...)
 	cmd := exec.Command(execPath, cmdline...)

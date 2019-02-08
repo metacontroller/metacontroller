@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package composite
+package decorator
 
 import (
 	"testing"
@@ -24,7 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/json"
 
-	"metacontroller.app/controller/composite"
+	"metacontroller.app/controller/decorator"
 	"metacontroller.app/test/integration/framework"
 )
 
@@ -48,21 +48,21 @@ func TestSyncWebhook(t *testing.T) {
 	childCRD, childClient := f.CreateCRD("Child", apiextensions.NamespaceScoped)
 
 	hook := f.ServeWebhook(func(body []byte) ([]byte, error) {
-		req := composite.SyncHookRequest{}
+		req := decorator.SyncHookRequest{}
 		if err := json.Unmarshal(body, &req); err != nil {
 			return nil, err
 		}
 		// As a simple test of request/response content,
 		// just create a child with the same name as the parent.
-		child := framework.UnstructuredCRD(childCRD, req.Parent.GetName())
+		child := framework.UnstructuredCRD(childCRD, req.Object.GetName())
 		child.SetLabels(labels)
-		resp := composite.SyncHookResponse{
-			Children: []*unstructured.Unstructured{child},
+		resp := decorator.SyncHookResponse{
+			Attachments: []*unstructured.Unstructured{child},
 		}
 		return json.Marshal(resp)
 	})
 
-	f.CreateCompositeController("cc", hook.URL, parentCRD, childCRD)
+	f.CreateDecoratorController("dc", hook.URL, parentCRD, childCRD)
 
 	parent := framework.UnstructuredCRD(parentCRD, "test-sync-webhook")
 	unstructured.SetNestedStringMap(parent.Object, labels, "spec", "selector", "matchLabels")
