@@ -62,7 +62,7 @@ func TestSyncWebhook(t *testing.T) {
 		return json.Marshal(resp)
 	})
 
-	f.CreateDecoratorController("dc", hook.URL, parentCRD, childCRD)
+	f.CreateDecoratorController("dc", hook.URL, framework.CRDResourceRule(parentCRD), framework.CRDResourceRule(childCRD))
 
 	parent := framework.UnstructuredCRD(parentCRD, "test-sync-webhook")
 	unstructured.SetNestedStringMap(parent.Object, labels, "spec", "selector", "matchLabels")

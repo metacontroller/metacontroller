@@ -23,6 +23,7 @@ import (
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/util/json"
 
 	dynamicclientset "metacontroller.app/dynamic/clientset"
 )
@@ -100,4 +101,19 @@ func UnstructuredCRD(crd *v1beta1.CustomResourceDefinition, name string) *unstru
 	obj.SetKind(crd.Spec.Names.Kind)
 	obj.SetName(name)
 	return obj
+}
+
+// UnstructuredJSON creates a new Unstructured object from the given JSON.
+// It panics on a decode error because it's meant for use with hard-coded test
+// data.
+func UnstructuredJSON(apiVersion, kind, name, jsonStr string) *unstructured.Unstructured {
+	obj := map[string]interface{}{}
+	if err := json.Unmarshal([]byte(jsonStr), &obj); err != nil {
+		panic(err)
+	}
+	u := &unstructured.Unstructured{Object: obj}
+	u.SetAPIVersion(apiVersion)
+	u.SetKind(kind)
+	u.SetName(name)
+	return u
 }
