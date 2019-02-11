@@ -82,7 +82,7 @@ func testMain(tests func() int) error {
 		if kubectlErr == nil {
 			break
 		}
-		if time.Since(start) > defaultWaitTimeout {
+		if time.Since(start) > time.Minute {
 			return fmt.Errorf("timed out waiting for kube-apiserver to be ready: %v", kubectlErr)
 		}
 		time.Sleep(time.Second)

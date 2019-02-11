@@ -31,7 +31,7 @@ import (
 )
 
 const (
-	defaultWaitTimeout  = 60 * time.Second
+	defaultWaitTimeout  = 30 * time.Second
 	defaultWaitInterval = 250 * time.Millisecond
 )
 
@@ -73,6 +73,11 @@ func NewFixture(t *testing.T) *Fixture {
 		apiextensions:  apiextensions,
 		metacontroller: mcClient,
 	}
+}
+
+// Clientset returns the Kubernetes clientset.
+func (f *Fixture) Clientset() kubernetes.Interface {
+	return f.kubernetes
 }
 
 // CreateNamespace creates a namespace that will be deleted after this test
