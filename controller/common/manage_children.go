@@ -170,8 +170,12 @@ func deleteChildren(client *dynamicclientset.ResourceClient, parent *unstructure
 			// This observed object wasn't listed as desired.
 			glog.Infof("%v: deleting %v", describeObject(parent), describeObject(obj))
 			uid := obj.GetUID()
+			// Explicitly request deletion propagation, which is what users expect,
+			// since some objects default to orphaning for backwards compatibility.
+			propagation := metav1.DeletePropagationBackground
 			err := client.Namespace(obj.GetNamespace()).Delete(obj.GetName(), &metav1.DeleteOptions{
-				Preconditions: &metav1.Preconditions{UID: &uid},
+				Preconditions:     &metav1.Preconditions{UID: &uid},
+				PropagationPolicy: &propagation,
 			})
 			if err != nil {
 				errs = append(errs, fmt.Errorf("can't delete %v: %v", describeObject(obj), err))
@@ -223,8 +227,12 @@ func updateChildren(client *dynamicclientset.ResourceClient, updateStrategy Chil
 				// Delete the object (now) and recreate it (on the next sync).
 				glog.Infof("%v: deleting %v for update", describeObject(parent), describeObject(obj))
 				uid := oldObj.GetUID()
+				// Explicitly request deletion propagation, which is what users expect,
+				// since some objects default to orphaning for backwards compatibility.
+				propagation := metav1.DeletePropagationBackground
 				err := client.Namespace(ns).Delete(obj.GetName(), &metav1.DeleteOptions{
-					Preconditions: &metav1.Preconditions{UID: &uid},
+					Preconditions:     &metav1.Preconditions{UID: &uid},
+					PropagationPolicy: &propagation,
 				})
 				if err != nil {
 					errs = append(errs, err)
