@@ -24,9 +24,16 @@ import (
 	"metacontroller.app/apis/metacontroller/v1alpha1"
 )
 
+func CRDResourceRule(crd *apiextensions.CustomResourceDefinition) v1alpha1.ResourceRule {
+	return v1alpha1.ResourceRule{
+		APIVersion: crd.Spec.Group + "/" + crd.Spec.Versions[0].Name,
+		Resource:   crd.Spec.Names.Plural,
+	}
+}
+
 // CreateCompositeController generates a test CompositeController and installs
 // it in the test API server.
-func (f *Fixture) CreateCompositeController(name, syncHookURL string, parentCRD, childCRD *apiextensions.CustomResourceDefinition) *v1alpha1.CompositeController {
+func (f *Fixture) CreateCompositeController(name, syncHookURL string, parentRule, childRule v1alpha1.ResourceRule) *v1alpha1.CompositeController {
 	cc := &v1alpha1.CompositeController{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "default",
@@ -34,17 +41,11 @@ func (f *Fixture) CreateCompositeController(name, syncHookURL string, parentCRD,
 		},
 		Spec: v1alpha1.CompositeControllerSpec{
 			ParentResource: v1alpha1.CompositeControllerParentResourceRule{
-				ResourceRule: v1alpha1.ResourceRule{
-					APIVersion: parentCRD.Spec.Group + "/" + parentCRD.Spec.Versions[0].Name,
-					Resource:   parentCRD.Spec.Names.Plural,
-				},
+				ResourceRule: parentRule,
 			},
 			ChildResources: []v1alpha1.CompositeControllerChildResourceRule{
 				{
-					ResourceRule: v1alpha1.ResourceRule{
-						APIVersion: childCRD.Spec.Group + "/" + childCRD.Spec.Versions[0].Name,
-						Resource:   childCRD.Spec.Names.Plural,
-					},
+					ResourceRule: childRule,
 				},
 			},
 			Hooks: &v1alpha1.CompositeControllerHooks{
@@ -70,7 +71,7 @@ func (f *Fixture) CreateCompositeController(name, syncHookURL string, parentCRD,
 
 // CreateDecoratorController generates a test DecoratorController and installs
 // it in the test API server.
-func (f *Fixture) CreateDecoratorController(name, syncHookURL string, parentCRD, childCRD *apiextensions.CustomResourceDefinition) *v1alpha1.DecoratorController {
+func (f *Fixture) CreateDecoratorController(name, syncHookURL string, parentRule, childRule v1alpha1.ResourceRule) *v1alpha1.DecoratorController {
 	dc := &v1alpha1.DecoratorController{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "default",
@@ -79,18 +80,12 @@ func (f *Fixture) CreateDecoratorController(name, syncHookURL string, parentCRD,
 		Spec: v1alpha1.DecoratorControllerSpec{
 			Resources: []v1alpha1.DecoratorControllerResourceRule{
 				{
-					ResourceRule: v1alpha1.ResourceRule{
-						APIVersion: parentCRD.Spec.Group + "/" + parentCRD.Spec.Versions[0].Name,
-						Resource:   parentCRD.Spec.Names.Plural,
-					},
+					ResourceRule: parentRule,
 				},
 			},
 			Attachments: []v1alpha1.DecoratorControllerAttachmentRule{
 				{
-					ResourceRule: v1alpha1.ResourceRule{
-						APIVersion: childCRD.Spec.Group + "/" + childCRD.Spec.Versions[0].Name,
-						Resource:   childCRD.Spec.Names.Plural,
-					},
+					ResourceRule: childRule,
 				},
 			},
 			Hooks: &v1alpha1.DecoratorControllerHooks{
