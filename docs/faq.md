@@ -197,7 +197,7 @@ later.
 ### How can I make sure external resources get cleaned up?
 
 If you allocate external resources as part of your hook, you should also
-implement a [finalzie hook][] to make sure you get a chance to clean up those
+implement a [finalize hook][] to make sure you get a chance to clean up those
 external resources when the Kubernetes API object for which you created them
 goes away.
 
