@@ -75,18 +75,6 @@
   revision = "4030bb1f1f0c35b30ca7009e9ebd06849dd45306"
 
 [[projects]]
-  digest = "1:b72c8ef795e79b80e0a1405566d7ec07b3f465114d2b3f66b4de1f1699fdbe5c"
-  name = "github.com/google/go-jsonnet"
-  packages = [
-    ".",
-    "ast",
-    "parser",
-  ]
-  pruneopts = "UT"
-  revision = "6144c57d2a054b72ff46219f655bf863b940e174"
-  version = "v0.11.2"
-
-[[projects]]
   branch = "master"
   digest = "1:3ee90c0d94da31b442dde97c99635aaafec68d0b8a3c12ee2075c6bdabeec6bb"
   name = "github.com/google/gofuzz"
@@ -607,10 +595,9 @@
   input-imports = [
     "github.com/0xRLG/ocworkqueue",
     "github.com/golang/glog",
-    "github.com/google/go-jsonnet",
-    "github.com/google/go-jsonnet/ast",
     "go.opencensus.io/exporter/prometheus",
     "go.opencensus.io/stats/view",
+    "k8s.io/api/batch/v1",
     "k8s.io/api/core/v1",
     "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1",
     "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/typed/apiextensions/v1beta1",

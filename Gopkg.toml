@@ -28,6 +28,11 @@ required = [
   "k8s.io/code-generator/cmd/informer-gen"
   ]
 
+# The code in examples/ is not part of the actual build.
+ignored = [
+  "metacontroller.app/examples/*"
+]
+
 [[constraint]]
   name = "k8s.io/client-go"
   version = "8.0.0"
