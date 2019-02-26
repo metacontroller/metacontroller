@@ -9,7 +9,7 @@ install: generated_files
 	go install
 
 unit-test:
-	pkgs="$$(go list ./... | grep -v /test/integration/)" ; \
+	pkgs="$$(go list ./... | grep -v '/test/integration/\|/examples/')" ; \
 		go test -i $${pkgs} && \
 		go test $${pkgs}
 
