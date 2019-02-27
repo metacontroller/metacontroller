@@ -3,7 +3,6 @@ kind: DaemonJob
 metadata:
   name: hello-world
 spec:
-  pauseImage: gcr.io/google_containers/pause
   template:
     metadata:
       labels:
@@ -13,4 +12,7 @@ spec:
       - name: hello-world
         image: busybox
         command: ["sh", "-c", "echo 'Hello world' && sleep 30"]
+        resources:
+          requests:
+            cpu: 10m
     terminationGracePeriodSeconds: 10

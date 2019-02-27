@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright 2017 Google Inc.
+# Copyright 2019 Google Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -28,7 +28,6 @@ def is_job_finished(job):
   return False
 
 def new_daemon(job):
-  daemon = {}
   daemon = copy.deepcopy(job)
   daemon['apiVersion'] = 'apps/v1'
   daemon['kind'] = 'DaemonSet'
@@ -37,9 +36,12 @@ def new_daemon(job):
   daemon['metadata']['labels'] = copy.deepcopy(job['spec']['template']['metadata']['labels'])
   daemon['spec'] = {}
   daemon['spec']['template'] = copy.deepcopy(job['spec']['template'])
-  del daemon['spec']['template']['spec']['containers']
   daemon['spec']['template']['spec']['initContainers'] = copy.deepcopy(job['spec']['template']['spec']['containers'])
-  daemon['spec']['template']['spec']['containers'] = [{'name': "pause", 'image': job['spec'].get('pauseImage', 'gcr.io/google_containers/pause')}]
+  daemon['spec']['template']['spec']['containers'] = [{
+      'name': "pause",
+      'image': job['spec'].get('pauseImage', 'gcr.io/google_containers/pause'),
+      'resources': {'requests': {'cpu': '10m'}}
+    }]
   daemon['spec']['selector'] = {'matchLabels': copy.deepcopy(job['spec']['template']['metadata']['labels'])}
 
   return daemon
@@ -47,33 +49,30 @@ def new_daemon(job):
 class Controller(BaseHTTPRequestHandler):
   def sync(self, job, children):
     desired_status = {}
-    desired_childs = {}
     child = '%s-dj' % (job['metadata']['name'])
 
-    # self.log_message(" Children: %s", children)
+    self.log_message(" Children: %s", children)
 
-    # If the job already finished (either completed or failed) at some point,
-    # stop actively managing childs since they might get deleted by child GC.
-    # Just generate a desired state for any observed childs and return status.
+    # If the job already finished at some point, freeze the status,
+    # delete children, and take no further action.
     if is_job_finished(job):
       desired_status = copy.deepcopy(job['status'])
       desired_status['conditions'] = [{'type': 'Complete', 'status': 'True'}]
       return {'status': desired_status, 'children': []}
 
     # Compute status based on what we observed, before building desired state.
-    # Generate desired state for existing childs.
-    desired_childs[child] = new_daemon(job)
+    # Our .status is just a copy of the DaemonSet .status with extra fields.
     desired_status = copy.deepcopy(children['DaemonSet.apps/v1'].get(child, {}).get('status',{}))
-
-    # If the child is finished the job is finished as well
     if is_job_finished(children['DaemonSet.apps/v1'].get(child, {})):
       desired_status['conditions'] = [{'type': 'Complete', 'status': 'True'}]
-      # Cleanup the DeamonJob
-      return {'status': desired_status, 'children': []}
     else:
       desired_status['conditions'] = [{'type': 'Complete', 'status': 'False'}]
 
-    return {'status': desired_status, 'children': desired_childs.values()}
+    # Always generate desired state for child if we reach this point.
+    # We should not delete children until after we know we've recorded
+    # completion in our status, which was the first check we did above.
+    desired_child = new_daemon(job)
+    return {'status': desired_status, 'children': [desired_child]}
 
 
   def do_POST(self):
