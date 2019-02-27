@@ -239,20 +239,13 @@ func (pc *parentController) enqueueParentObject(obj interface{}) {
 }
 
 func (pc *parentController) updateParentObject(old, cur interface{}) {
-	// Ignore updates where the ResourceVersion changed (not a resync)
-	// but the spec hasn't changed (e.g. our own status updates).
-	oldParent := old.(*unstructured.Unstructured)
-	curParent := cur.(*unstructured.Unstructured)
-	if curParent.GetDeletionTimestamp() == nil &&
-		oldParent.GetDeletionTimestamp() == nil &&
-		curParent.GetResourceVersion() != oldParent.GetResourceVersion() {
-		oldSpec := k8s.GetNestedField(oldParent.UnstructuredContent(), "spec")
-		curSpec := k8s.GetNestedField(curParent.UnstructuredContent(), "spec")
-		if reflect.DeepEqual(oldSpec, curSpec) {
-			return
-		}
-	}
-
+	// We used to ignore our own status updates, but we don't anymore.
+	// It's sometimes necessary for a hook to see its own status updates
+	// so they know that the status was committed to storage.
+	// This could cause endless sync hot-loops if your hook always returns a
+	// different status (e.g. you have some incrementing counter).
+	// Doing that is an anti-pattern anyway because status generation should be
+	// idempotent if nothing meaningful has actually changed in the system.
 	pc.enqueueParentObject(cur)
 }
 

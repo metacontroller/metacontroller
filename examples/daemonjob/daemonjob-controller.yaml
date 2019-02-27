@@ -1,0 +1,70 @@
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: daemonjobs.ctl.example.com
+spec:
+  group: ctl.example.com
+  version: v1
+  scope: Namespaced
+  names:
+    plural: daemonjobs
+    singular: daemonjob
+    kind: DaemonJob
+    shortNames: ["dj"]
+  subresources:
+    status: {}
+---
+apiVersion: metacontroller.k8s.io/v1alpha1
+kind: CompositeController
+metadata:
+  name: daemonjob-controller
+spec:
+  generateSelector: true
+  parentResource:
+    apiVersion: ctl.example.com/v1
+    resource: daemonjobs
+  childResources:
+    - apiVersion: apps/v1
+      resource: daemonsets
+  hooks:
+    sync:
+      webhook:
+        url: http://daemonjob-controller.metacontroller/sync
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: daemonjob-controller
+  namespace: metacontroller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: daemonjob-controller
+  template:
+    metadata:
+      labels:
+        app: daemonjob-controller
+    spec:
+      containers:
+      - name: controller
+        image: python:2.7
+        command: ["python", "/hooks/sync.py"]
+        volumeMounts:
+        - name: hooks
+          mountPath: /hooks
+      volumes:
+      - name: hooks
+        configMap:
+          name: daemonjob-controller
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: daemonjob-controller
+  namespace: metacontroller
+spec:
+  selector:
+    app: daemonjob-controller
+  ports:
+  - port: 80
