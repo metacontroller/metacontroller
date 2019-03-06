@@ -291,6 +291,7 @@ The body of your response should be a JSON object with the following fields:
 | `annotations` | A map of key-value pairs for annotations to set on the target object. |
 | `status` | A JSON object that will completely replace the `status` field within the target object. Leave unspecified or `null` to avoid changing `status`. |
 | `attachments` | A list of JSON objects representing all the desired attachments for this target object. |
+| `resyncAfterSeconds` | Set the delay (in seconds, as a float) before an optional, one-time, per-object resync. |
 
 By convention, the controller for a given resource should not
 modify its own spec, so your decorator can't mutate the target's spec.
@@ -323,6 +324,16 @@ response because they're in different forms.
 Instead, you should think of each entry in the list of `attachments` as being
 sent to [`kubectl apply`][kubectl apply].
 That is, you should [set only the fields that you care about](/api/apply/).
+
+You can optionally set `resyncAfterSeconds` to a value greater than 0 to request
+that the `sync` hook be called again with this particular parent object after
+some delay (specified in seconds, with decimal fractions allowed).
+Unlike the controller-wide [`resyncPeriodSeconds`](#resync-period), this is a
+one-time request (not a request to start periodic resyncs), although you can
+always return another `resyncAfterSeconds` value from subsequent `sync` calls.
+Also unlike the controller-wide setting, this request only applies to the
+particular parent object that this `sync` call sent, so you can request
+different delays (or omit the request) depending on the state of each object.
 
 Note that your webhook handler must return a response with a status code of `200`
 to be considered successful. Metacontroller will wait for a response for up to the
@@ -417,10 +428,10 @@ and Metacontroller will call your hook again automatically if anything changes
 in the observed state.
 
 If the only thing you're still waiting for is a state change in an external
-system, and you don't need to assert any new desired state for your attachments,
-consider returning an error from your `finalize` hook instead of success.
-This will cause Metacontroller to requeue and retry the hook later, giving you
+system, and you don't need to assert any new desired state for your children,
+returning success from the `finalize` hook may mean that Metacontroller doesn't
+call your hook again until the next [periodic resync](#resync-period).
+To reduce the delay, you can request a one-time, per-object resync by setting
+`resyncAfterSeconds` in your [hook response](#sync-hook-response), giving you
 a chance to recheck the external state without holding up a slot in the work
 queue.
-If you return success, Metacontroller won't call your hook again until the next
-[periodic resync](#resync-period).

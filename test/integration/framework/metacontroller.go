@@ -17,15 +17,15 @@ limitations under the License.
 package framework
 
 import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	apiextensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/kubernetes/pkg/util/pointer"
 
 	"metacontroller.app/apis/metacontroller/v1alpha1"
 )
 
-func CRDResourceRule(crd *apiextensions.CustomResourceDefinition) v1alpha1.ResourceRule {
-	return v1alpha1.ResourceRule{
+func CRDResourceRule(crd *apiextensions.CustomResourceDefinition) *v1alpha1.ResourceRule {
+	return &v1alpha1.ResourceRule{
 		APIVersion: crd.Spec.Group + "/" + crd.Spec.Versions[0].Name,
 		Resource:   crd.Spec.Names.Plural,
 	}
@@ -33,21 +33,23 @@ func CRDResourceRule(crd *apiextensions.CustomResourceDefinition) v1alpha1.Resou
 
 // CreateCompositeController generates a test CompositeController and installs
 // it in the test API server.
-func (f *Fixture) CreateCompositeController(name, syncHookURL string, parentRule, childRule v1alpha1.ResourceRule) *v1alpha1.CompositeController {
+func (f *Fixture) CreateCompositeController(name, syncHookURL string, parentRule, childRule *v1alpha1.ResourceRule) *v1alpha1.CompositeController {
+	childResources := []v1alpha1.CompositeControllerChildResourceRule{}
+	if childRule != nil {
+		childResources = append(childResources, v1alpha1.CompositeControllerChildResourceRule{ResourceRule: *childRule})
+	}
 	cc := &v1alpha1.CompositeController{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "default",
 			Name:      name,
 		},
 		Spec: v1alpha1.CompositeControllerSpec{
+			// Set a big resyncPeriod so tests can precisely control when syncs happen.
+			ResyncPeriodSeconds: pointer.Int32Ptr(3600),
 			ParentResource: v1alpha1.CompositeControllerParentResourceRule{
-				ResourceRule: parentRule,
+				ResourceRule: *parentRule,
 			},
-			ChildResources: []v1alpha1.CompositeControllerChildResourceRule{
-				{
-					ResourceRule: childRule,
-				},
-			},
+			ChildResources: childResources,
 			Hooks: &v1alpha1.CompositeControllerHooks{
 				Sync: &v1alpha1.Hook{
 					Webhook: &v1alpha1.Webhook{
@@ -71,23 +73,25 @@ func (f *Fixture) CreateCompositeController(name, syncHookURL string, parentRule
 
 // CreateDecoratorController generates a test DecoratorController and installs
 // it in the test API server.
-func (f *Fixture) CreateDecoratorController(name, syncHookURL string, parentRule, childRule v1alpha1.ResourceRule) *v1alpha1.DecoratorController {
+func (f *Fixture) CreateDecoratorController(name, syncHookURL string, parentRule, childRule *v1alpha1.ResourceRule) *v1alpha1.DecoratorController {
+	childResources := []v1alpha1.DecoratorControllerAttachmentRule{}
+	if childRule != nil {
+		childResources = append(childResources, v1alpha1.DecoratorControllerAttachmentRule{ResourceRule: *childRule})
+	}
 	dc := &v1alpha1.DecoratorController{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "default",
 			Name:      name,
 		},
 		Spec: v1alpha1.DecoratorControllerSpec{
+			// Set a big resyncPeriod so tests can precisely control when syncs happen.
+			ResyncPeriodSeconds: pointer.Int32Ptr(3600),
 			Resources: []v1alpha1.DecoratorControllerResourceRule{
 				{
-					ResourceRule: parentRule,
+					ResourceRule: *parentRule,
 				},
 			},
-			Attachments: []v1alpha1.DecoratorControllerAttachmentRule{
-				{
-					ResourceRule: childRule,
-				},
-			},
+			Attachments: childResources,
 			Hooks: &v1alpha1.DecoratorControllerHooks{
 				Sync: &v1alpha1.Hook{
 					Webhook: &v1alpha1.Webhook{

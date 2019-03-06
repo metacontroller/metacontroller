@@ -102,6 +102,17 @@ func (m ChildMap) ReplaceChild(parent metav1.Object, child *unstructured.Unstruc
 	}
 }
 
+// List expands the ChildMap into a flat list of child objects, in random order.
+func (m ChildMap) List() []*unstructured.Unstructured {
+	var list []*unstructured.Unstructured
+	for _, group := range m {
+		for _, obj := range group {
+			list = append(list, obj)
+		}
+	}
+	return list
+}
+
 // MakeChildMap builds the map of children resources that is suitable for use
 // in the `children` field of a CompositeController SyncRequest or
 // `attachments` field of  the  DecoratorControllers SyncRequest.
