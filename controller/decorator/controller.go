@@ -268,6 +268,15 @@ func (c *decoratorController) enqueueParentObject(obj interface{}) {
 	c.queue.Add(key)
 }
 
+func (c *decoratorController) enqueueParentObjectAfter(obj interface{}, delay time.Duration) {
+	key, err := parentQueueKey(obj)
+	if err != nil {
+		utilruntime.HandleError(fmt.Errorf("couldn't get key for object %+v: %v", obj, err))
+		return
+	}
+	c.queue.AddAfter(key, delay)
+}
+
 func (c *decoratorController) updateParentObject(old, cur interface{}) {
 	// TODO(enisoc): Is there any way to avoid resyncing after our own updates?
 	c.enqueueParentObject(cur)
@@ -448,8 +457,6 @@ func (c *decoratorController) syncParentObject(parent *unstructured.Unstructured
 		return err
 	}
 
-	var desiredChildren common.ChildMap
-
 	// Call the sync hook to get the desired annotations and children.
 	syncRequest := &SyncHookRequest{
 		Controller:  c.dc,
@@ -460,7 +467,12 @@ func (c *decoratorController) syncParentObject(parent *unstructured.Unstructured
 	if err != nil {
 		return err
 	}
-	desiredChildren = common.MakeChildMap(parent, syncResult.Attachments)
+	desiredChildren := common.MakeChildMap(parent, syncResult.Attachments)
+
+	// Enqueue a delayed resync, if requested.
+	if syncResult.ResyncAfterSeconds > 0 {
+		c.enqueueParentObjectAfter(parent, time.Duration(syncResult.ResyncAfterSeconds*float64(time.Second)))
+	}
 
 	// Set desired labels and annotations on parent.
 	// Also remove finalizer if requested.

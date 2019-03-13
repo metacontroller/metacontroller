@@ -73,7 +73,7 @@ func (pc *parentController) claimRevisions(parent *unstructured.Unstructured) ([
 	return revisions, nil
 }
 
-func (pc *parentController) syncRevisions(parent *unstructured.Unstructured, observedChildren common.ChildMap) (parentStatus map[string]interface{}, desiredChildren common.ChildMap, finalized bool, err error) {
+func (pc *parentController) syncRevisions(parent *unstructured.Unstructured, observedChildren common.ChildMap) (*SyncHookResponse, error) {
 	// If no child resources use rolling updates, just sync the latest parent.
 	// Also, if the parent object is being deleted and we don't have a finalizer,
 	// just sync the latest parent to get the status since we won't manage
@@ -87,15 +87,15 @@ func (pc *parentController) syncRevisions(parent *unstructured.Unstructured, obs
 		}
 		syncResult, err := callSyncHook(pc.cc, syncRequest)
 		if err != nil {
-			return nil, nil, false, fmt.Errorf("sync hook failed for %v %v/%v: %v", pc.parentResource.Kind, parent.GetNamespace(), parent.GetName(), err)
+			return nil, fmt.Errorf("sync hook failed for %v %v/%v: %v", pc.parentResource.Kind, parent.GetNamespace(), parent.GetName(), err)
 		}
-		return syncResult.Status, common.MakeChildMap(parent, syncResult.Children), syncResult.Finalized, nil
+		return syncResult, nil
 	}
 
 	// Claim all matching ControllerRevisions for the parent.
 	observedRevisions, err := pc.claimRevisions(parent)
 	if err != nil {
-		return nil, nil, false, err
+		return nil, err
 	}
 
 	// Extract the fields from parent that the controller author
@@ -121,7 +121,7 @@ func (pc *parentController) syncRevisions(parent *unstructured.Unstructured, obs
 	for _, revision := range observedRevisions {
 		patch := make(map[string]interface{})
 		if err := json.Unmarshal(revision.ParentPatch.Raw, &patch); err != nil {
-			return nil, nil, false, fmt.Errorf("can't unmarshal ControllerRevision parentPatch: %v", err)
+			return nil, fmt.Errorf("can't unmarshal ControllerRevision parentPatch: %v", err)
 		}
 		if reflect.DeepEqual(patch, latestPatch) {
 			// This ControllerRevision matches the latest parent state.
@@ -138,7 +138,7 @@ func (pc *parentController) syncRevisions(parent *unstructured.Unstructured, obs
 	if latest.revision == nil {
 		revision, err := newControllerRevision(&pc.parentResource.APIResource, latest.parent, latestPatch)
 		if err != nil {
-			return nil, nil, false, err
+			return nil, err
 		}
 		latest.revision = revision
 	}
@@ -160,10 +160,8 @@ func (pc *parentController) syncRevisions(parent *unstructured.Unstructured, obs
 				pr.syncError = err
 				return
 			}
-			pr.status = syncResult.Status
-			pr.desiredChildList = syncResult.Children
+			pr.syncResult = syncResult
 			pr.desiredChildMap = common.MakeChildMap(parent, syncResult.Children)
-			pr.finalized = syncResult.Finalized
 		}(pr)
 	}
 	wg.Wait()
@@ -171,13 +169,13 @@ func (pc *parentController) syncRevisions(parent *unstructured.Unstructured, obs
 	// If any of the sync calls failed, abort.
 	for _, pr := range parentRevisions {
 		if pr.syncError != nil {
-			return nil, nil, false, fmt.Errorf("sync hook failed for %v %v/%v: %v", pc.parentResource.Kind, parent.GetNamespace(), parent.GetName(), pr.syncError)
+			return nil, fmt.Errorf("sync hook failed for %v %v/%v: %v", pc.parentResource.Kind, parent.GetNamespace(), parent.GetName(), pr.syncError)
 		}
 	}
 
 	// Manipulate revisions to proceed with any ongoing rollout, if possible.
 	if err := pc.syncRollingUpdate(parentRevisions, observedChildren); err != nil {
-		return nil, nil, false, err
+		return nil, err
 	}
 
 	// Remove any ControllerRevisions that no longer have any children.
@@ -197,13 +195,13 @@ func (pc *parentController) syncRevisions(parent *unstructured.Unstructured, obs
 		}
 	}
 	if err := pc.manageRevisions(parent, observedRevisions, desiredRevisions); err != nil {
-		return nil, nil, false, fmt.Errorf("%v %v/%v: can't reconcile ControllerRevisions: %v", pc.parentResource.Kind, parent.GetNamespace(), parent.GetName(), err)
+		return nil, fmt.Errorf("%v %v/%v: can't reconcile ControllerRevisions: %v", pc.parentResource.Kind, parent.GetNamespace(), parent.GetName(), err)
 	}
 
 	// We now know which revision ought to be responsible for which children.
 	// Start with the latest revision's desired children.
 	// Then overwrite any children that are still claimed by other revisions.
-	desiredChildren = latest.desiredChildMap
+	desiredChildren := latest.desiredChildMap
 	for _, pr := range parentRevisions[1:] {
 		for _, ck := range pr.revision.Children {
 			for _, name := range ck.Names {
@@ -215,17 +213,32 @@ func (pc *parentController) syncRevisions(parent *unstructured.Unstructured, obs
 		}
 	}
 
-	// Aggregate `finalized` from all revisions. We're finalized if all agree.
-	finalized = true
+	// Build a single, aggregated syncResult.
+	// We only take parent status from the latest revision.
+	syncResult := &SyncHookResponse{
+		Status:   latest.syncResult.Status,
+		Children: desiredChildren.List(),
+	}
+
+	// Aggregate `resyncAfterSeconds` from all revisions.
+	// The smallest positive value wins.
 	for _, pr := range parentRevisions {
-		if !pr.finalized {
-			finalized = false
+		if resync := pr.syncResult.ResyncAfterSeconds; resync > 0 &&
+			(syncResult.ResyncAfterSeconds == 0 || resync < syncResult.ResyncAfterSeconds) {
+			syncResult.ResyncAfterSeconds = resync
+		}
+	}
+
+	// Aggregate `finalized` from all revisions. We're finalized if all agree.
+	syncResult.Finalized = true
+	for _, pr := range parentRevisions {
+		if !pr.syncResult.Finalized {
+			syncResult.Finalized = false
 			break
 		}
 	}
 
-	// We only take parent status from the latest revision.
-	return latest.status, desiredChildren, finalized, nil
+	return syncResult, nil
 }
 
 func (pc *parentController) manageRevisions(parent *unstructured.Unstructured, observedRevisions, desiredRevisions []*v1alpha1.ControllerRevision) error {
@@ -365,11 +378,10 @@ type parentRevision struct {
 	parent   *unstructured.Unstructured
 	revision *v1alpha1.ControllerRevision
 
-	status           map[string]interface{}
-	desiredChildList []*unstructured.Unstructured
-	desiredChildMap  common.ChildMap
-	syncError        error
-	finalized        bool
+	syncResult *SyncHookResponse
+	syncError  error
+
+	desiredChildMap common.ChildMap
 }
 
 func (pr *parentRevision) countChildren() int {

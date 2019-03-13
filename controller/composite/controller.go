@@ -238,6 +238,15 @@ func (pc *parentController) enqueueParentObject(obj interface{}) {
 	pc.queue.Add(key)
 }
 
+func (pc *parentController) enqueueParentObjectAfter(obj interface{}, delay time.Duration) {
+	key, err := common.KeyFunc(obj)
+	if err != nil {
+		utilruntime.HandleError(fmt.Errorf("couldn't get key for object %+v: %v", obj, err))
+		return
+	}
+	pc.queue.AddAfter(key, delay)
+}
+
 func (pc *parentController) updateParentObject(old, cur interface{}) {
 	// We used to ignore our own status updates, but we don't anymore.
 	// It's sometimes necessary for a hook to see its own status updates
@@ -427,14 +436,20 @@ func (pc *parentController) syncParentObject(parent *unstructured.Unstructured) 
 	// Reconcile ControllerRevisions belonging to this parent.
 	// Call the sync hook for each revision, then compute the overall status and
 	// desired children, accounting for any rollout in progress.
-	parentStatus, desiredChildren, finalized, err := pc.syncRevisions(parent, observedChildren)
+	syncResult, err := pc.syncRevisions(parent, observedChildren)
 	if err != nil {
 		return err
+	}
+	desiredChildren := common.MakeChildMap(parent, syncResult.Children)
+
+	// Enqueue a delayed resync, if requested.
+	if syncResult.ResyncAfterSeconds > 0 {
+		pc.enqueueParentObjectAfter(parent, time.Duration(syncResult.ResyncAfterSeconds*float64(time.Second)))
 	}
 
 	// If all revisions agree that they've finished finalizing,
 	// remove our finalizer.
-	if finalized {
+	if syncResult.Finalized {
 		updatedParent, err := pc.parentClient.Namespace(parent.GetNamespace()).RemoveFinalizer(parent, pc.finalizer.Name)
 		if err != nil {
 			return fmt.Errorf("can't remove finalizer for %v %v/%v: %v", parent.GetKind(), parent.GetNamespace(), parent.GetName(), err)
@@ -489,7 +504,7 @@ func (pc *parentController) syncParentObject(parent *unstructured.Unstructured) 
 
 	// Update parent status.
 	// We'll want to make sure this happens after manageChildren once we support observedGeneration.
-	if _, err := pc.updateParentStatus(parent, parentStatus); err != nil {
+	if _, err := pc.updateParentStatus(parent, syncResult.Status); err != nil {
 		return fmt.Errorf("can't update status for %v %v/%v: %v", pc.parentResource.Kind, parent.GetNamespace(), parent.GetName(), err)
 	}
 

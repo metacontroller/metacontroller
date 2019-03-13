@@ -41,6 +41,8 @@ type SyncHookResponse struct {
 	Status      map[string]interface{}       `json:"status"`
 	Attachments []*unstructured.Unstructured `json:"attachments"`
 
+	ResyncAfterSeconds float64 `json:"resyncAfterSeconds"`
+
 	// Finalized is only used by the finalize hook.
 	Finalized bool `json:"finalized"`
 }

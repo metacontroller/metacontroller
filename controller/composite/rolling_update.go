@@ -86,7 +86,7 @@ func (pc *parentController) syncRollingUpdate(parentRevisions []*parentRevision,
 	// Look for the next child to update, if any.
 	// We go one by one, in the order in which the controller returned them
 	// in the latest sync hook result.
-	for _, child := range latest.desiredChildList {
+	for _, child := range latest.syncResult.Children {
 		apiGroup, _ := common.ParseAPIVersion(child.GetAPIVersion())
 		kind := child.GetKind()
 		name := child.GetName()
@@ -115,7 +115,7 @@ func (pc *parentController) syncRollingUpdate(parentRevisions []*parentRevision,
 					Reason:  "RolloutWaiting",
 					Message: err.Error(),
 				}
-				dynamicobject.SetCondition(latest.status, updatedCondition)
+				dynamicobject.SetCondition(latest.syncResult.Status, updatedCondition)
 				return nil
 			}
 
@@ -133,7 +133,7 @@ func (pc *parentController) syncRollingUpdate(parentRevisions []*parentRevision,
 				Reason:  "RolloutProgressing",
 				Message: fmt.Sprintf("updating %v %v", kind, name),
 			}
-			dynamicobject.SetCondition(latest.status, updatedCondition)
+			dynamicobject.SetCondition(latest.syncResult.Status, updatedCondition)
 			return nil
 		}
 	}
@@ -145,7 +145,7 @@ func (pc *parentController) syncRollingUpdate(parentRevisions []*parentRevision,
 		Reason:  "OnLatestRevision",
 		Message: fmt.Sprintf("latest ControllerRevision: %v", latest.revision.Name),
 	}
-	dynamicobject.SetCondition(latest.status, updatedCondition)
+	dynamicobject.SetCondition(latest.syncResult.Status, updatedCondition)
 	return nil
 }
 
