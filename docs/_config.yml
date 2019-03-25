@@ -30,7 +30,7 @@ breadcrumbs: true
 analytics:
   provider: google
   google:
-    tracking_id: UA-116602056-1
+    tracking_id: UA-136881871-1
 
 # Build settings
 markdown: kramdown
