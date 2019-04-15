@@ -55,6 +55,7 @@ type parentController struct {
 	dynClient      *dynamicclientset.Clientset
 	parentClient   *dynamicclientset.ResourceClient
 	parentInformer *dynamicinformer.ResourceInformer
+	dynInformers   *dynamicinformer.SharedInformerFactory
 
 	revisionLister mclisters.ControllerRevisionLister
 
@@ -117,6 +118,7 @@ func newParentController(resources *dynamicdiscovery.ResourceMap, dynClient *dyn
 		parentClient:   parentClient,
 		parentInformer: parentInformer,
 		parentResource: parentResource,
+		dynInformers:   dynInformers,
 		revisionLister: revisionLister,
 		updateStrategy: updateStrategy,
 		queue:          workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "CompositeController-"+cc.Name),
@@ -435,6 +437,11 @@ func (pc *parentController) syncParentObject(parent *unstructured.Unstructured) 
 		return err
 	}
 
+	relatedObjects, err := pc.getRelatedObjects(parent)
+	if err != nil {
+		return err
+	}
+
 	// Reconcile ControllerRevisions belonging to this parent.
 	// Call the sync hook for each revision, then compute the overall status and
 	// desired children, accounting for any rollout in progress.
@@ -607,6 +614,90 @@ func (pc *parentController) claimChildren(parent *unstructured.Unstructured) (co
 		}
 	}
 	return childMap, nil
+}
+
+func (pc *parentController) getRelatedObjects(parent *unstructured.Unstructured) (common.ChildMap, error) {
+	customizeHookRequest := CustomizeHookRequest{
+		Controller: pc.cc,
+		Parent:     parent,
+	}
+
+	customizeHookResponse, err := callCustomizeHook(pc.cc, &customizeHookRequest)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if customizeHookResponse.RelatedResourceRules == nil {
+		return nil, nil
+	}
+
+	parentNamespace := parent.GetNamespace()
+
+	childMap := make(common.ChildMap)
+	for _, relatedRule := range customizeHookResponse.RelatedResourceRules {
+		relatedClient, err := pc.dynClient.Resource(relatedRule.APIVersion, relatedRule.Resource)
+		if err != nil {
+			return nil, err
+		}
+
+		informer := pc.childInformers.Get(relatedRule.APIVersion, relatedRule.Resource)
+		if informer == nil {
+			informer, err = pc.dynInformers.Resource(relatedRule.APIVersion, relatedRule.Resource)
+			if err != nil{
+				return nil, fmt.Errorf("can't create informer for related resource: %v", err)
+			}
+
+			if !k8s.WaitForCacheSync(pc.parentResource.Kind, pc.stopCh, informer.Informer().HasSynced) {
+				glog.Warningf("%v CompositeController cache sync never finished", pc.parentResource.Kind)
+			}
+
+			pc.childInformers.Set(relatedRule.APIVersion, relatedRule.Resource, informer)
+		}
+
+		var selector labels.Selector
+		if relatedRule.LabelSelector == nil {
+			selector = labels.Everything()
+		} else {
+			selector, err = metav1.LabelSelectorAsSelector(relatedRule.LabelSelector)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		var all []*unstructured.Unstructured
+		if pc.parentResource.Namespaced {
+			if len(relatedRule.Namespace) != 0 && relatedRule.Namespace != parentNamespace {
+				return nil, fmt.Errorf("requested related object namespace %s differs from parent object namespace %s", relatedRule.Namespace, parentNamespace)
+			}
+			all, err = informer.Lister().ListNamespace(parentNamespace, labels.Everything()) //selector)
+			glog.Infof("Searched for %+v, found %+v", selector, all)
+		} else if len(relatedRule.Namespace) != 0 {
+			all, err = informer.Lister().ListNamespace(relatedRule.Namespace, selector)
+		} else {
+			all, err = informer.Lister().List(selector)
+		}
+		if err != nil {
+			return nil, fmt.Errorf("can't list %v related objects: %v", relatedClient.Kind, relatedRule.Resource, err)
+		}
+
+		childMap.InitGroup(relatedRule.APIVersion, relatedClient.Kind)
+
+		for _, obj := range all {
+			if len(relatedRule.Names) == 0 {
+				childMap.Insert(parent, obj)
+			} else {
+				for _, name := range relatedRule.Names {
+					if name == obj.GetName() {
+						childMap.Insert(parent, obj)
+						break
+					}
+				}
+			}
+		}
+	}
+
+	return childMap, err
 }
 
 func (pc *parentController) updateParentStatus(parent *unstructured.Unstructured, status map[string]interface{}) (*unstructured.Unstructured, error) {
