@@ -47,13 +47,13 @@ type SyncHookResponse struct {
 }
 
 // RelatedHookRequest is the object sent as JSON to the related hook.
-type RelatedHookRequest struct {
+type CustomizeHookRequest struct {
 	Controller *v1alpha1.CompositeController `json:"controller"`
 	Parent     *unstructured.Unstructured    `json:"parent"`
 }
 
-type RelatedHookResponse struct {
-	RelatedResourceRules []*RelatedResourceRule `json:"relatedResources,omitempty"`
+type CustomizeHookResponse struct {
+	RelatedResourceRules []*v1alpha1.RelatedResourceRule `json:"relatedResources,omitempty"`
 }
 
 func callSyncHook(cc *v1alpha1.CompositeController, request *SyncHookRequest) (*SyncHookResponse, error) {
@@ -87,15 +87,15 @@ func callSyncHook(cc *v1alpha1.CompositeController, request *SyncHookRequest) (*
 	return &response, nil
 }
 
-func callRelatedHook(cc *v1alpha1.CompositeController, request *RelatedHookRequest) (*RelatedHookResponse, error) {
-	var response RelatedHookResponse
+func callCustomizeHook(cc *v1alpha1.CompositeController, request *CustomizeHookRequest) (*CustomizeHookResponse, error) {
+	var response CustomizeHookResponse
 
   // As the related hook is optional, return nothing
-	if cc.Spec.Hooks == nil || cc.Spec.Hooks.Related == nil {
+	if cc.Spec.Hooks == nil || cc.Spec.Hooks.Customize == nil {
 		return &response, nil
 	}
 
-	if err := hooks.Call(cc.Spec.Hooks.Related, request, &response); err != nil {
+	if err := hooks.Call(cc.Spec.Hooks.Customize, request, &response); err != nil {
 		return nil, fmt.Errorf("related hook failed: %v", err)
 	}
 

@@ -219,7 +219,7 @@ type DecoratorControllerList struct {
 
 type RelatedResourceRule struct {
 	ResourceRule    `json:",inline"`
-	LabelSelector *labels.Selector `json:"labelSelector"`
+	*metav1.LabelSelector `json:"labelSelector"`
 	Namespace string `json:"namespace,omitempty"`
 	Names    []string `json:"names"`
 }
