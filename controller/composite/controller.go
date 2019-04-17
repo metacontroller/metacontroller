@@ -636,24 +636,7 @@ func (pc *parentController) getRelatedObjects(parent *unstructured.Unstructured)
 
 	childMap := make(common.ChildMap)
 	for _, relatedRule := range customizeHookResponse.RelatedResourceRules {
-		relatedClient, err := pc.dynClient.Resource(relatedRule.APIVersion, relatedRule.Resource)
-		if err != nil {
-			return nil, err
-		}
-
-		informer := pc.childInformers.Get(relatedRule.APIVersion, relatedRule.Resource)
-		if informer == nil {
-			informer, err = pc.dynInformers.Resource(relatedRule.APIVersion, relatedRule.Resource)
-			if err != nil{
-				return nil, fmt.Errorf("can't create informer for related resource: %v", err)
-			}
-
-			if !k8s.WaitForCacheSync(pc.parentResource.Kind, pc.stopCh, informer.Informer().HasSynced) {
-				glog.Warningf("%v CompositeController cache sync never finished", pc.parentResource.Kind)
-			}
-
-			pc.childInformers.Set(relatedRule.APIVersion, relatedRule.Resource, informer)
-		}
+		relatedClient, informer, err := pc.getRelatedClient(relatedRule.APIVersion, relatedRule.Resource)
 
 		var selector labels.Selector
 		if relatedRule.LabelSelector == nil {
@@ -700,6 +683,123 @@ func (pc *parentController) getRelatedObjects(parent *unstructured.Unstructured)
 	return childMap, err
 }
 
+func (pc *parentController) onRelatedAdd(obj interface{}) {
+	related := obj.(*unstructured.Unstructured)
+
+	if related.GetDeletionTimestamp() != nil {
+		pc.onRelatedDelete(related)
+		return
+	}
+
+	parents := pc.findRelatedParents(related)
+	if len(parents) == 0 {
+		return
+	}
+	glog.V(4).Infof("%v: related object %v %s created or updated", pc.parentResource.Kind, related.GetKind(), related.GetName())
+	for _, parent := range parents {
+		pc.enqueueParentObject(parent)
+	}
+}
+
+func (pc *parentController) onRelatedUpdate(old, cur interface{}) {
+	oldChild := old.(*unstructured.Unstructured)
+	curChild := cur.(*unstructured.Unstructured)
+
+	// We don't care about no-op updates. See onChildUpdate for the reason.
+	if oldChild.GetResourceVersion() == curChild.GetResourceVersion() {
+		return
+	}
+
+	// Just like for children, updates are treated like creates.
+	pc.onRelatedAdd(cur)
+}
+
+func (pc *parentController) onRelatedDelete(obj interface{}) {
+	related, ok := obj.(*unstructured.Unstructured)
+
+	if !ok {
+		tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
+		if !ok {
+			utilruntime.HandleError(fmt.Errorf("couldn't get object from tombstone %+v", obj))
+			return
+		}
+		related, ok = tombstone.Obj.(*unstructured.Unstructured)
+		if !ok {
+			utilruntime.HandleError(fmt.Errorf("tombstone contained object that is not *unstructured.Unstructured %#v", obj))
+			return
+		}
+	}
+
+	// Once we have the deleted object, we continue as if the object was created,
+	// by finding the parents interested in the object and queueing them for a resync
+	pc.onRelatedAdd(related)
+}
+
+func (pc *parentController) findRelatedParents(related *unstructured.Unstructured) []*unstructured.Unstructured {
+	parents, err := pc.parentInformer.Lister().List(labels.Everything())
+	if err != nil {
+		return nil
+	}
+
+	var matchingParents []*unstructured.Unstructured
+	MATCHPARENTS:
+	for _, parent := range parents {
+		// TODO: We shouldn't call the customize hook here, but use cached results
+		customizeHookResponse, err := callCustomizeHook(pc.cc, &CustomizeHookRequest{
+			Controller: pc.cc,
+			Parent:     parent,
+		})
+
+		if err != nil {
+			continue
+		}
+
+		for _, relatedRule := range customizeHookResponse.RelatedResourceRules {
+			matches, err := pc.matchesRelatedRule(parent, related, relatedRule)
+			if err != nil {
+				utilruntime.HandleError(err)
+				continue
+			}
+			if matches {
+				matchingParents = append(matchingParents, parent)
+				continue MATCHPARENTS
+			}
+		}
+	}
+	return matchingParents
+}
+
+func (pc *parentController) getRelatedClient(apiVersion, resource string) (*dynamicclientset.ResourceClient, *dynamicinformer.ResourceInformer, error) {
+	client, err := pc.dynClient.Resource(apiVersion, resource)
+
+	if err != nil {
+		return nil, nil, err
+	}
+
+	informer := pc.childInformers.Get(apiVersion, resource)
+	if informer == nil {
+		informer, err = pc.dynInformers.Resource(apiVersion, resource)
+
+		if err != nil {
+			return nil, nil, fmt.Errorf("can't create informer for related resource: %v", err)
+		}
+
+		informer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+			AddFunc:    pc.onRelatedAdd,
+			UpdateFunc: pc.onRelatedUpdate,
+			DeleteFunc: pc.onRelatedDelete,
+		})
+
+		if !k8s.WaitForCacheSync(pc.parentResource.Kind, pc.stopCh, informer.Informer().HasSynced) {
+			glog.Warningf("%v CompositeController cache sync never finished", pc.parentResource.Kind)
+		}
+
+		pc.childInformers.Set(apiVersion, resource, informer)
+	}
+
+	return client, informer, nil
+}
+
 func (pc *parentController) updateParentStatus(parent *unstructured.Unstructured, status map[string]interface{}) (*unstructured.Unstructured, error) {
 	// Inject ObservedGeneration before comparing with old status,
 	// so we're comparing against the final form we desire.
@@ -720,4 +820,34 @@ func (pc *parentController) updateParentStatus(parent *unstructured.Unstructured
 		obj.UnstructuredContent()["status"] = status
 		return true
 	})
+}
+
+func (pc *parentController) matchesRelatedRule(parent, related *unstructured.Unstructured, relatedRule *v1alpha1.RelatedResourceRule) (bool, error) {
+	if pc.parentResource.Namespaced {
+		parentNamespace := parent.GetNamespace()
+		if len(relatedRule.Namespace) != 0 && parentNamespace != relatedRule.Namespace {
+			return false, fmt.Errorf("%s: Namespace of parent %s does not match with namespace %s of related rule for %s/%s", pc.parentResource.Kind, parent.GetName(), relatedRule.Namespace, relatedRule.APIVersion, relatedRule.Resource)
+		}
+		if parentNamespace != related.GetNamespace() {
+			return false, nil
+		}
+	}
+	selector, err := metav1.LabelSelectorAsSelector(relatedRule.LabelSelector)
+	if err != nil {
+		return false, err
+	}
+	if !selector.Matches(labels.Set(related.GetLabels())) {
+		return false, nil
+	}
+	if len(relatedRule.Names) != 0 {
+		relatedName := related.GetName()
+		for _, name := range relatedRule.Names {
+			if name == relatedName {
+				return true, nil
+			}
+		}
+		return false, nil
+	} else {
+		return true, nil
+	}
 }
