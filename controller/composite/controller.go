@@ -699,6 +699,16 @@ func (pc *parentController) getCustomizeHookResponse(parent *unstructured.Unstru
 	}
 }
 
+func (pc *parentController) notifyRelatedParents(related ...*unstructured.Unstructured) {
+	parents := pc.findRelatedParents(related...)
+	if len(parents) == 0 {
+		return
+	}
+	for _, parent := range parents {
+		pc.enqueueParentObject(parent)
+	}
+}
+
 func (pc *parentController) onRelatedAdd(obj interface{}) {
 	related := obj.(*unstructured.Unstructured)
 
@@ -707,27 +717,21 @@ func (pc *parentController) onRelatedAdd(obj interface{}) {
 		return
 	}
 
-	parents := pc.findRelatedParents(related)
-	if len(parents) == 0 {
-		return
-	}
-	glog.V(4).Infof("%v: related object %v %s created or updated", pc.parentResource.Kind, related.GetKind(), related.GetName())
-	for _, parent := range parents {
-		pc.enqueueParentObject(parent)
-	}
+	pc.notifyRelatedParents(related)
 }
 
 func (pc *parentController) onRelatedUpdate(old, cur interface{}) {
-	oldChild := old.(*unstructured.Unstructured)
-	curChild := cur.(*unstructured.Unstructured)
+	oldRelated := old.(*unstructured.Unstructured)
+	curRelated := cur.(*unstructured.Unstructured)
 
 	// We don't care about no-op updates. See onChildUpdate for the reason.
-	if oldChild.GetResourceVersion() == curChild.GetResourceVersion() {
+	if oldRelated.GetResourceVersion() == curRelated.GetResourceVersion() {
 		return
 	}
 
-	// Just like for children, updates are treated like creates.
-	pc.onRelatedAdd(cur)
+	// We want to notify parents that are interested in the new state or were interested
+	// in the old state.
+	pc.notifyRelatedParents(oldRelated, curRelated)
 }
 
 func (pc *parentController) onRelatedDelete(obj interface{}) {
@@ -746,12 +750,10 @@ func (pc *parentController) onRelatedDelete(obj interface{}) {
 		}
 	}
 
-	// Once we have the deleted object, we continue as if the object was created,
-	// by finding the parents interested in the object and queueing them for a resync
-	pc.onRelatedAdd(related)
+	pc.notifyRelatedParents(related)
 }
 
-func (pc *parentController) findRelatedParents(related *unstructured.Unstructured) []*unstructured.Unstructured {
+func (pc *parentController) findRelatedParents(relateds ...*unstructured.Unstructured) []*unstructured.Unstructured {
 	parents, err := pc.parentInformer.Lister().List(labels.Everything())
 	if err != nil {
 		return nil
@@ -768,14 +770,16 @@ func (pc *parentController) findRelatedParents(related *unstructured.Unstructure
 		}
 
 		for _, relatedRule := range customizeHookResponse.RelatedResourceRules {
-			matches, err := pc.matchesRelatedRule(parent, related, relatedRule)
-			if err != nil {
-				utilruntime.HandleError(err)
-				continue
-			}
-			if matches {
-				matchingParents = append(matchingParents, parent)
-				continue MATCHPARENTS
+			for _, related := range relateds {
+				matches, err := pc.matchesRelatedRule(parent, related, relatedRule)
+				if err != nil {
+					utilruntime.HandleError(err)
+					continue
+				}
+				if matches {
+					matchingParents = append(matchingParents, parent)
+					continue MATCHPARENTS
+				}
 			}
 		}
 	}
