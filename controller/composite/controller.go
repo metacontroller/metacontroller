@@ -33,16 +33,17 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 
-	"metacontroller.io/apis/metacontroller/v1alpha1"
-	mcclientset "metacontroller.io/client/generated/clientset/internalclientset"
-	mclisters "metacontroller.io/client/generated/lister/metacontroller/v1alpha1"
-	"metacontroller.io/controller/common"
-	"metacontroller.io/controller/common/finalizer"
-	dynamicclientset "metacontroller.io/dynamic/clientset"
-	dynamiccontrollerref "metacontroller.io/dynamic/controllerref"
-	dynamicdiscovery "metacontroller.io/dynamic/discovery"
-	dynamicinformer "metacontroller.io/dynamic/informer"
-	k8s "metacontroller.io/third_party/kubernetes"
+	"metacontroller.app/apis/metacontroller/v1alpha1"
+	mcclientset "metacontroller.app/client/generated/clientset/internalclientset"
+	mclisters "metacontroller.app/client/generated/lister/metacontroller/v1alpha1"
+	"metacontroller.app/controller/common"
+	"metacontroller.app/controller/common/finalizer"
+	"metacontroller.app/controller/common/related"
+	dynamicclientset "metacontroller.app/dynamic/clientset"
+	dynamiccontrollerref "metacontroller.app/dynamic/controllerref"
+	dynamicdiscovery "metacontroller.app/dynamic/discovery"
+	dynamicinformer "metacontroller.app/dynamic/informer"
+	k8s "metacontroller.app/third_party/kubernetes"
 )
 
 type parentController struct {
@@ -55,7 +56,6 @@ type parentController struct {
 	dynClient      *dynamicclientset.Clientset
 	parentClient   *dynamicclientset.ResourceClient
 	parentInformer *dynamicinformer.ResourceInformer
-	dynInformers   *dynamicinformer.SharedInformerFactory
 
 	revisionLister mclisters.ControllerRevisionLister
 
@@ -65,13 +65,11 @@ type parentController struct {
 	updateStrategy updateStrategyMap
 	childInformers common.InformerMap
 
-	numWorkers int
-
-	finalizer *finalizer.Manager
-	customizeCache CustomizeResponseCache
+	finalizer      *finalizer.Manager
+	related        related.Manager
 }
 
-func newParentController(resources *dynamicdiscovery.ResourceMap, dynClient *dynamicclientset.Clientset, dynInformers *dynamicinformer.SharedInformerFactory, mcClient mcclientset.Interface, revisionLister mclisters.ControllerRevisionLister, cc *v1alpha1.CompositeController, numWorkers int) (pc *parentController, newErr error) {
+func newParentController(resources *dynamicdiscovery.ResourceMap, dynClient *dynamicclientset.Clientset, dynInformers *dynamicinformer.SharedInformerFactory, mcClient mcclientset.Interface, revisionLister mclisters.ControllerRevisionLister, cc *v1alpha1.CompositeController) (pc *parentController, newErr error) {
 	// Make a dynamic client for the parent resource.
 	parentClient, err := dynClient.Resource(cc.Spec.ParentResource.APIVersion, cc.Spec.ParentResource.Resource)
 	if err != nil {
@@ -110,6 +108,9 @@ func newParentController(resources *dynamicdiscovery.ResourceMap, dynClient *dyn
 		childInformers.Set(child.APIVersion, child.Resource, childInformer)
 	}
 
+	parentResources := make(common.GroupKindMap)
+	parentResources.Set(parentResource.Group, parentResource.Kind, parentResource)
+
 	pc = &parentController{
 		cc:             cc,
 		resources:      resources,
@@ -119,17 +120,24 @@ func newParentController(resources *dynamicdiscovery.ResourceMap, dynClient *dyn
 		parentClient:   parentClient,
 		parentInformer: parentInformer,
 		parentResource: parentResource,
-		dynInformers:   dynInformers,
 		revisionLister: revisionLister,
 		updateStrategy: updateStrategy,
 		queue:          workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "CompositeController-"+cc.Name),
-		numWorkers:     numWorkers,
 		finalizer: &finalizer.Manager{
-			Name:    "metacontroller.io/compositecontroller-" + cc.Name,
+			Name:    "metacontroller.app/compositecontroller-" + cc.Name,
 			Enabled: cc.Spec.Hooks.Finalize != nil,
 		},
-		customizeCache: make(CustomizeResponseCache),
 	}
+
+	pc.related = related.NewRelatedManager(
+		parentResource.Kind,
+		pc.enqueueParentObject,
+		cc,
+		dynClient,
+		dynInformers,
+		parentInformer,
+		parentResources,
+	)
 
 	return pc, nil
 }
@@ -137,6 +145,8 @@ func newParentController(resources *dynamicdiscovery.ResourceMap, dynClient *dyn
 func (pc *parentController) Start() {
 	pc.stopCh = make(chan struct{})
 	pc.doneCh = make(chan struct{})
+
+	pc.related.Start(pc.stopCh)
 
 	// Install event handlers. CompositeControllers can be created at any time,
 	// so we have to assume the shared informers are already running. We can't
@@ -185,8 +195,9 @@ func (pc *parentController) Start() {
 			return
 		}
 
+		// 5 workers ought to be enough for anyone.
 		var wg sync.WaitGroup
-		for i := 0; i < pc.numWorkers; i++ {
+		for i := 0; i < 5; i++ {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
@@ -439,7 +450,7 @@ func (pc *parentController) syncParentObject(parent *unstructured.Unstructured) 
 		return err
 	}
 
-	relatedObjects, err := pc.getRelatedObjects(parent)
+	relatedObjects, err := pc.related.GetRelatedObjects(parent)
 	if err != nil {
 		return err
 	}
@@ -618,205 +629,6 @@ func (pc *parentController) claimChildren(parent *unstructured.Unstructured) (co
 	return childMap, nil
 }
 
-func (pc *parentController) getRelatedObjects(parent *unstructured.Unstructured) (common.ChildMap, error) {
-
-	customizeHookResponse, err := pc.getCustomizeHookResponse(parent)
-
-	if err != nil {
-		return nil, err
-	}
-
-	parentNamespace := parent.GetNamespace()
-
-	childMap := make(common.ChildMap)
-	for _, relatedRule := range customizeHookResponse.RelatedResourceRules {
-		relatedClient, informer, err := pc.getRelatedClient(relatedRule.APIVersion, relatedRule.Resource)
-
-		var selector labels.Selector
-		if relatedRule.LabelSelector == nil {
-			selector = labels.Everything()
-		} else {
-			selector, err = metav1.LabelSelectorAsSelector(relatedRule.LabelSelector)
-			if err != nil {
-				return nil, err
-			}
-		}
-
-		var all []*unstructured.Unstructured
-		if pc.parentResource.Namespaced {
-			if len(relatedRule.Namespace) != 0 && relatedRule.Namespace != parentNamespace {
-				return nil, fmt.Errorf("requested related object namespace %s differs from parent object namespace %s", relatedRule.Namespace, parentNamespace)
-			}
-			all, err = informer.Lister().ListNamespace(parentNamespace, selector)
-			glog.Infof("Searched for %+v, found %+v", selector, all)
-		} else if len(relatedRule.Namespace) != 0 {
-			all, err = informer.Lister().ListNamespace(relatedRule.Namespace, selector)
-		} else {
-			all, err = informer.Lister().List(selector)
-		}
-		if err != nil {
-			return nil, fmt.Errorf("can't list %v related objects: %v", relatedClient.Kind, relatedRule.Resource, err)
-		}
-
-		childMap.InitGroup(relatedRule.APIVersion, relatedClient.Kind)
-
-		for _, obj := range all {
-			if len(relatedRule.Names) == 0 {
-				childMap.Insert(parent, obj)
-			} else {
-				for _, name := range relatedRule.Names {
-					if name == obj.GetName() {
-						childMap.Insert(parent, obj)
-						break
-					}
-				}
-			}
-		}
-	}
-
-	return childMap, err
-}
-
-func (pc *parentController) getCachedCustomizeHookResponse(parent *unstructured.Unstructured) *CustomizeHookResponse {
-	return pc.customizeCache.Get(parent.GetName(), parent.GetGeneration())
-}
-
-func (pc *parentController) getCustomizeHookResponse(parent *unstructured.Unstructured) (*CustomizeHookResponse, error) {
-	cached := pc.getCachedCustomizeHookResponse(parent)
-	if cached != nil {
-		return cached, nil
-	} else {
-		response, err := callCustomizeHook(pc.cc, &CustomizeHookRequest{
-			Controller: pc.cc,
-			Parent:     parent,
-		})
-		if err != nil {
-			return nil, err
-		}
-
-		pc.customizeCache.Add(parent.GetName(), parent.GetGeneration(), response)
-		return response, nil
-	}
-}
-
-func (pc *parentController) notifyRelatedParents(related ...*unstructured.Unstructured) {
-	parents := pc.findRelatedParents(related...)
-	if len(parents) == 0 {
-		return
-	}
-	for _, parent := range parents {
-		pc.enqueueParentObject(parent)
-	}
-}
-
-func (pc *parentController) onRelatedAdd(obj interface{}) {
-	related := obj.(*unstructured.Unstructured)
-
-	if related.GetDeletionTimestamp() != nil {
-		pc.onRelatedDelete(related)
-		return
-	}
-
-	pc.notifyRelatedParents(related)
-}
-
-func (pc *parentController) onRelatedUpdate(old, cur interface{}) {
-	oldRelated := old.(*unstructured.Unstructured)
-	curRelated := cur.(*unstructured.Unstructured)
-
-	// We don't care about no-op updates. See onChildUpdate for the reason.
-	if oldRelated.GetResourceVersion() == curRelated.GetResourceVersion() {
-		return
-	}
-
-	// We want to notify parents that are interested in the new state or were interested
-	// in the old state.
-	pc.notifyRelatedParents(oldRelated, curRelated)
-}
-
-func (pc *parentController) onRelatedDelete(obj interface{}) {
-	related, ok := obj.(*unstructured.Unstructured)
-
-	if !ok {
-		tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
-		if !ok {
-			utilruntime.HandleError(fmt.Errorf("couldn't get object from tombstone %+v", obj))
-			return
-		}
-		related, ok = tombstone.Obj.(*unstructured.Unstructured)
-		if !ok {
-			utilruntime.HandleError(fmt.Errorf("tombstone contained object that is not *unstructured.Unstructured %#v", obj))
-			return
-		}
-	}
-
-	pc.notifyRelatedParents(related)
-}
-
-func (pc *parentController) findRelatedParents(relateds ...*unstructured.Unstructured) []*unstructured.Unstructured {
-	parents, err := pc.parentInformer.Lister().List(labels.Everything())
-	if err != nil {
-		return nil
-	}
-
-	var matchingParents []*unstructured.Unstructured
-	MATCHPARENTS:
-	for _, parent := range parents {
-		// TODO: We shouldn't call the customize hook here, but use cached results
-		customizeHookResponse := pc.getCachedCustomizeHookResponse(parent)
-
-		if customizeHookResponse == nil {
-			continue
-		}
-
-		for _, relatedRule := range customizeHookResponse.RelatedResourceRules {
-			for _, related := range relateds {
-				matches, err := pc.matchesRelatedRule(parent, related, relatedRule)
-				if err != nil {
-					utilruntime.HandleError(err)
-					continue
-				}
-				if matches {
-					matchingParents = append(matchingParents, parent)
-					continue MATCHPARENTS
-				}
-			}
-		}
-	}
-	return matchingParents
-}
-
-func (pc *parentController) getRelatedClient(apiVersion, resource string) (*dynamicclientset.ResourceClient, *dynamicinformer.ResourceInformer, error) {
-	client, err := pc.dynClient.Resource(apiVersion, resource)
-
-	if err != nil {
-		return nil, nil, err
-	}
-
-	informer := pc.childInformers.Get(apiVersion, resource)
-	if informer == nil {
-		informer, err = pc.dynInformers.Resource(apiVersion, resource)
-
-		if err != nil {
-			return nil, nil, fmt.Errorf("can't create informer for related resource: %v", err)
-		}
-
-		informer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-			AddFunc:    pc.onRelatedAdd,
-			UpdateFunc: pc.onRelatedUpdate,
-			DeleteFunc: pc.onRelatedDelete,
-		})
-
-		if !k8s.WaitForCacheSync(pc.parentResource.Kind, pc.stopCh, informer.Informer().HasSynced) {
-			glog.Warningf("%v CompositeController cache sync never finished", pc.parentResource.Kind)
-		}
-
-		pc.childInformers.Set(apiVersion, resource, informer)
-	}
-
-	return client, informer, nil
-}
-
 func (pc *parentController) updateParentStatus(parent *unstructured.Unstructured, status map[string]interface{}) (*unstructured.Unstructured, error) {
 	// Inject ObservedGeneration before comparing with old status,
 	// so we're comparing against the final form we desire.
@@ -837,34 +649,4 @@ func (pc *parentController) updateParentStatus(parent *unstructured.Unstructured
 		obj.UnstructuredContent()["status"] = status
 		return true
 	})
-}
-
-func (pc *parentController) matchesRelatedRule(parent, related *unstructured.Unstructured, relatedRule *v1alpha1.RelatedResourceRule) (bool, error) {
-	if pc.parentResource.Namespaced {
-		parentNamespace := parent.GetNamespace()
-		if len(relatedRule.Namespace) != 0 && parentNamespace != relatedRule.Namespace {
-			return false, fmt.Errorf("%s: Namespace of parent %s does not match with namespace %s of related rule for %s/%s", pc.parentResource.Kind, parent.GetName(), relatedRule.Namespace, relatedRule.APIVersion, relatedRule.Resource)
-		}
-		if parentNamespace != related.GetNamespace() {
-			return false, nil
-		}
-	}
-	selector, err := metav1.LabelSelectorAsSelector(relatedRule.LabelSelector)
-	if err != nil {
-		return false, err
-	}
-	if !selector.Matches(labels.Set(related.GetLabels())) {
-		return false, nil
-	}
-	if len(relatedRule.Names) != 0 {
-		relatedName := related.GetName()
-		for _, name := range relatedRule.Names {
-			if name == relatedName {
-				return true, nil
-			}
-		}
-		return false, nil
-	} else {
-		return true, nil
-	}
 }
