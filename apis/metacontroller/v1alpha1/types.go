@@ -37,6 +37,13 @@ type CompositeController struct {
 	Status CompositeControllerStatus `json:"status,omitempty"`
 }
 
+func (cc *CompositeController) GetCustomizeHook() *Hook {
+	if cc.Spec.Hooks == nil {
+		return nil
+	}
+	return cc.Spec.Hooks.Customize
+}
+
 type CompositeControllerSpec struct {
 	ParentResource CompositeControllerParentResourceRule  `json:"parentResource"`
 	ChildResources []CompositeControllerChildResourceRule `json:"childResources,omitempty"`
