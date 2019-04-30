@@ -281,7 +281,7 @@ func (rm *Manager) GetRelatedObjects(parent *unstructured.Unstructured) (common.
 			all, err = informer.Lister().List(selector)
 		}
 		if err != nil {
-			return nil, fmt.Errorf("can't list %v related objects: %v", relatedClient.Kind, relatedRule.Resource, err)
+			return nil, fmt.Errorf("can't list %v related objects: %v", relatedClient.Kind, err)
 		}
 
 		childMap.InitGroup(relatedRule.APIVersion, relatedClient.Kind)
