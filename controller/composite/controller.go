@@ -37,8 +37,8 @@ import (
 	mcclientset "metacontroller.app/client/generated/clientset/internalclientset"
 	mclisters "metacontroller.app/client/generated/lister/metacontroller/v1alpha1"
 	"metacontroller.app/controller/common"
+	"metacontroller.app/controller/common/customize"
 	"metacontroller.app/controller/common/finalizer"
-	"metacontroller.app/controller/common/related"
 	dynamicclientset "metacontroller.app/dynamic/clientset"
 	dynamiccontrollerref "metacontroller.app/dynamic/controllerref"
 	dynamicdiscovery "metacontroller.app/dynamic/discovery"
@@ -66,7 +66,7 @@ type parentController struct {
 	childInformers common.InformerMap
 
 	finalizer      *finalizer.Manager
-	related        related.Manager
+	customize      customize.Manager
 }
 
 func newParentController(resources *dynamicdiscovery.ResourceMap, dynClient *dynamicclientset.Clientset, dynInformers *dynamicinformer.SharedInformerFactory, mcClient mcclientset.Interface, revisionLister mclisters.ControllerRevisionLister, cc *v1alpha1.CompositeController) (pc *parentController, newErr error) {
@@ -129,7 +129,7 @@ func newParentController(resources *dynamicdiscovery.ResourceMap, dynClient *dyn
 		},
 	}
 
-	pc.related = related.NewRelatedManager(
+	pc.customize = customize.NewCustomizeManager(
 		parentResource.Kind,
 		pc.enqueueParentObject,
 		cc,
@@ -146,7 +146,7 @@ func (pc *parentController) Start() {
 	pc.stopCh = make(chan struct{})
 	pc.doneCh = make(chan struct{})
 
-	pc.related.Start(pc.stopCh)
+	pc.customize.Start(pc.stopCh)
 
 	// Install event handlers. CompositeControllers can be created at any time,
 	// so we have to assume the shared informers are already running. We can't
@@ -450,7 +450,7 @@ func (pc *parentController) syncParentObject(parent *unstructured.Unstructured) 
 		return err
 	}
 
-	relatedObjects, err := pc.related.GetRelatedObjects(parent)
+	relatedObjects, err := pc.customize.GetRelatedObjects(parent)
 	if err != nil {
 		return err
 	}

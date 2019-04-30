@@ -1,4 +1,4 @@
-package related
+package customize
 
 import (
 	"fmt"
@@ -20,7 +20,7 @@ import (
 
 type Manager struct {
 	name             string
-	metacontroller   common.CustomizableController
+	metacontroller   CustomizableController
 
 	interestedResourceKinds common.GroupKindMap
 
@@ -36,10 +36,10 @@ type Manager struct {
 	enqueueParent    func(interface{})
 }
 
-func NewRelatedManager(
+func NewCustomizeManager(
 	name           string,
 	enqueueParent  func(interface{}),
-	metacontroller common.CustomizableController,
+	metacontroller CustomizableController,
 	dynClient      *dynamicclientset.Clientset,
 	dynInformers   *dynamicinformer.SharedInformerFactory,
 	parentInformer *dynamicinformer.ResourceInformer,
@@ -62,16 +62,16 @@ func (rm *Manager) Start(stopCh chan struct{}) {
 	rm.stopCh = stopCh
 }
 
-func (rm *Manager) GetCachedCustomizeHookResponse(parent *unstructured.Unstructured) *common.CustomizeHookResponse {
+func (rm *Manager) GetCachedCustomizeHookResponse(parent *unstructured.Unstructured) *CustomizeHookResponse {
 	return rm.customizeCache.Get(parent.GetName(), parent.GetGeneration())
 }
 
-func (rm *Manager) GetCustomizeHookResponse(parent *unstructured.Unstructured) (*common.CustomizeHookResponse, error) {
+func (rm *Manager) GetCustomizeHookResponse(parent *unstructured.Unstructured) (*CustomizeHookResponse, error) {
 	cached := rm.GetCachedCustomizeHookResponse(parent)
 	if cached != nil {
 		return cached, nil
 	} else {
-		response, err := common.CallCustomizeHook(rm.metacontroller, &common.CustomizeHookRequest{
+		response, err := CallCustomizeHook(rm.metacontroller, &CustomizeHookRequest{
 			Controller: rm.metacontroller,
 			Parent:     parent,
 		})
