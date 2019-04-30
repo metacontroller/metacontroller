@@ -110,6 +110,8 @@ func newParentController(resources *dynamicdiscovery.ResourceMap, dynClient *dyn
 
 	parentResources := make(common.GroupKindMap)
 	parentResources.Set(parentResource.Group, parentResource.Kind, parentResource)
+	parentInformers := make(common.InformerMap)
+	parentInformers.Set(parentResource.Group, parentResource.Name, parentInformer)
 
 	pc = &parentController{
 		cc:             cc,
@@ -135,7 +137,7 @@ func newParentController(resources *dynamicdiscovery.ResourceMap, dynClient *dyn
 		cc,
 		dynClient,
 		dynInformers,
-		parentInformer,
+		parentInformers,
 		parentResources,
 	)
 

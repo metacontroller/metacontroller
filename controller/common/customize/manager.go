@@ -22,11 +22,11 @@ type Manager struct {
 	name             string
 	metacontroller   CustomizableController
 
-	interestedResourceKinds common.GroupKindMap
+	parentKinds      common.GroupKindMap
 
 	dynClient        *dynamicclientset.Clientset
 	dynInformers     *dynamicinformer.SharedInformerFactory
-	parentInformer   *dynamicinformer.ResourceInformer
+	parentInformers  common.InformerMap
 
 	relatedInformers common.InformerMap
 	customizeCache   CustomizeResponseCache
@@ -37,24 +37,24 @@ type Manager struct {
 }
 
 func NewCustomizeManager(
-	name           string,
-	enqueueParent  func(interface{}),
-	metacontroller CustomizableController,
-	dynClient      *dynamicclientset.Clientset,
-	dynInformers   *dynamicinformer.SharedInformerFactory,
-	parentInformer *dynamicinformer.ResourceInformer,
-	interestedResourceKinds common.GroupKindMap,
+	name            string,
+	enqueueParent   func(interface{}),
+	metacontroller  CustomizableController,
+	dynClient       *dynamicclientset.Clientset,
+	dynInformers    *dynamicinformer.SharedInformerFactory,
+	parentInformers common.InformerMap,
+	parentKinds     common.GroupKindMap,
 ) Manager {
 	return Manager{
-		name:                    name,
-		metacontroller:          metacontroller,
-		interestedResourceKinds: interestedResourceKinds,
-		customizeCache:          make(CustomizeResponseCache),
-		dynClient:               dynClient,
-		dynInformers:            dynInformers,
-		parentInformer:          parentInformer,
-		relatedInformers:        make(common.InformerMap),
-		enqueueParent:           enqueueParent,
+		name:             name,
+		metacontroller:   metacontroller,
+		parentKinds:      parentKinds,
+		customizeCache:   make(CustomizeResponseCache),
+		dynClient:        dynClient,
+		dynInformers:     dynInformers,
+		parentInformers:  parentInformers,
+		relatedInformers: make(common.InformerMap),
+		enqueueParent:    enqueueParent,
 	}
 }
 
@@ -170,31 +170,33 @@ func (rm *Manager) notifyRelatedParents(related ...*unstructured.Unstructured) {
 }
 
 func (rm *Manager) findRelatedParents(relateds ...*unstructured.Unstructured) []*unstructured.Unstructured {
-	parents, err := rm.parentInformer.Lister().List(labels.Everything())
-	if err != nil {
-		return nil
-	}
-
 	var matchingParents []*unstructured.Unstructured
-	MATCHPARENTS:
-	for _, parent := range parents {
-		// TODO: We shouldn't call the customize hook here, but use cached results
-		customizeHookResponse := rm.GetCachedCustomizeHookResponse(parent)
 
-		if customizeHookResponse == nil {
-			continue
+	for _, parentInformer := range rm.parentInformers {
+		parents, err := parentInformer.Lister().List(labels.Everything())
+		if err != nil {
+			return nil
 		}
 
-		for _, relatedRule := range customizeHookResponse.RelatedResourceRules {
-			for _, related := range relateds {
-				matches, err := rm.matchesRelatedRule(parent, related, relatedRule)
-				if err != nil {
-					utilruntime.HandleError(err)
-					continue
-				}
-				if matches {
-					matchingParents = append(matchingParents, parent)
-					continue MATCHPARENTS
+	MATCHPARENTS:
+		for _, parent := range parents {
+			customizeHookResponse := rm.GetCachedCustomizeHookResponse(parent)
+
+			if customizeHookResponse == nil {
+				continue
+			}
+
+			for _, relatedRule := range customizeHookResponse.RelatedResourceRules {
+				for _, related := range relateds {
+					matches, err := rm.matchesRelatedRule(parent, related, relatedRule)
+					if err != nil {
+						utilruntime.HandleError(err)
+						continue
+					}
+					if matches {
+						matchingParents = append(matchingParents, parent)
+						continue MATCHPARENTS
+					}
 				}
 			}
 		}
@@ -204,7 +206,7 @@ func (rm *Manager) findRelatedParents(relateds ...*unstructured.Unstructured) []
 
 func (rm *Manager) matchesRelatedRule(parent, related *unstructured.Unstructured, relatedRule *v1alpha1.RelatedResourceRule) (bool, error) {
 	parentGroup, _ := common.ParseAPIVersion(parent.GetAPIVersion())
-	parentResource := rm.interestedResourceKinds.Get(parentGroup, parent.GetKind())
+	parentResource := rm.parentKinds.Get(parentGroup, parent.GetKind())
 	if parentResource == nil {
 		return false, fmt.Errorf("Unknown parent %v/%v", parentGroup, parent.GetKind())
 	}
@@ -240,7 +242,7 @@ func (rm *Manager) matchesRelatedRule(parent, related *unstructured.Unstructured
 func (rm *Manager) GetRelatedObjects(parent *unstructured.Unstructured) (common.ChildMap, error) {
 
 	parentGroup, _ := common.ParseAPIVersion(parent.GetAPIVersion())
-	parentResource := rm.interestedResourceKinds.Get(parentGroup, parent.GetKind())
+	parentResource := rm.parentKinds.Get(parentGroup, parent.GetKind())
 	if parentResource == nil {
 		return nil, fmt.Errorf("Unknown parent %v/%v", parentGroup, parent.GetKind())
 	}
