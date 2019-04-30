@@ -179,6 +179,13 @@ type DecoratorController struct {
 	Status DecoratorControllerStatus `json:"status,omitempty"`
 }
 
+func (dc *DecoratorController) GetCustomizeHook() *Hook {
+	if dc.Spec.Hooks == nil {
+		return nil
+	}
+	return dc.Spec.Hooks.Customize
+}
+
 type DecoratorControllerSpec struct {
 	Resources   []DecoratorControllerResourceRule   `json:"resources"`
 	Attachments []DecoratorControllerAttachmentRule `json:"attachments,omitempty"`
@@ -209,8 +216,9 @@ type DecoratorControllerAttachmentUpdateStrategy struct {
 }
 
 type DecoratorControllerHooks struct {
-	Sync     *Hook `json:"sync,omitempty"`
-	Finalize *Hook `json:"finalize,omitempty"`
+	Customize *Hook `json:"customize,omitempty"`
+	Sync      *Hook `json:"sync,omitempty"`
+	Finalize  *Hook `json:"finalize,omitempty"`
 }
 
 type DecoratorControllerStatus struct {
