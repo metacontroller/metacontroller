@@ -27,7 +27,7 @@ func CallCustomizeHook(cc CustomizableController, request *CustomizeHookRequest)
 	var response CustomizeHookResponse
 
 	hook := cc.GetCustomizeHook()
-  // As the related hook is optional, return nothing
+	// As the related hook is optional, return nothing
 	if hook == nil {
 		return &response, nil
 	}

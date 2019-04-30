@@ -34,14 +34,15 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 
-	"metacontroller.io/apis/metacontroller/v1alpha1"
-	"metacontroller.io/controller/common"
-	"metacontroller.io/controller/common/finalizer"
-	dynamicclientset "metacontroller.io/dynamic/clientset"
-	dynamicdiscovery "metacontroller.io/dynamic/discovery"
-	dynamicinformer "metacontroller.io/dynamic/informer"
-	dynamicobject "metacontroller.io/dynamic/object"
-	k8s "metacontroller.io/third_party/kubernetes"
+	"metacontroller.app/apis/metacontroller/v1alpha1"
+	"metacontroller.app/controller/common"
+	"metacontroller.app/controller/common/customize"
+	"metacontroller.app/controller/common/finalizer"
+	dynamicclientset "metacontroller.app/dynamic/clientset"
+	dynamicdiscovery "metacontroller.app/dynamic/discovery"
+	dynamicinformer "metacontroller.app/dynamic/informer"
+	dynamicobject "metacontroller.app/dynamic/object"
+	k8s "metacontroller.app/third_party/kubernetes"
 )
 
 const (
@@ -66,12 +67,11 @@ type decoratorController struct {
 	parentInformers common.InformerMap
 	childInformers  common.InformerMap
 
-	numWorkers int
-
 	finalizer *finalizer.Manager
+	customize customize.Manager
 }
 
-func newDecoratorController(resources *dynamicdiscovery.ResourceMap, dynClient *dynamicclientset.Clientset, dynInformers *dynamicinformer.SharedInformerFactory, dc *v1alpha1.DecoratorController, numWorkers int) (controller *decoratorController, newErr error) {
+func newDecoratorController(resources *dynamicdiscovery.ResourceMap, dynClient *dynamicclientset.Clientset, dynInformers *dynamicinformer.SharedInformerFactory, dc *v1alpha1.DecoratorController) (controller *decoratorController, newErr error) {
 	c := &decoratorController{
 		dc:              dc,
 		resources:       resources,
@@ -80,13 +80,23 @@ func newDecoratorController(resources *dynamicdiscovery.ResourceMap, dynClient *
 		parentInformers: make(common.InformerMap),
 		childInformers:  make(common.InformerMap),
 
-		queue:      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "DecoratorController-"+dc.Name),
-		numWorkers: numWorkers,
+		queue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "DecoratorController-"+dc.Name),
 		finalizer: &finalizer.Manager{
-			Name:    "metacontroller.io/decoratorcontroller-" + dc.Name,
+			Name:    "metacontroller.app/decoratorcontroller-" + dc.Name,
 			Enabled: dc.Spec.Hooks.Finalize != nil,
 		},
 	}
+
+	customize := customize.NewCustomizeManager(
+		dc.Name,
+		c.enqueueParentObject,
+		dc,
+		dynClient,
+		dynInformers,
+		c.parentInformers,
+		c.parentKinds,
+	)
+	c.customize = customize
 
 	var err error
 
@@ -201,8 +211,9 @@ func (c *decoratorController) Start() {
 			return
 		}
 
+		// 5 workers ought to be enough for anyone.
 		var wg sync.WaitGroup
-		for i := 0; i < c.numWorkers; i++ {
+		for i := 0; i < 5; i++ {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
@@ -459,11 +470,17 @@ func (c *decoratorController) syncParentObject(parent *unstructured.Unstructured
 		return err
 	}
 
+	relatedObjects, err := c.customize.GetRelatedObjects(parent)
+	if err != nil {
+		return err
+	}
+
 	// Call the sync hook to get the desired annotations and children.
 	syncRequest := &SyncHookRequest{
 		Controller:  c.dc,
 		Object:      parent,
 		Attachments: observedChildren,
+		Related:     relatedObjects,
 	}
 	syncResult, err := c.callSyncHook(syncRequest)
 	if err != nil {
@@ -507,7 +524,7 @@ func (c *decoratorController) syncParentObject(parent *unstructured.Unstructured
 
 		if statusChanged && parentClient.HasSubresource("status") {
 			// The regular Update below will ignore changes to .status so we do it separately.
-			result, err := parentClient.Namespace(parent.GetNamespace()).UpdateStatus(updatedParent, metav1.UpdateOptions{})
+			result, err := parentClient.Namespace(parent.GetNamespace()).UpdateStatus(updatedParent)
 			if err != nil {
 				return fmt.Errorf("can't update status: %v", err)
 			}
