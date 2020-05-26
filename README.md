@@ -4,10 +4,6 @@ Metacontroller is an add-on for Kubernetes
 that makes it easy to write and deploy [custom controllers](https://kubernetes.io/docs/concepts/api-extension/custom-resources/#custom-controllers)
 in the form of [simple scripts](https://metacontroller.app).
 
-This is not an officially supported Google product.
-Although this open-source project was started by [GKE](https://cloud.google.com/kubernetes-engine/),
-the add-on works the same in any Kubernetes cluster.
-
 ## Documentation
 
 Please see the [documentation site](https://metacontroller.app) for details
