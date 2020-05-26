@@ -1,0 +1,49 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-backend
+spec:
+  ports:
+  - port: 80
+    name: web
+  clusterIP: None
+  selector:
+    app: nginx
+---
+apiVersion: ctl.enisoc.com/v1
+kind: CatSet
+metadata:
+  name: nginx-backend
+spec:
+  serviceName: nginx-backend
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+        component: backend
+    spec:
+      terminationGracePeriodSeconds: 1
+      containers:
+      - name: nginx
+        image: gcr.io/google_containers/nginx-slim:0.8
+        ports:
+        - containerPort: 80
+          name: web
+        volumeMounts:
+        - name: www
+          mountPath: /usr/share/nginx/html
+  volumeClaimTemplates:
+  - metadata:
+      name: www
+      labels:
+        app: nginx
+        component: backend
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 1Gi

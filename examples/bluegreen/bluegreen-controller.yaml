@@ -1,0 +1,76 @@
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: bluegreendeployments.ctl.enisoc.com
+spec:
+  group: ctl.enisoc.com
+  version: v1
+  scope: Namespaced
+  names:
+    plural: bluegreendeployments
+    singular: bluegreendeployment
+    kind: BlueGreenDeployment
+    shortNames:
+    - bgd
+  subresources:
+    status: {}
+---
+apiVersion: metacontroller.k8s.io/v1alpha1
+kind: CompositeController
+metadata:
+  name: bluegreen-controller
+spec:
+  parentResource:
+    apiVersion: ctl.enisoc.com/v1
+    resource: bluegreendeployments
+  childResources:
+  - apiVersion: v1
+    resource: services
+    updateStrategy:
+      method: InPlace
+  - apiVersion: extensions/v1beta1
+    resource: replicasets
+    updateStrategy:
+      method: InPlace
+  hooks:
+    sync:
+      webhook:
+        url: http://bluegreen-controller.metacontroller/sync
+---
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: bluegreen-controller
+  namespace: metacontroller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bluegreen-controller
+  template:
+    metadata:
+      labels:
+        app: bluegreen-controller
+    spec:
+      containers:
+      - name: controller
+        image: metacontroller/nodejs-server:0.1
+        imagePullPolicy: Always
+        volumeMounts:
+        - name: hooks
+          mountPath: /node/hooks
+      volumes:
+      - name: hooks
+        configMap:
+          name: bluegreen-controller
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bluegreen-controller
+  namespace: metacontroller
+spec:
+  selector:
+    app: bluegreen-controller
+  ports:
+  - port: 80

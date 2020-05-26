@@ -1,0 +1,73 @@
+# Welcome to Jekyll!
+#
+# This config file is meant for settings that affect your whole blog, values
+# which you are expected to set up once and rarely edit after that. If you find
+# yourself editing this file very often, consider using Jekyll's data files
+# feature for the data you need to update frequently.
+#
+# For technical reasons, this file is *NOT* reloaded automatically when you use
+# 'bundle exec jekyll serve'. If you change this file, please restart the server process.
+
+# Site settings
+# These are used to personalize your new site. If you look in the HTML files,
+# you will see them accessed via {{ site.title }}, {{ site.email }}, and so on.
+# You can create any custom variable you would like, and they will be accessible
+# in the templates via {{ site.myvariable }}.
+title: Metacontroller
+title_separator: "-"
+locale: en-US
+encoding: utf-8
+description: Lightweight Kubernetes controllers as a service
+baseurl: "" # the subpath of your site, e.g. /blog
+url: "" # the base hostname & protocol for your site, e.g. http://example.com
+repository: GoogleCloudPlatform/metacontroller
+repo_url: https://github.com/GoogleCloudPlatform/metacontroller
+repo_dir: https://github.com/GoogleCloudPlatform/metacontroller/tree/master
+repo_file: https://github.com/GoogleCloudPlatform/metacontroller/blob/master
+repo_raw: https://raw.githubusercontent.com/GoogleCloudPlatform/metacontroller/master
+
+breadcrumbs: true
+analytics:
+  provider: google
+  google:
+    tracking_id: UA-136881871-1
+
+# Build settings
+markdown: kramdown
+highlighter: rouge
+theme: minimal-mistakes-jekyll
+plugins:
+  - jekyll-paginate
+  - jekyll-sitemap
+  - jekyll-gist
+  - jekyll-feed
+sass:
+  sass_dir: _sass
+  style: compressed
+timezone: America/Los_Angeles
+
+collections:
+  api:
+    output: true
+    permalink: /:collection/:path/
+  guide:
+    output: true
+    permalink: /:collection/:path/
+  contrib:
+    output: true
+    permalink: /:collection/:path/
+  design:
+    output: true
+    permalink: /:collection/:path/
+
+defaults:
+  - scope:
+      path: ""
+    values:
+      layout: single
+      toc: true
+      sidebar:
+        nav: docs
+
+include:
+- "_redirects"

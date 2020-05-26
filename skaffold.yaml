@@ -1,0 +1,10 @@
+apiVersion: skaffold/v1beta2
+kind: Config
+build:
+  artifacts:
+  - image: enisoc/metacontroller
+    docker:
+      dockerfile: Dockerfile.dev
+deploy:
+  kustomize:
+    path: manifests/dev

@@ -1,0 +1,18 @@
+apiVersion: ctl.example.com/v1
+kind: DaemonJob
+metadata:
+  name: hello-world
+spec:
+  template:
+    metadata:
+      labels:
+        app: hello-world
+    spec:
+      containers:
+      - name: hello-world
+        image: busybox
+        command: ["sh", "-c", "echo 'Hello world' && sleep 30"]
+        resources:
+          requests:
+            cpu: 10m
+    terminationGracePeriodSeconds: 10

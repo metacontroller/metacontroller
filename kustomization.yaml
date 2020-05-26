@@ -1,0 +1,6 @@
+commonLabels:
+  app.kubernetes.io/name: metacontroller
+
+resources:
+- manifests/metacontroller-rbac.yaml
+- manifests/metacontroller.yaml

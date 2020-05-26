@@ -1,0 +1,7 @@
+bases:
+- ../..
+resources:
+- ../../manifests/metacontroller-namespace.yaml
+patches:
+- image.yaml
+- args.yaml

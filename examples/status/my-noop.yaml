@@ -1,0 +1,6 @@
+apiVersion: metacontroller.k8s.io/v1
+kind: Noop
+metadata:
+  name: noop
+spec:
+  

@@ -1,0 +1,81 @@
+apiVersion: metacontroller.k8s.io/v1alpha1
+kind: DecoratorController
+metadata:
+  name: service-per-pod
+spec:
+  resources:
+  - apiVersion: apps/v1beta1
+    resource: statefulsets
+    annotationSelector:
+      matchExpressions:
+      - {key: service-per-pod-label, operator: Exists}
+      - {key: service-per-pod-ports, operator: Exists}
+  attachments:
+  - apiVersion: v1
+    resource: services
+  hooks:
+    sync:
+      webhook:
+        url: http://service-per-pod.metacontroller/sync-service-per-pod
+    finalize:
+      webhook:
+        url: http://service-per-pod.metacontroller/finalize-service-per-pod
+---
+apiVersion: metacontroller.k8s.io/v1alpha1
+kind: DecoratorController
+metadata:
+  name: pod-name-label
+spec:
+  resources:
+  - apiVersion: v1
+    resource: pods
+    labelSelector:
+      matchExpressions:
+      - {key: pod-name, operator: DoesNotExist}
+    annotationSelector:
+      matchExpressions:
+      - {key: pod-name-label, operator: Exists}
+  hooks:
+    sync:
+      webhook:
+        url: http://service-per-pod.metacontroller/sync-pod-name-label
+---
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: service-per-pod
+  namespace: metacontroller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: service-per-pod
+  template:
+    metadata:
+      labels:
+        app: service-per-pod
+    spec:
+      containers:
+      - name: hooks
+        image: metacontroller/jsonnetd:0.1
+        imagePullPolicy: Always
+        workingDir: /hooks
+        volumeMounts:
+        - name: hooks
+          mountPath: /hooks
+      volumes:
+      - name: hooks
+        configMap:
+          name: service-per-pod-hooks
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: service-per-pod
+  namespace: metacontroller
+spec:
+  selector:
+    app: service-per-pod
+  ports:
+  - port: 80
+    targetPort: 8080

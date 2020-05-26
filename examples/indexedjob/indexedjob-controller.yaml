@@ -1,0 +1,70 @@
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: indexedjobs.ctl.enisoc.com
+spec:
+  group: ctl.enisoc.com
+  version: v1
+  scope: Namespaced
+  names:
+    plural: indexedjobs
+    singular: indexedjob
+    kind: IndexedJob
+    shortNames: ["ij", "idxj"]
+  subresources:
+    status: {}
+---
+apiVersion: metacontroller.k8s.io/v1alpha1
+kind: CompositeController
+metadata:
+  name: indexedjob-controller
+spec:
+  generateSelector: true
+  parentResource:
+    apiVersion: ctl.enisoc.com/v1
+    resource: indexedjobs
+  childResources:
+    - apiVersion: v1
+      resource: pods
+  hooks:
+    sync:
+      webhook:
+        url: http://indexedjob-controller.metacontroller/sync
+---
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: indexedjob-controller
+  namespace: metacontroller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: indexedjob-controller
+  template:
+    metadata:
+      labels:
+        app: indexedjob-controller
+    spec:
+      containers:
+      - name: controller
+        image: python:2.7
+        command: ["python", "/hooks/sync.py"]
+        volumeMounts:
+        - name: hooks
+          mountPath: /hooks
+      volumes:
+      - name: hooks
+        configMap:
+          name: indexedjob-controller
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: indexedjob-controller
+  namespace: metacontroller
+spec:
+  selector:
+    app: indexedjob-controller
+  ports:
+  - port: 80
