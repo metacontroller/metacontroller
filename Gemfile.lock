@@ -16,7 +16,7 @@ GEM
     eventmachine (1.2.5)
     faraday (0.14.0)
       multipart-post (>= 1.2, < 3)
-    ffi (1.9.23)
+    ffi (1.12.2)
     forwardable-extended (2.6.0)
     gemoji (3.0.0)
     html-pipeline (2.7.1)
