@@ -1,12 +1,12 @@
-## Metacontroller
 
-Metacontroller is an add-on for Kubernetes
-that makes it easy to write and deploy [custom controllers](https://kubernetes.io/docs/concepts/api-extension/custom-resources/#custom-controllers)
+# Metacontroller
+
+Metacontroller is an add-on for Kubernetes that makes it easy to write and
+deploy [custom controllers](https://kubernetes.io/docs/concepts/api-extension/custom-resources/#custom-controllers)
 in the form of [simple scripts](https://metacontroller.app).
 
-This is not an officially supported Google product.
-Although this open-source project was started by [GKE](https://cloud.google.com/kubernetes-engine/),
-the add-on works the same in any Kubernetes cluster.
+## A New Home
+This is the new community owned and actively maintained home for Metacontroller. The open-source [project](https://github.com/GoogleCloudPlatform/metacontroller) started by [GKE](https://cloud.google.com/kubernetes-engine/) is no longer maintained. All future updates and releases for Metacontroller will come from this repository. In time, all [issues](https://github.com/GoogleCloudPlatform/metacontroller/issues) from the previous repository will be triaged and moved [here](https://github.com/metacontroller/metacontroller/issues). We are excited to move forward with Metacontroller as a community maintained project. A big thank you to all of the wonderful Metacontroller community members that made this happen!
 
 ## Documentation
 
@@ -15,7 +15,7 @@ on how to install, use, or contribute to Metacontroller.
 
 ## Contact
 
-Please file [GitHub issues](issues) for bugs, feature requests, and proposals.
+Please file [GitHub issues](https://github.com/metacontroller/metacontroller/issues) for bugs, feature requests, and proposals.
 
 Use the [mailing list](https://groups.google.com/forum/#!forum/metacontroller)
 for questions and comments, or join the
