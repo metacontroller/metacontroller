@@ -17,10 +17,19 @@ again.
 
 ## Code Reviews
 
-All submissions, including submissions by project members, require review. We
-use GitHub pull requests for this purpose. Consult
-[GitHub Help](https://help.github.com/articles/about-pull-requests/) for more
-information on using pull requests.
+All submissions, including submissions by project members, require review. We use GitHub pull requests for this purpose. Consult
+[GitHub Help](https://help.github.com/articles/about-pull-requests/) for more information on using pull requests.
+
+## Commit messages
+
+This repository uses [semantic versioning](https://semver.org/), therefore every commit and PR must follow naming convention. We require commit header to be in form `<type>(<scope>): [#issue_number] - <subject>`, where `type`, `scope` and
+`subject` as defined in  [angular commit message convention](https://github.com/angular/angular.js/blob/master/DEVELOPERS.md#type). `#issue_number` is optional, if commit resolves any gihub issue.
+
+Please be aware that new release will be triggered for:
+* `feat` - minor release
+* `perf/fix` - patch release
+
+where minor/patch as in semantic versioning definition.
 
 ## Contributor Guide
 
