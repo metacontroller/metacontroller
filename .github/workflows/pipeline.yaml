@@ -4,38 +4,13 @@ on: [push, pull_request]
 jobs:
   tests:
     runs-on: ubuntu-18.04
-    strategy:
-      matrix:
-        test: ['unit-test', 'integration-test']
-    name: ${{ matrix.test }}
+    name: Tests
     steps:
-      - name: setup env
-        shell: bash
-        run: |
-          echo "::set-env name=GOPATH::${{ github.workspace }}/go"
-          echo "::add-path::${{ github.workspace }}/go/bin"
       - name: checkout
         uses: actions/checkout@v2
-        with:
-          fetch-depth: 1
-          path: go/src/github.com/${{ github.repository }}
-      - name: Setup go
-        uses: actions/setup-go@v2
-        with:
-          go-version: 1.11.13
-      - name: setup tests
+      - name: Run   unit & integration tests
         shell: bash
-        run: |
-          cd $GOPATH/src/github.com/${{ github.repository }}
-          hack/get-kube-binaries.sh
-          go get -u github.com/golang/dep/cmd/dep
-          dep ensure
-          go install
-      - name: Run   ${{ matrix.test }}
-        shell: bash
-        run: |
-          cd $GOPATH/src/github.com/${{ github.repository }}
-          make ${{ matrix.test }}
+        run: docker build -t metacontroller:test -f Dockerfile.test .
   linters:
     runs-on: ubuntu-18.04
     steps:
