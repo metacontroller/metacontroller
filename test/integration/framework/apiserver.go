@@ -82,6 +82,7 @@ func startApiserver() (func(), error) {
 		"--secure-port", "0",
 		"--insecure-port", strconv.Itoa(apiserverPort),
 		"--etcd-servers", etcdURL,
+		"--external-hostname", apiserverURL,
 	)
 
 	// Uncomment these to see kube-apiserver output in test logs.

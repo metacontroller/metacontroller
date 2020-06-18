@@ -82,12 +82,13 @@ func testMain(tests func() int) error {
 		if kubectlErr == nil {
 			break
 		}
+		klog.Warningf("Kubectl error: %v", kubectlErr)
 		if time.Since(start) > time.Minute {
 			return fmt.Errorf("timed out waiting for kube-apiserver to be ready: %v", kubectlErr)
 		}
 		time.Sleep(time.Second)
 	}
-
+	klog.Info("Kube-apiserver started")
 	// Create Metacontroller Namespace.
 	if err := execKubectl("apply", "-f", path.Join(manifestDir, "metacontroller-namespace.yaml")); err != nil {
 		return fmt.Errorf("cannot install metacontroller namespace: %v", err)

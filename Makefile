@@ -15,7 +15,7 @@ unit-test:
 
 integration-test:
 	go test -i ./test/integration/...
-	PATH="$(PWD)/hack/bin:$(PATH)" go test ./test/integration/... -v -timeout 5m -args -v=6
+	PATH="$(PWD)/hack/bin:$(PATH)" go test ./test/integration/... -v -timeout 5m -args --logtostderr -v=5
 
 image: generated_files
 	docker build -t metacontroller/metacontroller:$(TAG) .
