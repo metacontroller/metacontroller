@@ -1,3 +1,10 @@
+![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/metacontroller/metacontroller)
+![GitHub Release Date](https://img.shields.io/github/release-date/metacontroller/metacontroller)
+![GitHub](https://img.shields.io/github/license/metacontroller/metacontroller)
+![Docker Image Size (latest semver)](https://img.shields.io/docker/image-size/metacontrollerio/metacontroller)
+![Docker Pulls](https://img.shields.io/docker/pulls/metacontrollerio/metacontroller)
+![GitHub contributors](https://img.shields.io/github/contributors/metacontroller/metacontroller)
+
 # Metacontroller
 
 Metacontroller is an add-on for Kubernetes that makes it easy to write and
