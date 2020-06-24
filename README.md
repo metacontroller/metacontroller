@@ -16,8 +16,8 @@ This is the new community owned and actively maintained home for Metacontroller.
 
 Following is the immediate plan of actions:
 - [x] Make this repo same as https://github.com/GoogleCloudPlatform/metacontroller
-- [ ] Make a release that uploads the image [here](https://hub.docker.com/orgs/metacontrollerio)
-- [ ] Fix Docker image vulnerability [issue](https://github.com/GoogleCloudPlatform/metacontroller/issues/202)
+- [x] Make a release that uploads the image [here](https://hub.docker.com/orgs/metacontrollerio)
+- [x] Fix Docker image vulnerability [issue](https://github.com/GoogleCloudPlatform/metacontroller/issues/202)
 - [ ] Merge changes from [Metac](https://github.com/AmitKumarDas/metac) to this repo
 
 ## Documentation
