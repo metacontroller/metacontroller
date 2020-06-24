@@ -36,6 +36,17 @@ jobs:
         run: |
           cd $GOPATH/src/github.com/${{ github.repository }}
           make ${{ matrix.test }}
+  linters:
+    runs-on: ubuntu-18.04
+    steps:
+    - name: checkout
+      uses: actions/checkout@v2
+    - name: build local Image
+      run: docker build -t metacontrollerio/metacontroller:lint .
+    - name:
+      uses: Azure/container-scan@v0
+      with:
+        image-name: metacontrollerio/metacontroller:lint
   release:
     name: Release
     runs-on: ubuntu-18.04
