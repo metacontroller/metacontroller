@@ -30,7 +30,7 @@ required = [
 
 # The code in examples/ is not part of the actual build.
 ignored = [
-  "metacontroller.app/examples/*"
+  "metacontroller.io/examples/*"
 ]
 
 [[constraint]]

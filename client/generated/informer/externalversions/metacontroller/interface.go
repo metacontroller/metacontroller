@@ -19,8 +19,8 @@ limitations under the License.
 package metacontroller
 
 import (
-	internalinterfaces "metacontroller.app/client/generated/informer/externalversions/internalinterfaces"
-	v1alpha1 "metacontroller.app/client/generated/informer/externalversions/metacontroller/v1alpha1"
+	internalinterfaces "metacontroller.io/client/generated/informer/externalversions/internalinterfaces"
+	v1alpha1 "metacontroller.io/client/generated/informer/externalversions/metacontroller/v1alpha1"
 )
 
 // Interface provides access to each of this group's versions.

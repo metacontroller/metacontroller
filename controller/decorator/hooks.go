@@ -21,9 +21,9 @@ import (
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	"metacontroller.app/apis/metacontroller/v1alpha1"
-	"metacontroller.app/controller/common"
-	"metacontroller.app/hooks"
+	"metacontroller.io/apis/metacontroller/v1alpha1"
+	"metacontroller.io/controller/common"
+	"metacontroller.io/hooks"
 )
 
 // SyncHookRequest is the object sent as JSON to the sync hook.

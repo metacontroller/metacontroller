@@ -16,4 +16,4 @@ limitations under the License.
 
 // +k8s:deepcopy-gen=package,register
 
-package v1alpha1 // import "metacontroller.app/apis/metacontroller/v1alpha1"
+package v1alpha1 // import "metacontroller.io/apis/metacontroller/v1alpha1"

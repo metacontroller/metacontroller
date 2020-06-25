@@ -21,8 +21,8 @@ package v1alpha1
 import (
 	serializer "k8s.io/apimachinery/pkg/runtime/serializer"
 	rest "k8s.io/client-go/rest"
-	v1alpha1 "metacontroller.app/apis/metacontroller/v1alpha1"
-	"metacontroller.app/client/generated/clientset/internalclientset/scheme"
+	v1alpha1 "metacontroller.io/apis/metacontroller/v1alpha1"
+	"metacontroller.io/client/generated/clientset/internalclientset/scheme"
 )
 
 type MetacontrollerV1alpha1Interface interface {

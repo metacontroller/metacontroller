@@ -26,8 +26,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
-	mcclientset "metacontroller.app/client/generated/clientset/internalclientset"
-	dynamicclientset "metacontroller.app/dynamic/clientset"
+	mcclientset "metacontroller.io/client/generated/clientset/internalclientset"
+	dynamicclientset "metacontroller.io/dynamic/clientset"
 )
 
 const (

@@ -10,10 +10,10 @@ First, check out the code:
 ```sh
 # If you're going to build locally, make sure to
 # place the repo according to the Go import path:
-#   $GOPATH/src/metacontroller.app
+#   $GOPATH/src/metacontroller.io
 cd $GOPATH/src
-git clone {{ site.repo_url }}.git metacontroller.app
-cd metacontroller.app
+git clone {{ site.repo_url }}.git metacontroller.io
+cd metacontroller.io
 ```
 
 ## Docker Build
@@ -23,7 +23,7 @@ Metacontroller server without any dependencies on the local build environment
 except for Docker 17.05+ (for multi-stage support):
 
 ```console
-src/metacontroller.app$ docker build -t <yourtag> .
+src/metacontroller.io$ docker build -t <yourtag> .
 ```
 
 ## Local Build

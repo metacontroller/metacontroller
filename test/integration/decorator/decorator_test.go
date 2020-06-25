@@ -25,8 +25,8 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/json"
 
-	"metacontroller.app/controller/decorator"
-	"metacontroller.app/test/integration/framework"
+	"metacontroller.io/controller/decorator"
+	"metacontroller.io/test/integration/framework"
 )
 
 func TestMain(m *testing.M) {

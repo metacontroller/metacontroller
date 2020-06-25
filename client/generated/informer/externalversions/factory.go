@@ -27,9 +27,9 @@ import (
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	cache "k8s.io/client-go/tools/cache"
-	internalclientset "metacontroller.app/client/generated/clientset/internalclientset"
-	internalinterfaces "metacontroller.app/client/generated/informer/externalversions/internalinterfaces"
-	metacontroller "metacontroller.app/client/generated/informer/externalversions/metacontroller"
+	internalclientset "metacontroller.io/client/generated/clientset/internalclientset"
+	internalinterfaces "metacontroller.io/client/generated/informer/externalversions/internalinterfaces"
+	metacontroller "metacontroller.io/client/generated/informer/externalversions/metacontroller"
 )
 
 // SharedInformerOption defines the functional option type for SharedInformerFactory.

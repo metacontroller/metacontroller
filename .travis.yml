@@ -1,7 +1,7 @@
 language: go
 go:
 - "1.11.x"
-go_import_path: metacontroller.app
+go_import_path: metacontroller.io
 cache:
   directories:
   - vendor

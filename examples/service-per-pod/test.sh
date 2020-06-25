@@ -13,7 +13,7 @@ trap cleanup EXIT
 
 set -ex
 
-finalizer="metacontroller.app/service-per-pod-test"
+finalizer="metacontroller.io/service-per-pod-test"
 
 echo "Install controller..."
 kubectl create configmap service-per-pod-hooks -n metacontroller --from-file=hooks
