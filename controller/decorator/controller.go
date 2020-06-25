@@ -34,14 +34,14 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 
-	"metacontroller.app/apis/metacontroller/v1alpha1"
-	"metacontroller.app/controller/common"
-	"metacontroller.app/controller/common/finalizer"
-	dynamicclientset "metacontroller.app/dynamic/clientset"
-	dynamicdiscovery "metacontroller.app/dynamic/discovery"
-	dynamicinformer "metacontroller.app/dynamic/informer"
-	dynamicobject "metacontroller.app/dynamic/object"
-	k8s "metacontroller.app/third_party/kubernetes"
+	"metacontroller.io/apis/metacontroller/v1alpha1"
+	"metacontroller.io/controller/common"
+	"metacontroller.io/controller/common/finalizer"
+	dynamicclientset "metacontroller.io/dynamic/clientset"
+	dynamicdiscovery "metacontroller.io/dynamic/discovery"
+	dynamicinformer "metacontroller.io/dynamic/informer"
+	dynamicobject "metacontroller.io/dynamic/object"
+	k8s "metacontroller.io/third_party/kubernetes"
 )
 
 const (
@@ -80,7 +80,7 @@ func newDecoratorController(resources *dynamicdiscovery.ResourceMap, dynClient *
 
 		queue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "DecoratorController-"+dc.Name),
 		finalizer: &finalizer.Manager{
-			Name:    "metacontroller.app/decoratorcontroller-" + dc.Name,
+			Name:    "metacontroller.io/decoratorcontroller-" + dc.Name,
 			Enabled: dc.Spec.Hooks.Finalize != nil,
 		},
 	}

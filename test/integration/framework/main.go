@@ -27,8 +27,8 @@ import (
 	"k8s.io/client-go/discovery"
 	"k8s.io/klog"
 
-	dynamicdiscovery "metacontroller.app/dynamic/discovery"
-	"metacontroller.app/server"
+	dynamicdiscovery "metacontroller.io/dynamic/discovery"
+	"metacontroller.io/server"
 )
 
 var resourceMap *dynamicdiscovery.ResourceMap

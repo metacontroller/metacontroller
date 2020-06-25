@@ -14,7 +14,7 @@ trap cleanup EXIT
 set -ex
 
 cs="catsets"
-finalizer="metacontroller.app/catset-test"
+finalizer="metacontroller.io/catset-test"
 
 echo "Install controller..."
 kubectl create configmap catset-controller -n metacontroller --from-file=sync.js

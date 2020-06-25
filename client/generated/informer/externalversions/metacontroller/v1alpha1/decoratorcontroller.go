@@ -25,10 +25,10 @@ import (
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
 	cache "k8s.io/client-go/tools/cache"
-	metacontrollerv1alpha1 "metacontroller.app/apis/metacontroller/v1alpha1"
-	internalclientset "metacontroller.app/client/generated/clientset/internalclientset"
-	internalinterfaces "metacontroller.app/client/generated/informer/externalversions/internalinterfaces"
-	v1alpha1 "metacontroller.app/client/generated/lister/metacontroller/v1alpha1"
+	metacontrollerv1alpha1 "metacontroller.io/apis/metacontroller/v1alpha1"
+	internalclientset "metacontroller.io/client/generated/clientset/internalclientset"
+	internalinterfaces "metacontroller.io/client/generated/informer/externalversions/internalinterfaces"
+	v1alpha1 "metacontroller.io/client/generated/lister/metacontroller/v1alpha1"
 )
 
 // DecoratorControllerInformer provides access to a shared informer and lister for

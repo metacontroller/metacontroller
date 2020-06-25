@@ -27,7 +27,7 @@ import (
 	"github.com/golang/glog"
 	"k8s.io/apimachinery/pkg/util/json"
 
-	"metacontroller.app/apis/metacontroller/v1alpha1"
+	"metacontroller.io/apis/metacontroller/v1alpha1"
 )
 
 func callWebhook(webhook *v1alpha1.Webhook, request interface{}, response interface{}) error {

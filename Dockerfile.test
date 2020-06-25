@@ -2,8 +2,8 @@ FROM golang:1.10 AS build
 
 RUN curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
 
-COPY . /go/src/metacontroller.app/
-WORKDIR /go/src/metacontroller.app/
+COPY . /go/src/metacontroller.io/
+WORKDIR /go/src/metacontroller.io/
 RUN hack/get-kube-binaries.sh
 RUN dep ensure
 RUN go install

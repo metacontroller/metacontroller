@@ -21,7 +21,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/kubernetes/pkg/util/pointer"
 
-	"metacontroller.app/apis/metacontroller/v1alpha1"
+	"metacontroller.io/apis/metacontroller/v1alpha1"
 )
 
 func CRDResourceRule(crd *apiextensions.CustomResourceDefinition) *v1alpha1.ResourceRule {
