@@ -3,19 +3,26 @@ TAG = dev
 PKG        := metacontroller.io
 API_GROUPS := metacontroller/v1alpha1
 
+export GO111MODULE=on
+
 all: install
 
 install: generated_files
 	go install
 
-unit-test:
+vendor: 
+	@go mod download
+	@go mod tidy
+	@go mod vendor
+
+unit-test: vendor
 	pkgs="$$(go list ./... | grep -v '/test/integration/\|/examples/')" ; \
 		go test -i $${pkgs} && \
 		go test $${pkgs}
 
-integration-test:
+integration-test: vendor
 	go test -i ./test/integration/...
-	PATH="$(PWD)/hack/bin:$(PATH)" go test ./test/integration/... -v -timeout 5m -args --logtostderr -v=5
+	PATH="$(PWD)/hack/bin:$(PATH)" go test ./test/integration/... -v -timeout 5m -args --logtostderr -v=1
 
 image: generated_files
 	docker build -t metacontrollerio/metacontroller:$(TAG) .

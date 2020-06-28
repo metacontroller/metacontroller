@@ -28,12 +28,8 @@ src/metacontroller.io$ docker build -t <yourtag> .
 
 ## Local Build
 
-To build locally, you'll need Go 1.9+ as well as
-[dep](https://github.com/golang/dep) (to download Go dependencies):
-
 ```sh
-curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
-dep ensure
+make vendor
 go install
 ```
 

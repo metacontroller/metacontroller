@@ -1,11 +1,9 @@
-FROM golang:1.10 AS build
-
-RUN curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
+FROM golang:1.14.4 AS build
 
 COPY . /go/src/metacontroller.io/
 WORKDIR /go/src/metacontroller.io/
 ENV CGO_ENABLED=0
-RUN dep ensure && go install
+RUN make vendor && go install
 
 FROM alpine:3.12.0
 COPY --from=build /go/bin/metacontroller.io /usr/bin/metacontroller
