@@ -1,11 +1,8 @@
-FROM golang:1.10 AS build
-
-RUN curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
+FROM golang:1.14.4 AS build
 
 COPY . /go/src/metacontroller.io/
 WORKDIR /go/src/metacontroller.io/
 RUN hack/get-kube-binaries.sh
-RUN dep ensure
-RUN go install
+RUN make vendor
 RUN make unit-test
 RUN make integration-test
