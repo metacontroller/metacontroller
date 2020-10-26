@@ -1,0 +1,12 @@
+[book]
+language = "en"
+multilingual = false
+src = "src"
+title = "Metacontroller"
+description = "Lightweight Kubernetes controllers as a service"
+
+[output.html]
+mathjax-support = true
+git-repository-url = "https://github.com/metacontroller/metacontroller"
+git-repository-icon = "fa-github"
+site-url = "/metacontroller/"
