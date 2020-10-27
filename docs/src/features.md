@@ -140,5 +140,5 @@ For comparison, the corresponding pull request to
 over 9,000 lines of changes to business logic, boilerplate, and generated code.
 
 [catset]: ./examples.md#catset-javascript
-[catset update]: https://www.github.com/metacontroller/metacontroller/pull/22/files
+[catset update]: https://www.github.com/GoogleCloudPlatform/metacontroller/pull/22/files
 [statefulset update]: https://github.com/kubernetes/kubernetes/pull/46669

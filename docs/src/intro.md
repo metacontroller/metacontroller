@@ -10,7 +10,7 @@ provide *storage* for new types of objects, custom controllers define the *behav
 of a new extension to the [Kubernetes API](https://kubernetes.io/docs/concepts/overview/working-with-objects/kubernetes-objects/).
 Just like the [CustomResourceDefinition](https://kubernetes.io/docs/tasks/access-kubernetes-api/extend-api-custom-resource-definitions/)
 (CRD) API makes it easy to request storage for a custom resource,
-the [Metacontroller APIs](/api/) make it easy to define behavior for a new extension API
+the [Metacontroller APIs](./api.md) make it easy to define behavior for a new extension API
 or add custom behavior to existing APIs.
 
 ## Simple Automation
