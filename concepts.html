@@ -1,0 +1,364 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js light">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Concepts - Metacontroller</title>
+        
+        
+
+
+        <!-- Custom HTML head -->
+        
+
+
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <meta name="description" content="Lightweight Kubernetes controllers as a service">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        
+        <link rel="icon" href="favicon.svg">
+        
+        
+        <link rel="shortcut icon" href="favicon.png">
+        
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/general.css">
+        <link rel="stylesheet" href="css/chrome.css">
+        
+        <link rel="stylesheet" href="css/print.css" media="print">
+        
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        
+        <link rel="stylesheet" href="fonts/fonts.css">
+        
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="highlight.css">
+        <link rel="stylesheet" href="tomorrow-night.css">
+        <link rel="stylesheet" href="ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        
+
+        
+        <!-- MathJax -->
+        <script async type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+        
+    </head>
+    <body>
+        <!-- Provide site root to javascript -->
+        <script type="text/javascript">
+            var path_to_root = "";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script type="text/javascript">
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script type="text/javascript">
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script type="text/javascript">
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="intro.html"><strong aria-hidden="true">1.</strong> Getting Started</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="intro.html"><strong aria-hidden="true">1.1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="examples.html"><strong aria-hidden="true">1.2.</strong> Examples</a></li><li class="chapter-item expanded "><a href="concepts.html" class="active"><strong aria-hidden="true">1.3.</strong> Concepts</a></li><li class="chapter-item expanded "><a href="features.html"><strong aria-hidden="true">1.4.</strong> Features</a></li><li class="chapter-item expanded "><a href="faq.html"><strong aria-hidden="true">1.5.</strong> FAQ</a></li><li class="chapter-item expanded "><a href="pronunciation.html"><strong aria-hidden="true">1.6.</strong> Pronunciation</a></li></ol></li><li class="chapter-item expanded "><a href="guide.html"><strong aria-hidden="true">2.</strong> User Guide</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="guide/install.html"><strong aria-hidden="true">2.1.</strong> Install Metacontroller</a></li><li class="chapter-item expanded "><a href="guide/create.html"><strong aria-hidden="true">2.2.</strong> Create a controller</a></li><li class="chapter-item expanded "><a href="guide/best-practices.html"><strong aria-hidden="true">2.3.</strong> Best Practices</a></li><li class="chapter-item expanded "><a href="guide/troubleshooting.html"><strong aria-hidden="true">2.4.</strong> Troubleshooting</a></li></ol></li><li class="chapter-item expanded "><a href="api.html"><strong aria-hidden="true">3.</strong> API Reference</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="api/apply.html"><strong aria-hidden="true">3.1.</strong> Apply Semantics</a></li><li class="chapter-item expanded "><a href="api/compositecontroller.html"><strong aria-hidden="true">3.2.</strong> CompositeController</a></li><li class="chapter-item expanded "><a href="api/controllerrevision.html"><strong aria-hidden="true">3.3.</strong> ControllerRevision</a></li><li class="chapter-item expanded "><a href="api/decoratorcontroller.html"><strong aria-hidden="true">3.4.</strong> DecoratorController</a></li><li class="chapter-item expanded "><a href="api/hook.html"><strong aria-hidden="true">3.5.</strong> Hook</a></li></ol></li><li class="chapter-item expanded "><a href="design.html"><strong aria-hidden="true">4.</strong> Design Docs</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="design/customize-hook.html"><strong aria-hidden="true">4.1.</strong> Customize Hook</a></li><li class="chapter-item expanded "><a href="design/map-controller.html"><strong aria-hidden="true">4.2.</strong> MapController</a></li></ol></li><li class="chapter-item expanded "><a href="contrib.html"><strong aria-hidden="true">5.</strong> Contributing</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="contrib/build.html"><strong aria-hidden="true">5.1.</strong> Building</a></li></ol></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light (default)</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                        
+                    </div>
+
+                    <h1 class="menu-title">Metacontroller</h1>
+
+                    <div class="right-buttons">
+                        
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        
+                        
+                        <a href="https://github.com/metacontroller/metacontroller" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                        
+                    </div>
+                </div>
+
+                
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" name="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+                
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script type="text/javascript">
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1><a class="header" href="#concepts" id="concepts">Concepts</a></h1>
+<p>This page provides some background on terms that are used throughout
+the Metacontroller documentation.</p>
+<h2><a class="header" href="#kubernetes-concepts" id="kubernetes-concepts">Kubernetes Concepts</a></h2>
+<p>These are some of the general <a href="https://kubernetes.io/docs/concepts/">Kubernetes Concepts</a>
+that are particularly relevant to Metacontroller.</p>
+<h3><a class="header" href="#resource" id="resource">Resource</a></h3>
+<p>In the context of the <a href="https://kubernetes.io/docs/concepts/overview/kubernetes-api/">Kubernetes API</a>, a <em>resource</em> is a <a href="https://en.wikipedia.org/wiki/Representational_state_transfer">REST</a>-style
+collection of <a href="https://kubernetes.io/docs/concepts/overview/working-with-objects/kubernetes-objects/">API objects</a>.
+When writing controllers, it's important to understand the following terminology.</p>
+<h4><a class="header" href="#resource-name" id="resource-name">Resource Name</a></h4>
+<p>There are many ways to refer to a resource.
+For example, you may have noticed that you can fetch ReplicaSets with
+any of the following commands:</p>
+<pre><code class="language-sh">kubectl get rs          # short name
+kubectl get replicaset  # singular name
+kubectl get replicasets # plural name
+</code></pre>
+<p>When writing controllers, it's important to note that the <em>plural name</em>
+is the canonical form when interacting with the REST API
+(it's in the URL) and API discovery (entries are keyed by plural name).</p>
+<p>So, whenever Metacontroller asks for a resource name, you should use the
+canonical, lowercase, plural form (e.g. <code>replicasets</code>).</p>
+<h4><a class="header" href="#api-group" id="api-group">API Group</a></h4>
+<p>Each resource lives inside a particular <a href="https://kubernetes.io/docs/concepts/overview/kubernetes-api/#api-groups">API group</a>, which helps different
+API authors avoid name conflicts.
+For example, you can have two resources with the same name as long as they are
+in different API groups.</p>
+<h4><a class="header" href="#api-version" id="api-version">API Version</a></h4>
+<p>Each API group has one or more available <a href="https://kubernetes.io/docs/concepts/overview/kubernetes-api/#api-versioning">API versions</a>.
+It's important to note that Kubernetes API versions are <a href="https://cloudplatform.googleblog.com/2018/03/API-design-which-version-of-versioning-is-right-for-you.html">format versions</a>.
+That is, each version is a different lens through which you can view objects in the collection,
+but you'll see the same set of underlying objects no matter which lens you view them through.</p>
+<p>The API group and version are often combined in the form <code>&lt;group&gt;/&lt;version&gt;</code>,
+such as in the <code>apiVersion</code> field of an API object.
+APIs in the <em>core</em> group (like Pod) omit the group name in such cases,
+specifying only <code>&lt;version&gt;</code>.</p>
+<h4><a class="header" href="#api-kind" id="api-kind">API Kind</a></h4>
+<p>Whereas a <em>resource</em> is a collection of objects served at a particular REST path,
+the <em>kind</em> of a resource represents something like the <em>type</em> or <em>class</em> of those
+objects.</p>
+<p>Since Kubernetes resources and kinds must have a 1-to-1 correspondence within
+a given API group, the resource name and kind are often used interchangeably
+in Kubernetes documentation.
+However, it's important to distinguish the resource and kind when writing
+controllers.</p>
+<p>The kind is often the same as the singular resource name, except that it's
+written in UpperCamelCase.
+This is the form that you use when writing JSON or YAML manifests,
+and so it's also the form you should use when generating objects within a
+<a href="#lambda-hook">lambda hook</a>:</p>
+<pre><code class="language-yaml">apiVersion: apps/v1
+kind: ReplicaSet
+[...]
+</code></pre>
+<h3><a class="header" href="#custom-resource" id="custom-resource">Custom Resource</a></h3>
+<p>A <a href="https://kubernetes.io/docs/concepts/api-extension/custom-resources/">custom resource</a> is any <a href="#resource">resource</a> that's installed through
+dynamic API registration (either through CRD or aggregation),
+rather than by being compiled directly into the Kubernetes API server.</p>
+<h3><a class="header" href="#controller" id="controller">Controller</a></h3>
+<p>Distributed components in the Kubernetes control plane communicate with each
+other by posting records in a shared datastore (like a public message board),
+rather than sending direct messages (like email).</p>
+<p>This design helps avoid silos of information. All participants can see what
+everyone is saying to everyone else, so each participant can easily access
+whatever information it needs to make the best decision, even as those needs change.
+The lack of silos also means extensions have the same power as built-in features.</p>
+<p>In the context of the Kubernetes control plane, a <em>controller</em> is a
+long-running, automated, autonomous agent that participates in the
+control plane via this shared datastore (the Kubernetes API server).
+In the message board analogy, you can think of controllers like bots.</p>
+<p>A given controller might participate by:</p>
+<ul>
+<li>observing objects in the API server as inputs and
+creating or updating other objects in the API server as outputs
+(e.g. creating Pods for a ReplicaSet);</li>
+<li>observing objects in the API server as inputs
+and taking action in some other domain
+(e.g. spawning containers for a Pod);</li>
+<li>creating or updating objects in the API server
+to report observations from some other domain
+(e.g. &quot;the container is running&quot;);</li>
+<li>or any combination of the above.</li>
+</ul>
+<h3><a class="header" href="#custom-controller" id="custom-controller">Custom Controller</a></h3>
+<p>A <a href="https://kubernetes.io/docs/concepts/api-extension/custom-resources/#custom-controllers">custom controller</a> is any <a href="#controller">controller</a> that can be installed,
+upgraded, and removed in a running cluster, independently of the cluster's own
+lifecycle.</p>
+<h2><a class="header" href="#metacontroller-concepts" id="metacontroller-concepts">Metacontroller Concepts</a></h2>
+<p>These are some concepts that are specific to Metacontroller.</p>
+<h3><a class="header" href="#metacontroller" id="metacontroller">Metacontroller</a></h3>
+<p><em>Metacontroller</em> is a server that extends Kubernetes with APIs that encapsulate
+the common parts of writing <a href="#custom-controller">custom controllers</a>.</p>
+<p>Just like <a href="https://kubernetes.io/docs/concepts/overview/components/#kube-controller-manager">kube-controller-manager</a>, this server hosts multiple controllers.
+However, the set of hosted controllers changes dynamically in response to
+updates in objects of the Metacontroller API types.
+Metacontroller is thus itself a controller that watches the Metacontroller API
+objects and launches hosted controllers in response.
+In other words, it's a controller-controller -- hence the name.</p>
+<h3><a class="header" href="#lambda-controller" id="lambda-controller">Lambda Controller</a></h3>
+<p>When you create a controller with one of the Metacontroller APIs, you provide
+a function that contains only the business logic specific to your controller.
+Since these functions are called via webhooks, you can write them in any
+language that can understand HTTP and JSON, and optionally host them with
+a Functions-as-a-Service provider.</p>
+<p>The Metacontroller server then executes a control loop on your behalf,
+calling your function whenever necessary to decide what to do.</p>
+<p>These callback-based controllers are called <em>lambda controllers</em>.
+To keep the interface as simple as possible, each lambda controller API targets
+a specific controller pattern, such as:</p>
+<ul>
+<li><a href="./api/compositecontroller.html">CompositeController</a>: <em>objects composed of other objects</em></li>
+<li><a href="./api/decoratorcontroller.html">DecoratorController</a>: <em>attach new behavior to existing objects</em></li>
+</ul>
+<p>Support for other types of controller patterns will be added in the future,
+such as coordinating between Kubernetes API objects and external state
+in another domain.</p>
+<h3><a class="header" href="#lambda-hook" id="lambda-hook">Lambda Hook</a></h3>
+<p>Each <a href="#lambda-controller">lambda controller</a> API defines a set of hooks,
+which it calls to let you implement your business logic.</p>
+<p>Currently, these <a href="./api/hook.html">lambda hooks</a> must be implemented as webhooks,
+but other mechanisms could be added in the future,
+such as gRPC or embedded scripting languages.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                        
+                            <a rel="prev" href="examples.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+                        
+
+                        
+                            <a rel="next" href="features.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+                        
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                
+                    <a rel="prev" href="examples.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+                
+
+                
+                    <a rel="next" href="features.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+                
+            </nav>
+
+        </div>
+
+        
+
+        
+
+        
+
+        
+        <script type="text/javascript">
+            window.playground_copyable = true;
+        </script>
+        
+
+        
+
+        
+        <script src="elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="mark.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="searcher.js" type="text/javascript" charset="utf-8"></script>
+        
+
+        <script src="clipboard.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="highlight.js" type="text/javascript" charset="utf-8"></script>
+        <script src="book.js" type="text/javascript" charset="utf-8"></script>
+
+        <!-- Custom JS scripts -->
+        
+
+        
+
+    </body>
+</html>

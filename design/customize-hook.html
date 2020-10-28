@@ -1,0 +1,290 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js light">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Customize Hook - Metacontroller</title>
+        
+        
+
+
+        <!-- Custom HTML head -->
+        
+
+
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <meta name="description" content="Lightweight Kubernetes controllers as a service">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        
+        <link rel="icon" href="../favicon.svg">
+        
+        
+        <link rel="shortcut icon" href="../favicon.png">
+        
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        
+        <link rel="stylesheet" href="../css/print.css" media="print">
+        
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        
+        <link rel="stylesheet" href="../fonts/fonts.css">
+        
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        
+
+        
+        <!-- MathJax -->
+        <script async type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+        
+    </head>
+    <body>
+        <!-- Provide site root to javascript -->
+        <script type="text/javascript">
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script type="text/javascript">
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script type="text/javascript">
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script type="text/javascript">
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../intro.html"><strong aria-hidden="true">1.</strong> Getting Started</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../intro.html"><strong aria-hidden="true">1.1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../examples.html"><strong aria-hidden="true">1.2.</strong> Examples</a></li><li class="chapter-item expanded "><a href="../concepts.html"><strong aria-hidden="true">1.3.</strong> Concepts</a></li><li class="chapter-item expanded "><a href="../features.html"><strong aria-hidden="true">1.4.</strong> Features</a></li><li class="chapter-item expanded "><a href="../faq.html"><strong aria-hidden="true">1.5.</strong> FAQ</a></li><li class="chapter-item expanded "><a href="../pronunciation.html"><strong aria-hidden="true">1.6.</strong> Pronunciation</a></li></ol></li><li class="chapter-item expanded "><a href="../guide.html"><strong aria-hidden="true">2.</strong> User Guide</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../guide/install.html"><strong aria-hidden="true">2.1.</strong> Install Metacontroller</a></li><li class="chapter-item expanded "><a href="../guide/create.html"><strong aria-hidden="true">2.2.</strong> Create a controller</a></li><li class="chapter-item expanded "><a href="../guide/best-practices.html"><strong aria-hidden="true">2.3.</strong> Best Practices</a></li><li class="chapter-item expanded "><a href="../guide/troubleshooting.html"><strong aria-hidden="true">2.4.</strong> Troubleshooting</a></li></ol></li><li class="chapter-item expanded "><a href="../api.html"><strong aria-hidden="true">3.</strong> API Reference</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../api/apply.html"><strong aria-hidden="true">3.1.</strong> Apply Semantics</a></li><li class="chapter-item expanded "><a href="../api/compositecontroller.html"><strong aria-hidden="true">3.2.</strong> CompositeController</a></li><li class="chapter-item expanded "><a href="../api/controllerrevision.html"><strong aria-hidden="true">3.3.</strong> ControllerRevision</a></li><li class="chapter-item expanded "><a href="../api/decoratorcontroller.html"><strong aria-hidden="true">3.4.</strong> DecoratorController</a></li><li class="chapter-item expanded "><a href="../api/hook.html"><strong aria-hidden="true">3.5.</strong> Hook</a></li></ol></li><li class="chapter-item expanded "><a href="../design.html"><strong aria-hidden="true">4.</strong> Design Docs</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../design/customize-hook.html" class="active"><strong aria-hidden="true">4.1.</strong> Customize Hook</a></li><li class="chapter-item expanded "><a href="../design/map-controller.html"><strong aria-hidden="true">4.2.</strong> MapController</a></li></ol></li><li class="chapter-item expanded "><a href="../contrib.html"><strong aria-hidden="true">5.</strong> Contributing</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../contrib/build.html"><strong aria-hidden="true">5.1.</strong> Building</a></li></ol></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light (default)</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                        
+                    </div>
+
+                    <h1 class="menu-title">Metacontroller</h1>
+
+                    <div class="right-buttons">
+                        
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        
+                        
+                        <a href="https://github.com/metacontroller/metacontroller" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                        
+                    </div>
+                </div>
+
+                
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" name="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+                
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script type="text/javascript">
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1><a class="header" href="#customize-hook" id="customize-hook">Customize Hook</a></h1>
+<h3><a class="header" href="#controller-changes" id="controller-changes">Controller changes</a></h3>
+<p>The composite and decorator controller <code>sync</code> and <code>finalize</code> hooks will contain a new field, <code>related</code>.</p>
+<p>This field is in the same format as <code>children</code> / <code>ChildMap</code>.</p>
+<h3><a class="header" href="#customize-hook-1" id="customize-hook-1">Customize Hook</a></h3>
+<p>If the <code>customize</code> hook is defined, Metacontroller will ask for which related
+objects, or classes of objects that your <code>sync</code> and <code>finalize</code> hooks need to
+know about.</p>
+<p>This is useful for mapping across many objects. One example would be a
+controller that lets you specify ConfigMaps to be placed in every Namespace.</p>
+<p>Another use-case is being able to reference other objects, e.g. the <code>env</code>
+section from a core <code>Pod</code> object.</p>
+<p>If you don't define a <code>customize</code> hook, then the related section of the hooks will
+be empty.</p>
+<p>The <code>customize</code> hook will not provide any information about the current state of
+the cluster. Thus, the set of related objects may only depend on the state of
+the parent object.</p>
+<p>This hook may also accept other fields in future, for other customizations.</p>
+<h4><a class="header" href="#customize-hook-request" id="customize-hook-request">Customize Hook Request</a></h4>
+<p>A separate request will be sent for each parent object,
+so your hook only needs to think about one parent at a time.</p>
+<p>The body of the request (a POST in the case of a <a href="../api/hook.html#webhook">webhook</a>)
+will be a JSON object with the following fields:</p>
+<table><thead><tr><th>Field</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>controller</code></td><td>The whole CompositeController object, like what you might get from <code>kubectl get compositecontroller &lt;name&gt; -o json</code>.</td></tr>
+<tr><td><code>parent</code></td><td>The parent object, like what you might get from <code>kubectl get &lt;parent-resource&gt; &lt;parent-name&gt; -o json</code>.</td></tr>
+</tbody></table>
+<h4><a class="header" href="#customize-hook-response" id="customize-hook-response">Customize Hook Response</a></h4>
+<p>The body of your response should be a JSON object with the following fields:</p>
+<table><thead><tr><th>Field</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>relatedResources</code></td><td>A list of JSON objects representing all the desired related resource label selectors.</td></tr>
+</tbody></table>
+<p>The <code>relatedResources</code> field should contain a flat list of objects,
+not an associative array.</p>
+<p>Each resource rule object should be a JSON object with the following fields:</p>
+<table><thead><tr><th>Field</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>apiVersion</code></td><td>The API <code>&lt;group&gt;/&lt;version&gt;</code> of the parent resource, or just <code>&lt;version&gt;</code> for core APIs. (e.g. <code>v1</code>, <code>apps/v1</code>, <code>batch/v1</code>)</td></tr>
+<tr><td><code>resource</code></td><td>The canonical, lowercase, plural name of the parent resource. (e.g. <code>deployments</code>, <code>replicasets</code>, <code>statefulsets</code>)</td></tr>
+<tr><td><code>labelSelector</code></td><td>A <code>v1.LabelSelector</code> object.</td></tr>
+<tr><td><code>namespace</code></td><td>Optional. The Namespace to select in</td></tr>
+<tr><td><code>names</code></td><td>Optional. A list of strings, representing individual objects to return</td></tr>
+</tbody></table>
+<p>If the parent resource is cluster scoped and the related resource is namespaced,
+the namespace may be used to restrict which objects to look at. If the parent
+resource is namespaced, the related resources must come from the same namespace.
+Specifying the namespace is optional, but if specified must match.</p>
+<p>Note that your webhook handler must return a response with a status code of <code>200</code>
+to be considered successful. Metacontroller will wait for a response for up to the
+amount defined in the <a href="../api/hook.html#webhook">Webhook spec</a>.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                        
+                            <a rel="prev" href="../design.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+                        
+
+                        
+                            <a rel="next" href="../design/map-controller.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+                        
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                
+                    <a rel="prev" href="../design.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+                
+
+                
+                    <a rel="next" href="../design/map-controller.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+                
+            </nav>
+
+        </div>
+
+        
+
+        
+
+        
+
+        
+        <script type="text/javascript">
+            window.playground_copyable = true;
+        </script>
+        
+
+        
+
+        
+        <script src="../elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../mark.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../searcher.js" type="text/javascript" charset="utf-8"></script>
+        
+
+        <script src="../clipboard.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../highlight.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../book.js" type="text/javascript" charset="utf-8"></script>
+
+        <!-- Custom JS scripts -->
+        
+
+        
+
+    </body>
+</html>

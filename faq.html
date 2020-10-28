@@ -1,0 +1,393 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js light">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>FAQ - Metacontroller</title>
+        
+        
+
+
+        <!-- Custom HTML head -->
+        
+
+
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <meta name="description" content="Lightweight Kubernetes controllers as a service">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        
+        <link rel="icon" href="favicon.svg">
+        
+        
+        <link rel="shortcut icon" href="favicon.png">
+        
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/general.css">
+        <link rel="stylesheet" href="css/chrome.css">
+        
+        <link rel="stylesheet" href="css/print.css" media="print">
+        
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        
+        <link rel="stylesheet" href="fonts/fonts.css">
+        
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="highlight.css">
+        <link rel="stylesheet" href="tomorrow-night.css">
+        <link rel="stylesheet" href="ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        
+
+        
+        <!-- MathJax -->
+        <script async type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+        
+    </head>
+    <body>
+        <!-- Provide site root to javascript -->
+        <script type="text/javascript">
+            var path_to_root = "";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script type="text/javascript">
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script type="text/javascript">
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script type="text/javascript">
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="intro.html"><strong aria-hidden="true">1.</strong> Getting Started</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="intro.html"><strong aria-hidden="true">1.1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="examples.html"><strong aria-hidden="true">1.2.</strong> Examples</a></li><li class="chapter-item expanded "><a href="concepts.html"><strong aria-hidden="true">1.3.</strong> Concepts</a></li><li class="chapter-item expanded "><a href="features.html"><strong aria-hidden="true">1.4.</strong> Features</a></li><li class="chapter-item expanded "><a href="faq.html" class="active"><strong aria-hidden="true">1.5.</strong> FAQ</a></li><li class="chapter-item expanded "><a href="pronunciation.html"><strong aria-hidden="true">1.6.</strong> Pronunciation</a></li></ol></li><li class="chapter-item expanded "><a href="guide.html"><strong aria-hidden="true">2.</strong> User Guide</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="guide/install.html"><strong aria-hidden="true">2.1.</strong> Install Metacontroller</a></li><li class="chapter-item expanded "><a href="guide/create.html"><strong aria-hidden="true">2.2.</strong> Create a controller</a></li><li class="chapter-item expanded "><a href="guide/best-practices.html"><strong aria-hidden="true">2.3.</strong> Best Practices</a></li><li class="chapter-item expanded "><a href="guide/troubleshooting.html"><strong aria-hidden="true">2.4.</strong> Troubleshooting</a></li></ol></li><li class="chapter-item expanded "><a href="api.html"><strong aria-hidden="true">3.</strong> API Reference</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="api/apply.html"><strong aria-hidden="true">3.1.</strong> Apply Semantics</a></li><li class="chapter-item expanded "><a href="api/compositecontroller.html"><strong aria-hidden="true">3.2.</strong> CompositeController</a></li><li class="chapter-item expanded "><a href="api/controllerrevision.html"><strong aria-hidden="true">3.3.</strong> ControllerRevision</a></li><li class="chapter-item expanded "><a href="api/decoratorcontroller.html"><strong aria-hidden="true">3.4.</strong> DecoratorController</a></li><li class="chapter-item expanded "><a href="api/hook.html"><strong aria-hidden="true">3.5.</strong> Hook</a></li></ol></li><li class="chapter-item expanded "><a href="design.html"><strong aria-hidden="true">4.</strong> Design Docs</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="design/customize-hook.html"><strong aria-hidden="true">4.1.</strong> Customize Hook</a></li><li class="chapter-item expanded "><a href="design/map-controller.html"><strong aria-hidden="true">4.2.</strong> MapController</a></li></ol></li><li class="chapter-item expanded "><a href="contrib.html"><strong aria-hidden="true">5.</strong> Contributing</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="contrib/build.html"><strong aria-hidden="true">5.1.</strong> Building</a></li></ol></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light (default)</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                        
+                    </div>
+
+                    <h1 class="menu-title">Metacontroller</h1>
+
+                    <div class="right-buttons">
+                        
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        
+                        
+                        <a href="https://github.com/metacontroller/metacontroller" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                        
+                    </div>
+                </div>
+
+                
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" name="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+                
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script type="text/javascript">
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1><a class="header" href="#faq" id="faq">FAQ</a></h1>
+<p>This page answers some common questions encountered while
+evaluating, setting up, and using Metacontroller.</p>
+<p>If you have any questions that aren't answered here,
+please ask on the <a href="https://groups.google.com/forum/#!forum/metacontroller">mailing list</a>
+or <a href="https://kubernetes.slack.com/messages/metacontroller/">Slack channel</a>.</p>
+<h2><a class="header" href="#evaluating-metacontroller" id="evaluating-metacontroller">Evaluating Metacontroller</a></h2>
+<h3><a class="header" href="#how-does-metacontroller-compare-with-other-tools" id="how-does-metacontroller-compare-with-other-tools">How does Metacontroller compare with other tools?</a></h3>
+<p>See the <a href="./features.html">features</a> page for a list of the things that are
+most unique about Metacontroller's approach.</p>
+<p>In general, Metacontroller aims to make common patterns as simple as possible,
+without necessarily supporting the full flexibility you would have if you wrote
+a controller from scratch.
+The philosophy is analogous to that of <a href="https://kubernetes.io/docs/concepts/api-extension/custom-resources/#customresourcedefinitions">CustomResourceDefinition</a> (CRD),
+where the main API server does all the heavy lifting for you, but you don't have
+as much control as you would if you wrote your own API server and connected it
+through <a href="https://kubernetes.io/docs/concepts/api-extension/custom-resources/#api-server-aggregation">aggregation</a>.</p>
+<p>Just like CRD, Metacontroller started with a small set of capabilities and is
+expanding over time to support more customization and more use cases as we gain
+confidence in the abstractions.
+Depending on your use case, you may prefer one of the alternative tools that
+took the opposite approach of first allowing everything and then building
+&quot;rails&quot; over time to encourage best practices and simplify development.</p>
+<h3><a class="header" href="#what-is-metacontroller-good-for" id="what-is-metacontroller-good-for">What is Metacontroller good for?</a></h3>
+<p>Metacontroller is intended to be a generic tool for creating many kinds of
+Kubernetes <a href="./concepts.html#controller">controllers</a>, but one of its earliest motivating use cases was to
+simplify development of custom workload automation, so it's particularly
+well-suited for this.</p>
+<p>For example, if you've ever thought, &quot;I wish StatefulSet would do this one
+thing differently,&quot; Metacontroller gives you the tools to <a href="./examples.html#catset-javascript">define your own
+custom behavior</a> without reinventing the wheel.</p>
+<p>Metacontroller is also well-suited to people who prefer languages other than
+Go, but still want to benefit from the efficient API machinery that was
+developed in Go for the core Kubernetes controllers.</p>
+<p>Lastly, Metacontroller is good for rapid development of automation on top of
+APIs that already exist as Kubernetes resources, such as:</p>
+<ul>
+<li>ad hoc scripting (&quot;make an X for every Y&quot;)</li>
+<li>configuration abstraction (&quot;when I say A, that means {X,Y,Z}&quot;)</li>
+<li>higher-level automation of custom APIs added by <a href="https://coreos.com/operators/">Operators</a></li>
+<li>gluing an <a href="#can-i-call-external-apis-from-my-hook">external CRUD API</a> into the Kubernetes control plane with a
+simple translation layer</li>
+</ul>
+<h3><a class="header" href="#what-is-metacontroller-not-good-for" id="what-is-metacontroller-not-good-for">What is Metacontroller not good for?</a></h3>
+<p>Metacontroller is not a good fit when you need to examine a large number of
+objects to answer a single hook request.
+For example, if you need to be sent a list of all Pods or all Nodes in order to
+decide on your desired state, we'd have to call your hook with the full list of
+all Pods or Nodes any time any one of them changed.
+However, it might be a good fit if your desired behavior can be naturally
+broken down into per-Pod or per-Node tasks, since then we'd only need to call
+your hook with each object that changed.</p>
+<p>Metacontroller is also not a good fit for writing controllers that perform long
+sequences of imperative steps -- for example, a single hook that executes many
+steps of a workflow by creating various children at the right times.
+That's because Metacontroller hooks work best when they use a functional style
+(no side effects, and output depends only on input), which is an awkward style
+for defining imperative sequences.</p>
+<h3><a class="header" href="#do-i-have-to-use-crd" id="do-i-have-to-use-crd">Do I have to use CRD?</a></h3>
+<p>It's common to use <a href="https://kubernetes.io/docs/concepts/api-extension/custom-resources/#customresourcedefinitions">CRD</a>, but Metacontroller doesn't know or care whether a
+<a href="./concepts.html#resource">resource</a> is built-in or <a href="./concepts.html#custom-resource">custom</a>, nor whether it's served
+by CRD or by an <a href="https://kubernetes.io/docs/concepts/api-extension/custom-resources/#api-server-aggregation">aggregated API server</a>.</p>
+<p>Metacontroller uses API discovery and the dynamic client to treat all resources
+the same, so you can write automation for any type of resource.
+Using the dynamic client also means Metacontroller doesn't need to be updated
+when new APIs or fields are added in subsequent Kubernetes releases.</p>
+<h3><a class="header" href="#what-does-the-name-metacontroller-mean" id="what-does-the-name-metacontroller-mean">What does the name Metacontroller mean?</a></h3>
+<p>The name <em>Metacontroller</em> comes from the English words <em>meta</em> and <em>controller</em>.
+Metacontroller is a <em>controller controller</em> --
+a <a href="./concepts.html#controller">controller</a> that controls other controllers.</p>
+<h3><a class="header" href="#how-do-you-pronounce-metacontroller" id="how-do-you-pronounce-metacontroller">How do you pronounce Metacontroller?</a></h3>
+<p>Please see the <a href="./pronunciation.html">pronunciation guide</a>.</p>
+<h2><a class="header" href="#setting-up-metacontroller" id="setting-up-metacontroller">Setting Up Metacontroller</a></h2>
+<h3><a class="header" href="#do-i-need-to-be-a-cluster-admin-to-install-metacontroller" id="do-i-need-to-be-a-cluster-admin-to-install-metacontroller">Do I need to be a cluster admin to install Metacontroller?</a></h3>
+<p><a href="./guide/install.html">Installing Metacontroller</a> requires permission to both install
+<a href="https://kubernetes.io/docs/concepts/api-extension/custom-resources/#customresourcedefinitions">CRDs</a> (representing the <a href="./api.html">Metacontroller APIs</a> themselves)
+and grant permissions for Metacontroller to access other resources on
+behalf of the controllers it hosts.</p>
+<h3><a class="header" href="#why-is-metacontroller-shared-cluster-wide" id="why-is-metacontroller-shared-cluster-wide">Why is Metacontroller shared cluster-wide?</a></h3>
+<p>Metacontroller currently only supports cluster-wide installation
+because it's modeled after the built-in <a href="https://kubernetes.io/docs/concepts/overview/components/#kube-controller-manager">kube-controller-manager</a>
+component to achieve the same benefits of sharing watches and caches.</p>
+<p>Also, resources in general (either built-in or custom) can only be
+installed cluster-wide, and a Kubernetes API object is conventionally
+intended to mean the same thing regardless of what namespace it's in.</p>
+<h3><a class="header" href="#why-does-metacontroller-need-these-permissions" id="why-does-metacontroller-need-these-permissions">Why does Metacontroller need these permissions?</a></h3>
+<p>During alpha, Metacontroller simply requests wildcard permission to all
+resources so the controllers it hosts can access anything they want.
+For this reason, you should only give trusted users access to the
+<a href="./api.html">Metacontroller APIs</a> that create hosted controllers.</p>
+<p>By contrast, core controllers are restricted to only the minimal set of
+permissions needed to do their jobs.</p>
+<!---As part of the [beta roadmap][roadmap], we plan to offer per-controller
+service accounts to mitigate the risks of confused deputy problems.
+
+[roadmap]: https://www.github.com/metacontroller/metacontroller/issues/9-->
+<h3><a class="header" href="#does-metacontroller-have-to-be-in-its-own-namespace" id="does-metacontroller-have-to-be-in-its-own-namespace">Does Metacontroller have to be in its own namespace?</a></h3>
+<p>The default installation manifests put Metacontroller in its own namespace
+to make it easy to see what's there and clean up if necessary,
+but it can run anywhere.
+The <code>metacontroller</code> namespace is also used in <a href="./examples.html">examples</a> for similar
+convenience reasons, but you can run webhooks in any namespace
+or even host them outside the cluster.</p>
+<h2><a class="header" href="#developing-with-metacontroller" id="developing-with-metacontroller">Developing with Metacontroller</a></h2>
+<h3><a class="header" href="#which-languages-can-i-write-hooks-in" id="which-languages-can-i-write-hooks-in">Which languages can I write hooks in?</a></h3>
+<p>You can write <a href="./concepts.html#lambda-hook">lambda hooks</a> (the business logic for your controller)
+in any language, as long as you can host it as a webhook that accepts
+and returns JSON.
+Regardless of which language you use for your business logic,
+Metacontroller uses the efficient machinery written in Go for the
+core controllers to interact with the API server on your behalf.</p>
+<h3><a class="header" href="#how-do-i-access-the-kubernetes-api-from-my-hook" id="how-do-i-access-the-kubernetes-api-from-my-hook">How do I access the Kubernetes API from my hook?</a></h3>
+<p>You don't! Or at least, you don't have to, and it's best not to.
+Instead, you just <a href="./features.html#declarative-watches">declare what objects you care about</a>
+and Metacontroller will send them to you as part of the hook request.
+Then, your hook should simply return a list of desired objects.
+Metacontroller will take care of <a href="./features.html#declarative-reconciliation">reconciling your desired state</a>.</p>
+<h3><a class="header" href="#can-i-call-external-apis-from-my-hook" id="can-i-call-external-apis-from-my-hook">Can I call external APIs from my hook?</a></h3>
+<p>Yes. Your hook code can do whatever it wants as part of computing a response to
+a Metacontroller hook request, including calling external APIs.</p>
+<p>The main thing to be careful of is to avoid synchronously waiting for
+long-running tasks to finish, since that will hold up one of a fixed number of
+concurrent slots in the queue of triggers for that hook.
+Instead, if your hook needs to wait for some condition that's checked through an
+external API, you should return a status that indicates this pending state,
+and set a <a href="./api/compositecontroller.html#resync-period">resync period</a> so you get a chance to check the condition again
+later.</p>
+<h3><a class="header" href="#how-can-i-make-sure-external-resources-get-cleaned-up" id="how-can-i-make-sure-external-resources-get-cleaned-up">How can I make sure external resources get cleaned up?</a></h3>
+<p>If you allocate external resources as part of your hook, you should also
+implement a <a href="./api/compositecontroller.html#finalize-hook">finalize hook</a> to make sure you get a chance to clean up those
+external resources when the Kubernetes API object for which you created them
+goes away.</p>
+<h3><a class="header" href="#does-metacontroller-support-apply-semantics" id="does-metacontroller-support-apply-semantics">Does Metacontroller support &quot;apply&quot; semantics?</a></h3>
+<p>Yes, Metacontroller enforces <a href="./api/apply.html">apply semantics</a>, which means your controller
+will play nicely with other automation as long as you only fill in the fields
+that you care about in the objects you return.</p>
+<h3><a class="header" href="#how-do-i-host-my-hook" id="how-do-i-host-my-hook">How do I host my hook?</a></h3>
+<p>You can host your <a href="./concepts.html#lambda-hook">lambda hooks</a> with an HTTP server library in your chosen
+language, with a standalone HTTP server, or with a Functions-as-a-Service platform.
+See the <a href="./examples.html">examples</a> page for approaches in various languages.</p>
+<h3><a class="header" href="#how-can-i-provide-a-programmatic-client-for-my-api" id="how-can-i-provide-a-programmatic-client-for-my-api">How can I provide a programmatic client for my API?</a></h3>
+<p>Since Metacontroller uses the dynamic client on your behalf, you can write your
+controller's business logic without any client library at all.
+That also means you can write a &quot;dynamically typed&quot; controller without creating
+static schema (either Kubernetes' Go IDL or OpenAPI) or generating a client.</p>
+<p>However, if you want to provide a static client for users of your API,
+nothing about Metacontroller prevents you from writing Go IDL or OpenAPI
+and generating a client the same way you would without Metacontroller.</p>
+<h3><a class="header" href="#what-are-the-best-practices-for-designing-controllers" id="what-are-the-best-practices-for-designing-controllers">What are the best practices for designing controllers?</a></h3>
+<p>Please see the dedicated <a href="./guide/best-practices.html">best practices guide</a>.</p>
+<h3><a class="header" href="#how-do-i-troubleshoot-problems" id="how-do-i-troubleshoot-problems">How do I troubleshoot problems?</a></h3>
+<p>Please see the dedicated <a href="./guide/troubleshooting.html">troubleshooting guide</a>.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                        
+                            <a rel="prev" href="features.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+                        
+
+                        
+                            <a rel="next" href="pronunciation.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+                        
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                
+                    <a rel="prev" href="features.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+                
+
+                
+                    <a rel="next" href="pronunciation.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+                
+            </nav>
+
+        </div>
+
+        
+
+        
+
+        
+
+        
+        <script type="text/javascript">
+            window.playground_copyable = true;
+        </script>
+        
+
+        
+
+        
+        <script src="elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="mark.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="searcher.js" type="text/javascript" charset="utf-8"></script>
+        
+
+        <script src="clipboard.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="highlight.js" type="text/javascript" charset="utf-8"></script>
+        <script src="book.js" type="text/javascript" charset="utf-8"></script>
+
+        <!-- Custom JS scripts -->
+        
+
+        
+
+    </body>
+</html>

@@ -1,0 +1,479 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js light">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Apply Semantics - Metacontroller</title>
+        
+        
+
+
+        <!-- Custom HTML head -->
+        
+
+
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <meta name="description" content="Lightweight Kubernetes controllers as a service">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        
+        <link rel="icon" href="../favicon.svg">
+        
+        
+        <link rel="shortcut icon" href="../favicon.png">
+        
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        
+        <link rel="stylesheet" href="../css/print.css" media="print">
+        
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        
+        <link rel="stylesheet" href="../fonts/fonts.css">
+        
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        
+
+        
+        <!-- MathJax -->
+        <script async type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+        
+    </head>
+    <body>
+        <!-- Provide site root to javascript -->
+        <script type="text/javascript">
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script type="text/javascript">
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script type="text/javascript">
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script type="text/javascript">
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../intro.html"><strong aria-hidden="true">1.</strong> Getting Started</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../intro.html"><strong aria-hidden="true">1.1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../examples.html"><strong aria-hidden="true">1.2.</strong> Examples</a></li><li class="chapter-item expanded "><a href="../concepts.html"><strong aria-hidden="true">1.3.</strong> Concepts</a></li><li class="chapter-item expanded "><a href="../features.html"><strong aria-hidden="true">1.4.</strong> Features</a></li><li class="chapter-item expanded "><a href="../faq.html"><strong aria-hidden="true">1.5.</strong> FAQ</a></li><li class="chapter-item expanded "><a href="../pronunciation.html"><strong aria-hidden="true">1.6.</strong> Pronunciation</a></li></ol></li><li class="chapter-item expanded "><a href="../guide.html"><strong aria-hidden="true">2.</strong> User Guide</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../guide/install.html"><strong aria-hidden="true">2.1.</strong> Install Metacontroller</a></li><li class="chapter-item expanded "><a href="../guide/create.html"><strong aria-hidden="true">2.2.</strong> Create a controller</a></li><li class="chapter-item expanded "><a href="../guide/best-practices.html"><strong aria-hidden="true">2.3.</strong> Best Practices</a></li><li class="chapter-item expanded "><a href="../guide/troubleshooting.html"><strong aria-hidden="true">2.4.</strong> Troubleshooting</a></li></ol></li><li class="chapter-item expanded "><a href="../api.html"><strong aria-hidden="true">3.</strong> API Reference</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../api/apply.html" class="active"><strong aria-hidden="true">3.1.</strong> Apply Semantics</a></li><li class="chapter-item expanded "><a href="../api/compositecontroller.html"><strong aria-hidden="true">3.2.</strong> CompositeController</a></li><li class="chapter-item expanded "><a href="../api/controllerrevision.html"><strong aria-hidden="true">3.3.</strong> ControllerRevision</a></li><li class="chapter-item expanded "><a href="../api/decoratorcontroller.html"><strong aria-hidden="true">3.4.</strong> DecoratorController</a></li><li class="chapter-item expanded "><a href="../api/hook.html"><strong aria-hidden="true">3.5.</strong> Hook</a></li></ol></li><li class="chapter-item expanded "><a href="../design.html"><strong aria-hidden="true">4.</strong> Design Docs</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../design/customize-hook.html"><strong aria-hidden="true">4.1.</strong> Customize Hook</a></li><li class="chapter-item expanded "><a href="../design/map-controller.html"><strong aria-hidden="true">4.2.</strong> MapController</a></li></ol></li><li class="chapter-item expanded "><a href="../contrib.html"><strong aria-hidden="true">5.</strong> Contributing</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../contrib/build.html"><strong aria-hidden="true">5.1.</strong> Building</a></li></ol></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light (default)</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                        
+                    </div>
+
+                    <h1 class="menu-title">Metacontroller</h1>
+
+                    <div class="right-buttons">
+                        
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        
+                        
+                        <a href="https://github.com/metacontroller/metacontroller" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                        
+                    </div>
+                </div>
+
+                
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" name="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+                
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script type="text/javascript">
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1><a class="header" href="#apply-semantics" id="apply-semantics">Apply Semantics</a></h1>
+<p>This page describes how Metacontroller emulates <a href="https://kubernetes.io/docs/concepts/cluster-administration/manage-deployment/#kubectl-apply"><code>kubectl apply</code></a>.</p>
+<p>In most cases, you should be able to think of Metacontroller's apply semantics
+as being the same as <code>kubectl apply</code>, but there are some differences.</p>
+<h2><a class="header" href="#motivation" id="motivation">Motivation</a></h2>
+<p>This section explains why Metacontroller uses <code>apply</code> semantics.</p>
+<p>As an example, suppose you create a simple Pod like this
+with <code>kubectl apply -f</code>:</p>
+<pre><code class="language-yaml">apiVersion: v1
+kind: Pod
+metadata:
+  name: my-pod
+  labels:
+    app: my-app
+spec:
+  containers:
+  - name: nginx
+    image: nginx
+</code></pre>
+<p>If you then read back the Pod you created with <code>kubectl get pod my-pod -o yaml</code>,
+you'll see a lot of extra fields filled in that you never set:</p>
+<pre><code class="language-yaml">apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    kubernetes.io/limit-ranger: 'LimitRanger plugin set: cpu request for container
+      nginx'
+  creationTimestamp: 2018-04-13T00:46:51Z
+  labels:
+    app: my-app
+  name: my-pod
+  namespace: default
+  resourceVersion: &quot;28573496&quot;
+  selfLink: /api/v1/namespaces/default/pods/my-pod
+  uid: 27f1b2e1-3eb4-11e8-88d2-42010a800051
+spec:
+  containers:
+  - image: nginx
+    imagePullPolicy: Always
+    name: nginx
+    resources:
+      requests:
+        cpu: 100m
+    terminationMessagePath: /dev/termination-log
+    terminationMessagePolicy: File
+[...]
+</code></pre>
+<p>These fields may represent materialized default values and other metadata
+set by the API server, values set by built-in admission control or
+external admission plugins, or even values set by other controllers.</p>
+<p>Rather than sifting through all that to find the fields you care about,
+<code>kubectl apply</code> lets you go back to your original, simple file,
+and make a change:</p>
+<pre><code class="language-yaml">apiVersion: v1
+kind: Pod
+metadata:
+  name: my-pod
+  labels:
+    app: my-app
+    role: staging # added a label
+spec:
+  containers:
+  - name: nginx
+    image: nginx
+</code></pre>
+<p>If you try to <code>kubectl create -f</code> your updated file, it will fail because
+you can't create something that already exists.
+If you try to <code>kubectl replace -f</code> your updated file, it will fail because
+it thinks you're trying to unset all those extra fields.</p>
+<p>However, if you use <code>kubectl apply -f</code> with your updated file,
+it will update only the part you changed (adding a label),
+and leave all those extra fields untouched.</p>
+<p>Metacontroller treats the desired objects you return from your
+hook in much the same way (but with <a href="#dynamic-apply">some differences</a>,
+such as support for strategic merge inside CRDs).
+As a result, you should always return the short form containing
+only the fields you care about, not the long form containing
+all the extra fields.</p>
+<p>This generally means you should use the same code path to update things
+as you do to create them.
+Just generate a full JSON object from scratch every time,
+containing all the fields you care about,
+and only the fields you care about.</p>
+<p>Metacontroller will figure out whether the object needs to be created
+or updated, and which fields it should and shouldn't touch in the case
+of an update.</p>
+<h2><a class="header" href="#dynamic-apply" id="dynamic-apply">Dynamic Apply</a></h2>
+<p>The biggest difference between kubectl's implementation of apply
+and Metacontroller's is that Metacontroller can emulate strategic
+merge inside CRDs.</p>
+<p>For example, suppose you have a CRD with an embedded Pod template:</p>
+<pre><code class="language-yaml">apiVersion: ctl.enisoc.com/v1
+kind: CatSet # this resource is served via CRD
+metadata:
+  name: my-catset
+spec:
+  template: # embedded Pod template in CRD
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx
+        ports:
+        - containerPort: 80
+          name: web
+</code></pre>
+<p>You create this with apply:</p>
+<pre><code class="language-sh">kubectl apply -f catset.yaml
+</code></pre>
+<p>The promise of <code>apply</code> is that it will &quot;apply the changes you’ve made, without overwriting any automated changes to properties you haven’t specified&quot;.</p>
+<p>As an example, suppose some other automation decides to edit your Pod template
+and add a sidecar container:</p>
+<pre><code class="language-yaml">apiVersion: ctl.enisoc.com/v1
+kind: CatSet # this resource is served via CRD
+metadata:
+  name: my-catset
+spec:
+  template: # embedded Pod template in CRD
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx
+        ports:
+        - containerPort: 80
+          name: web
+      - name: sidecar
+        image: log-uploader # fake sidecar example
+</code></pre>
+<p>Now suppose you change something in your local file and reapply it:</p>
+<pre><code class="language-sh">kubectl apply -f catset.yaml
+</code></pre>
+<p>Because <code>kubectl apply</code> doesn't support strategic merge inside CRDs,
+this will completely replace the <code>containers</code> list with yours,
+removing the <code>sidecar</code> container.
+By contrast, if this had been a Deployment or StatefulSet,
+<code>kubectl apply</code> would have preserved the <code>sidecar</code> container.</p>
+<p>As a result, if a controller uses kubectl's apply implementation
+with CRDs, that controller will fight against automation that tries
+to add sidecar containers or makes other changes to lists of objects
+that Kubernetes expects to be treated like associative arrays
+(ports, volumes, etc.).</p>
+<p>To avoid this fighting, and to make the experience of using CRDs beter match
+that of native resources, Metacontroller uses an alternative implementation
+of apply logic that's based on convention instead of configuration.</p>
+<h3><a class="header" href="#conventions" id="conventions">Conventions</a></h3>
+<p>The main convention that Metacontroller enforces on apply semantics
+is how to detect and handle &quot;associative lists&quot;.</p>
+<p>In Kubernetes API conventions, an associative list is a list of objects
+or scalars that should be treated as if it were a map (associative array),
+but because of limitations in JSON/YAML it looks the same as an ordered list
+when serialized.</p>
+<p>For native resources, <code>kubectl apply</code> determines which lists are associative
+lists by configuration: it must have compiled-in knowledge of all the resources,
+and metadata about how each of their fields should be treated.
+There is currently no mechanism for CRDs to specify this metadata,
+which is why <code>kubectl apply</code> falls back to assuming all lists are &quot;atomic&quot;,
+and should never be merged (only replaced entirely).</p>
+<p>Even if there were a mechanism for CRDs to specify metadata for every field
+(e.g. through extensions to OpenAPI),
+it's not clear that it makes sense to <em>require</em> every CRD author to do so
+in order for their resources to behave correctly when used with <code>kubecl apply</code>.
+One alternative that has been considered for such &quot;schemaless CRDs&quot; is to
+establish a convention -- as long as your CRD follows the convention, you
+don't need to provide configuration.</p>
+<p>Metacontroller implements one such convention that empirically handles
+many common cases encountered when embedding Pod templates in CRDs
+(although it has <a href="#limitations">limitations</a>),
+developed by surveying the use of associative lists across the resources
+built into Kubernetes:</p>
+<ul>
+<li>A list is detected as an associative list if and only if all of the
+following conditions are met:
+<ul>
+<li>All items in the list are JSON objects
+(not scalars, nor other lists).</li>
+<li>All objects in the list have some field name in common,
+where that field name is one of the conventional merge keys
+(most commonly <code>name</code>).</li>
+</ul>
+</li>
+<li>If a list is detected as an associative list, the conventional
+field name that all objects have in common (e.g. <code>name</code>) is used
+as the merge key.
+<ul>
+<li>If more than one conventional merge key might work,
+pick only one according to a fixed order.</li>
+</ul>
+</li>
+</ul>
+<p>This allows Metacontroller to &quot;do the right thing&quot; in the majority of cases,
+without requiring advance knowledge about the resources it's working with --
+knowledge that's not available anywhere in the case of CRDs.</p>
+<p>In the future, Metacontroller will likely switch from this custom apply
+implementation to <a href="https://github.com/kubernetes/features/issues/555">server-side apply</a>, which is trying to solve the
+broader problem for all components that interact with the Kubernetes API.
+However, it's not yet clear whether that proposal will embrace schemaless
+CRDs and support apply semantics on them.</p>
+<h3><a class="header" href="#limitations" id="limitations">Limitations</a></h3>
+<p>A convention-based approach is necessarily more limiting than
+the native apply implementation, which supports arbitrary per-field
+configuration.
+The trade-off is that conventions reduce boilerplate and lower the
+barrier to entry for simple use cases.</p>
+<p>This section lists some examples of configurations that the native
+apply allows, but are currently not supported in Metacontroller's
+convention-based apply.
+If any of these are blockers for you,
+please <a href="https://www.github.com/metacontroller/metacontroller/issues">file an issue</a> describing your
+use case.</p>
+<ul>
+<li>Atomic object lists
+<ul>
+<li>A list of objects that share one of the conventional keys,
+but should nevertheless be treated atomically (replaced rather than merged).</li>
+</ul>
+</li>
+<li>Unconventional associative list keys
+<ul>
+<li>An associative list that doesn't use one of the conventional keys.</li>
+</ul>
+</li>
+<li>Multi-field associative list keys
+<ul>
+<li>A key that's composed of two or more fields (e.g. both <code>port</code> and <code>protocol</code>).</li>
+</ul>
+</li>
+<li>Scalar-valued associative lists
+<ul>
+<li>A list of scalars (not objects) that should be merged as if the
+scalar values were field names in an object.</li>
+</ul>
+</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                        
+                            <a rel="prev" href="../api.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+                        
+
+                        
+                            <a rel="next" href="../api/compositecontroller.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+                        
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                
+                    <a rel="prev" href="../api.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+                
+
+                
+                    <a rel="next" href="../api/compositecontroller.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+                
+            </nav>
+
+        </div>
+
+        
+
+        
+
+        
+
+        
+        <script type="text/javascript">
+            window.playground_copyable = true;
+        </script>
+        
+
+        
+
+        
+        <script src="../elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../mark.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../searcher.js" type="text/javascript" charset="utf-8"></script>
+        
+
+        <script src="../clipboard.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../highlight.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../book.js" type="text/javascript" charset="utf-8"></script>
+
+        <!-- Custom JS scripts -->
+        
+
+        
+
+    </body>
+</html>

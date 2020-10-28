@@ -1,0 +1,354 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js light">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Introduction - Metacontroller</title>
+        
+        
+
+
+        <!-- Custom HTML head -->
+        
+
+
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <meta name="description" content="Lightweight Kubernetes controllers as a service">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        
+        <link rel="icon" href="favicon.svg">
+        
+        
+        <link rel="shortcut icon" href="favicon.png">
+        
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/general.css">
+        <link rel="stylesheet" href="css/chrome.css">
+        
+        <link rel="stylesheet" href="css/print.css" media="print">
+        
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        
+        <link rel="stylesheet" href="fonts/fonts.css">
+        
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="highlight.css">
+        <link rel="stylesheet" href="tomorrow-night.css">
+        <link rel="stylesheet" href="ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        
+
+        
+        <!-- MathJax -->
+        <script async type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+        
+    </head>
+    <body>
+        <!-- Provide site root to javascript -->
+        <script type="text/javascript">
+            var path_to_root = "";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script type="text/javascript">
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script type="text/javascript">
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script type="text/javascript">
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="intro.html" class="active"><strong aria-hidden="true">1.</strong> Getting Started</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="intro.html" class="active"><strong aria-hidden="true">1.1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="examples.html"><strong aria-hidden="true">1.2.</strong> Examples</a></li><li class="chapter-item expanded "><a href="concepts.html"><strong aria-hidden="true">1.3.</strong> Concepts</a></li><li class="chapter-item expanded "><a href="features.html"><strong aria-hidden="true">1.4.</strong> Features</a></li><li class="chapter-item expanded "><a href="faq.html"><strong aria-hidden="true">1.5.</strong> FAQ</a></li><li class="chapter-item expanded "><a href="pronunciation.html"><strong aria-hidden="true">1.6.</strong> Pronunciation</a></li></ol></li><li class="chapter-item expanded "><a href="guide.html"><strong aria-hidden="true">2.</strong> User Guide</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="guide/install.html"><strong aria-hidden="true">2.1.</strong> Install Metacontroller</a></li><li class="chapter-item expanded "><a href="guide/create.html"><strong aria-hidden="true">2.2.</strong> Create a controller</a></li><li class="chapter-item expanded "><a href="guide/best-practices.html"><strong aria-hidden="true">2.3.</strong> Best Practices</a></li><li class="chapter-item expanded "><a href="guide/troubleshooting.html"><strong aria-hidden="true">2.4.</strong> Troubleshooting</a></li></ol></li><li class="chapter-item expanded "><a href="api.html"><strong aria-hidden="true">3.</strong> API Reference</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="api/apply.html"><strong aria-hidden="true">3.1.</strong> Apply Semantics</a></li><li class="chapter-item expanded "><a href="api/compositecontroller.html"><strong aria-hidden="true">3.2.</strong> CompositeController</a></li><li class="chapter-item expanded "><a href="api/controllerrevision.html"><strong aria-hidden="true">3.3.</strong> ControllerRevision</a></li><li class="chapter-item expanded "><a href="api/decoratorcontroller.html"><strong aria-hidden="true">3.4.</strong> DecoratorController</a></li><li class="chapter-item expanded "><a href="api/hook.html"><strong aria-hidden="true">3.5.</strong> Hook</a></li></ol></li><li class="chapter-item expanded "><a href="design.html"><strong aria-hidden="true">4.</strong> Design Docs</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="design/customize-hook.html"><strong aria-hidden="true">4.1.</strong> Customize Hook</a></li><li class="chapter-item expanded "><a href="design/map-controller.html"><strong aria-hidden="true">4.2.</strong> MapController</a></li></ol></li><li class="chapter-item expanded "><a href="contrib.html"><strong aria-hidden="true">5.</strong> Contributing</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="contrib/build.html"><strong aria-hidden="true">5.1.</strong> Building</a></li></ol></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light (default)</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                        
+                    </div>
+
+                    <h1 class="menu-title">Metacontroller</h1>
+
+                    <div class="right-buttons">
+                        
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        
+                        
+                        <a href="https://github.com/metacontroller/metacontroller" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                        
+                    </div>
+                </div>
+
+                
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" name="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+                
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script type="text/javascript">
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1><a class="header" href="#introduction" id="introduction">Introduction</a></h1>
+<p>Metacontroller is an add-on for <a href="https://kubernetes.io/">Kubernetes</a>
+that makes it easy to write and deploy <a href="https://kubernetes.io/docs/concepts/api-extension/custom-resources/#custom-controllers">custom controllers</a>.
+Although the <a href="https://www.github.com/metacontroller/metacontroller">open-source project</a> was started at Google,
+the add-on works the same in any Kubernetes cluster.</p>
+<p>While <a href="https://kubernetes.io/docs/concepts/api-extension/custom-resources/">custom resources</a>
+provide <em>storage</em> for new types of objects, custom controllers define the <em>behavior</em>
+of a new extension to the <a href="https://kubernetes.io/docs/concepts/overview/working-with-objects/kubernetes-objects/">Kubernetes API</a>.
+Just like the <a href="https://kubernetes.io/docs/tasks/access-kubernetes-api/extend-api-custom-resource-definitions/">CustomResourceDefinition</a>
+(CRD) API makes it easy to request storage for a custom resource,
+the <a href="./api.html">Metacontroller APIs</a> make it easy to define behavior for a new extension API
+or add custom behavior to existing APIs.</p>
+<h2><a class="header" href="#simple-automation" id="simple-automation">Simple Automation</a></h2>
+<p>Kubernetes provides a lot of powerful automation through its built-in APIs,
+but sometimes you just want to tweak one little thing or add a bit of logic on top.
+With Metacontroller, you can write and deploy new <a href="https://hackernoon.com/level-triggering-and-reconciliation-in-kubernetes-1f17fe30333d">level-triggered</a>
+API logic in minutes.</p>
+<p>The code for your custom controller could be as simple as this example in <a href="http://jsonnet.org/">Jsonnet</a>
+that <a href="https://www.github.com/metacontroller/metacontroller/tree/master/examples/service-per-pod">adds a label to Pods</a>:</p>
+<pre><code class="language-jsonnet">// This example is written in Jsonnet (a JSON templating language),
+// but you can write hooks in any language.
+function(request) {
+  local pod = request.object,
+  local labelKey = pod.metadata.annotations[&quot;pod-name-label&quot;],
+
+  // Inject the Pod name as a label with the key requested in the annotation.
+  labels: {
+    [labelKey]: pod.metadata.name
+  }
+}
+</code></pre>
+<p>Since all you need to provide is a webhook that understands <a href="http://www.json.org/">JSON</a>,
+you can use any programming language, often without any dependencies beyond the standard library.
+The code above is not a snippet; it's the entire script.</p>
+<p>You can quickly deploy your code through any <a href="https://en.wikipedia.org/wiki/Function_as_a_service">FaaS</a>
+platform that offers HTTP(S) endpoints, or just <a href="https://www.github.com/metacontroller/metacontroller/tree/master/examples/service-per-pod#deploy-the-decoratorcontrollers">load your script into a ConfigMap</a>
+and launch a simple HTTP server to run it:</p>
+<pre><code class="language-sh">kubectl create configmap service-per-pod-hooks -n metacontroller --from-file=hooks
+</code></pre>
+<p>Finally, you declaratively specify how your script interacts with the Kubernetes API,
+which is analogous to writing a CustomResourceDefinition (to specify how to store objects):</p>
+<pre><code class="language-yaml">apiVersion: metacontroller.k8s.io/v1alpha1
+kind: DecoratorController
+metadata:
+  name: pod-name-label
+spec:
+  resources:
+  - apiVersion: v1
+    resource: pods
+    annotationSelector:
+      matchExpressions:
+      - {key: pod-name-label, operator: Exists}
+  hooks:
+    sync:
+      webhook:
+        url: http://service-per-pod.metacontroller/sync-pod-name-label
+</code></pre>
+<p>This declarative specification means that your code never has to talk to the Kubernetes API,
+so you don't need to import any Kubernetes client library nor depend on any code provided by
+Kubernetes.
+You merely receive JSON describing the observed state of the world
+and return JSON describing your desired state.</p>
+<p>Metacontroller remotely handles all interaction with the Kubernetes API.
+It runs a level-triggered reconciliation loop on your behalf, much the way
+CRD provides a declarative interface to request that the API Server
+store objects on your behalf.</p>
+<h2><a class="header" href="#reusable-building-blocks" id="reusable-building-blocks">Reusable Building Blocks</a></h2>
+<p>In addition to making ad hoc automation simple, Metacontroller also makes it
+easier to build and compose general-purpose abstractions.</p>
+<p>For example, many built-in workload APIs like <a href="https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/">StatefulSet</a>
+are almost trivial to <a href="https://www.github.com/metacontroller/metacontroller/tree/master/examples/catset">reimplement as Metacontroller hooks</a>,
+meaning you can easily fork and customize such APIs.
+Feature requests that used to take months to implement in the core Kubernetes
+repository can be hacked together in an afternoon by anyone who wants them.</p>
+<p>You can also compose existing APIs into higher-level abstractions,
+such as how <a href="https://www.github.com/metacontroller/metacontroller/tree/master/examples/bluegreen">BlueGreenDeployment</a>
+builds on top of the <a href="https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/">ReplicaSet</a>
+and <a href="https://kubernetes.io/docs/concepts/services-networking/service/">Service</a> APIs.</p>
+<p>Users can even invent new general-purpose APIs like <a href="https://www.github.com/metacontroller/metacontroller/tree/master/examples/indexedjob">IndexedJob</a>,
+which is a Job-like API that provides unique Pod identities like StatefulSet.</p>
+<h2><a class="header" href="#complex-orchestration" id="complex-orchestration">Complex Orchestration</a></h2>
+<p>Extension APIs implemented with Metacontroller can also build on top of other
+extension APIs that are themselves implemented with Metacontroller.
+This pattern can be used to compose complex orchestration out of
+simple building blocks that each do one thing well.</p>
+<p>For example, the <a href="https://www.github.com/metacontroller/metacontroller/tree/master/examples/vitess">Vitess Operator</a>
+is implemented entirely as Jsonnet webhooks with Metacontroller.
+The end result is much more complex than ad hoc automation or even
+general-purpose workload abstractions, but the key is that this complexity
+arises solely from the challenge of orchestrating <a href="https://vitess.io">Vitess</a>,
+a distributed MySQL clustering system.</p>
+<p>Building <a href="https://coreos.com/operators/">Operators</a> with Metacontroller
+frees developers from learning the internal machinery of implementing
+Kubernetes controllers and APIs, allowing them to focus on solving
+problems in the application domain.
+It also means they can take advantage of existing API machinery like
+shared caches without having to write their Operators in Go.</p>
+<p>Metacontroller's webhook APIs are designed to make it feel like you're
+writing a one-shot, client-side generator that spits out JSON that gets
+piped to <a href="https://kubernetes.io/docs/concepts/cluster-administration/manage-deployment/#kubectl-apply"><code>kubectl apply</code></a>.</p>
+<p>In other words, if you already know how to manually manage an application
+in Kubernetes with <code>kubectl</code>, Metacontroller lets you write automation for
+that app without having to learn a new language or how to use Kubernetes
+client libraries.</p>
+<h2><a class="header" href="#get-started" id="get-started">Get Started</a></h2>
+<ul>
+<li><a href="./guide/install.html">Install Metacontroller</a></li>
+<li><a href="./concepts.html">Learn concepts</a></li>
+<li><a href="./examples.html">See examples</a></li>
+<li><a href="./guide/create.html">Create a controller</a></li>
+<li>Give feedback by filing <a href="https://www.github.com/metacontroller/metacontroller/issues">GitHub issues</a>.</li>
+<li><a href="./contrib.html">Contribute</a>!</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                        
+                            <a rel="prev" href="intro.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+                        
+
+                        
+                            <a rel="next" href="intro.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+                        
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                
+                    <a rel="prev" href="intro.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+                
+
+                
+                    <a rel="next" href="intro.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+                
+            </nav>
+
+        </div>
+
+        
+
+        
+
+        
+
+        
+        <script type="text/javascript">
+            window.playground_copyable = true;
+        </script>
+        
+
+        
+
+        
+        <script src="elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="mark.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="searcher.js" type="text/javascript" charset="utf-8"></script>
+        
+
+        <script src="clipboard.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="highlight.js" type="text/javascript" charset="utf-8"></script>
+        <script src="book.js" type="text/javascript" charset="utf-8"></script>
+
+        <!-- Custom JS scripts -->
+        
+
+        
+
+    </body>
+</html>

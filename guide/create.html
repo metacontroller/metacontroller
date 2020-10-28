@@ -1,0 +1,530 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js light">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Create a controller - Metacontroller</title>
+        
+        
+
+
+        <!-- Custom HTML head -->
+        
+
+
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <meta name="description" content="Lightweight Kubernetes controllers as a service">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        
+        <link rel="icon" href="../favicon.svg">
+        
+        
+        <link rel="shortcut icon" href="../favicon.png">
+        
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        
+        <link rel="stylesheet" href="../css/print.css" media="print">
+        
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        
+        <link rel="stylesheet" href="../fonts/fonts.css">
+        
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        
+
+        
+        <!-- MathJax -->
+        <script async type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+        
+    </head>
+    <body>
+        <!-- Provide site root to javascript -->
+        <script type="text/javascript">
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script type="text/javascript">
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script type="text/javascript">
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script type="text/javascript">
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../intro.html"><strong aria-hidden="true">1.</strong> Getting Started</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../intro.html"><strong aria-hidden="true">1.1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../examples.html"><strong aria-hidden="true">1.2.</strong> Examples</a></li><li class="chapter-item expanded "><a href="../concepts.html"><strong aria-hidden="true">1.3.</strong> Concepts</a></li><li class="chapter-item expanded "><a href="../features.html"><strong aria-hidden="true">1.4.</strong> Features</a></li><li class="chapter-item expanded "><a href="../faq.html"><strong aria-hidden="true">1.5.</strong> FAQ</a></li><li class="chapter-item expanded "><a href="../pronunciation.html"><strong aria-hidden="true">1.6.</strong> Pronunciation</a></li></ol></li><li class="chapter-item expanded "><a href="../guide.html"><strong aria-hidden="true">2.</strong> User Guide</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../guide/install.html"><strong aria-hidden="true">2.1.</strong> Install Metacontroller</a></li><li class="chapter-item expanded "><a href="../guide/create.html" class="active"><strong aria-hidden="true">2.2.</strong> Create a controller</a></li><li class="chapter-item expanded "><a href="../guide/best-practices.html"><strong aria-hidden="true">2.3.</strong> Best Practices</a></li><li class="chapter-item expanded "><a href="../guide/troubleshooting.html"><strong aria-hidden="true">2.4.</strong> Troubleshooting</a></li></ol></li><li class="chapter-item expanded "><a href="../api.html"><strong aria-hidden="true">3.</strong> API Reference</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../api/apply.html"><strong aria-hidden="true">3.1.</strong> Apply Semantics</a></li><li class="chapter-item expanded "><a href="../api/compositecontroller.html"><strong aria-hidden="true">3.2.</strong> CompositeController</a></li><li class="chapter-item expanded "><a href="../api/controllerrevision.html"><strong aria-hidden="true">3.3.</strong> ControllerRevision</a></li><li class="chapter-item expanded "><a href="../api/decoratorcontroller.html"><strong aria-hidden="true">3.4.</strong> DecoratorController</a></li><li class="chapter-item expanded "><a href="../api/hook.html"><strong aria-hidden="true">3.5.</strong> Hook</a></li></ol></li><li class="chapter-item expanded "><a href="../design.html"><strong aria-hidden="true">4.</strong> Design Docs</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../design/customize-hook.html"><strong aria-hidden="true">4.1.</strong> Customize Hook</a></li><li class="chapter-item expanded "><a href="../design/map-controller.html"><strong aria-hidden="true">4.2.</strong> MapController</a></li></ol></li><li class="chapter-item expanded "><a href="../contrib.html"><strong aria-hidden="true">5.</strong> Contributing</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../contrib/build.html"><strong aria-hidden="true">5.1.</strong> Building</a></li></ol></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light (default)</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                        
+                    </div>
+
+                    <h1 class="menu-title">Metacontroller</h1>
+
+                    <div class="right-buttons">
+                        
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        
+                        
+                        <a href="https://github.com/metacontroller/metacontroller" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                        
+                    </div>
+                </div>
+
+                
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" name="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+                
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script type="text/javascript">
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1><a class="header" href="#create-a-controller" id="create-a-controller">Create a Controller</a></h1>
+<p>This tutorial walks through a simple example of creating a controller in Python
+with Metacontroller.</p>
+<h2><a class="header" href="#prerequisites" id="prerequisites">Prerequisites</a></h2>
+<ul>
+<li>Kubernetes v1.9+</li>
+<li>You should have <code>kubectl</code> available and configured to talk to the desired cluster.</li>
+<li>You should have already <a href="./install.html">installed Metacontroller</a>.</li>
+</ul>
+<h2><a class="header" href="#hello-world" id="hello-world">Hello, World!</a></h2>
+<p>In this example, we'll create a useless controller that runs a single Pod
+that prints a greeting to its standard output.
+Once you're familiar with the general process, you can look through the
+<a href="../examples.html">examples</a> page to find concepts that actually do something useful.</p>
+<p>To make cleanup easier, first create a new Namespace called <code>hello</code>:</p>
+<pre><code class="language-sh">kubectl create namespace hello
+</code></pre>
+<p>We'll put all our Namespace-scoped objects there by adding <code>-n hello</code> to the
+<code>kubectl</code> commands.</p>
+<h3><a class="header" href="#define-a-custom-resource" id="define-a-custom-resource">Define a custom resource</a></h3>
+<p>Our example controller will implement the behavior for a new API represented
+as a <a href="../concepts.html#custom-resource">custom resource</a>.</p>
+<p>First, let's use the built-in <a href="https://kubernetes.io/docs/concepts/api-extension/custom-resources/#customresourcedefinitions">CustomResourceDefinition</a> API to set up a storage location
+(a <em>helloworlds</em> <a href="../concepts.html#resource">resource</a>) for objects of our custom type (HelloWorld).</p>
+<p>Save the following to a file called <code>crd.yaml</code>:</p>
+<pre><code class="language-yaml">apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: helloworlds.example.com
+spec:
+  group: example.com
+  version: v1
+  names:
+    kind: HelloWorld
+    plural: helloworlds
+    singular: helloworld
+  scope: Namespaced
+</code></pre>
+<p>Then apply it to your cluster:</p>
+<pre><code class="language-sh">kubectl apply -f crd.yaml
+</code></pre>
+<h3><a class="header" href="#define-a-custom-controller" id="define-a-custom-controller">Define a custom controller</a></h3>
+<p>For each HelloWorld object, we're going to create a Pod as a child object,
+so we'll use the <a href="../api/compositecontroller.html">CompositeController</a> API to implement a controller that
+defines this parent-child relationship.</p>
+<p>Save the following to a file called <code>controller.yaml</code>:</p>
+<pre><code class="language-yaml">apiVersion: metacontroller.k8s.io/v1alpha1
+kind: CompositeController
+metadata:
+  name: hello-controller
+spec:
+  generateSelector: true
+  parentResource:
+    apiVersion: example.com/v1
+    resource: helloworlds
+  childResources:
+  - apiVersion: v1
+    resource: pods
+    updateStrategy:
+      method: Recreate
+  hooks:
+    sync:
+      webhook:
+        url: http://hello-controller.hello/sync
+</code></pre>
+<p>Then apply it to your cluster:</p>
+<pre><code class="language-sh">kubectl apply -f controller.yaml
+</code></pre>
+<p>This tells Metacontroller to start a <a href="../concepts.html#controller">reconciling control loop</a>
+for you, running inside the Metacontroller server.
+The parameters under <code>spec:</code> let you tune the behavior of the controller
+<a href="../features.html#declarative-reconciliation">declaratively</a>.</p>
+<p>In this case:</p>
+<ul>
+<li>We set <a href="../api/compositecontroller.html#generate-selector"><code>generateSelector</code></a> to <code>true</code> to mimic the built-in
+<a href="https://kubernetes.io/docs/concepts/workloads/controllers/jobs-run-to-completion/#specifying-your-own-pod-selector">Job</a> API since we're running a Pod to completion and don't want
+to share Pods across invocations.</li>
+<li>The <a href="../api/compositecontroller.html#parent-resource"><code>parentResource</code></a> is our custom resource called <code>helloworlds</code>.</li>
+<li>The idea of CompositeController is that the parent resource represents
+objects that are composed of other objects.
+A HelloWorld is composed of just a Pod, so we have only one entry in the
+<a href="../api/compositecontroller.html#child-resources"><code>childResources</code></a> list.</li>
+<li>For each child resource, we can optionally set an
+<a href="../api/compositecontroller.html#child-update-strategy"><code>updateStrategy</code></a> to specify what to do if a child object
+needs to be updated.
+Since Pods are effectively immutable, we use the <code>Recreate</code> method,
+which means, &quot;delete the outdated object and create a new one&quot;.</li>
+<li>Finally, we tell Metacontroller how to invoke the <code>sync</code> webhook,
+which is where we'll define the business logic of our controller.
+The example relies on in-cluster DNS to resolve the address of the
+<code>hello-controller</code> Service (which we'll define below)
+within the <code>hello</code> Namespace.</li>
+</ul>
+<h3><a class="header" href="#write-a-webhook" id="write-a-webhook">Write a webhook</a></h3>
+<p>Metacontroller will handle the <a href="../features.html#controller-best-practices">controllery bits</a>
+for us, but we still need to tell it what our controller actually does.</p>
+<p>To define our business logic, we write a webhook that generates child objects
+based on the parent spec, which is provided as JSON in the webhook request.
+The <a href="../api/compositecontroller.html#sync-hook-request">sync hook request</a> contains additional information as well,
+but the parent spec is all we need for this example.</p>
+<p>You can write Metacontroller hooks in any language, but Python is particularly
+nice because its <em>dictionary</em> type is convenient for programmatically building
+JSON objects (like the Pod object below).</p>
+<p>If you have a preferred Functions-as-a-Service framework, you can use that to
+write your webhook, but we'll keep this example self-contained by relying on
+the basic HTTP server module in the Python standard library.
+The <code>do_POST()</code> method handles decoding and encoding the request and response
+as JSON.</p>
+<p>The real hook logic is in the <code>sync()</code> method, and consists primarily of
+building a Pod object.
+Because Metacontroller uses <a href="../api/apply.html">apply semantics</a>, you can simply return the
+Pod object as if you were creating it, every time.
+If the Pod already exists, Metacontroller will take care of updates according
+to your <a href="../api/compositecontroller.html#child-update-strategy">update strategy</a>.</p>
+<p>In this case, we set the update method to <code>Recreate</code>, so an existing Pod
+would be deleted and replaced if it doesn't match the desired state returned
+by your hook.
+Notice, however, that the hook code below doesn't need to mention any of that
+because it's only responsible for computing the desired state;
+the Metacontroller server takes care of
+<a href="../features.html#declarative-reconciliation">reconciling with the observed state</a>.</p>
+<p>Save the following to a file called <code>sync.py</code>:</p>
+<pre><code class="language-python">from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
+import json
+
+class Controller(BaseHTTPRequestHandler):
+  def sync(self, parent, children):
+    # Compute status based on observed state.
+    desired_status = {
+      &quot;pods&quot;: len(children[&quot;Pod.v1&quot;])
+    }
+
+    # Generate the desired child object(s).
+    who = parent.get(&quot;spec&quot;, {}).get(&quot;who&quot;, &quot;World&quot;)
+    desired_pods = [
+      {
+        &quot;apiVersion&quot;: &quot;v1&quot;,
+        &quot;kind&quot;: &quot;Pod&quot;,
+        &quot;metadata&quot;: {
+          &quot;name&quot;: parent[&quot;metadata&quot;][&quot;name&quot;]
+        },
+        &quot;spec&quot;: {
+          &quot;restartPolicy&quot;: &quot;OnFailure&quot;,
+          &quot;containers&quot;: [
+            {
+              &quot;name&quot;: &quot;hello&quot;,
+              &quot;image&quot;: &quot;busybox&quot;,
+              &quot;command&quot;: [&quot;echo&quot;, &quot;Hello, %s!&quot; % who]
+            }
+          ]
+        }
+      }
+    ]
+
+    return {&quot;status&quot;: desired_status, &quot;children&quot;: desired_pods}
+
+  def do_POST(self):
+    # Serve the sync() function as a JSON webhook.
+    observed = json.loads(self.rfile.read(int(self.headers.getheader(&quot;content-length&quot;))))
+    desired = self.sync(observed[&quot;parent&quot;], observed[&quot;children&quot;])
+
+    self.send_response(200)
+    self.send_header(&quot;Content-type&quot;, &quot;application/json&quot;)
+    self.end_headers()
+    self.wfile.write(json.dumps(desired))
+
+HTTPServer((&quot;&quot;, 80), Controller).serve_forever()
+</code></pre>
+<p>Then load it into your cluster as a ConfigMap:</p>
+<pre><code class="language-sh">kubectl -n hello create configmap hello-controller --from-file=sync.py
+</code></pre>
+<p><em>Note</em>: The <code>-n hello</code> flag is important to put the ConfigMap in the
+<code>hello</code> namespace we created for the tutorial.</p>
+<h3><a class="header" href="#deploy-the-webhook" id="deploy-the-webhook">Deploy the webhook</a></h3>
+<p>Finally, since we wrote our hook as a self-contained Python web server,
+we need to deploy it somewhere that Metacontroller can reach.
+Luckily, we have this thing called Kubernetes which is great at hosting
+stateless web services.</p>
+<p>Since our hook consists of only a small Python script, we'll use a generic
+Python container image and mount the script from the ConfigMap we created.</p>
+<p>Save the following to a file called <code>webhook.yaml</code>:</p>
+<pre><code class="language-yaml">apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: hello-controller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hello-controller
+  template:
+    metadata:
+      labels:
+        app: hello-controller
+    spec:
+      containers:
+      - name: controller
+        image: python:2.7
+        command: [&quot;python&quot;, &quot;/hooks/sync.py&quot;]
+        volumeMounts:
+        - name: hooks
+          mountPath: /hooks
+      volumes:
+      - name: hooks
+        configMap:
+          name: hello-controller
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hello-controller
+spec:
+  selector:
+    app: hello-controller
+  ports:
+  - port: 80
+</code></pre>
+<p>Then apply it to your cluster:</p>
+<pre><code class="language-sh">kubectl -n hello apply -f webhook.yaml
+</code></pre>
+<h3><a class="header" href="#try-it-out" id="try-it-out">Try it out</a></h3>
+<p>Now we can create HelloWorld objects and see what they do.</p>
+<p>Save the following to a file called <code>hello.yaml</code>:</p>
+<pre><code class="language-yaml">apiVersion: example.com/v1
+kind: HelloWorld
+metadata:
+  name: your-name
+spec:
+  who: Your Name
+</code></pre>
+<p>Then apply it to your cluster:</p>
+<pre><code class="language-sh">kubectl -n hello apply -f hello.yaml
+</code></pre>
+<p>Our controller should see this and create a Pod that prints a greeting
+and then exits.
+If you list all Pods (with the <code>-a</code> flag) in the <code>hello</code> namespace:</p>
+<pre><code class="language-sh">kubectl -n hello get pods -a
+</code></pre>
+<p>You should see something like this:</p>
+<pre><code class="language-console">NAME                                READY     STATUS      RESTARTS   AGE
+hello-controller-746fc7c4dc-rzslh   1/1       Running     0          2m
+your-name                           0/1       Completed   0          15s
+</code></pre>
+<p>Then you can check the logs on the <em>Completed</em> Pod:</p>
+<pre><code class="language-sh">kubectl -n hello logs your-name
+</code></pre>
+<p>Which should look like this:</p>
+<pre><code class="language-console">Hello, Your Name!
+</code></pre>
+<p>Now let's look at what happens when you update the parent object,
+for example to change the name:</p>
+<pre><code class="language-sh">kubectl -n hello patch helloworld your-name --type=merge -p '{&quot;spec&quot;:{&quot;who&quot;:&quot;My Name&quot;}}'
+</code></pre>
+<p>If you now check the Pod logs again:</p>
+<pre><code class="language-sh">kubectl -n hello logs your-name
+</code></pre>
+<p>You should see that the Pod was updated (actually deleted and recreated)
+to print a greeting to the new name, even though the hook code doesn't
+mention anything about updates.</p>
+<pre><code class="language-console">Hello, My Name!
+</code></pre>
+<h3><a class="header" href="#clean-up" id="clean-up">Clean up</a></h3>
+<p>Another thing Metacontroller does for you by default is set up links
+so that child objects are removed by the garbage collector when the parent
+goes away (assuming your cluster is version 1.8+).</p>
+<p>You can check this by deleting the parent:</p>
+<pre><code class="language-sh">kubectl -n hello delete helloworld your-name
+</code></pre>
+<p>And then checking for the child Pod:</p>
+<pre><code class="language-sh">kubectl -n hello get pods -a
+</code></pre>
+<p>You should see that the child Pod was cleaned up automatically,
+so only the webhook Pod remains:</p>
+<pre><code class="language-console">NAME                                READY     STATUS      RESTARTS   AGE
+hello-controller-746fc7c4dc-rzslh   1/1       Running     0          3m
+</code></pre>
+<p>When you're done with the tutorial, you should remove the controller,
+CRD, and Namespace as follows:</p>
+<pre><code class="language-sh">kubectl delete compositecontroller hello-controller
+kubectl delete crd helloworlds.example.com
+kubectl delete ns hello
+</code></pre>
+<h2><a class="header" href="#next-steps" id="next-steps">Next Steps</a></h2>
+<ul>
+<li>Explore other <a href="../examples.html">example controllers</a>.</li>
+<li>Read about <a href="./best-practices.html">best practices</a> for writing controllers.</li>
+<li>Learn how to <a href="./troubleshooting.html">troubleshoot controllers</a>.</li>
+<li>Dive into the details of all the <a href="../api.html">available Metacontroller APIs</a>.</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                        
+                            <a rel="prev" href="../guide/install.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+                        
+
+                        
+                            <a rel="next" href="../guide/best-practices.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+                        
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                
+                    <a rel="prev" href="../guide/install.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+                
+
+                
+                    <a rel="next" href="../guide/best-practices.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+                
+            </nav>
+
+        </div>
+
+        
+
+        
+
+        
+
+        
+        <script type="text/javascript">
+            window.playground_copyable = true;
+        </script>
+        
+
+        
+
+        
+        <script src="../elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../mark.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../searcher.js" type="text/javascript" charset="utf-8"></script>
+        
+
+        <script src="../clipboard.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../highlight.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../book.js" type="text/javascript" charset="utf-8"></script>
+
+        <!-- Custom JS scripts -->
+        
+
+        
+
+    </body>
+</html>
