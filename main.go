@@ -60,9 +60,13 @@ func main() {
 		glog.Info("No kubeconfig file specified; trying in-cluster auto-config...")
 		config, err = rest.InClusterConfig()
 	}
+
 	if err != nil {
 		glog.Fatal(err)
 	}
+
+	config.QPS = 100
+	config.Burst = 300
 
 	stopServer, err := server.Start(config, *discoveryInterval, *informerRelist)
 	if err != nil {
