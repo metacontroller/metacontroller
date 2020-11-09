@@ -4,7 +4,7 @@ metadata:
   name: service-per-pod
 spec:
   resources:
-  - apiVersion: apps/v1beta1
+  - apiVersion: apps/v1
     resource: statefulsets
     annotationSelector:
       matchExpressions:
@@ -40,7 +40,7 @@ spec:
       webhook:
         url: http://service-per-pod.metacontroller/sync-pod-name-label
 ---
-apiVersion: apps/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: service-per-pod

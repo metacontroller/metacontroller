@@ -21,7 +21,7 @@ metadata:
   name: service-per-pod
 spec:
   resources:
-  - apiVersion: apps/v1beta1
+  - apiVersion: apps/v1
     resource: statefulsets
     annotationSelector:
       matchExpressions:
