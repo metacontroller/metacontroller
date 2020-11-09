@@ -240,7 +240,7 @@ Python container image and mount the script from the ConfigMap we created.
 Save the following to a file called `webhook.yaml`:
 
 ```yaml
-apiVersion: apps/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: hello-controller

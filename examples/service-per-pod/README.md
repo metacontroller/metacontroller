@@ -8,7 +8,7 @@ In Kubernetes 1.9+, StatefulSet automatically adds the Pod name as a label on
 each of its Pods, so you can enable Service-Per-Pod like this:
 
 ```yaml
-apiVersion: apps/v1beta2
+apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   annotations:
@@ -24,7 +24,7 @@ The Pod name label is only added to Pods that request it with an annotation,
 which you can add in the StatefulSet's Pod template:
 
 ```yaml
-apiVersion: apps/v1beta2
+apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   annotations:

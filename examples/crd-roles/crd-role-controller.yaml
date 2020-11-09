@@ -19,7 +19,7 @@ spec:
         url: http://crd-role-controller.metacontroller/sync-crd-role
         timeout: 10s
 ---
-apiVersion: apps/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: crd-role-controller
