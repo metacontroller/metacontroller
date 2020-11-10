@@ -42,6 +42,8 @@ var (
 	informerRelist    = flag.Duration("cache-flush-interval", 30*time.Minute, "How often to flush local caches and relist objects from the API server")
 	debugAddr         = flag.String("debug-addr", ":9999", "The address to bind the debug http endpoints")
 	clientConfigPath  = flag.String("client-config-path", "", "Path to kubeconfig file (same format as used by kubectl); if not specified, use in-cluster config")
+	clientGoQPS       = flag.Float64("client-go-qps", 5, "Number of queries per second client-go is allowed to make (default 5)")
+	clientGoBurst     = flag.Int("client-go-burst", 10, "Allowed burst queries for client-go (default 10)")
 )
 
 func main() {
@@ -65,8 +67,8 @@ func main() {
 		glog.Fatal(err)
 	}
 
-	config.QPS = 100
-	config.Burst = 300
+	config.QPS = float32(*clientGoQPS)
+	config.Burst = *clientGoBurst
 
 	stopServer, err := server.Start(config, *discoveryInterval, *informerRelist)
 	if err != nil {
