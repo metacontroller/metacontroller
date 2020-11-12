@@ -1060,7 +1060,7 @@ stateless web services.</p>
 <p>Since our hook consists of only a small Python script, we'll use a generic
 Python container image and mount the script from the ConfigMap we created.</p>
 <p>Save the following to a file called <code>webhook.yaml</code>:</p>
-<pre><code class="language-yaml">apiVersion: apps/v1beta1
+<pre><code class="language-yaml">apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: hello-controller
@@ -2001,7 +2001,7 @@ metadata:
   name: service-per-pod
 spec:
   resources:
-  - apiVersion: apps/v1beta1
+  - apiVersion: apps/v1
     resource: statefulsets
     annotationSelector:
       matchExpressions:
