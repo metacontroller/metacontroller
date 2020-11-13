@@ -26,11 +26,12 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	"go.opencensus.io/exporter/prometheus"
-	"go.opencensus.io/stats/view"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/component-base/metrics/legacyregistry"
+	_ "k8s.io/component-base/metrics/prometheus/clientgo"
 
 	"metacontroller.io/server"
 
@@ -75,14 +76,8 @@ func main() {
 		glog.Fatal(err)
 	}
 
-	exporter, err := prometheus.NewExporter(prometheus.Options{})
-	if err != nil {
-		glog.Fatalf("can't create prometheus exporter: %v", err)
-	}
-	view.RegisterExporter(exporter)
-
 	mux := http.NewServeMux()
-	mux.Handle("/metrics", exporter)
+	mux.Handle("/metrics", promhttp.HandlerFor(legacyregistry.DefaultGatherer, promhttp.HandlerOpts{}))
 	srv := &http.Server{
 		Addr:    *debugAddr,
 		Handler: mux,

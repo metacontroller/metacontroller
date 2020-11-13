@@ -241,7 +241,7 @@ func updateChildren(client *dynamicclientset.ResourceClient, updateStrategy Chil
 			case v1alpha1.ChildUpdateInPlace, v1alpha1.ChildUpdateRollingInPlace:
 				// Update the object in-place.
 				glog.Infof("%v: updating %v", describeObject(parent), describeObject(obj))
-				if _, err := client.Namespace(ns).Update(newObj); err != nil {
+				if _, err := client.Namespace(ns).Update(newObj, metav1.UpdateOptions{}); err != nil {
 					errs = append(errs, err)
 					continue
 				}
@@ -269,7 +269,7 @@ func updateChildren(client *dynamicclientset.ResourceClient, updateStrategy Chil
 			ownerRefs = append(ownerRefs, *controllerRef)
 			obj.SetOwnerReferences(ownerRefs)
 
-			if _, err := client.Namespace(ns).Create(obj); err != nil {
+			if _, err := client.Namespace(ns).Create(obj, metav1.CreateOptions{}); err != nil {
 				errs = append(errs, err)
 				continue
 			}

@@ -505,7 +505,7 @@ func (c *decoratorController) syncParentObject(parent *unstructured.Unstructured
 
 		if statusChanged && parentClient.HasSubresource("status") {
 			// The regular Update below will ignore changes to .status so we do it separately.
-			result, err := parentClient.Namespace(parent.GetNamespace()).UpdateStatus(updatedParent)
+			result, err := parentClient.Namespace(parent.GetNamespace()).UpdateStatus(updatedParent, metav1.UpdateOptions{})
 			if err != nil {
 				return fmt.Errorf("can't update status: %v", err)
 			}
@@ -518,7 +518,7 @@ func (c *decoratorController) syncParentObject(parent *unstructured.Unstructured
 		}
 
 		glog.V(4).Infof("DecoratorController %v: updating %v %v/%v", c.dc.Name, parent.GetKind(), parent.GetNamespace(), parent.GetName())
-		_, err = parentClient.Namespace(parent.GetNamespace()).Update(updatedParent)
+		_, err = parentClient.Namespace(parent.GetNamespace()).Update(updatedParent, metav1.UpdateOptions{})
 		if err != nil {
 			return fmt.Errorf("can't update %v %v/%v: %v", parent.GetKind(), parent.GetNamespace(), parent.GetName(), err)
 		}

@@ -26,7 +26,6 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
-	"k8s.io/kubernetes/pkg/util/pointer"
 
 	"metacontroller.io/apis/metacontroller/v1alpha1"
 	client "metacontroller.io/client/generated/clientset/internalclientset/typed/metacontroller/v1alpha1"
@@ -88,8 +87,8 @@ func (m *ControllerRevisionManager) adoptControllerRevision(obj *v1alpha1.Contro
 		Kind:               m.parentKind.Kind,
 		Name:               m.Controller.GetName(),
 		UID:                m.Controller.GetUID(),
-		Controller:         pointer.BoolPtr(true),
-		BlockOwnerDeletion: pointer.BoolPtr(true),
+		Controller:         k8s.BoolPtr(true),
+		BlockOwnerDeletion: k8s.BoolPtr(true),
 	}
 
 	// We can't use strategic merge patch because we want this to work with custom resources.

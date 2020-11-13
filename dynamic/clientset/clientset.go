@@ -146,7 +146,7 @@ func (rc *ResourceClient) AtomicUpdate(orig *unstructured.Unstructured, update f
 			result = current
 			return nil
 		}
-		result, err = rc.Update(current)
+		result, err = rc.Update(current, metav1.UpdateOptions{})
 		return err
 	})
 	return result, err
@@ -198,9 +198,9 @@ func (rc *ResourceClient) AtomicStatusUpdate(orig *unstructured.Unstructured, up
 		}
 
 		if rc.HasSubresource("status") {
-			result, err = rc.UpdateStatus(current)
+			result, err = rc.UpdateStatus(current, metav1.UpdateOptions{})
 		} else {
-			result, err = rc.Update(current)
+			result, err = rc.Update(current, metav1.UpdateOptions{})
 		}
 		return err
 	})

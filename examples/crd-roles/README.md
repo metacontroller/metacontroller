@@ -10,7 +10,7 @@ Both the parent and child resouces are Cluster scoped.
 ### Deploy the controller
 
 ```sh
-kubectl create configmap crd-role-contoller -n metacontroller --from-file=sync.py
+kubectl create configmap crd-role-controller -n metacontroller --from-file=sync.py
 kubectl apply -f crd-role-controller.yaml
 ```
 
