@@ -20,8 +20,8 @@ import (
 	"math/rand"
 	"testing"
 
-	"k8s.io/apimachinery/pkg/api/testing/fuzzer"
-	roundtrip "k8s.io/apimachinery/pkg/api/testing/roundtrip"
+	"k8s.io/apimachinery/pkg/api/apitesting/fuzzer"
+	roundtrip "k8s.io/apimachinery/pkg/api/apitesting/roundtrip"
 	metafuzzer "k8s.io/apimachinery/pkg/apis/meta/fuzzer"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"

@@ -21,12 +21,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/0xRLG/ocworkqueue"
-	"go.opencensus.io/stats/view"
-
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/rest"
-	"k8s.io/client-go/util/workqueue"
 
 	"metacontroller.io/apis/metacontroller/v1alpha1"
 	mcclientset "metacontroller.io/client/generated/clientset/internalclientset"
@@ -66,9 +62,6 @@ func Start(config *rest.Config, discoveryInterval, informerRelist time.Duration)
 	}
 	// Create dynamic informer factory (for sharing dynamic informers).
 	dynInformers := dynamicinformer.NewSharedInformerFactory(dynClient, informerRelist)
-
-	workqueue.SetProvider(ocworkqueue.MetricsProvider())
-	view.Register(ocworkqueue.DefaultViews...)
 
 	// Start metacontrollers (controllers that spawn controllers).
 	// Each one requests the informers it needs from the factory.

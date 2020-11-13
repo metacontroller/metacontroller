@@ -1,5 +1,7 @@
+package tools
+
 /*
-Copyright 2016 The Kubernetes Authors.
+Copyright 2019 The Kubernetes Authors.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -11,25 +13,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package kubernetes
-
-// This is copied from k8s.io/kubernetes to avoid a dependency on all of Kubernetes.
-// TODO(enisoc): Move the upstream code to somewhere better.
-
-// BoolPtr returns a pointer to a bool
-func BoolPtr(b bool) *bool {
-	o := b
-	return &o
-}
-
-// Int32Ptr returns a pointer to the given int32
-func Int32Ptr(i int32) *int32 {
-	o := i
-	return &o
-}
-
-// StringPtr returns a pointer to the given string
-func StringPtr(s string) *string {
-	o := s
-	return &o
-}
+import (
+	_ "k8s.io/code-generator"                           // used in code generation
+	_ "k8s.io/code-generator/cmd/deepcopy-gen"          // used in code generation
+	_ "sigs.k8s.io/controller-tools/cmd/controller-gen" // used in code generation
+)

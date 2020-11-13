@@ -16,7 +16,7 @@ vendor:
 	@go mod vendor
 
 unit-test: vendor
-	pkgs="$$(go list ./... | grep -v '/test/integration/\|/examples/')" ; \
+	pkgs="$$(go list ./... | grep -v '/test/integration/\|/examples/\|hack')" ; \
 		go test -i $${pkgs} && \
 		go test $${pkgs}
 

@@ -185,7 +185,7 @@ func (in *CompositeControllerHooks) DeepCopy() *CompositeControllerHooks {
 func (in *CompositeControllerList) DeepCopyInto(out *CompositeControllerList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.ListMeta = in.ListMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]CompositeController, len(*in))
@@ -371,7 +371,7 @@ func (in *ControllerRevisionChildren) DeepCopy() *ControllerRevisionChildren {
 func (in *ControllerRevisionList) DeepCopyInto(out *ControllerRevisionList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.ListMeta = in.ListMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]ControllerRevision, len(*in))
@@ -496,7 +496,7 @@ func (in *DecoratorControllerHooks) DeepCopy() *DecoratorControllerHooks {
 func (in *DecoratorControllerList) DeepCopyInto(out *DecoratorControllerList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.ListMeta = in.ListMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]DecoratorController, len(*in))

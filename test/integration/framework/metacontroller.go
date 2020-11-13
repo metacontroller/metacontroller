@@ -19,7 +19,7 @@ package framework
 import (
 	apiextensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/kubernetes/pkg/util/pointer"
+	pointer "metacontroller.io/third_party/kubernetes"
 
 	"metacontroller.io/apis/metacontroller/v1alpha1"
 )

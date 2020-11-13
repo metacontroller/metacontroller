@@ -70,7 +70,7 @@ func TestSyncWebhook(t *testing.T) {
 
 	parent := framework.UnstructuredCRD(parentCRD, "test-sync-webhook")
 	unstructured.SetNestedStringMap(parent.Object, labels, "spec", "selector", "matchLabels")
-	_, err := parentClient.Namespace(ns).Create(parent)
+	_, err := parentClient.Namespace(ns).Create(parent, metav1.CreateOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -139,7 +139,7 @@ func TestCacadingDelete(t *testing.T) {
 	unstructured.SetNestedStringMap(parent.Object, labels, "spec", "selector", "matchLabels")
 	unstructured.SetNestedField(parent.Object, int64(1), "spec", "replicas")
 	var err error
-	if parent, err = parentClient.Namespace(ns).Create(parent); err != nil {
+	if parent, err = parentClient.Namespace(ns).Create(parent, metav1.CreateOptions{}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -227,7 +227,7 @@ func TestResyncAfter(t *testing.T) {
 
 	parent := framework.UnstructuredCRD(parentCRD, "test-resync-after")
 	unstructured.SetNestedStringMap(parent.Object, labels, "spec", "selector", "matchLabels")
-	_, err := parentClient.Namespace(ns).Create(parent)
+	_, err := parentClient.Namespace(ns).Create(parent, metav1.CreateOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}

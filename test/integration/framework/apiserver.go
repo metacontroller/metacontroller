@@ -60,11 +60,15 @@ func startApiserver() (func(), error) {
 		fmt.Fprintf(os.Stderr, installApiserver)
 		return nil, fmt.Errorf("could not find kube-apiserver in PATH: %v", err)
 	}
-	apiserverPort, err := getAvailablePort()
+	apiserverInsecurePort, err := getAvailablePort()
 	if err != nil {
-		return nil, fmt.Errorf("could not get a port: %v", err)
+		return nil, fmt.Errorf("could not get a insecure port: %v", err)
 	}
-	apiserverURL = fmt.Sprintf("http://127.0.0.1:%d", apiserverPort)
+	apiserverSecurePort, err := getAvailablePort()
+	if err != nil {
+		return nil, fmt.Errorf("could not get a secure port: %v", err)
+	}
+	apiserverURL = fmt.Sprintf("http://127.0.0.1:%d", apiserverInsecurePort)
 	klog.Infof("starting kube-apiserver on %s", apiserverURL)
 
 	apiserverDataDir, err := ioutil.TempDir(os.TempDir(), "integration_test_apiserver_data")
@@ -78,17 +82,16 @@ func startApiserver() (func(), error) {
 		ctx,
 		apiserverPath,
 		"--cert-dir", apiserverDataDir,
-		// Disable secure port since we don't use it, so we don't conflict with other apiservers.
-		"--secure-port", "0",
-		"--insecure-port", strconv.Itoa(apiserverPort),
+		"--insecure-port", strconv.Itoa(apiserverInsecurePort),
+		"--secure-port", strconv.Itoa(apiserverSecurePort),
 		"--etcd-servers", etcdURL,
 		"--external-hostname", apiserverURL,
 	)
 
 	// Uncomment these to see kube-apiserver output in test logs.
 	// For Metacontroller tests, we generally don't expect problems at this level.
-	//cmd.Stdout = os.Stdout
-	//cmd.Stderr = os.Stderr
+	// cmd.Stdout = os.Stdout
+	// cmd.Stderr = os.Stderr
 
 	stop := func() {
 		cancel()
