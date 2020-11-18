@@ -35,4 +35,4 @@ where minor/patch as in semantic versioning definition.
 
 Aside from the above administrative requirements, you can find more
 technical details about project internals in the
-[contributor guide](https://metacontroller.app/contrib/).
+[contributor guide](https://metacontroller.github.io/metacontroller/contrib/).

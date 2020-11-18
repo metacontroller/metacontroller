@@ -9,11 +9,11 @@ There's a [known issue](https://github.com/GoogleCloudPlatform/metacontroller/is
 that makes it difficult to produce JSON according to the rules that Metacontroller
 requires if you import the official Go structs for Kubernetes APIs.
 In particular, some fields will always be emitted, even if you never set them,
-which goes against Metacontroller's [apply semantics](https://metacontroller.app/api/apply/).
+which goes against Metacontroller's [apply semantics](https://metacontroller.github.io/metacontroller/api/apply/).
 
 ### Prerequisites
 
-* [Install Metacontroller](https://metacontroller.app/guide/install/)
+* [Install Metacontroller](https://metacontroller.github.io/metacontroller/guide/install.html)
 
 ### Install Thing Controller
 
