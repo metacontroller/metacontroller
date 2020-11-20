@@ -10,7 +10,7 @@ set -u
 # The integration test framework expects these binaries to be found in the PATH.
 
 # This is the kube-apiserver version to test against.
-KUBE_VERSION="${KUBE_VERSION:-v1.11.3}"
+KUBE_VERSION="${KUBE_VERSION:-v1.18.8}"
 KUBERNETES_RELEASE_URL="${KUBERNETES_RELEASE_URL:-https://dl.k8s.io}"
 
 # This should be the etcd version downloaded by kubernetes/hack/lib/etcd.sh

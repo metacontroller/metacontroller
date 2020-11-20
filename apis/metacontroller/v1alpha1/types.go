@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// +groupName=metacontroller.k8s.io
 package v1alpha1
 
 import (
@@ -26,6 +27,8 @@ import (
 // +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
+// +kubebuilder:subresource:status
+// +kubebuilder:resource:path=compositecontrollers,scope=Cluster,shortName=cc;cctl
 type CompositeController struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
@@ -130,6 +133,9 @@ type CompositeControllerList struct {
 // +genclient:noStatus
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
+// +kubebuilder:subresource:status
+// +kubebuilder:resource:path=controllerrevisions,scope=Namespaced
+
 type ControllerRevision struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
@@ -156,7 +162,8 @@ type ControllerRevisionList struct {
 // +genclient:noStatus
 // +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
+// +kubebuilder:subresource:status
+// +kubebuilder:resource:path=decoratorcontrollers,scope=Cluster,shortName=dec;decorators
 type DecoratorController struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
