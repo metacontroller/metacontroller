@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"strings"
 
-	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/json"
@@ -37,26 +37,32 @@ const (
 
 // CreateCRD generates a quick-and-dirty CRD for use in tests,
 // and installs it in the test environment's API server.
-func (f *Fixture) CreateCRD(kind string, scope v1beta1.ResourceScope) (*v1beta1.CustomResourceDefinition, *dynamicclientset.ResourceClient) {
+func (f *Fixture) CreateCRD(kind string, scope apiextensionsv1.ResourceScope) (*apiextensionsv1.CustomResourceDefinition, *dynamicclientset.ResourceClient) {
 	singular := strings.ToLower(kind)
 	plural := singular + "s"
-	crd := &v1beta1.CustomResourceDefinition{
+	xPreserveUnknownFields := true
+	crd := &apiextensionsv1.CustomResourceDefinition{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: fmt.Sprintf("%s.%s", plural, APIGroup),
 		},
-		Spec: v1beta1.CustomResourceDefinitionSpec{
+		Spec: apiextensionsv1.CustomResourceDefinitionSpec{
 			Group: APIGroup,
 			Scope: scope,
-			Names: v1beta1.CustomResourceDefinitionNames{
+			Names: apiextensionsv1.CustomResourceDefinitionNames{
 				Singular: singular,
 				Plural:   plural,
 				Kind:     kind,
 			},
-			Versions: []v1beta1.CustomResourceDefinitionVersion{
+			Versions: []apiextensionsv1.CustomResourceDefinitionVersion{
 				{
 					Name:    "v1",
 					Served:  true,
 					Storage: true,
+					Schema: &apiextensionsv1.CustomResourceValidation{
+						OpenAPIV3Schema: &apiextensionsv1.JSONSchemaProps{
+							XPreserveUnknownFields: &xPreserveUnknownFields,
+						},
+					},
 				},
 			},
 		},
@@ -95,7 +101,7 @@ func (f *Fixture) CreateCRD(kind string, scope v1beta1.ResourceScope) (*v1beta1.
 }
 
 // UnstructuredCRD creates a new Unstructured object for the given CRD.
-func UnstructuredCRD(crd *v1beta1.CustomResourceDefinition, name string) *unstructured.Unstructured {
+func UnstructuredCRD(crd *apiextensionsv1.CustomResourceDefinition, name string) *unstructured.Unstructured {
 	obj := &unstructured.Unstructured{}
 	obj.SetAPIVersion(crd.Spec.Group + "/" + crd.Spec.Versions[0].Name)
 	obj.SetKind(crd.Spec.Names.Kind)
