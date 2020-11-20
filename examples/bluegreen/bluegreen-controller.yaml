@@ -1,10 +1,9 @@
-apiVersion: apiextensions.k8s.io/v1beta1
+apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   name: bluegreendeployments.ctl.enisoc.com
 spec:
   group: ctl.enisoc.com
-  version: v1
   scope: Namespaced
   names:
     plural: bluegreendeployments
@@ -12,8 +11,15 @@ spec:
     kind: BlueGreenDeployment
     shortNames:
     - bgd
-  subresources:
-    status: {}
+  versions:
+  - name: v1
+    served: true
+    storage: true
+    schema:
+      openAPIV3Schema:
+        x-kubernetes-preserve-unknown-fields: true
+    subresources:
+      status: {}
 ---
 apiVersion: metacontroller.k8s.io/v1alpha1
 kind: CompositeController
@@ -28,7 +34,7 @@ spec:
     resource: services
     updateStrategy:
       method: InPlace
-  - apiVersion: extensions/v1beta1
+  - apiVersion: apps/v1
     resource: replicasets
     updateStrategy:
       method: InPlace

@@ -43,7 +43,7 @@ var podTemplateEqual = function (bgd, rs) {
 
 var newReplicaSet = function (bgd, color, replicas, template) {
   let rs = {
-    apiVersion: 'extensions/v1beta1',
+    apiVersion: 'apps/v1',
     kind: 'ReplicaSet',
     metadata: {
       name: `${bgd.metadata.name}-${color}`,
@@ -81,7 +81,7 @@ module.exports = async function (context) {
 
   try {
     let bgd = observed.parent;
-    let observedRS = observed.children['ReplicaSet.extensions/v1beta1'];
+    let observedRS = observed.children['ReplicaSet.apps/v1'];
 
     // Compute status from observed state.
     let service = observed.children['Service.v1'][bgd.spec.service.metadata.name];

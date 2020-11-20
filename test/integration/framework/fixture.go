@@ -22,7 +22,7 @@ import (
 	"time"
 
 	v1 "k8s.io/api/core/v1"
-	apiextensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/typed/apiextensions/v1beta1"
+	apiextensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/typed/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
@@ -43,7 +43,7 @@ type Fixture struct {
 
 	dynamic        *dynamicclientset.Clientset
 	kubernetes     kubernetes.Interface
-	apiextensions  apiextensionsclient.ApiextensionsV1beta1Interface
+	apiextensions  apiextensionsclient.ApiextensionsV1Interface
 	metacontroller mcclientset.Interface
 }
 
