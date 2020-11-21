@@ -17,7 +17,7 @@ limitations under the License.
 package composite
 
 import (
-	"crypto/sha1"
+	"crypto/sha1" // #nosec
 	"encoding/hex"
 	"fmt"
 	"reflect"
@@ -345,7 +345,7 @@ func controllerRevisionName(parentResource *metav1.APIResource, parent *unstruct
 func controllerRevisionHash(parentUID, patchData []byte) string {
 	// We don't do collision avoidance, so use something
 	// with very low accidental collision probability.
-	hasher := sha1.New()
+	hasher := sha1.New() // #nosec
 	// Add the parent UID since parent names can collide across resources.
 	// It doesn't matter that the UID won't match after adoption.
 	// This hash is only used for idempotent creation, not for lookup.

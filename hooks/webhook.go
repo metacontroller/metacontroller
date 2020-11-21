@@ -32,11 +32,13 @@ import (
 
 func callWebhook(webhook *v1alpha1.Webhook, request interface{}, response interface{}) error {
 	url, err := webhookURL(webhook)
-	hookTimeout, err := webhookTimeout(webhook)
 	if err != nil {
 		return err
 	}
-
+	hookTimeout, err := webhookTimeout(webhook)
+	if err != nil {
+		glog.Warningln(err)
+	}
 	// Encode request.
 	reqBody, err := json.Marshal(request)
 	if err != nil {
@@ -108,7 +110,7 @@ func webhookTimeout(webhook *v1alpha1.Webhook) (time.Duration, error) {
 
 	if webhook.Timeout.Duration <= 0 {
 		// Defaults to 10 Seconds if invalid.
-		return 10 * time.Second, fmt.Errorf("invalid client config: timeout must be a non-zero positive duration")
+		return 10 * time.Second, fmt.Errorf("invalid client config: timeout must be a non-zero positive duration. Defaulting to 10 seconds")
 	}
 
 	return webhook.Timeout.Duration, nil

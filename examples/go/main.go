@@ -5,7 +5,7 @@ import (
 	"log"
 	"net/http"
 
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/json"
@@ -46,9 +46,9 @@ func sync(request *SyncRequest) (*SyncResponse, error) {
 
 	// Compute status based on latest observed state.
 	for _, pod := range request.Children.Pods {
-		response.Status.Replicas += 1
+		response.Status.Replicas++
 		if pod.Status.Phase == v1.PodSucceeded {
-			response.Status.Succeeded += 1
+			response.Status.Succeeded++
 		}
 	}
 
