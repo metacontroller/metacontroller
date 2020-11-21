@@ -66,8 +66,8 @@ func GetNestedArray(obj map[string]interface{}, fields ...string) []interface{} 
 }
 
 func GetNestedObject(obj map[string]interface{}, fields ...string) map[string]interface{} {
-	if obj, ok := GetNestedField(obj, fields...).(map[string]interface{}); ok {
-		return obj
+	if nested_obj, ok := GetNestedField(obj, fields...).(map[string]interface{}); ok {
+		return nested_obj
 	}
 	return nil
 }
