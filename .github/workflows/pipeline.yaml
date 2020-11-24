@@ -72,18 +72,18 @@ jobs:
   #     with:
   #       run: errcheck
   #       token: ${{ secrets.GITHUB_TOKEN }}
-  go-vet:
-    runs-on: ubuntu-18.04
-    env:
-      GO111MODULE: on
-    steps:
-    - name: checkout
-      uses: actions/checkout@v2
-    - name: check
-      uses: grandcolline/golang-github-actions@v1.1.0
-      with:
-        run: vet
-        token: ${{ secrets.GITHUB_TOKEN }}
+  # go-vet:
+  #   runs-on: ubuntu-18.04
+  #   env:
+  #     GO111MODULE: on
+  #   steps:
+  #   - name: checkout
+  #     uses: actions/checkout@v2
+  #   - name: check
+  #     uses: grandcolline/golang-github-actions@v1.1.0
+  #     with:
+  #       run: vet
+  #       token: ${{ secrets.GITHUB_TOKEN }}
   go-fmt:
     runs-on: ubuntu-18.04
     env:
