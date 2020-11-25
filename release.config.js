@@ -4,9 +4,7 @@ module.exports = {
     '@semantic-release/commit-analyzer',
     '@semantic-release/release-notes-generator',
     '@semantic-release/github', {
-      "assets": [
-        {"path": "manifests/*.yaml", "label": "Manifests"}
-      ],
+      "assets": {"path": "manifests/metacontroller.yaml", "label": "Manifests"},
       "addReleases": "top"
     }]
 }
