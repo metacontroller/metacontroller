@@ -6,6 +6,7 @@ module.exports = {
     '@semantic-release/github', {
       "assets": [
         {"path": "manifests/*.yaml", "label": "Manifests"}
-      ]
+      ],
+      "addReleases": "top"
     }]
 }
