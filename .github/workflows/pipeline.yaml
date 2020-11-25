@@ -125,5 +125,5 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.PAT }}
         run: |
-          npm install @semantic-release/git
+          npm install @semantic-release/git @semantic-release/changelog @google/semantic-release-replace-plugin -D
           npx semantic-release --debug
