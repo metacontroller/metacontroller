@@ -2,40 +2,27 @@
 name: Test and Release (if on master)
 on: [push, pull_request]
 jobs:
-  tests:
-    runs-on: ubuntu-18.04
-    name: Tests
-    steps:
-      - name: checkout
-        uses: actions/checkout@v2
-      - name: Run   unit & integration tests
-        shell: bash
-        run: docker build -t metacontroller:test -f Dockerfile.test .
-  docker-linters:
-    runs-on: ubuntu-18.04
-    steps:
-    - name: checkout
-      uses: actions/checkout@v2
-    - name: build local Image
-      run: docker build -t metacontrollerio/metacontroller:lint .
-    - name: Lint docker image
-      uses: Azure/container-scan@v0
-      with:
-        image-name: metacontrollerio/metacontroller:lint
-  go-sec:
-    runs-on: ubuntu-18.04
-    env:
-      GO111MODULE: on
-    steps:
-    - name: checkout
-      uses: actions/checkout@v2
-    - name: check
-      uses: grandcolline/golang-github-actions@v1.1.0
-      with:
-        run: sec
-        token: ${{ secrets.GITHUB_TOKEN }}
-        flags: "-exclude-dir=examples -exclude-dir=test -exclude=G104"
-  # go-shadow:
+  # tests:
+  #   runs-on: ubuntu-18.04
+  #   name: Tests
+  #   steps:
+  #     - name: checkout
+  #       uses: actions/checkout@v2
+  #     - name: Run   unit & integration tests
+  #       shell: bash
+  #       run: docker build -t metacontroller:test -f Dockerfile.test .
+  # docker-linters:
+  #   runs-on: ubuntu-18.04
+  #   steps:
+  #   - name: checkout
+  #     uses: actions/checkout@v2
+  #   - name: build local Image
+  #     run: docker build -t metacontrollerio/metacontroller:lint .
+  #   - name: Lint docker image
+  #     uses: Azure/container-scan@v0
+  #     with:
+  #       image-name: metacontrollerio/metacontroller:lint
+  # go-sec:
   #   runs-on: ubuntu-18.04
   #   env:
   #     GO111MODULE: on
@@ -45,22 +32,22 @@ jobs:
   #   - name: check
   #     uses: grandcolline/golang-github-actions@v1.1.0
   #     with:
-  #       run: shadow
+  #       run: sec
   #       token: ${{ secrets.GITHUB_TOKEN }}
-  go-imports:
-    runs-on: ubuntu-18.04
-    env:
-      GO111MODULE: on
-    steps:
-    - name: checkout
-      uses: actions/checkout@v2
-    - name: check
-      uses: grandcolline/golang-github-actions@v1.1.0
-      with:
-        run: imports
-        token: ${{ secrets.GITHUB_TOKEN }}
-        flags: "-exclude-dir=examples -exclude-dir=test"
-  # go-errcheck:
+  #       flags: "-exclude-dir=examples -exclude-dir=test -exclude=G104"
+  # # go-shadow:
+  # #   runs-on: ubuntu-18.04
+  # #   env:
+  # #     GO111MODULE: on
+  # #   steps:
+  # #   - name: checkout
+  # #     uses: actions/checkout@v2
+  # #   - name: check
+  # #     uses: grandcolline/golang-github-actions@v1.1.0
+  # #     with:
+  # #       run: shadow
+  # #       token: ${{ secrets.GITHUB_TOKEN }}
+  # go-imports:
   #   runs-on: ubuntu-18.04
   #   env:
   #     GO111MODULE: on
@@ -70,32 +57,45 @@ jobs:
   #   - name: check
   #     uses: grandcolline/golang-github-actions@v1.1.0
   #     with:
-  #       run: errcheck
+  #       run: imports
   #       token: ${{ secrets.GITHUB_TOKEN }}
-  go-vet:
-    runs-on: ubuntu-18.04
-    env:
-      GO111MODULE: on
-    steps:
-    - name: checkout
-      uses: actions/checkout@v2
-    - name: check
-      uses: grandcolline/golang-github-actions@v1.1.0
-      with:
-        run: vet
-        token: ${{ secrets.GITHUB_TOKEN }}
-  go-fmt:
-    runs-on: ubuntu-18.04
-    env:
-      GO111MODULE: on
-    steps:
-    - name: checkout
-      uses: actions/checkout@v2
-    - name: check
-      uses: grandcolline/golang-github-actions@v1.1.0
-      with:
-        run: fmt
-        token: ${{ secrets.GITHUB_TOKEN }}
+  #       flags: "-exclude-dir=examples -exclude-dir=test"
+  # # go-errcheck:
+  # #   runs-on: ubuntu-18.04
+  # #   env:
+  # #     GO111MODULE: on
+  # #   steps:
+  # #   - name: checkout
+  # #     uses: actions/checkout@v2
+  # #   - name: check
+  # #     uses: grandcolline/golang-github-actions@v1.1.0
+  # #     with:
+  # #       run: errcheck
+  # #       token: ${{ secrets.GITHUB_TOKEN }}
+  # go-vet:
+  #   runs-on: ubuntu-18.04
+  #   env:
+  #     GO111MODULE: on
+  #   steps:
+  #   - name: checkout
+  #     uses: actions/checkout@v2
+  #   - name: check
+  #     uses: grandcolline/golang-github-actions@v1.1.0
+  #     with:
+  #       run: vet
+  #       token: ${{ secrets.GITHUB_TOKEN }}
+  # go-fmt:
+  #   runs-on: ubuntu-18.04
+  #   env:
+  #     GO111MODULE: on
+  #   steps:
+  #   - name: checkout
+  #     uses: actions/checkout@v2
+  #   - name: check
+  #     uses: grandcolline/golang-github-actions@v1.1.0
+  #     with:
+  #       run: fmt
+  #       token: ${{ secrets.GITHUB_TOKEN }}
   # go-staticcheck:
   #   runs-on: ubuntu-18.04
   #   env:
@@ -124,4 +124,4 @@ jobs:
       - name: Release
         env:
           GH_TOKEN: ${{ secrets.PAT }}
-        run: npx semantic-release
+        run: npx semantic-release --debug
