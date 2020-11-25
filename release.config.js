@@ -15,8 +15,8 @@ module.exports = {
         "replacements": [
           {
             "files": ["manifests/metacontroller.yaml"],
-            "from": "image: metacontrollerio/metacontroller:\".*\"",
-            "to": "image: metacontrollerio/metacontroller:\"${nextRelease.version}\"",
+            "from": "metacontrollerio/metacontroller:\".*\"",
+            "to": "metacontrollerio/metacontroller:\"${nextRelease.version}\"",
             "results": [
               {
                 "file": "manifests/metacontroller.yaml",
