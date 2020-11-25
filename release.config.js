@@ -19,7 +19,7 @@ module.exports = {
             "to": "image: metacontrollerio/metacontroller:\"${nextRelease.version}\"",
             "results": [
               {
-                "file": "foo/__init__.py",
+                "file": "manifests/metacontroller.yaml",
                 "hasChanged": true,
                 "numMatches": 1,
                 "numReplacements": 1
