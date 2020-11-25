@@ -4,6 +4,7 @@
 ![Docker Image Size (latest semver)](https://img.shields.io/docker/image-size/metacontrollerio/metacontroller)
 ![Docker Pulls](https://img.shields.io/docker/pulls/metacontrollerio/metacontroller)
 ![GitHub contributors](https://img.shields.io/github/contributors/metacontroller/metacontroller)
+[![Go Report Card](https://goreportcard.com/badge/github.com/metacontroller/metacontroller)](https://goreportcard.com/report/github.com/metacontroller/metacontroller)
 
 # Metacontroller
 
