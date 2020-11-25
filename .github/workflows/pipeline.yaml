@@ -124,4 +124,6 @@ jobs:
       - name: Release
         env:
           GH_TOKEN: ${{ secrets.PAT }}
-        run: npx semantic-release --debug
+        run: |
+          npm install @semantic-release/git
+          npx semantic-release --debug
