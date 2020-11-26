@@ -1,0 +1,13 @@
+{
+  "extends": [
+    "config:base"
+  ],
+  "semanticCommits": "true",
+  "packageRules": [
+    {
+      "packagePatterns": "^k8s.io",
+      "separateMinorPatch": "true",
+      "groupName": ["k8s.io packages"]
+    }
+  ]
+}
