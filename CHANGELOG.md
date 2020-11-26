@@ -1,3 +1,11 @@
+## [0.4.11](https://github.com/grzesuav/metacontroller/compare/v0.4.10...v0.4.11) (2020-11-26)
+
+
+### Bug Fixes
+
+* aaaa ([50ac33e](https://github.com/grzesuav/metacontroller/commit/50ac33e177c9ba3c31fecdba59caf7b4ffedf620))
+* moving ([ef8387e](https://github.com/grzesuav/metacontroller/commit/ef8387ea1f1c7509ad0933d79798f3cd454b9732))
+
 ## [0.4.10](https://github.com/grzesuav/metacontroller/compare/v0.4.9...v0.4.10) (2020-11-26)
 
 
