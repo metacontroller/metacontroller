@@ -1,3 +1,10 @@
+## [0.4.10](https://github.com/grzesuav/metacontroller/compare/v0.4.9...v0.4.10) (2020-11-26)
+
+
+### Bug Fixes
+
+* yaml version ([f336526](https://github.com/grzesuav/metacontroller/commit/f336526672b0d4f2ab1b855ac5cdfb97486365cf))
+
 ## [0.4.9](https://github.com/grzesuav/metacontroller/compare/v0.4.8...v0.4.9) (2020-11-26)
 
 

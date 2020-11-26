@@ -71,4 +71,4 @@ spec:
         - -v=4
         - --discovery-interval=20s
   volumeClaimTemplates: []
-  __VERSION__ = "1.0.0"
+  __VERSION__ = "0.4.10"
