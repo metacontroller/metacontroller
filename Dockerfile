@@ -1,4 +1,4 @@
-FROM golang:1.14.4 AS build
+FROM golang:1.15.5 AS build
 
 COPY . /go/src/metacontroller.io/
 WORKDIR /go/src/metacontroller.io/
