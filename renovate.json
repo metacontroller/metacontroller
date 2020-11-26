@@ -7,6 +7,7 @@
   "packageRules": [
     {
       "packagePatterns": "^k8s.io",
+      "semanticCommitType": "fix",,
       "separateMinorPatch": "true",
       "groupName": ["k8s.io packages"]
     }
