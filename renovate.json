@@ -10,6 +10,10 @@
       "semanticCommitType": "fix",
       "separateMinorPatch": "true",
       "groupName": ["k8s.io packages"]
+    },
+    {
+      "managers": ["dockerfile", "gomod"],
+      "semanticCommitType": "fix"
     }
   ]
 }
