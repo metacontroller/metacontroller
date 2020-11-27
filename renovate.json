@@ -1,0 +1,19 @@
+{
+  "extends": [
+    "config:base"
+  ],
+  "semanticCommits": "true",
+  "semanticCommitType": "fix",
+  "packageRules": [
+    {
+      "packagePatterns": "^k8s.io",
+      "semanticCommitType": "fix",
+      "separateMinorPatch": "true",
+      "groupName": ["k8s.io packages"]
+    },
+    {
+      "managers": ["dockerfile", "gomod"],
+      "semanticCommitType": "fix"
+    }
+  ]
+}
