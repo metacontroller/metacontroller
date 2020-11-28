@@ -7,7 +7,7 @@ go 1.14
 require (
 	github.com/go-logr/logr v0.3.0 // indirect
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
-	github.com/google/go-jsonnet v0.14.0
+	github.com/google/go-jsonnet v0.17.0
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/prometheus/client_golang v1.8.0
 	github.com/prometheus/common v0.15.0 // indirect
