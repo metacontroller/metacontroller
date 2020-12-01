@@ -5,8 +5,15 @@ controllers or just to run third-party controllers that depend on it.
 
 ## Prerequisites
 
-* Kubernetes v1.9+
+* Kubernetes v1.16
 * You should have `kubectl` available and configured to talk to the desired cluster.
+
+### Running on kubernetes older than 1.16
+
+Metacontroller *should* work fine (as for now - December 2020) running on 1.9+, as it does not have direct dependency on kubernetes API version. 
+In this case you should use [0.4.5](https://github.com/metacontroller/metacontroller/releases/tag/v0.4.5) release manifests, just put current (or any fixed) image version in `metacontroller.yaml`. 
+However there is no gurantee that this will work forever - the goal is to make it compatibile with supported kubernetes releases. 
+Please update your cluster in that case.
 
 ### Grant yourself cluster-admin (GKE only)
 
