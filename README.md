@@ -30,18 +30,14 @@ on how to install, use, or contribute to Metacontroller.
 
 Please file [GitHub issues](https://github.com/metacontroller/metacontroller/issues) for bugs, feature requests, and proposals.
 
-Use the [mailing list](https://groups.google.com/forum/#!forum/metacontroller)
-for questions and comments, or join the
-[#metacontroller](https://kubernetes.slack.com/messages/metacontroller/) channel on
+Join the [#metacontroller](https://kubernetes.slack.com/messages/metacontroller/) channel on
 [Kubernetes Slack](http://slack.kubernetes.io).
 
-Subscribe to the [announce list](https://groups.google.com/forum/#!forum/metacontroller-announce)
-for low-frequency project updates like new releases.
 
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) and the
-[contributor guide](https://metacontroller.github.io/metacontroller/contrib/).
+[contributor guide](https://metacontroller.github.io/metacontroller/contrib.html).
 
 ## Licensing
 
