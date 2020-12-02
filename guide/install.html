@@ -175,9 +175,14 @@
 controllers or just to run third-party controllers that depend on it.</p>
 <h2><a class="header" href="#prerequisites" id="prerequisites">Prerequisites</a></h2>
 <ul>
-<li>Kubernetes v1.9+</li>
+<li>Kubernetes v1.16</li>
 <li>You should have <code>kubectl</code> available and configured to talk to the desired cluster.</li>
 </ul>
+<h3><a class="header" href="#running-on-kubernetes-older-than-116" id="running-on-kubernetes-older-than-116">Running on kubernetes older than 1.16</a></h3>
+<p>Metacontroller <em>should</em> work fine (as for now - December 2020) running on 1.9+, as it does not have direct dependency on kubernetes API version. 
+In this case you should use <a href="https://github.com/metacontroller/metacontroller/releases/tag/v0.4.5">0.4.5</a> release manifests, just put current (or any fixed) image version in <code>metacontroller.yaml</code>. 
+However there is no gurantee that this will work forever - the goal is to make it compatibile with supported kubernetes releases. 
+Please update your cluster in that case.</p>
 <h3><a class="header" href="#grant-yourself-cluster-admin-gke-only" id="grant-yourself-cluster-admin-gke-only">Grant yourself cluster-admin (GKE only)</a></h3>
 <p>Due to a <a href="https://cloud.google.com/container-engine/docs/role-based-access-control#defining_permissions_in_a_role">known issue</a>
 in GKE, you'll need to first grant yourself <code>cluster-admin</code> privileges before
