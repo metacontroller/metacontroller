@@ -18,7 +18,7 @@ metadata:
   name: nginx
   annotations:
     service-per-pod-label: pod-name
-    service-per-pod-ports: "80:80"
+    service-per-pod-ports: "80:80,8080:8080"
 spec:
   selector:
     matchLabels:
