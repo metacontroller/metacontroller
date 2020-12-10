@@ -1,3 +1,10 @@
+## [1.0.1](https://github.com/metacontroller/metacontroller/compare/v1.0.0...v1.0.1) (2020-12-10)
+
+
+### Bug Fixes
+
+* **deps:** update k8s.io packages to v0.17.15 ([34a0c98](https://github.com/metacontroller/metacontroller/commit/34a0c98c03d4940c8abd18c85ddbcb6f876ea837))
+
 # [1.0.0](https://github.com/metacontroller/metacontroller/compare/v0.4.5...v1.0.0) (2020-12-01)
 
 
