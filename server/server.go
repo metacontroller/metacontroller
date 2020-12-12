@@ -41,7 +41,7 @@ type controller interface {
 	Stop()
 }
 
-func Start(config *rest.Config, discoveryInterval, informerRelist time.Duration) (stop func(), err error) {
+func Start(config *rest.Config, discoveryInterval, informerRelist time.Duration, numWorkers int) (stop func(), err error) {
 	// Periodically refresh discovery to pick up newly-installed resources.
 	dc := discovery.NewDiscoveryClientForConfigOrDie(config)
 	resources := dynamicdiscovery.NewResourceMap(dc)
@@ -66,8 +66,8 @@ func Start(config *rest.Config, discoveryInterval, informerRelist time.Duration)
 	// Start metacontrollers (controllers that spawn controllers).
 	// Each one requests the informers it needs from the factory.
 	controllers := []controller{
-		composite.NewMetacontroller(resources, dynClient, dynInformers, mcInformerFactory, mcClient),
-		decorator.NewMetacontroller(resources, dynClient, dynInformers, mcInformerFactory),
+		composite.NewMetacontroller(resources, dynClient, dynInformers, mcInformerFactory, mcClient, numWorkers),
+		decorator.NewMetacontroller(resources, dynClient, dynInformers, mcInformerFactory, numWorkers),
 	}
 
 	// Start all requested informers.

@@ -45,6 +45,7 @@ var (
 	clientConfigPath  = flag.String("client-config-path", "", "Path to kubeconfig file (same format as used by kubectl); if not specified, use in-cluster config")
 	clientGoQPS       = flag.Float64("client-go-qps", 5, "Number of queries per second client-go is allowed to make (default 5)")
 	clientGoBurst     = flag.Int("client-go-burst", 10, "Allowed burst queries for client-go (default 10)")
+	workers           = flag.Int("workers", 5, "Number of sync workers to run (default 5)")
 )
 
 func main() {
@@ -71,7 +72,7 @@ func main() {
 	config.QPS = float32(*clientGoQPS)
 	config.Burst = *clientGoBurst
 
-	stopServer, err := server.Start(config, *discoveryInterval, *informerRelist)
+	stopServer, err := server.Start(config, *discoveryInterval, *informerRelist, *workers)
 	if err != nil {
 		glog.Fatal(err)
 	}

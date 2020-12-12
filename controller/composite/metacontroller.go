@@ -54,9 +54,11 @@ type Metacontroller struct {
 	parentControllers map[string]*parentController
 
 	stopCh, doneCh chan struct{}
+
+	numWorkers int
 }
 
-func NewMetacontroller(resources *dynamicdiscovery.ResourceMap, dynClient *dynamicclientset.Clientset, dynInformers *dynamicinformer.SharedInformerFactory, mcInformerFactory mcinformers.SharedInformerFactory, mcClient mcclientset.Interface) *Metacontroller {
+func NewMetacontroller(resources *dynamicdiscovery.ResourceMap, dynClient *dynamicclientset.Clientset, dynInformers *dynamicinformer.SharedInformerFactory, mcInformerFactory mcinformers.SharedInformerFactory, mcClient mcclientset.Interface, numWorkers int) *Metacontroller {
 	mc := &Metacontroller{
 		resources:    resources,
 		mcClient:     mcClient,
@@ -70,6 +72,8 @@ func NewMetacontroller(resources *dynamicdiscovery.ResourceMap, dynClient *dynam
 
 		queue:             workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "CompositeController"),
 		parentControllers: make(map[string]*parentController),
+
+		numWorkers: numWorkers,
 	}
 
 	mc.ccInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -175,7 +179,7 @@ func (mc *Metacontroller) syncCompositeController(cc *v1alpha1.CompositeControll
 		delete(mc.parentControllers, cc.Name)
 	}
 
-	pc, err := newParentController(mc.resources, mc.dynClient, mc.dynInformers, mc.mcClient, mc.revisionLister, cc)
+	pc, err := newParentController(mc.resources, mc.dynClient, mc.dynInformers, mc.mcClient, mc.revisionLister, cc, mc.numWorkers)
 	if err != nil {
 		return err
 	}

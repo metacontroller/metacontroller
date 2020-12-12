@@ -66,10 +66,12 @@ type decoratorController struct {
 	parentInformers common.InformerMap
 	childInformers  common.InformerMap
 
+	numWorkers int
+
 	finalizer *finalizer.Manager
 }
 
-func newDecoratorController(resources *dynamicdiscovery.ResourceMap, dynClient *dynamicclientset.Clientset, dynInformers *dynamicinformer.SharedInformerFactory, dc *v1alpha1.DecoratorController) (controller *decoratorController, newErr error) {
+func newDecoratorController(resources *dynamicdiscovery.ResourceMap, dynClient *dynamicclientset.Clientset, dynInformers *dynamicinformer.SharedInformerFactory, dc *v1alpha1.DecoratorController, numWorkers int) (controller *decoratorController, newErr error) {
 	c := &decoratorController{
 		dc:              dc,
 		resources:       resources,
@@ -78,7 +80,8 @@ func newDecoratorController(resources *dynamicdiscovery.ResourceMap, dynClient *
 		parentInformers: make(common.InformerMap),
 		childInformers:  make(common.InformerMap),
 
-		queue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "DecoratorController-"+dc.Name),
+		queue:      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "DecoratorController-"+dc.Name),
+		numWorkers: numWorkers,
 		finalizer: &finalizer.Manager{
 			Name:    "metacontroller.io/decoratorcontroller-" + dc.Name,
 			Enabled: dc.Spec.Hooks.Finalize != nil,
@@ -198,9 +201,8 @@ func (c *decoratorController) Start() {
 			return
 		}
 
-		// 5 workers ought to be enough for anyone.
 		var wg sync.WaitGroup
-		for i := 0; i < 5; i++ {
+		for i := 0; i < c.numWorkers; i++ {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
