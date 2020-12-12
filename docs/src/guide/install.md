@@ -55,3 +55,4 @@ in `manifests/metacontroller.yaml`):
 | `--client-config-path` | Path to kubeconfig file (same format as used by kubectl); if not specified, use in-cluster config (e.g. `--client-config-path=/path/to/kubeconfig`). |
 | `--client-go-qps` | Number of queries per second client-go is allowed to make (default 5, e.g. `--client-go-qps=100`) |
 | `--client-go-burst` |Allowed burst queries for client-go (default 10, e.g. `--client-go-burst=200`) |
+| `--workers` | Number of sync workers to run (default 5, e.g. `--workers=100`) |

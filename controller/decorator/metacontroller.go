@@ -50,9 +50,11 @@ type Metacontroller struct {
 	decoratorControllers map[string]*decoratorController
 
 	stopCh, doneCh chan struct{}
+
+	numWorkers int
 }
 
-func NewMetacontroller(resources *dynamicdiscovery.ResourceMap, dynClient *dynamicclientset.Clientset, dynInformers *dynamicinformer.SharedInformerFactory, mcInformerFactory mcinformers.SharedInformerFactory) *Metacontroller {
+func NewMetacontroller(resources *dynamicdiscovery.ResourceMap, dynClient *dynamicclientset.Clientset, dynInformers *dynamicinformer.SharedInformerFactory, mcInformerFactory mcinformers.SharedInformerFactory, numWorkers int) *Metacontroller {
 	mc := &Metacontroller{
 		resources:    resources,
 		dynClient:    dynClient,
@@ -63,6 +65,8 @@ func NewMetacontroller(resources *dynamicdiscovery.ResourceMap, dynClient *dynam
 
 		queue:                workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "DecoratorController"),
 		decoratorControllers: make(map[string]*decoratorController),
+
+		numWorkers: numWorkers,
 	}
 
 	mc.dcInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -168,7 +172,7 @@ func (mc *Metacontroller) syncDecoratorController(dc *v1alpha1.DecoratorControll
 		delete(mc.decoratorControllers, dc.Name)
 	}
 
-	c, err := newDecoratorController(mc.resources, mc.dynClient, mc.dynInformers, dc)
+	c, err := newDecoratorController(mc.resources, mc.dynClient, mc.dynInformers, dc, mc.numWorkers)
 	if err != nil {
 		return err
 	}

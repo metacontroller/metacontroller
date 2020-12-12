@@ -64,10 +64,12 @@ type parentController struct {
 	updateStrategy updateStrategyMap
 	childInformers common.InformerMap
 
+	numWorkers int
+
 	finalizer *finalizer.Manager
 }
 
-func newParentController(resources *dynamicdiscovery.ResourceMap, dynClient *dynamicclientset.Clientset, dynInformers *dynamicinformer.SharedInformerFactory, mcClient mcclientset.Interface, revisionLister mclisters.ControllerRevisionLister, cc *v1alpha1.CompositeController) (pc *parentController, newErr error) {
+func newParentController(resources *dynamicdiscovery.ResourceMap, dynClient *dynamicclientset.Clientset, dynInformers *dynamicinformer.SharedInformerFactory, mcClient mcclientset.Interface, revisionLister mclisters.ControllerRevisionLister, cc *v1alpha1.CompositeController, numWorkers int) (pc *parentController, newErr error) {
 	// Make a dynamic client for the parent resource.
 	parentClient, err := dynClient.Resource(cc.Spec.ParentResource.APIVersion, cc.Spec.ParentResource.Resource)
 	if err != nil {
@@ -118,6 +120,7 @@ func newParentController(resources *dynamicdiscovery.ResourceMap, dynClient *dyn
 		revisionLister: revisionLister,
 		updateStrategy: updateStrategy,
 		queue:          workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "CompositeController-"+cc.Name),
+		numWorkers:     numWorkers,
 		finalizer: &finalizer.Manager{
 			Name:    "metacontroller.io/compositecontroller-" + cc.Name,
 			Enabled: cc.Spec.Hooks.Finalize != nil,
@@ -178,9 +181,8 @@ func (pc *parentController) Start() {
 			return
 		}
 
-		// 5 workers ought to be enough for anyone.
 		var wg sync.WaitGroup
-		for i := 0; i < 5; i++ {
+		for i := 0; i < pc.numWorkers; i++ {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
