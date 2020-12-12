@@ -4,6 +4,7 @@
   ],
   "semanticCommits": "true",
   "semanticCommitType": "fix",
+  "pinDigests": "true",
   "packageRules": [
     {
       "packagePatterns": "^k8s.io",
