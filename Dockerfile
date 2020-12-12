@@ -7,5 +7,5 @@ RUN make vendor && go install
 
 FROM alpine:3.12.2
 COPY --from=build /go/bin/metacontroller.io /usr/bin/metacontroller
-RUN apk update && apk add --no-cache ca-certificates
+RUN apk update && apk add --no-cache ca-certificates openssl=1.1.1i-r0 libcrypto1.1=1.1.1i-r0 libssl1.1=1.1.1i-r0
 CMD ["/usr/bin/metacontroller"]
