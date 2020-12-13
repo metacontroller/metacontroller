@@ -1,3 +1,10 @@
+## [1.0.3](https://github.com/metacontroller/metacontroller/compare/v1.0.2...v1.0.3) (2020-12-13)
+
+
+### Bug Fixes
+
+* **security:** Update vunerable openssl packages -  CVE-2020-1971 ([060a2d9](https://github.com/metacontroller/metacontroller/commit/060a2d9b178936e7ed535310525bbf6e68ac77dd))
+
 ## [1.0.2](https://github.com/metacontroller/metacontroller/compare/v1.0.1...v1.0.2) (2020-12-11)
 
 
