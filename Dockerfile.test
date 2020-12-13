@@ -1,4 +1,4 @@
-FROM golang:1.14.4 AS build
+FROM golang:1.14.4@sha256:d2b31e71040ae90fc0e115a73c7657f6e48bc4c2642a48f4b68406761868b914 AS build
 
 COPY . /go/src/metacontroller.io/
 WORKDIR /go/src/metacontroller.io/
