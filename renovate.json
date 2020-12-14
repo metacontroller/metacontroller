@@ -3,7 +3,8 @@
     "config:base"
   ],
   "semanticCommits": "true",
-  "semanticCommitType": "fix"
+  "semanticCommitType": "fix",
+  "commitBody": "Signed-off-by: Renovate <renovate@github.com>"
   "packageRules": [
     {
       "packagePatterns": "^k8s.io",
