@@ -886,6 +886,7 @@ in <code>manifests/metacontroller.yaml</code>):</p>
 <tr><td><code>--client-config-path</code></td><td>Path to kubeconfig file (same format as used by kubectl); if not specified, use in-cluster config (e.g. <code>--client-config-path=/path/to/kubeconfig</code>).</td></tr>
 <tr><td><code>--client-go-qps</code></td><td>Number of queries per second client-go is allowed to make (default 5, e.g. <code>--client-go-qps=100</code>)</td></tr>
 <tr><td><code>--client-go-burst</code></td><td>Allowed burst queries for client-go (default 10, e.g. <code>--client-go-burst=200</code>)</td></tr>
+<tr><td><code>--workers</code></td><td>Number of sync workers to run (default 5, e.g. <code>--workers=100</code>)</td></tr>
 </tbody></table>
 <h1><a class="header" href="#create-a-controller" id="create-a-controller">Create a Controller</a></h1>
 <p>This tutorial walks through a simple example of creating a controller in Python
