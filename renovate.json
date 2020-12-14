@@ -4,7 +4,7 @@
   ],
   "semanticCommits": "true",
   "semanticCommitType": "fix",
-  "pinDigests": "true",
+  "commitBody": "Signed-off-by: Renovate <renovate@github.com>",
   "packageRules": [
     {
       "packagePatterns": "^k8s.io",
