@@ -1,3 +1,10 @@
+# [1.1.0](https://github.com/metacontroller/metacontroller/compare/v1.0.3...v1.1.0) (2020-12-14)
+
+
+### Features
+
+* **perf:** Add a flag to configure the number of workers to run ([3f07022](https://github.com/metacontroller/metacontroller/commit/3f070229327b735a532d114b06175d6f46d30e82))
+
 ## [1.0.3](https://github.com/metacontroller/metacontroller/compare/v1.0.2...v1.0.3) (2020-12-13)
 
 
