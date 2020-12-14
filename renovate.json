@@ -3,8 +3,7 @@
     "config:base"
   ],
   "semanticCommits": "true",
-  "semanticCommitType": "fix",
-  "pinDigests": "true",
+  "semanticCommitType": "fix"
   "packageRules": [
     {
       "packagePatterns": "^k8s.io",
