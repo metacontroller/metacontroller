@@ -4,7 +4,7 @@
   ],
   "semanticCommits": "true",
   "semanticCommitType": "fix",
-  "commitBody": "Signed-off-by: Renovate <renovate@github.com>",
+  "commitBody": "Signed-off-by: Renovate Bot bot@renovateapp.com",
   "packageRules": [
     {
       "packagePatterns": "^k8s.io",
