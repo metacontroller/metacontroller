@@ -1,3 +1,10 @@
+## [1.1.1](https://github.com/metacontroller/metacontroller/compare/v1.1.0...v1.1.1) (2020-12-19)
+
+
+### Bug Fixes
+
+* **deps:** Update alpine to 3.12.3 and go to 1.15.6 ([091f3b2](https://github.com/metacontroller/metacontroller/commit/091f3b2231ac3c6b481dd159183739fdcc31e7b3))
+
 # [1.1.0](https://github.com/metacontroller/metacontroller/compare/v1.0.3...v1.1.0) (2020-12-14)
 
 
