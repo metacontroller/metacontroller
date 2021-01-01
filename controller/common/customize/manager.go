@@ -11,39 +11,39 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/tools/cache"
 
-	v1alpha1 "metacontroller.app/apis/metacontroller/v1alpha1"
-	"metacontroller.app/controller/common"
-	dynamicclientset "metacontroller.app/dynamic/clientset"
-	dynamicinformer "metacontroller.app/dynamic/informer"
-	k8s "metacontroller.app/third_party/kubernetes"
+	v1alpha1 "metacontroller.io/apis/metacontroller/v1alpha1"
+	"metacontroller.io/controller/common"
+	dynamicclientset "metacontroller.io/dynamic/clientset"
+	dynamicinformer "metacontroller.io/dynamic/informer"
+	k8s "metacontroller.io/third_party/kubernetes"
 )
 
 type Manager struct {
-	name             string
-	metacontroller   CustomizableController
+	name           string
+	metacontroller CustomizableController
 
-	parentKinds      common.GroupKindMap
+	parentKinds common.GroupKindMap
 
-	dynClient        *dynamicclientset.Clientset
-	dynInformers     *dynamicinformer.SharedInformerFactory
-	parentInformers  common.InformerMap
+	dynClient       *dynamicclientset.Clientset
+	dynInformers    *dynamicinformer.SharedInformerFactory
+	parentInformers common.InformerMap
 
 	relatedInformers common.InformerMap
 	customizeCache   CustomizeResponseCache
 
-	stopCh           chan struct{}
+	stopCh chan struct{}
 
-	enqueueParent    func(interface{})
+	enqueueParent func(interface{})
 }
 
 func NewCustomizeManager(
-	name            string,
-	enqueueParent   func(interface{}),
-	metacontroller  CustomizableController,
-	dynClient       *dynamicclientset.Clientset,
-	dynInformers    *dynamicinformer.SharedInformerFactory,
+	name string,
+	enqueueParent func(interface{}),
+	metacontroller CustomizableController,
+	dynClient *dynamicclientset.Clientset,
+	dynInformers *dynamicinformer.SharedInformerFactory,
 	parentInformers common.InformerMap,
-	parentKinds     common.GroupKindMap,
+	parentKinds common.GroupKindMap,
 ) Manager {
 	return Manager{
 		name:             name,
@@ -259,14 +259,9 @@ func (rm *Manager) GetRelatedObjects(parent *unstructured.Unstructured) (common.
 	for _, relatedRule := range customizeHookResponse.RelatedResourceRules {
 		relatedClient, informer, err := rm.getRelatedClient(relatedRule.APIVersion, relatedRule.Resource)
 
-		var selector labels.Selector
-		if relatedRule.LabelSelector == nil {
-			selector = labels.Everything()
-		} else {
-			selector, err = metav1.LabelSelectorAsSelector(relatedRule.LabelSelector)
-			if err != nil {
-				return nil, err
-			}
+		selector, err := metav1.LabelSelectorAsSelector(relatedRule.LabelSelector)
+		if err != nil {
+			return nil, err
 		}
 
 		var all []*unstructured.Unstructured

@@ -28,11 +28,11 @@ import (
 
 // SyncHookRequest is the object sent as JSON to the sync hook.
 type SyncHookRequest struct {
-	Controller interface{}                `json:"controller"`
-	Parent     *unstructured.Unstructured `json:"parent"`
-	Children   common.ChildMap            `json:"children"`
-	Related    common.ChildMap            `json:"related"`
-	Finalizing bool                       `json:"finalizing"`
+	Controller *v1alpha1.CompositeController `json:"controller"`
+	Parent     *unstructured.Unstructured    `json:"parent"`
+	Children   common.ChildMap               `json:"children"`
+	Related    common.ChildMap               `json:"related"`
+	Finalizing bool                          `json:"finalizing"`
 }
 
 // SyncHookResponse is the expected format of the JSON response from the sync hook.

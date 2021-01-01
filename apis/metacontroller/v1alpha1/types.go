@@ -107,8 +107,8 @@ type ServiceReference struct {
 
 type CompositeControllerHooks struct {
 	Customize *Hook `json:"customize,omitempty"`
-	Sync     *Hook `json:"sync,omitempty"`
-	Finalize *Hook `json:"finalize,omitempty"`
+	Sync      *Hook `json:"sync,omitempty"`
+	Finalize  *Hook `json:"finalize,omitempty"`
 
 	PreUpdateChild  *Hook `json:"preUpdateChild,omitempty"`
 	PostUpdateChild *Hook `json:"postUpdateChild,omitempty"`
@@ -233,8 +233,8 @@ type DecoratorControllerList struct {
 }
 
 type RelatedResourceRule struct {
-	ResourceRule    `json:",inline"`
+	ResourceRule          `json:",inline"`
 	*metav1.LabelSelector `json:"labelSelector"`
-	Namespace string `json:"namespace,omitempty"`
-	Names    []string `json:"names"`
+	Namespace             string   `json:"namespace,omitempty"`
+	Names                 []string `json:"names"`
 }

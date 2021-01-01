@@ -21,6 +21,7 @@ require (
 	k8s.io/gengo v0.0.0-20201113003025-83324d819ded // indirect
 	k8s.io/klog v1.0.0
 	k8s.io/klog/v2 v2.4.0
+	k8s.io/utils v0.0.0-20191114184206-e782cd3c129f
 	sigs.k8s.io/controller-tools v0.2.4
 )
 
