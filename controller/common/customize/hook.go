@@ -5,18 +5,19 @@ import (
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	v1alpha1 "metacontroller.app/apis/metacontroller/v1alpha1"
-	"metacontroller.app/hooks"
+	v1alpha1 "metacontroller.io/apis/metacontroller/v1alpha1"
+	"metacontroller.io/hooks"
 )
+
+var callCustomizeHook = hooks.Call
 
 type CustomizableController interface {
 	GetCustomizeHook() *v1alpha1.Hook
 }
 
-// RelatedHookRequest is the object sent as JSON to the related hook.
 type CustomizeHookRequest struct {
-	Controller CustomizableController        `json:"controller"`
-	Parent     *unstructured.Unstructured    `json:"parent"`
+	Controller CustomizableController     `json:"controller"`
+	Parent     *unstructured.Unstructured `json:"parent"`
 }
 
 type CustomizeHookResponse struct {
@@ -32,7 +33,7 @@ func CallCustomizeHook(cc CustomizableController, request *CustomizeHookRequest)
 		return &response, nil
 	}
 
-	if err := hooks.Call(hook, request, &response); err != nil {
+	if err := callCustomizeHook(hook, request, &response); err != nil {
 		return nil, fmt.Errorf("related hook failed: %v", err)
 	}
 
