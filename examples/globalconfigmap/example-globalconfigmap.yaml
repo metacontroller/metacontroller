@@ -1,0 +1,37 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: global
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: globalsettings
+  namespace: global
+data:
+  some: value
+  other: value
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: first
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: second
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: third
+---
+apiVersion: examples.metacontroller.io/v1alpha1
+kind: GlobalConfigMap
+metadata:
+  name: globalsettings
+spec:
+  sourceName: globalsettings
+  sourceNamespace: global

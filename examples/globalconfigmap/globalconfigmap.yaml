@@ -1,0 +1,97 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: globalconfigmaps.examples.metacontroller.io
+spec:
+  group: examples.metacontroller.io
+  scope: Cluster
+  names:
+    plural: globalconfigmaps
+    singular: globalconfigmap
+    kind: GlobalConfigMap
+    shortNames: ["gcm"]
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            type: object
+            properties:
+              sourceName:
+                description: 'Name of configmap to propagate'
+                type: string
+              sourceNamespace:
+                description: 'Namespace in which configmap to propagate is located'
+                type: string
+            required:
+            - sourceName
+            - sourceNamespace
+        required:
+        - spec
+    subresources:
+      status: {}
+---
+apiVersion: metacontroller.k8s.io/v1alpha1
+kind: CompositeController
+metadata:
+  name: globalconfigmap-controller
+spec:
+  generateSelector: true
+  parentResource:
+    apiVersion: examples.metacontroller.io/v1alpha1
+    resource: globalconfigmaps
+  childResources:
+  - apiVersion: v1
+    resource: configmaps
+    updateStrategy:
+      method: InPlace
+  hooks:
+    sync:
+      webhook:
+        url: http://globalconfigmap-controller.metacontroller/sync
+    customize:
+      webhook:
+        url: http://globalconfigmap-controller.metacontroller/customize
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: globalconfigmap-controller
+  namespace: metacontroller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: globalconfigmap-controller
+  template:
+    metadata:
+      labels:
+        app: globalconfigmap-controller
+    spec:
+      containers:
+      - name: controller
+        image: python:3.9
+        command: ["python", "/hooks/sync.py"]
+        volumeMounts:
+        - name: hooks
+          mountPath: /hooks
+      volumes:
+      - name: hooks
+        configMap:
+          name: globalconfigmap-controller
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: globalconfigmap-controller
+  namespace: metacontroller
+spec:
+  selector:
+    app: globalconfigmap-controller
+  ports:
+  - port: 80
