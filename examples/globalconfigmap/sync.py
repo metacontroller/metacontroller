@@ -28,9 +28,12 @@ class Controller(BaseHTTPRequestHandler):
         sourceNamespace: str = parent['spec']['sourceNamespace']
         sourceName: str = parent['spec']['sourceName']
         original_configmap: dict = related['ConfigMap.v1'][f'{sourceNamespace}/{sourceName}']
-        targetNamespaces: list[str] = parent['spec']['targetNamespaces']
-        target_configmaps = [self.new_configmap(
-            sourceName, namespace, original_configmap['data']) for namespace in targetNamespaces]
+        targetNamespaces = related['Namespace.v1']
+        target_configmaps = []
+        for namespace in targetNamespaces.values():
+            if namespace['metadata']['name'] != sourceNamespace:
+                target_configmaps.append(self.new_configmap(
+                    sourceName, namespace['metadata']['name'], original_configmap['data']))
         return target_configmaps
 
     def new_configmap(self, name: str, namespace: str, data: dict) -> dict:
@@ -52,6 +55,10 @@ class Controller(BaseHTTPRequestHandler):
                 'labelSelector': {},
                 'namespace': sourceNamespace,
                 'names': [sourceName]
+            }, {
+                'apiVersion': 'v1',
+                'resource': 'namespaces',
+                'labelSelector': {}
             }
         ]
 
@@ -62,12 +69,9 @@ class Controller(BaseHTTPRequestHandler):
             parent: dict = observed['parent']
             related: dict = observed['related']
             LOGGER.info("/sync %s", parent['metadata']['name'])
-            expected_copies: int = len(parent['spec']['targetNamespaces'])
-            actual_copies: int = len(observed['children']['ConfigMap.v1'])
             response: dict = {
                 'status': {
-                    'expected_copies': f'{expected_copies}',
-                    'actual_copies': f'{actual_copies}'
+                    'working': 'fine'
                 },
                 'children': self.sync(parent, related)
             }

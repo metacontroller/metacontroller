@@ -1,0 +1,42 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: original
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: settings
+  namespace: original
+data:
+  some: "value"
+  other: "value"
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: one
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: two
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: three
+---
+apiVersion: examples.metacontroller.io/v1alpha1
+kind: ConfigMapPropagation
+metadata:
+  name: settings-propagation
+spec:
+  sourceName: settings
+  sourceNamespace: original
+  targetNamespaces:
+  - one
+  - two
+  - three
+

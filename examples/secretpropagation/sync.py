@@ -27,16 +27,19 @@ class Controller(BaseHTTPRequestHandler):
     def sync(self, parent: dict, related: dict) -> dict:
         sourceNamespace: str = parent['spec']['sourceNamespace']
         sourceName: str = parent['spec']['sourceName']
-        original_configmap: dict = related['ConfigMap.v1'][f'{sourceNamespace}/{sourceName}']
-        targetNamespaces: list[str] = parent['spec']['targetNamespaces']
-        target_configmaps = [self.new_configmap(
-            sourceName, namespace, original_configmap['data']) for namespace in targetNamespaces]
-        return target_configmaps
+        original_secret: dict = related['Secret.v1'][f'{sourceNamespace}/{sourceName}']
+        targetNamespaces = related['Namespace.v1']
+        target_secrets = []
+        for namespace in targetNamespaces.values():
+            if namespace['metadata']['name'] != sourceNamespace:
+                target_secrets.append(self.new_secret(
+                    sourceName, namespace['metadata']['name'], original_secret['data']))
+        return target_secrets
 
-    def new_configmap(self, name: str, namespace: str, data: dict) -> dict:
+    def new_secret(self, name: str, namespace: str, data: dict) -> dict:
         return {
             'apiVersion': 'v1',
-            'kind': 'ConfigMap',
+            'kind': 'Secret',
             'metadata': {
                 'name': name,
                 'namespace': namespace
@@ -44,14 +47,18 @@ class Controller(BaseHTTPRequestHandler):
             'data': data
         }
 
-    def customize(self, sourceName: str, sourceNamespace: str) -> dict:
+    def customize(self, sourceName: str, sourceNamespace: str, targetLabelSelector) -> dict:
         return [
             {
                 'apiVersion': 'v1',
-                'resource': 'configmaps',
+                'resource': 'secrets',
                 'labelSelector': {},
                 'namespace': sourceNamespace,
                 'names': [sourceName]
+            }, {
+                'apiVersion': 'v1',
+                'resource': 'namespaces',
+                'labelSelector': targetLabelSelector
             }
         ]
 
@@ -62,12 +69,9 @@ class Controller(BaseHTTPRequestHandler):
             parent: dict = observed['parent']
             related: dict = observed['related']
             LOGGER.info("/sync %s", parent['metadata']['name'])
-            expected_copies: int = len(parent['spec']['targetNamespaces'])
-            actual_copies: int = len(observed['children']['ConfigMap.v1'])
             response: dict = {
                 'status': {
-                    'expected_copies': f'{expected_copies}',
-                    'actual_copies': f'{actual_copies}'
+                    'working': 'fine'
                 },
                 'children': self.sync(parent, related)
             }
@@ -80,10 +84,12 @@ class Controller(BaseHTTPRequestHandler):
                 int(self.headers.get('content-length'))))
             parent: dict = request['parent']
             LOGGER.info("/customize %s", parent['metadata']['name'])
+            LOGGER.info("Parent resource: \n %s", parent['spec'])
             related_resources: dict = {
                 'relatedResources': self.customize(
                     parent['spec']['sourceName'],
-                    parent['spec']['sourceNamespace']
+                    parent['spec']['sourceNamespace'],
+                    parent['spec']['targetNamespaceLabelSelector']
                 )
             }
             LOGGER.info("Related resources: \n %s", related_resources)
