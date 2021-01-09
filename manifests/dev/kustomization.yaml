@@ -1,7 +1,5 @@
 bases:
-- ../..
-resources:
-- ../../manifests/metacontroller-namespace.yaml
+- ../production
 patches:
 - image.yaml
 - args.yaml
