@@ -9,4 +9,4 @@ spec:
     spec:
       containers:
       - name: metacontroller
-        image: enisoc/metacontroller
+        image: metacontrollerio/metacontroller:dev

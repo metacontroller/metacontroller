@@ -14,12 +14,12 @@ module.exports = {
       {
         "replacements": [
           {
-            "files": ["manifests/metacontroller.yaml"],
+            "files": ["manifests/production/metacontroller.yaml"],
             "from": "metacontroller:v.*",
             "to": "metacontroller:v${nextRelease.version}",
             "results": [
               {
-                "file": "manifests/metacontroller.yaml",
+                "file": "manifests/production/metacontroller.yaml",
                 "hasChanged": true,
                 "numMatches": 1,
                 "numReplacements": 1
@@ -33,13 +33,13 @@ module.exports = {
     [
       "@semantic-release/git",
       {
-        "assets": ["CHANGELOG.md", "manifests/metacontroller.yaml"]
+        "assets": ["CHANGELOG.md", "manifests/production/metacontroller.yaml"]
       }
     ],
     [
       '@semantic-release/github', 
       {
-        "assets": ["manifests/*"]
+        "assets": ["manifests/production/*"]
       }
     ],
   ]
