@@ -18,12 +18,14 @@ package framework
 
 import (
 	"errors"
+	"flag"
 	"fmt"
 	"os"
 	"os/exec"
 	"path"
 	"time"
 
+	"github.com/golang/glog"
 	"k8s.io/client-go/discovery"
 	"k8s.io/klog"
 
@@ -43,7 +45,7 @@ See hack/get-kube-binaries.sh
 
 // manifestDir is the path from the integration test binary working dir to the
 // directory containing manifests to install Metacontroller.
-const manifestDir = "../../../manifests"
+const manifestDir = "../../../manifests/production"
 
 // getKubectlPath returns a path to a kube-apiserver executable.
 func getKubectlPath() (string, error) {
@@ -52,6 +54,7 @@ func getKubectlPath() (string, error) {
 
 // TestMain starts etcd, kube-apiserver, and metacontroller before running tests.
 func TestMain(tests func() int) {
+	flag.Parse()
 	if err := testMain(tests); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -78,6 +81,7 @@ func testMain(tests func() int) error {
 	klog.Info("Waiting for kube-apiserver to be ready...")
 	start := time.Now()
 	for {
+		time.Sleep(time.Second)
 		kubectlErr := execKubectl("version")
 		if kubectlErr == nil {
 			break
@@ -86,7 +90,6 @@ func testMain(tests func() int) error {
 		if time.Since(start) > time.Minute {
 			return fmt.Errorf("timed out waiting for kube-apiserver to be ready: %v", kubectlErr)
 		}
-		time.Sleep(time.Second)
 	}
 	klog.Info("Kube-apiserver started")
 	// Create Metacontroller Namespace.
@@ -133,6 +136,7 @@ func execKubectl(args ...string) error {
 		return fmt.Errorf("cannot exec kubectl: %v", err)
 	}
 	cmdline := append([]string{"--server", ApiserverURL()}, args...)
+	glog.Infof("Executing: %s with arguments: %s", execPath, cmdline)
 	cmd := exec.Command(execPath, cmdline...)
 	return cmd.Run()
 }

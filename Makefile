@@ -1,9 +1,12 @@
+PWD := ${CURDIR}
+PATH := $(PWD)/hack/bin:$(PATH)
 TAG = dev
 
 PKG        := metacontroller.io
 API_GROUPS := metacontroller/v1alpha1
 
 export GO111MODULE=on
+export GOTESTSUM_FORMAT=pkgname
 
 all: install
 
@@ -15,14 +18,16 @@ vendor:
 	@go mod tidy
 	@go mod vendor
 
-unit-test: vendor
+unit-test: test-setup
 	pkgs="$$(go list ./... | grep -v '/test/integration/\|/examples/\|hack')" ; \
 		go test -i $${pkgs} && \
-		go test $${pkgs}
+		gotestsum $${pkgs}
 
-integration-test: vendor
-	go test -i ./test/integration/...
-	PATH="$(PWD)/hack/bin:$(PATH)" go test ./test/integration/... -v -timeout 5m -args --logtostderr -v=1
+integration-test: test-setup
+	gotestsum ./test/integration/... -v -timeout 5m -args --logtostderr -v=1
+
+test-setup: vendor
+	./hack/setup.sh 
 
 image: generated_files
 	docker build -t metacontrollerio/metacontroller:$(TAG) .
