@@ -4,3 +4,5 @@
 /hack/bin/
 .*.swp
 .history
+**/.vscode
+**/.venv
