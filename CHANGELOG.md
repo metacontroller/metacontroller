@@ -1,3 +1,10 @@
+## [1.1.2](https://github.com/metacontroller/metacontroller/compare/v1.1.1...v1.1.2) (2021-01-11)
+
+
+### Bug Fixes
+
+* **deps:** Update k8s.io packages to v0.17.16 ([2f11f21](https://github.com/metacontroller/metacontroller/commit/2f11f21b8faca344ff6a2ed041adfe3e238d49bd))
+
 ## [1.1.1](https://github.com/metacontroller/metacontroller/compare/v1.1.0...v1.1.1) (2020-12-19)
 
 
