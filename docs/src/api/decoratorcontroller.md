@@ -172,6 +172,7 @@ Within the DecoratorController `spec`, the `hooks` field has the following subfi
 | ----- | ----------- |
 | [`sync`](#sync-hook) | Specifies how to call your sync hook, if any. |
 | [`finalize`](#finalize-hook) | Specifies how to call your finalize hook, if any. |
+| [`customize`](./customize.md#customize-hook) | Specifies how to call your customize hook, if any. |
 
 Each field of `hooks` contains [subfields][hook] that specify how to invoke
 that hook, such as by sending a request to a [webhook][].
@@ -212,6 +213,7 @@ will be a JSON object with the following fields:
 | `controller` | The whole DecoratorController object, like what you might get from `kubectl get decoratorcontroller <name> -o json`. |
 | `object` | The target object, like what you might get from `kubectl get <target-resource> <target-name> -o json`. |
 | `attachments` | An associative array of attachments that already exist. |
+| `related` | An associative array of related objects that exists, if `customize` hook was specified. See the [`customize` hook](./customize.md#customize-hook) |
 | `finalizing` | This is always `false` for the `sync` hook. See the [`finalize` hook](#finalize-hook) for details. |
 
 Each field of the `attachments` object represents one of the types of
@@ -278,6 +280,18 @@ as opposed to:
   "attachments": {}
 }
 ```
+
+
+Related resources, represented under `related` field, are present in the same form as `attachements`, 
+but representing resources matching `customize` hook response for given `parent` object. 
+Those object are not managed by controller, therefore are unmodificable, but you can use them to calculate `attachements`.
+Some existing examples implementing this approach are :
+* ConfigMapPropagation - makes copy of given ConfigMap in several namespaces.
+* GlobalConfigMap - makes copy of given ConfigMap in every namespace.
+* SecretPropagation - makes copy of given Secret in reach namespace satisfying label selector.
+
+Please note, than when related resources is updated, `sync` hook is triggered again (even if `parent` object and `attachements` does not change) - and you can recalculate
+children state according to fresh view of related objects.
 
 #### Sync Hook Response
 
@@ -433,3 +447,7 @@ To reduce the delay, you can request a one-time, per-object resync by setting
 `resyncAfterSeconds` in your [hook response](#sync-hook-response), giving you
 a chance to recheck the external state without holding up a slot in the work
 queue.
+
+## Customize Hook
+
+See [Customize hook spec](./customize.md#customize-hook)
