@@ -41,14 +41,6 @@ that gives each Pod a unique index, like StatefulSet.
 It shows how to write a CompositeController in Python, and also demonstrates
 [selector generation](./api/compositecontroller.md#generate-selector).
 
-### Vitess Operator (Jsonnet)
-
-The [Vitess Operator](https://www.github.com/metacontroller/metacontroller/tree/master/examples/vitess)
-is an example of using Metacontroller to write an Operator for a complex
-stateful application, in this case [Vitess](https://vitess.io).
-It shows how CompositeController can be layered to handle complex systems
-by breaking them down.
-
 ## DecoratorController
 
 [DecoratorController](./api/decoratorcontroller.md)
@@ -68,3 +60,22 @@ when the main object is deleted.
 is an example DecoratorController that creates an individual Service for
 every Pod in a StatefulSet (e.g. to give them static IPs), effectively adding
 new behavior to StatefulSet without having to reimplement it.
+
+## Customize hook examples
+[Customize hook](./api/customize.md) is addition to Composite/Decorator controllers, extending information given in `sync` hook of other objects (called `related`) in addition to parent.
+
+### ConfigMapPropagation
+
+[ConfigMapPropagation](https://www.github.com/metacontroller/metacontroller/tree/master/examples/configmappropagation) is
+a simple mechanizm to propagate given `ConfigMap` to other namespaces, specified in given objects. Source `ConfigMap` is also specifcied.
+
+
+### Global Config Map
+
+[Global Config Map](https://www.github.com/metacontroller/metacontroller/tree/master/examples/globalconfigmap) is similar to `ConfigMapPropagation`. but populates `ConfigMap` to all namespaces.
+
+### Secret propagation
+
+[Secret propagation](https://www.github.com/metacontroller/metacontroller/tree/master/examples/secretpropagation) is modyfication of `ConfigMapPropagation` concept, 
+using label selector on `Namespace` object to choose where to
+propagate `Secret`.

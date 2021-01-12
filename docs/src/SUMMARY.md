@@ -17,6 +17,7 @@
     - [CompositeController](./api/compositecontroller.md)
     - [ControllerRevision](./api/controllerrevision.md)
     - [DecoratorController](./api/decoratorcontroller.md)
+    - [Customize Hook](./api/customize.md)
     - [Hook](./api/hook.md)
 - [Design Docs](./design.md)
     - [Customize Hook](./design/customize-hook.md)
