@@ -51,5 +51,5 @@ echo "Expect CatSet's finalizer to scale the CatSet to 0 replicas..."
 until [[ "$(kubectl get $cs nginx-backend -o 'jsonpath={.status.replicas}')" -eq 0 ]]; do sleep 1; done
 
 echo "Wait for our finalizer to be the only one left, then remove it..."
-until [[ "$(kubectl get $cs nginx-backend -o 'jsonpath={.metadata.finalizers}')" == "[${finalizer}]" ]]; do sleep 1; done
+until [[ "$(kubectl get $cs nginx-backend -o 'jsonpath={.metadata.finalizers}')" == "[\"${finalizer}\"]" ]]; do sleep 1; done
 kubectl patch $cs nginx-backend --type=merge -p '{"metadata":{"finalizers":[]}}'
