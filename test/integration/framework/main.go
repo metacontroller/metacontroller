@@ -25,9 +25,8 @@ import (
 	"path"
 	"time"
 
-	"github.com/golang/glog"
 	"k8s.io/client-go/discovery"
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 
 	dynamicdiscovery "metacontroller.io/dynamic/discovery"
 	"metacontroller.io/server"
@@ -54,6 +53,7 @@ func getKubectlPath() (string, error) {
 
 // TestMain starts etcd, kube-apiserver, and metacontroller before running tests.
 func TestMain(tests func() int) {
+	klog.InitFlags(nil)
 	flag.Parse()
 	if err := testMain(tests); err != nil {
 		fmt.Println(err)
@@ -136,7 +136,7 @@ func execKubectl(args ...string) error {
 		return fmt.Errorf("cannot exec kubectl: %v", err)
 	}
 	cmdline := append([]string{"--server", ApiserverURL()}, args...)
-	glog.Infof("Executing: %s with arguments: %s", execPath, cmdline)
+	klog.Infof("Executing: %s with arguments: %s", execPath, cmdline)
 	cmd := exec.Command(execPath, cmdline...)
 	return cmd.Run()
 }

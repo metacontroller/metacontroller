@@ -24,8 +24,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/golang/glog"
 	"k8s.io/apimachinery/pkg/util/json"
+	"k8s.io/klog/v2"
 
 	"metacontroller.io/apis/metacontroller/v1alpha1"
 )
@@ -37,21 +37,21 @@ func callWebhook(webhook *v1alpha1.Webhook, request interface{}, response interf
 	}
 	hookTimeout, err := webhookTimeout(webhook)
 	if err != nil {
-		glog.Warningln(err)
+		klog.Warningln(err)
 	}
 	// Encode request.
 	reqBody, err := json.Marshal(request)
 	if err != nil {
 		return fmt.Errorf("can't marshal request: %v", err)
 	}
-	if glog.V(6) {
+	if klog.V(6).Enabled() {
 		reqBodyIndent, _ := gojson.MarshalIndent(request, "", "  ")
-		glog.Infof("DEBUG: webhook url: %s request body: %s", url, reqBodyIndent)
+		klog.Infof("DEBUG: webhook url: %s request body: %s", url, reqBodyIndent)
 	}
 
 	// Send request.
 	client := &http.Client{Timeout: hookTimeout}
-	glog.V(6).Infof("DEBUG: webhook timeout: %v", hookTimeout)
+	klog.V(6).Infof("DEBUG: webhook timeout: %v", hookTimeout)
 	resp, err := client.Post(url, "application/json", bytes.NewReader(reqBody))
 	if err != nil {
 		return fmt.Errorf("http error: %v", err)
@@ -63,7 +63,7 @@ func callWebhook(webhook *v1alpha1.Webhook, request interface{}, response interf
 	if err != nil {
 		return fmt.Errorf("can't read response body: %v", err)
 	}
-	glog.V(6).Infof("DEBUG: webhook url: %s response body: %s", url, respBody)
+	klog.V(6).Infof("DEBUG: webhook url: %s response body: %s", url, respBody)
 
 	// Check status code.
 	if resp.StatusCode != http.StatusOK {
