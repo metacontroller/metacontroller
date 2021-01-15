@@ -25,8 +25,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/golang/glog"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"k8s.io/klog/v2"
 
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -49,24 +49,24 @@ var (
 )
 
 func main() {
+	klog.InitFlags(nil)
 	flag.Parse()
-
-	glog.Infof("Discovery cache flush interval: %v", *discoveryInterval)
-	glog.Infof("API server object cache flush interval: %v", *informerRelist)
-	glog.Infof("Debug http server address: %v", *debugAddr)
+	klog.InfoS("Discovery cache flush interval", "discovery_interval", *discoveryInterval)
+	klog.InfoS("API server object cache flush interval", "cache_flush_interval", *informerRelist)
+	klog.InfoS("Http server address", "port", *debugAddr)
 
 	var config *rest.Config
 	var err error
 	if *clientConfigPath != "" {
-		glog.Infof("Using current context from kubeconfig file: %v", *clientConfigPath)
+		klog.Infof("Using current context from kubeconfig file: %v", *clientConfigPath)
 		config, err = clientcmd.BuildConfigFromFlags("", *clientConfigPath)
 	} else {
-		glog.Info("No kubeconfig file specified; trying in-cluster auto-config...")
+		klog.Info("No kubeconfig file specified; trying in-cluster auto-config...")
 		config, err = rest.InClusterConfig()
 	}
 
 	if err != nil {
-		glog.Fatal(err)
+		klog.Fatal(err)
 	}
 
 	config.QPS = float32(*clientGoQPS)
@@ -74,7 +74,7 @@ func main() {
 
 	stopServer, err := server.Start(config, *discoveryInterval, *informerRelist, *workers)
 	if err != nil {
-		glog.Fatal(err)
+		klog.Fatal(err)
 	}
 
 	mux := http.NewServeMux()
@@ -84,14 +84,14 @@ func main() {
 		Handler: mux,
 	}
 	go func() {
-		glog.Errorf("Error serving debug endpoint: %v", srv.ListenAndServe())
+		klog.Errorf("Error serving debug endpoint: %v", srv.ListenAndServe())
 	}()
 
 	// On SIGTERM, stop all controllers gracefully.
 	sigchan := make(chan os.Signal, 2)
 	signal.Notify(sigchan, os.Interrupt, syscall.SIGTERM)
 	sig := <-sigchan
-	glog.Infof("Received %q signal. Shutting down...", sig)
+	klog.Infof("Received %q signal. Shutting down...", sig)
 
 	stopServer()
 	srv.Shutdown(context.Background())

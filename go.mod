@@ -6,7 +6,6 @@ go 1.14
 
 require (
 	github.com/go-logr/logr v0.3.0 // indirect
-	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
 	github.com/google/go-jsonnet v0.14.0
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/prometheus/client_golang v1.8.0
@@ -23,7 +22,7 @@ require (
 	k8s.io/component-base v0.17.16
 	k8s.io/gengo v0.0.0-20201113003025-83324d819ded // indirect
 	k8s.io/klog v1.0.0
-	k8s.io/klog/v2 v2.4.0 // indirect
+	k8s.io/klog/v2 v2.4.0
 	sigs.k8s.io/controller-tools v0.2.4
 )
 

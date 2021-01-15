@@ -23,7 +23,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/golang/glog"
+	"k8s.io/klog/v2"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -183,11 +183,11 @@ func (c *decoratorController) Start() {
 		defer close(c.doneCh)
 		defer utilruntime.HandleCrash()
 
-		glog.Infof("Starting DecoratorController %v", c.dc.Name)
-		defer glog.Infof("Shutting down DecoratorController %v", c.dc.Name)
+		klog.Infof("Starting DecoratorController %v", c.dc.Name)
+		defer klog.Infof("Shutting down DecoratorController %v", c.dc.Name)
 
 		// Wait for dynamic client and all informers.
-		glog.Infof("Waiting for DecoratorController %v caches to sync", c.dc.Name)
+		klog.Infof("Waiting for DecoratorController %v caches to sync", c.dc.Name)
 		syncFuncs := make([]cache.InformerSynced, 0, 1+len(c.dc.Spec.Resources)+len(c.dc.Spec.Attachments))
 		for _, informer := range c.parentInformers {
 			syncFuncs = append(syncFuncs, informer.Informer().HasSynced)
@@ -197,7 +197,7 @@ func (c *decoratorController) Start() {
 		}
 		if !k8s.WaitForCacheSync(c.dc.Name, c.stopCh, syncFuncs...) {
 			// We wait forever unless Stop() is called, so this isn't an error.
-			glog.Warningf("DecoratorController %v cache sync never finished", c.dc.Name)
+			klog.Warningf("DecoratorController %v cache sync never finished", c.dc.Name)
 			return
 		}
 
@@ -347,7 +347,7 @@ func (c *decoratorController) onChildAdd(obj interface{}) {
 		// The controllerRef isn't a parent we know about.
 		return
 	}
-	glog.V(4).Infof("DecoratorController %v: %v %v/%v: child %v %v created or updated", c.dc.Name, parent.GetKind(), parent.GetNamespace(), parent.GetName(), child.GetKind(), child.GetName())
+	klog.V(4).Infof("DecoratorController %v: %v %v/%v: child %v %v created or updated", c.dc.Name, parent.GetKind(), parent.GetNamespace(), parent.GetName(), child.GetKind(), child.GetName())
 	c.enqueueParentObject(parent)
 }
 
@@ -395,7 +395,7 @@ func (c *decoratorController) onChildDelete(obj interface{}) {
 		// The controllerRef isn't a parent we know about.
 		return
 	}
-	glog.V(4).Infof("DecoratorController %v: %v %v/%v: child %v %v deleted", c.dc.Name, parent.GetKind(), parent.GetNamespace(), parent.GetName(), child.GetKind(), child.GetName())
+	klog.V(4).Infof("DecoratorController %v: %v %v/%v: child %v %v deleted", c.dc.Name, parent.GetKind(), parent.GetNamespace(), parent.GetName(), child.GetKind(), child.GetName())
 	c.enqueueParentObject(parent)
 }
 
@@ -416,7 +416,7 @@ func (c *decoratorController) sync(key string) error {
 	parent, err := informer.Lister().Get(namespace, name)
 	if apierrors.IsNotFound(err) {
 		// Swallow the error since there's no point retrying if the parent is gone.
-		glog.V(4).Infof("%v %v/%v has been deleted", kind, namespace, name)
+		klog.V(4).Infof("%v %v/%v has been deleted", kind, namespace, name)
 		return nil
 	}
 	if err != nil {
@@ -431,7 +431,7 @@ func (c *decoratorController) syncParentObject(parent *unstructured.Unstructured
 		return nil
 	}
 
-	glog.V(4).Infof("DecoratorController %v: sync %v %v/%v", c.dc.Name, parent.GetKind(), parent.GetNamespace(), parent.GetName())
+	klog.V(4).Infof("DecoratorController %v: sync %v %v/%v", c.dc.Name, parent.GetKind(), parent.GetNamespace(), parent.GetName())
 
 	parentClient, err := c.dynClient.Kind(parent.GetAPIVersion(), parent.GetKind())
 	if err != nil {
@@ -519,7 +519,7 @@ func (c *decoratorController) syncParentObject(parent *unstructured.Unstructured
 			dynamicobject.RemoveFinalizer(updatedParent, c.finalizer.Name)
 		}
 
-		glog.V(4).Infof("DecoratorController %v: updating %v %v/%v", c.dc.Name, parent.GetKind(), parent.GetNamespace(), parent.GetName())
+		klog.V(4).Infof("DecoratorController %v: updating %v %v/%v", c.dc.Name, parent.GetKind(), parent.GetNamespace(), parent.GetName())
 		_, err = parentClient.Namespace(parent.GetNamespace()).Update(updatedParent, metav1.UpdateOptions{})
 		if err != nil {
 			return fmt.Errorf("can't update %v %v/%v: %v", parent.GetKind(), parent.GetNamespace(), parent.GetName(), err)

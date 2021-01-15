@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/golang/glog"
+	"k8s.io/klog/v2"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -168,7 +168,7 @@ func deleteChildren(client *dynamicclientset.ResourceClient, parent *unstructure
 		}
 		if desired == nil || desired[name] == nil {
 			// This observed object wasn't listed as desired.
-			glog.Infof("%v: deleting %v", describeObject(parent), describeObject(obj))
+			klog.Infof("%v: deleting %v", describeObject(parent), describeObject(obj))
 			uid := obj.GetUID()
 			// Explicitly request deletion propagation, which is what users expect,
 			// since some objects default to orphaning for backwards compatibility.
@@ -206,13 +206,13 @@ func updateChildren(client *dynamicclientset.ResourceClient, updateStrategy Chil
 				// Nothing changed.
 				continue
 			}
-			if glog.V(5) {
-				glog.Infof("reflect diff: a=observed, b=desired:\n%s", diff.ObjectReflectDiff(oldObj.UnstructuredContent(), newObj.UnstructuredContent()))
+			if klog.V(5).Enabled() {
+				klog.Infof("reflect diff: a=observed, b=desired:\n%s", diff.ObjectReflectDiff(oldObj.UnstructuredContent(), newObj.UnstructuredContent()))
 			}
 
 			// Leave it alone if it's pending deletion.
 			if oldObj.GetDeletionTimestamp() != nil {
-				glog.Infof("%v: not updating %v (pending deletion)", describeObject(parent), describeObject(obj))
+				klog.Infof("%v: not updating %v (pending deletion)", describeObject(parent), describeObject(obj))
 				continue
 			}
 
@@ -221,11 +221,11 @@ func updateChildren(client *dynamicclientset.ResourceClient, updateStrategy Chil
 			case v1alpha1.ChildUpdateOnDelete, "":
 				// This means we don't try to update anything unless it gets deleted
 				// by someone else (we won't delete it ourselves).
-				glog.V(5).Infof("%v: not updating %v (OnDelete update strategy)", describeObject(parent), describeObject(obj))
+				klog.V(5).Infof("%v: not updating %v (OnDelete update strategy)", describeObject(parent), describeObject(obj))
 				continue
 			case v1alpha1.ChildUpdateRecreate, v1alpha1.ChildUpdateRollingRecreate:
 				// Delete the object (now) and recreate it (on the next sync).
-				glog.Infof("%v: deleting %v for update", describeObject(parent), describeObject(obj))
+				klog.Infof("%v: deleting %v for update", describeObject(parent), describeObject(obj))
 				uid := oldObj.GetUID()
 				// Explicitly request deletion propagation, which is what users expect,
 				// since some objects default to orphaning for backwards compatibility.
@@ -240,7 +240,7 @@ func updateChildren(client *dynamicclientset.ResourceClient, updateStrategy Chil
 				}
 			case v1alpha1.ChildUpdateInPlace, v1alpha1.ChildUpdateRollingInPlace:
 				// Update the object in-place.
-				glog.Infof("%v: updating %v", describeObject(parent), describeObject(obj))
+				klog.Infof("%v: updating %v", describeObject(parent), describeObject(obj))
 				if _, err := client.Namespace(ns).Update(newObj, metav1.UpdateOptions{}); err != nil {
 					errs = append(errs, err)
 					continue
@@ -251,7 +251,7 @@ func updateChildren(client *dynamicclientset.ResourceClient, updateStrategy Chil
 			}
 		} else {
 			// Create
-			glog.Infof("%v: creating %v", describeObject(parent), describeObject(obj))
+			klog.Infof("%v: creating %v", describeObject(parent), describeObject(obj))
 
 			// The controller should return a partial object containing only the
 			// fields it cares about. We save this partial object so we can do

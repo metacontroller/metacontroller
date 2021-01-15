@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/golang/glog"
+	"k8s.io/klog/v2"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -86,8 +86,8 @@ func (mc *Metacontroller) Start() {
 		defer close(mc.doneCh)
 		defer utilruntime.HandleCrash()
 
-		glog.Info("Starting DecoratorController metacontroller")
-		defer glog.Info("Shutting down DecoratorController metacontroller")
+		klog.Info("Starting DecoratorController metacontroller")
+		defer klog.Info("Shutting down DecoratorController metacontroller")
 
 		if !k8s.WaitForCacheSync("DecoratorController", mc.stopCh, mc.dcInformer.HasSynced) {
 			return
@@ -142,11 +142,11 @@ func (mc *Metacontroller) sync(key string) error {
 		return err
 	}
 
-	glog.V(4).Infof("sync DecoratorController %v", name)
+	klog.V(4).Infof("sync DecoratorController %v", name)
 
 	dc, err := mc.dcLister.Get(name)
 	if apierrors.IsNotFound(err) {
-		glog.V(4).Infof("DecoratorController %v has been deleted", name)
+		klog.V(4).Infof("DecoratorController %v has been deleted", name)
 		// Stop and remove the controller if it exists.
 		if c, ok := mc.decoratorControllers[name]; ok {
 			c.Stop()

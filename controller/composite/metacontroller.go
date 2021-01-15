@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/golang/glog"
+	"k8s.io/klog/v2"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -93,8 +93,8 @@ func (mc *Metacontroller) Start() {
 		defer close(mc.doneCh)
 		defer utilruntime.HandleCrash()
 
-		glog.Info("Starting CompositeController metacontroller")
-		defer glog.Info("Shutting down CompositeController metacontroller")
+		klog.Info("Starting CompositeController metacontroller")
+		defer klog.Info("Shutting down CompositeController metacontroller")
 
 		if !k8s.WaitForCacheSync("CompositeController", mc.stopCh, mc.ccInformer.HasSynced) {
 			return
@@ -149,11 +149,11 @@ func (mc *Metacontroller) sync(key string) error {
 		return err
 	}
 
-	glog.V(4).Infof("sync CompositeController %v", name)
+	klog.V(4).Infof("sync CompositeController %v", name)
 
 	cc, err := mc.ccLister.Get(name)
 	if apierrors.IsNotFound(err) {
-		glog.V(4).Infof("CompositeController %v has been deleted", name)
+		klog.V(4).Infof("CompositeController %v has been deleted", name)
 		// Stop and remove the controller if it exists.
 		if pc, ok := mc.parentControllers[name]; ok {
 			pc.Stop()
