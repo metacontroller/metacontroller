@@ -93,8 +93,8 @@ func (mc *Metacontroller) Start() {
 		defer close(mc.doneCh)
 		defer utilruntime.HandleCrash()
 
-		klog.Info("Starting CompositeController metacontroller")
-		defer klog.Info("Shutting down CompositeController metacontroller")
+		klog.InfoS("Starting CompositeController metacontroller")
+		defer klog.InfoS("Shutting down CompositeController metacontroller")
 
 		if !k8s.WaitForCacheSync("CompositeController", mc.stopCh, mc.ccInformer.HasSynced) {
 			return
@@ -149,11 +149,11 @@ func (mc *Metacontroller) sync(key string) error {
 		return err
 	}
 
-	klog.V(4).Infof("sync CompositeController %v", name)
+	klog.V(4).InfoS("Sync CompositeController", "name", name)
 
 	cc, err := mc.ccLister.Get(name)
 	if apierrors.IsNotFound(err) {
-		klog.V(4).Infof("CompositeController %v has been deleted", name)
+		klog.V(4).InfoS("CompositeController has been deleted", "name", name)
 		// Stop and remove the controller if it exists.
 		if pc, ok := mc.parentControllers[name]; ok {
 			pc.Stop()

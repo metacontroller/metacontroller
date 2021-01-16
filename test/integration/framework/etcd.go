@@ -28,7 +28,7 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 )
 
 var etcdURL = ""
@@ -76,13 +76,13 @@ func startEtcd() (func(), error) {
 		return nil, fmt.Errorf("could not get a port: %v", err)
 	}
 	etcdURL = fmt.Sprintf("http://127.0.0.1:%d", etcdPort)
-	klog.Infof("starting etcd on %s", etcdURL)
+	klog.InfoS("Starting etcd", "url", etcdURL)
 
 	etcdDataDir, err := ioutil.TempDir(os.TempDir(), "integration_test_etcd_data")
 	if err != nil {
 		return nil, fmt.Errorf("unable to make temp etcd data dir: %v", err)
 	}
-	klog.Infof("storing etcd data in: %v", etcdDataDir)
+	klog.InfoS("Storing etcd data", "data_directory", etcdDataDir)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cmd := exec.CommandContext(
@@ -102,10 +102,10 @@ func startEtcd() (func(), error) {
 	stop := func() {
 		cancel()
 		err := cmd.Wait()
-		klog.Infof("etcd exit status: %v", err)
+		klog.InfoS("Etcd exit status", "exit_status", err)
 		err = os.RemoveAll(etcdDataDir)
 		if err != nil {
-			klog.Warningf("error during etcd cleanup: %v", err)
+			klog.ErrorS(err, "error during etcd cleanup")
 		}
 	}
 

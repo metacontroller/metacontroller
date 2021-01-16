@@ -86,8 +86,8 @@ func (mc *Metacontroller) Start() {
 		defer close(mc.doneCh)
 		defer utilruntime.HandleCrash()
 
-		klog.Info("Starting DecoratorController metacontroller")
-		defer klog.Info("Shutting down DecoratorController metacontroller")
+		klog.InfoS("Starting DecoratorController metacontroller")
+		defer klog.InfoS("Shutting down DecoratorController metacontroller")
 
 		if !k8s.WaitForCacheSync("DecoratorController", mc.stopCh, mc.dcInformer.HasSynced) {
 			return
@@ -142,11 +142,11 @@ func (mc *Metacontroller) sync(key string) error {
 		return err
 	}
 
-	klog.V(4).Infof("sync DecoratorController %v", name)
+	klog.V(4).InfoS("Sync DecoratorController", "name", name)
 
 	dc, err := mc.dcLister.Get(name)
 	if apierrors.IsNotFound(err) {
-		klog.V(4).Infof("DecoratorController %v has been deleted", name)
+		klog.V(4).InfoS("DecoratorController has been deleted", "name", name)
 		// Stop and remove the controller if it exists.
 		if c, ok := mc.decoratorControllers[name]; ok {
 			c.Stop()

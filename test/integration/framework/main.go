@@ -86,7 +86,7 @@ func testMain(tests func() int) error {
 		if kubectlErr == nil {
 			break
 		}
-		klog.Warningf("Kubectl error: %v", kubectlErr)
+		klog.ErrorS(kubectlErr, "Kubectl error")
 		if time.Since(start) > time.Minute {
 			return fmt.Errorf("timed out waiting for kube-apiserver to be ready: %v", kubectlErr)
 		}
@@ -136,7 +136,7 @@ func execKubectl(args ...string) error {
 		return fmt.Errorf("cannot exec kubectl: %v", err)
 	}
 	cmdline := append([]string{"--server", ApiserverURL()}, args...)
-	klog.Infof("Executing: %s with arguments: %s", execPath, cmdline)
+	klog.InfoS("Executing command", "command", execPath, "arguments", cmdline)
 	cmd := exec.Command(execPath, cmdline...)
 	return cmd.Run()
 }

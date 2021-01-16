@@ -260,7 +260,7 @@ func (pc *parentController) manageRevisions(parent *unstructured.Unstructured, o
 			opts := &metav1.DeleteOptions{
 				Preconditions: &metav1.Preconditions{UID: &revision.UID},
 			}
-			klog.Infof("%v %v/%v: deleting ControllerRevision %v", parent.GetKind(), parent.GetNamespace(), parent.GetName(), revision.GetName())
+			klog.InfoS("Deleting ControllerRevision", "parent_kind", parent.GetKind(), "parent", klog.KObj(parent), "name", revision.GetName())
 			if err := client.Delete(revision.Name, opts); err != nil {
 				return fmt.Errorf("can't delete ControllerRevision %v for %v %v/%v: %v", revision.Name, pc.parentResource.Kind, parent.GetNamespace(), parent.GetName(), err)
 			}
@@ -275,7 +275,7 @@ func (pc *parentController) manageRevisions(parent *unstructured.Unstructured, o
 				// We didn't change anything.
 				continue
 			}
-			klog.Infof("%v %v/%v: updating ControllerRevision %v", parent.GetKind(), parent.GetNamespace(), parent.GetName(), revision.GetName())
+			klog.InfoS("Updating ControllerRevision", "parent_kind", parent.GetKind(), "parent", klog.KObj(parent), "name", revision.GetName())
 			if _, err := client.Update(revision); err != nil {
 				return fmt.Errorf("can't update ControllerRevision %v for %v %v/%v: %v", revision.Name, pc.parentResource.Kind, parent.GetNamespace(), parent.GetName(), err)
 			}
@@ -283,7 +283,7 @@ func (pc *parentController) manageRevisions(parent *unstructured.Unstructured, o
 			// Create
 			controllerRef := common.MakeControllerRef(parent)
 			revision.OwnerReferences = append(revision.OwnerReferences, *controllerRef)
-			klog.Infof("%v %v/%v: creating ControllerRevision %v", parent.GetKind(), parent.GetNamespace(), parent.GetName(), revision.GetName())
+			klog.InfoS("Creating ControllerRevision", "parent_kind", parent.GetKind(), "parent", klog.KObj(parent), "name", revision.GetName())
 			if _, err := client.Create(revision); err != nil {
 				return fmt.Errorf("can't create ControllerRevision %v for %v %v/%v: %v", revision.Name, pc.parentResource.Kind, parent.GetNamespace(), parent.GetName(), err)
 			}
