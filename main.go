@@ -52,6 +52,7 @@ var (
 func main() {
 	klog.InitFlags(nil)
 	flag.Parse()
+
 	klog.InfoS("Discovery cache flush interval", "discovery_interval", *discoveryInterval)
 	klog.InfoS("API server object cache flush interval", "cache_flush_interval", *informerRelist)
 	klog.InfoS("Http server address", "port", *debugAddr)
@@ -60,15 +61,16 @@ func main() {
 	var config *rest.Config
 	var err error
 	if *clientConfigPath != "" {
-		klog.Infof("Using current context from kubeconfig file: %v", *clientConfigPath)
+		klog.InfoS("Using current context from kubeconfig file", "path", *clientConfigPath)
 		config, err = clientcmd.BuildConfigFromFlags("", *clientConfigPath)
 	} else {
-		klog.Info("No kubeconfig file specified; trying in-cluster auto-config...")
+		klog.InfoS("No kubeconfig file specified; trying in-cluster auto-config...")
 		config, err = rest.InClusterConfig()
 	}
 
 	if err != nil {
-		klog.Fatal(err)
+		klog.ErrorS(err, "Terminating")
+		os.Exit(1)
 	}
 
 	config.QPS = float32(*clientGoQPS)
@@ -76,7 +78,8 @@ func main() {
 
 	stopServer, err := server.Start(config, *discoveryInterval, *informerRelist, *workers)
 	if err != nil {
-		klog.Fatal(err)
+		klog.ErrorS(err, "Terminating")
+		os.Exit(1)
 	}
 
 	mux := http.NewServeMux()
@@ -86,14 +89,14 @@ func main() {
 		Handler: mux,
 	}
 	go func() {
-		klog.Errorf("Error serving debug endpoint: %v", srv.ListenAndServe())
+		klog.ErrorS(srv.ListenAndServe(), "Error serving http endpoint")
 	}()
 
 	// On SIGTERM, stop all controllers gracefully.
 	sigchan := make(chan os.Signal, 2)
 	signal.Notify(sigchan, os.Interrupt, syscall.SIGTERM)
 	sig := <-sigchan
-	klog.Infof("Received %q signal. Shutting down...", sig)
+	klog.InfoS("Shutting down...", "signal", sig)
 
 	stopServer()
 	srv.Shutdown(context.Background())

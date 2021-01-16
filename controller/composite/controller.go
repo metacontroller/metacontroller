@@ -192,11 +192,11 @@ func (pc *parentController) Start() {
 		defer close(pc.doneCh)
 		defer utilruntime.HandleCrash()
 
-		klog.Infof("Starting %v CompositeController", pc.parentResource.Kind)
-		defer klog.Infof("Shutting down %v CompositeController", pc.parentResource.Kind)
+		klog.InfoS("Starting CompositeController", "controller", klog.KObj(pc.cc))
+		defer klog.InfoS("Shutting down CompositeController", "controller", klog.KObj(pc.cc))
 
 		// Wait for dynamic client and all informers.
-		klog.Infof("Waiting for %v CompositeController caches to sync", pc.parentResource.Kind)
+		klog.InfoS("Waiting for CompositeController caches to sync", "controller", klog.KObj(pc.cc))
 		syncFuncs := make([]cache.InformerSynced, 0, 2+len(pc.cc.Spec.ChildResources))
 		syncFuncs = append(syncFuncs, pc.dynClient.HasSynced, pc.parentInformer.Informer().HasSynced)
 		for _, childInformer := range pc.childInformers {
@@ -204,7 +204,7 @@ func (pc *parentController) Start() {
 		}
 		if !k8s.WaitForCacheSync(pc.parentResource.Kind, pc.stopCh, syncFuncs...) {
 			// We wait forever unless Stop() is called, so this isn't an error.
-			klog.Warningf("%v CompositeController cache sync never finished", pc.parentResource.Kind)
+			klog.InfoS("CompositeController cache sync never finished", "controller", klog.KObj(pc.cc))
 			return
 		}
 
@@ -333,7 +333,7 @@ func (pc *parentController) onChildAdd(obj interface{}) {
 			// The controllerRef isn't a parent we know about.
 			return
 		}
-		klog.V(4).Infof("%v %v/%v: child %v %v created or updated", pc.parentResource.Kind, parent.GetNamespace(), parent.GetName(), child.GetKind(), child.GetName())
+		klog.V(4).InfoS("Child created or updated", "parent_kind", pc.parentResource.Kind, "parent", klog.KObj(parent), "child_kind", child.GetKind(), "child", klog.KObj(child))
 		pc.enqueueParentObject(parent)
 		return
 	}
@@ -344,7 +344,7 @@ func (pc *parentController) onChildAdd(obj interface{}) {
 	if len(parents) == 0 {
 		return
 	}
-	klog.V(4).Infof("%v: orphan child %v %s created or updated", pc.parentResource.Kind, child.GetKind(), child.GetName())
+	klog.V(4).InfoS("Orphan child created or updated", "parent_kind", pc.parentResource.Kind, "child_kind", child.GetKind(), "child", klog.KObj(child))
 	for _, parent := range parents {
 		pc.enqueueParentObject(parent)
 	}
@@ -394,7 +394,7 @@ func (pc *parentController) onChildDelete(obj interface{}) {
 		// The controllerRef isn't a parent we know about.
 		return
 	}
-	klog.V(4).Infof("%v %v/%v: child %v %v deleted", pc.parentResource.Kind, parent.GetNamespace(), parent.GetName(), child.GetKind(), child.GetName())
+	klog.V(4).InfoS("Child deleted", "parent_kind", pc.parentResource.Kind, "parent", klog.KObj(parent), "child_kind", child.GetKind(), "child", klog.KObj(child))
 	pc.enqueueParentObject(parent)
 }
 
@@ -432,12 +432,12 @@ func (pc *parentController) sync(key string) error {
 		return err
 	}
 
-	klog.V(4).Infof("sync %v %v/%v", pc.parentResource.Kind, namespace, name)
+	klog.V(4).InfoS("Sync", "parent_kind", pc.parentResource.Kind, "object", klog.KRef(namespace, name))
 
 	parent, err := common.GetObject(pc.parentInformer, namespace, name)
 	if apierrors.IsNotFound(err) {
 		// Swallow the error since there's no point retrying if the parent is gone.
-		klog.V(4).Infof("%v %v/%v has been deleted", pc.parentResource.Kind, namespace, name)
+		klog.V(4).InfoS("Object has been deleted", "parent_kind", pc.parentResource.Kind, "object", klog.KRef(namespace, name))
 		return nil
 	}
 	if err != nil {
