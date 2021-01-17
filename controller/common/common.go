@@ -49,6 +49,12 @@ func (m ChildMap) Insert(parent metav1.Object, obj *unstructured.Unstructured) {
 	group[name] = obj
 }
 
+func (m ChildMap) InsertAll(parent metav1.Object, objects []*unstructured.Unstructured) {
+	for _, object := range objects {
+		m.Insert(parent, object)
+	}
+}
+
 func (m ChildMap) FindGroupKindName(apiGroup, kind, name string) *unstructured.Unstructured {
 	// The map is keyed by group-version-kind, but we don't know the version.
 	// So, check inside any GVK that matches the group and kind, ignoring version.
