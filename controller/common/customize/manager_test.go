@@ -114,3 +114,103 @@ func TestGetCustomizeHookResponse_returnResponse(t *testing.T) {
 		t.Error("Expected not nil here, response should be cached")
 	}
 }
+
+func TestDetermineSelectionType_returnErrorWhenLabelSelectorAndNamespaceIsPresent(t *testing.T) {
+	resourceRule := v1alpha1.RelatedResourceRule{
+		ResourceRule: v1alpha1.ResourceRule{
+			APIVersion: "some",
+			Resource:   "some",
+		},
+		LabelSelector: &v1.LabelSelector{MatchLabels: map[string]string{"aaa": "bbb"}},
+		Namespace:     "Namespace",
+	}
+
+	selectionType, err := determineSelectionType(&resourceRule)
+
+	if selectionType != invalid && err == nil {
+		t.Errorf("Expected error and 'invalid' selection type, but got %v", selectionType)
+	}
+}
+
+func TestDetermineSelectionType_returnErrorWhenLabelSelectorAndNameIsPresent(t *testing.T) {
+	resourceRule := v1alpha1.RelatedResourceRule{
+		ResourceRule: v1alpha1.ResourceRule{
+			APIVersion: "some",
+			Resource:   "some",
+		},
+		LabelSelector: &v1.LabelSelector{MatchLabels: map[string]string{"aaa": "bbb"}},
+		Names:         []string{"name"},
+	}
+
+	selectionType, err := determineSelectionType(&resourceRule)
+
+	if selectionType != invalid && err == nil {
+		t.Errorf("Expected error and 'invalid' selection type, but got %v", selectionType)
+	}
+}
+
+func TestDetermineSelectionType_returnLabelSelectorWhenPresent(t *testing.T) {
+	resourceRule := v1alpha1.RelatedResourceRule{
+		ResourceRule: v1alpha1.ResourceRule{
+			APIVersion: "some",
+			Resource:   "some",
+		},
+		LabelSelector: &v1.LabelSelector{MatchLabels: map[string]string{"aaa": "bbb"}},
+	}
+
+	selectionType, err := determineSelectionType(&resourceRule)
+
+	if selectionType != selectByLabels || err != nil {
+		t.Errorf("Expected %v selection type, but got %v", selectByLabels, selectionType)
+	}
+}
+
+func TestDetermineSelectionType_returnNamespaceAndNamesWhenNamespaceIsPresent(t *testing.T) {
+	resourceRule := v1alpha1.RelatedResourceRule{
+		ResourceRule: v1alpha1.ResourceRule{
+			APIVersion: "some",
+			Resource:   "some",
+		},
+		LabelSelector: nil,
+		Namespace:     "some",
+	}
+
+	selectionType, err := determineSelectionType(&resourceRule)
+
+	if selectionType != selectByNamespaceAndNames || err != nil {
+		t.Errorf("Expected %v selection type, but got %v", selectByNamespaceAndNames, selectionType)
+	}
+}
+
+func TestDetermineSelectionType_returnNamespaceAndNamesWhenNamesIsPresent(t *testing.T) {
+	resourceRule := v1alpha1.RelatedResourceRule{
+		ResourceRule: v1alpha1.ResourceRule{
+			APIVersion: "some",
+			Resource:   "some",
+		},
+		LabelSelector: nil,
+		Names:         []string{"name"},
+	}
+
+	selectionType, err := determineSelectionType(&resourceRule)
+
+	if selectionType != selectByNamespaceAndNames || err != nil {
+		t.Errorf("Expected %v selection type, but got %v", selectByNamespaceAndNames, selectionType)
+	}
+}
+
+func TestDetermineSelectionType_returnLabelsWhenNothingIsPresent(t *testing.T) {
+	resourceRule := v1alpha1.RelatedResourceRule{
+		ResourceRule: v1alpha1.ResourceRule{
+			APIVersion: "some",
+			Resource:   "some",
+		},
+		LabelSelector: nil,
+	}
+
+	selectionType, err := determineSelectionType(&resourceRule)
+
+	if selectionType != selectByLabels || err != nil {
+		t.Errorf("Expected %v selection type, but got %v", selectByLabels, selectionType)
+	}
+}

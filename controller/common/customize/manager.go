@@ -18,6 +18,14 @@ import (
 	k8s "metacontroller.io/third_party/kubernetes"
 )
 
+type relatedObjectsSelectionType string
+
+const (
+	selectByLabels            relatedObjectsSelectionType = "Labels"
+	selectByNamespaceAndNames relatedObjectsSelectionType = "NamespacesAndNames"
+	invalid                   relatedObjectsSelectionType = "Invalid"
+)
+
 type Manager struct {
 	name           string
 	metacontroller CustomizableController
@@ -204,39 +212,79 @@ func (rm *Manager) findRelatedParents(relateds ...*unstructured.Unstructured) []
 	return matchingParents
 }
 
+func determineSelectionType(relatedRule *v1alpha1.RelatedResourceRule) (relatedObjectsSelectionType, error) {
+	hasLabelSelector := relatedRule.LabelSelector != nil
+	hasNamespaceOrNames := len(relatedRule.Namespace) != 0 || len(relatedRule.Names) != 0
+	if hasLabelSelector && hasNamespaceOrNames {
+		return invalid, fmt.Errorf("Related rule cannot have both labelSelector and Namespace/Names specifcied : %#v", relatedRule)
+	}
+	if hasNamespaceOrNames {
+		return selectByNamespaceAndNames, nil
+	}
+	return selectByLabels, nil
+}
+
+func stringInArray(toMatch string, array []string) bool {
+	for _, element := range array {
+		if toMatch == element {
+			return true
+		}
+	}
+	return false
+}
+
+func toSelector(labelSelector *metav1.LabelSelector) (labels.Selector, error) {
+	if labelSelector == nil {
+		return labels.Everything(), nil
+	} else {
+		return metav1.LabelSelectorAsSelector(labelSelector)
+	}
+}
+
 func (rm *Manager) matchesRelatedRule(parent, related *unstructured.Unstructured, relatedRule *v1alpha1.RelatedResourceRule) (bool, error) {
 	parentGroup, _ := common.ParseAPIVersion(parent.GetAPIVersion())
 	parentResource := rm.parentKinds.Get(parentGroup, parent.GetKind())
 	if parentResource == nil {
 		return false, fmt.Errorf("Unknown parent %v/%v", parentGroup, parent.GetKind())
 	}
-	if parentResource.Namespaced {
-		parentNamespace := parent.GetNamespace()
-		if len(relatedRule.Namespace) != 0 && parentNamespace != relatedRule.Namespace {
-			return false, fmt.Errorf("%s: Namespace of parent %s does not match with namespace %s of related rule for %s/%s", parentResource.Kind, parent.GetName(), relatedRule.Namespace, relatedRule.APIVersion, relatedRule.Resource)
-		}
-		if parentNamespace != related.GetNamespace() {
-			return false, nil
-		}
-	}
-	selector, err := metav1.LabelSelectorAsSelector(relatedRule.LabelSelector)
+
+	selectionType, err := determineSelectionType(relatedRule)
 	if err != nil {
 		return false, err
 	}
-	if !selector.Matches(labels.Set(related.GetLabels())) {
-		return false, nil
-	}
-	if len(relatedRule.Names) != 0 {
-		relatedName := related.GetName()
-		for _, name := range relatedRule.Names {
-			if name == relatedName {
-				return true, nil
+
+	switch selectionType {
+	case selectByLabels:
+		selector, err := toSelector(relatedRule.LabelSelector)
+		if err != nil {
+			return false, err
+		}
+		return selector.Matches(labels.Set(related.GetLabels())), nil
+	case selectByNamespaceAndNames:
+		if parentResource.Namespaced {
+			parentNamespace := parent.GetNamespace()
+			if len(relatedRule.Namespace) != 0 && parentNamespace != relatedRule.Namespace {
+				return false, fmt.Errorf("%s: Namespace of parent %s does not match with namespace %s of related rule for %s/%s", parentResource.Kind, parent.GetName(), relatedRule.Namespace, relatedRule.APIVersion, relatedRule.Resource)
+			}
+			if parentNamespace != related.GetNamespace() {
+				return false, nil
 			}
 		}
-		return false, nil
-	} else {
+		if len(relatedRule.Names) != 0 {
+			relatedName := related.GetName()
+			return stringInArray(relatedName, relatedRule.Names), nil
+		}
 		return true, nil
 	}
+	return false, fmt.Errorf("Should not reach here")
+}
+
+func listObjects(selector labels.Selector, namespace string, informer *dynamicinformer.ResourceInformer) ([]*unstructured.Unstructured, error) {
+	if len(namespace) != 0 {
+		return informer.Lister().ListNamespace(namespace, selector)
+	}
+	return informer.Lister().List(selector)
+
 }
 
 func (rm *Manager) GetRelatedObjects(parent *unstructured.Unstructured) (common.ChildMap, error) {
@@ -259,41 +307,48 @@ func (rm *Manager) GetRelatedObjects(parent *unstructured.Unstructured) (common.
 	for _, relatedRule := range customizeHookResponse.RelatedResourceRules {
 		relatedClient, informer, err := rm.getRelatedClient(relatedRule.APIVersion, relatedRule.Resource)
 
-		selector, err := metav1.LabelSelectorAsSelector(relatedRule.LabelSelector)
+		selectionType, err := determineSelectionType(relatedRule)
 		if err != nil {
 			return nil, err
 		}
 
-		var all []*unstructured.Unstructured
-		if parentResource.Namespaced {
-			if len(relatedRule.Namespace) != 0 && relatedRule.Namespace != parentNamespace {
+		switch selectionType {
+		case selectByLabels:
+			selector, err := toSelector(relatedRule.LabelSelector)
+			if err != nil {
+				return nil, err
+			}
+			var all []*unstructured.Unstructured
+			if parentResource.Namespaced {
+				all, err = informer.Lister().ListNamespace(parentNamespace, selector)
+			} else {
+				all, err = informer.Lister().List(selector)
+			}
+			if err != nil {
+				return nil, fmt.Errorf("can't list %v related objects: %v", relatedClient.Kind, err)
+			}
+			childMap.InitGroup(relatedRule.APIVersion, relatedClient.Kind)
+			childMap.InsertAll(parent, all)
+
+		case selectByNamespaceAndNames:
+			if parentResource.Namespaced && len(relatedRule.Namespace) != 0 && parentNamespace != relatedRule.Namespace {
 				return nil, fmt.Errorf("requested related object namespace %s differs from parent object namespace %s", relatedRule.Namespace, parentNamespace)
 			}
-			all, err = informer.Lister().ListNamespace(parentNamespace, selector)
-		} else if len(relatedRule.Namespace) != 0 {
-			all, err = informer.Lister().ListNamespace(relatedRule.Namespace, selector)
-		} else {
-			all, err = informer.Lister().List(selector)
-		}
-		if err != nil {
-			return nil, fmt.Errorf("can't list %v related objects: %v", relatedClient.Kind, err)
-		}
-
-		childMap.InitGroup(relatedRule.APIVersion, relatedClient.Kind)
-
-		for _, obj := range all {
+			all, err := listObjects(labels.Everything(), relatedRule.Namespace, informer)
+			if err != nil {
+				return nil, fmt.Errorf("can't list %v related objects: %v", relatedClient.Kind, err)
+			}
+			childMap.InitGroup(relatedRule.APIVersion, relatedClient.Kind)
 			if len(relatedRule.Names) == 0 {
-				childMap.Insert(parent, obj)
+				childMap.InsertAll(parent, all)
 			} else {
-				for _, name := range relatedRule.Names {
-					if name == obj.GetName() {
+				for _, obj := range all {
+					if stringInArray(obj.GetName(), relatedRule.Names) {
 						childMap.Insert(parent, obj)
-						break
 					}
 				}
 			}
 		}
 	}
-
 	return childMap, err
 }
