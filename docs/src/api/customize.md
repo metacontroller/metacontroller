@@ -30,27 +30,24 @@ The body of your response should be a JSON object with the following fields:
 
 | Field | Description |
 | ----- | ----------- |
-| `relatedResources` | A list of JSON objects representing all the desired related resource label selectors. |
+| `relatedResources` | A list of JSON objects (`ResourceRules`) representing all the desired related resource descriptions (). |
 
 The `relatedResources` field should contain a flat list of objects,
 not an associative array.
 
-Each resource rule object should be a JSON object with the following fields:
+Each `ResourceRule` object should be a JSON object with the following fields:
 
 | Field | Description |
 | ----- | ----------- |
 | `apiVersion` | The API `<group>/<version>` of the parent resource, or just `<version>` for core APIs. (e.g. `v1`, `apps/v1`, `batch/v1`) |
 | `resource`   | The canonical, lowercase, plural name of the parent resource. (e.g. `deployments`, `replicasets`, `statefulsets`) |
-| `labelSelector` | A `v1.LabelSelector` object. **Do not left it nil** - see note below |
+| `labelSelector` | A `v1.LabelSelector` object. Omit if not used (i.e. Namespace or Names should be used) |
 | `namespace` | Optional. The Namespace to select in |
 | `names` | Optional. A list of strings, representing individual objects to return |
 
-Field `namespaces` and `names` are optional. If present, first label selector is applied, then abovementioned fields.
 
 **Important note**
-If you do not want match related resources based on `labelSelector`
-(i.e. select all resources of given type), then left it empty, (`'labelSelector': {}`) as not 
-setting this field will cause it to be set to `nil`, thus matching no objects.
+Please note that you can specify label selector or Namespace/Names, not both in the same `ResourceRule`.
 
 If the parent resource is cluster scoped and the related resource is namespaced,
 the namespace may be used to restrict which objects to look at. If the parent
@@ -87,13 +84,12 @@ The customize hook request will looks like :
 
 and we need to extract information identyfying source ConfigMap.
 
-We return :
+Controller returns :
 ```json
 [
     {
         'apiVersion': 'v1',
         'resource': 'configmaps',
-        'labelSelector': {},
         'namespace': ${parent['spec']['sourceNamespace']},
         'names': [${parent['spec']['sourceName']}]
     }, {
@@ -104,8 +100,8 @@ We return :
 ]
 ```
 
-The first element is needed, as in addition to our parent `CR`, in this case `GlobalConfigMap`, we need a source ConfigMap (as we want to propage it).
+The first `RelatedRule` describes that given configmap should be returned (it will be used as souce for our propagation).
 
-The second one is pointing that we want to get all namespaces in the cluster (`'labelSelector': {}` means - select all objects)
+The second `RelatedRule` describes that we want to recieve also all namespaces in the cluster (`'labelSelector': {}` means - select all objects).
 
-By having that, call to the `sync` hook will have non empty `related` field, in which all objects matching given criteria will be present.
+With those rules, call to the `sync` hook will have non empty `related` field (if resources exists in the cluster), in which all objects matching given criteria will be present.

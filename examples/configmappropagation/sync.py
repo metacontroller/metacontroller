@@ -27,6 +27,9 @@ class Controller(BaseHTTPRequestHandler):
     def sync(self, parent: dict, related: dict) -> dict:
         sourceNamespace: str = parent['spec']['sourceNamespace']
         sourceName: str = parent['spec']['sourceName']
+        if len(related['ConfigMap.v1']) == 0:
+            LOGGER.info("Related resource has been deleted, clean-up copies")
+            return []
         original_configmap: dict = related['ConfigMap.v1'][f'{sourceNamespace}/{sourceName}']
         targetNamespaces: list[str] = parent['spec']['targetNamespaces']
         target_configmaps = [self.new_configmap(
@@ -49,7 +52,6 @@ class Controller(BaseHTTPRequestHandler):
             {
                 'apiVersion': 'v1',
                 'resource': 'configmaps',
-                'labelSelector': {},
                 'namespace': sourceNamespace,
                 'names': [sourceName]
             }
@@ -60,8 +62,8 @@ class Controller(BaseHTTPRequestHandler):
             observed: dict = json.loads(self.rfile.read(
                 int(self.headers.get('content-length'))))
             parent: dict = observed['parent']
-            related: dict = observed['related']
             LOGGER.info("/sync %s", parent['metadata']['name'])
+            related: dict = observed['related']
             expected_copies: int = len(parent['spec']['targetNamespaces'])
             actual_copies: int = len(observed['children']['ConfigMap.v1'])
             response: dict = {
