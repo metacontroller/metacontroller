@@ -3,13 +3,12 @@ package customize
 import (
 	"fmt"
 
-	"github.com/golang/glog"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/klog"
 
 	v1alpha1 "metacontroller.io/apis/metacontroller/v1alpha1"
 	"metacontroller.io/controller/common"
@@ -114,7 +113,7 @@ func (rm *Manager) getRelatedClient(apiVersion, resource string) (*dynamicclient
 		})
 
 		if !k8s.WaitForCacheSync(rm.name, rm.stopCh, informer.Informer().HasSynced) {
-			glog.Warningf("related Manager %s cache sync never finished", rm.name)
+			klog.Warningf("related Manager %s cache sync never finished", rm.name)
 		}
 
 		rm.relatedInformers.Set(apiVersion, resource, informer)

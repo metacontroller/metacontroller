@@ -27,6 +27,9 @@ class Controller(BaseHTTPRequestHandler):
     def sync(self, parent: dict, related: dict) -> dict:
         sourceNamespace: str = parent['spec']['sourceNamespace']
         sourceName: str = parent['spec']['sourceName']
+        if len(related['Secret.v1']) == 0:
+            LOGGER.info("Related resource has been deleted, clean-up copies")
+            return []
         original_secret: dict = related['Secret.v1'][f'{sourceNamespace}/{sourceName}']
         targetNamespaces = related['Namespace.v1']
         target_secrets = []
@@ -52,7 +55,6 @@ class Controller(BaseHTTPRequestHandler):
             {
                 'apiVersion': 'v1',
                 'resource': 'secrets',
-                'labelSelector': {},
                 'namespace': sourceNamespace,
                 'names': [sourceName]
             }, {
