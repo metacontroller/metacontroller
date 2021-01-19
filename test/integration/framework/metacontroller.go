@@ -33,11 +33,23 @@ func CRDResourceRule(crd *apiextensions.CustomResourceDefinition) *v1alpha1.Reso
 
 // CreateCompositeController generates a test CompositeController and installs
 // it in the test API server.
-func (f *Fixture) CreateCompositeController(name, syncHookURL string, parentRule, childRule *v1alpha1.ResourceRule) *v1alpha1.CompositeController {
+func (f *Fixture) CreateCompositeController(name, syncHookURL string, customizeHookUrl string, parentRule, childRule *v1alpha1.ResourceRule) *v1alpha1.CompositeController {
 	childResources := []v1alpha1.CompositeControllerChildResourceRule{}
 	if childRule != nil {
 		childResources = append(childResources, v1alpha1.CompositeControllerChildResourceRule{ResourceRule: *childRule})
 	}
+
+	var customizeHook *v1alpha1.Hook
+	if len(customizeHookUrl) != 0 {
+		customizeHook = &v1alpha1.Hook{
+			Webhook: &v1alpha1.Webhook{
+				URL: &customizeHookUrl,
+			},
+		}
+	} else {
+		customizeHook = nil
+	}
+
 	cc := &v1alpha1.CompositeController{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "default",
@@ -56,6 +68,7 @@ func (f *Fixture) CreateCompositeController(name, syncHookURL string, parentRule
 						URL: &syncHookURL,
 					},
 				},
+				Customize: customizeHook,
 			},
 		},
 	}
@@ -73,11 +86,23 @@ func (f *Fixture) CreateCompositeController(name, syncHookURL string, parentRule
 
 // CreateDecoratorController generates a test DecoratorController and installs
 // it in the test API server.
-func (f *Fixture) CreateDecoratorController(name, syncHookURL string, parentRule, childRule *v1alpha1.ResourceRule) *v1alpha1.DecoratorController {
+func (f *Fixture) CreateDecoratorController(name, syncHookURL string, customizeHookUrl string, parentRule, childRule *v1alpha1.ResourceRule) *v1alpha1.DecoratorController {
 	childResources := []v1alpha1.DecoratorControllerAttachmentRule{}
 	if childRule != nil {
 		childResources = append(childResources, v1alpha1.DecoratorControllerAttachmentRule{ResourceRule: *childRule})
 	}
+
+	var customizeHook *v1alpha1.Hook
+	if len(customizeHookUrl) != 0 {
+		customizeHook = &v1alpha1.Hook{
+			Webhook: &v1alpha1.Webhook{
+				URL: &customizeHookUrl,
+			},
+		}
+	} else {
+		customizeHook = nil
+	}
+
 	dc := &v1alpha1.DecoratorController{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "default",
@@ -98,6 +123,7 @@ func (f *Fixture) CreateDecoratorController(name, syncHookURL string, parentRule
 						URL: &syncHookURL,
 					},
 				},
+				Customize: customizeHook,
 			},
 		},
 	}

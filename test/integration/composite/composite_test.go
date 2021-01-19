@@ -21,6 +21,7 @@ import (
 	"time"
 
 	batchv1 "k8s.io/api/batch/v1"
+	corev1 "k8s.io/api/core/v1"
 	apiextensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -28,6 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/json"
 
 	"metacontroller.io/apis/metacontroller/v1alpha1"
+	"metacontroller.io/controller/common/customize"
 	"metacontroller.io/controller/composite"
 	"metacontroller.io/test/integration/framework"
 )
@@ -66,7 +68,7 @@ func TestSyncWebhook(t *testing.T) {
 		return json.Marshal(resp)
 	})
 
-	f.CreateCompositeController("test-sync-webhook", hook.URL, framework.CRDResourceRule(parentCRD), framework.CRDResourceRule(childCRD))
+	f.CreateCompositeController("test-sync-webhook", hook.URL, "", framework.CRDResourceRule(parentCRD), framework.CRDResourceRule(childCRD))
 
 	parent := framework.UnstructuredCRD(parentCRD, "test-sync-webhook")
 	unstructured.SetNestedStringMap(parent.Object, labels, "spec", "selector", "matchLabels")
@@ -87,7 +89,7 @@ func TestSyncWebhook(t *testing.T) {
 
 // TestCascadingDelete tests that we request cascading deletion of children,
 // even if the server-side default for that child type is non-cascading.
-func TestCacadingDelete(t *testing.T) {
+func TestCascadingDelete(t *testing.T) {
 	ns := "test-cascading-delete"
 	labels := map[string]string{
 		"test": "test-cascading-delete",
@@ -133,7 +135,7 @@ func TestCacadingDelete(t *testing.T) {
 		return json.Marshal(resp)
 	})
 
-	f.CreateCompositeController("test-cascading-delete", hook.URL, framework.CRDResourceRule(parentCRD), &v1alpha1.ResourceRule{APIVersion: "batch/v1", Resource: "jobs"})
+	f.CreateCompositeController("test-cascading-delete", hook.URL, "", framework.CRDResourceRule(parentCRD), &v1alpha1.ResourceRule{APIVersion: "batch/v1", Resource: "jobs"})
 
 	parent := framework.UnstructuredCRD(parentCRD, "test-cascading-delete")
 	unstructured.SetNestedStringMap(parent.Object, labels, "spec", "selector", "matchLabels")
@@ -223,7 +225,7 @@ func TestResyncAfter(t *testing.T) {
 		return json.Marshal(resp)
 	})
 
-	f.CreateCompositeController("test-resync-after", hook.URL, framework.CRDResourceRule(parentCRD), nil)
+	f.CreateCompositeController("test-resync-after", hook.URL, "", framework.CRDResourceRule(parentCRD), nil)
 
 	parent := framework.UnstructuredCRD(parentCRD, "test-resync-after")
 	unstructured.SetNestedStringMap(parent.Object, labels, "spec", "selector", "matchLabels")
@@ -251,5 +253,97 @@ func TestResyncAfter(t *testing.T) {
 	t.Logf("elapsedSeconds: %v", elapsedSeconds)
 	if elapsedSeconds > 1.0 {
 		t.Errorf("requested resyncAfter did not occur in time; elapsedSeconds: %v", elapsedSeconds)
+	}
+}
+
+// TestCustomizeWebhook tests that the sync and customize webhook triggers and passes the
+// request/response properly.
+func TestCustomizeWebhook(t *testing.T) {
+	namespace := "test-customize-webhook"
+	relatedResourceName := "related-config-map"
+	labels := map[string]string{
+		"test": "test-customize-webhook",
+	}
+
+	f := framework.NewFixture(t)
+	defer f.TearDown()
+
+	f.CreateNamespace(namespace)
+	parentCRD, parentClient := f.CreateCRD("TestCustomizeWebhookParent", apiextensions.NamespaceScoped)
+	childCRD, childClient := f.CreateCRD("TestCustomizeWebhookChild", apiextensions.NamespaceScoped)
+	relatedClient := f.Clientset().CoreV1().ConfigMaps(namespace)
+	relatedConfigMap := corev1.ConfigMap{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ConfigMap",
+			APIVersion: "v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      relatedResourceName,
+			Namespace: namespace,
+		},
+		Data: make(map[string]string, 0),
+	}
+
+	_, err := relatedClient.Create(&relatedConfigMap)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	customizeHook := f.ServeWebhook(func(body []byte) ([]byte, error) {
+		type compositeCustomizeRequest struct {
+			Controller v1alpha1.CompositeController `json:"controller"`
+			Parent     unstructured.Unstructured    `json:"parent"`
+		}
+		req := compositeCustomizeRequest{}
+		if err := json.Unmarshal(body, &req); err != nil {
+			return nil, err
+		}
+		resp := customize.CustomizeHookResponse{
+			RelatedResourceRules: []*v1alpha1.RelatedResourceRule{
+				&v1alpha1.RelatedResourceRule{
+					ResourceRule: v1alpha1.ResourceRule{
+						APIVersion: "v1",
+						Resource:   "configmaps",
+					},
+					Namespace: req.Parent.GetNamespace(),
+					Names:     []string{relatedResourceName},
+				},
+			},
+		}
+		return json.Marshal(resp)
+	})
+
+	syncHook := f.ServeWebhook(func(body []byte) ([]byte, error) {
+		req := composite.SyncHookRequest{}
+		if err := json.Unmarshal(body, &req); err != nil {
+			return nil, err
+		}
+		// As a simple test of request/response content,
+		// just create a child with name composes from parent name and related ConfigMap name.
+		related := req.Related.List()[0]
+		child := framework.UnstructuredCRD(childCRD, req.Parent.GetName()+"-"+related.GetName())
+		child.SetLabels(labels)
+		resp := composite.SyncHookResponse{
+			Children: []*unstructured.Unstructured{child},
+		}
+		return json.Marshal(resp)
+	})
+
+	f.CreateCompositeController("test-customize-webhook", syncHook.URL, customizeHook.URL, framework.CRDResourceRule(parentCRD), framework.CRDResourceRule(childCRD))
+
+	parent := framework.UnstructuredCRD(parentCRD, "test-customize-webhook")
+	unstructured.SetNestedStringMap(parent.Object, labels, "spec", "selector", "matchLabels")
+	_, err = parentClient.Namespace(namespace).Create(parent, metav1.CreateOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Logf("Waiting for child object to be created...")
+	err = f.Wait(func() (bool, error) {
+		_, err := childClient.Namespace(namespace).Get("test-customize-webhook-"+relatedResourceName, metav1.GetOptions{})
+		return err == nil, err
+	})
+	if err != nil {
+		t.Errorf("didn't find expected child: %v", err)
 	}
 }
