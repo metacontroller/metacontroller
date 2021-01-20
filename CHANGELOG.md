@@ -1,3 +1,17 @@
+# [1.2.0](https://github.com/metacontroller/metacontroller/compare/v1.1.3...v1.2.0) (2021-01-20)
+
+
+### Bug Fixes
+
+* **deps:** Update go to 1.15.7 ([e9d7a22](https://github.com/metacontroller/metacontroller/commit/e9d7a2211c3be833fa8216724fe7ba16715c1985))
+* **deps:** Update k8s.io packages to 0.17.17 ([6ff338e](https://github.com/metacontroller/metacontroller/commit/6ff338ec8c96ccf8a46456b07b5bbb86ed6e33b6))
+* **deps:** Update prometheus/client_golang to v1.9.0 ([d288bce](https://github.com/metacontroller/metacontroller/commit/d288bceaed5f17073044caf85a3af52213513479))
+
+
+### Features
+
+* **#31:** Add distroless images, migrate to build action v2 ([bbd9715](https://github.com/metacontroller/metacontroller/commit/bbd9715b08968fa146082480ddcac52c0bb67d74)), closes [#31](https://github.com/metacontroller/metacontroller/issues/31)
+
 ## [1.1.3](https://github.com/metacontroller/metacontroller/compare/v1.1.2...v1.1.3) (2021-01-20)
 
 
