@@ -1,3 +1,10 @@
+## [1.2.1](https://github.com/metacontroller/metacontroller/compare/v1.2.0...v1.2.1) (2021-01-20)
+
+
+### Bug Fixes
+
+* **docker:** Disable `latest` tag for distroless variants ([8ce7a8d](https://github.com/metacontroller/metacontroller/commit/8ce7a8d9ada65358e9f371f30db0e25374a3a35c))
+
 # [1.2.0](https://github.com/metacontroller/metacontroller/compare/v1.1.3...v1.2.0) (2021-01-20)
 
 
