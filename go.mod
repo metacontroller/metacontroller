@@ -15,11 +15,11 @@ require (
 	k8s.io/api v0.17.17
 	k8s.io/apiextensions-apiserver v0.17.17
 	k8s.io/apimachinery v0.17.17
-	k8s.io/client-go v0.17.17
+	k8s.io/client-go/v12/v12 v12.0.0
 	k8s.io/code-generator v0.17.17
 	k8s.io/component-base v0.17.17
 	k8s.io/gengo v0.0.0-20201113003025-83324d819ded // indirect
-	k8s.io/klog v1.0.0
+	k8s.io/klog/v2/v2 v2.4.0
 	k8s.io/klog/v2 v2.4.0
 	k8s.io/utils v0.0.0-20191114184206-e782cd3c129f
 	sigs.k8s.io/controller-tools v0.2.4
