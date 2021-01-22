@@ -1,3 +1,11 @@
+# [1.3.0](https://github.com/metacontroller/metacontroller/compare/v1.2.1...v1.3.0) (2021-01-22)
+
+
+### Features
+
+* **#69:** Migration of customize hook implementation ([7c959db](https://github.com/metacontroller/metacontroller/commit/7c959db081eab9f69340fcb23b46f7e5791c0321)), closes [#69](https://github.com/metacontroller/metacontroller/issues/69)
+* Implement customize hook ([2facbdb](https://github.com/metacontroller/metacontroller/commit/2facbdbaa4f775670d5aab2959e41bd2dfc9e92e))
+
 ## [1.2.1](https://github.com/metacontroller/metacontroller/compare/v1.2.0...v1.2.1) (2021-01-20)
 
 
