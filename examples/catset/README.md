@@ -12,7 +12,7 @@ For this example, you need a cluster with a default storage class and a dynamic 
 
 ### Prerequisites
 
-* Install [Metacontroller](https://github.com/GoogleCloudPlatform/metacontroller)
+* Install [Metacontroller](https://github.com/metacontroller/metacontroller)
 
 ### Deploy the controller
 

@@ -4,7 +4,7 @@ This is an example DecoratorController returning a status
 
 ### Prerequisites
 
-* Install [Metacontroller](https://github.com/GoogleCloudPlatform/metacontroller)
+* Install [Metacontroller](https://github.com/metacontroller/metacontroller)
 
 ### Deploy the controller
 

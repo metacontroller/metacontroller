@@ -10,7 +10,7 @@ CompositeController to wrap up any such pattern you could think of.
 
 ### Prerequisites
 
-* Install [Metacontroller](https://github.com/GoogleCloudPlatform/metacontroller)
+* Install [Metacontroller](https://github.com/metacontroller/metacontroller)
 
 ### Deploy the controller
 

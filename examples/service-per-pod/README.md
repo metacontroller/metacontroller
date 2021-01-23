@@ -46,7 +46,7 @@ is removed to opt out of the decorator, any Services created will be cleaned up.
 
 * Kubernetes 1.8+ is recommended for its improved CRD support,
   especially garbage collection.
-* Install [Metacontroller](https://github.com/GoogleCloudPlatform/metacontroller).
+* Install [Metacontroller](https://github.com/metacontroller/metacontroller).
 
 ### Deploy the DecoratorControllers
 
