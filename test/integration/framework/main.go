@@ -103,7 +103,7 @@ func testMain(tests func() int) error {
 	}
 
 	// Install Metacontroller CRDs.
-	if err := execKubectl("apply", "-f", path.Join(manifestDir, "metacontroller.yaml")); err != nil {
+	if err := execKubectl("apply", "-f", path.Join(manifestDir, "metacontroller-crds-v1.yaml")); err != nil {
 		return fmt.Errorf("cannot install metacontroller CRDs: %v", err)
 	}
 
