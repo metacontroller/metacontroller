@@ -320,11 +320,17 @@ func TestCustomizeWebhook(t *testing.T) {
 		}
 		// As a simple test of request/response content,
 		// just create a child with name composes from parent name and related ConfigMap name.
-		related := req.Related.List()[0]
-		child := framework.UnstructuredCRD(childCRD, req.Parent.GetName()+"-"+related.GetName())
-		child.SetLabels(labels)
+		var children []*unstructured.Unstructured
+		if len(req.Related.List()) == 0 {
+			children = make([]*unstructured.Unstructured, 0)
+		} else {
+			related := req.Related.List()[0]
+			child := framework.UnstructuredCRD(childCRD, req.Parent.GetName()+"-"+related.GetName())
+			child.SetLabels(labels)
+			children = []*unstructured.Unstructured{child}
+		}
 		resp := composite.SyncHookResponse{
-			Children: []*unstructured.Unstructured{child},
+			Children: children,
 		}
 		return json.Marshal(resp)
 	})

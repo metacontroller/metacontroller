@@ -5,15 +5,14 @@ controllers or just to run third-party controllers that depend on it.
 
 ## Prerequisites
 
-* Kubernetes v1.16
+* Kubernetes v1.11+
 * You should have `kubectl` available and configured to talk to the desired cluster.
 
 ### Running on kubernetes older than 1.16
 
-Metacontroller *should* work fine (as for now - December 2020) running on 1.9+, as it does not have direct dependency on kubernetes API version. 
-In this case you should use [0.4.5](https://github.com/metacontroller/metacontroller/releases/tag/v0.4.5) release manifests, just put current (or any fixed) image version in `metacontroller.yaml`. 
-However there is no gurantee that this will work forever - the goal is to make it compatibile with supported kubernetes releases. 
-Please update your cluster in that case.
+As metacontroller does not have direct dependency on kubernetes API
+it have wide range of supported kubernetes versions.
+However, to be able to install it on clusters older than 1.16, CRD with schema in version `v1beta1` must be used then.
 
 ### Grant yourself cluster-admin (GKE only)
 
@@ -30,16 +29,22 @@ Replace `<user>` and `<domain>` above based on the account you use to authentica
 ## Install Metacontroller
 
 ```sh
-# Create metacontroller namespace.
-kubectl create namespace metacontroller
-# Create metacontroller service account and role/binding.
-kubectl apply -f {{ site.repo_raw }}/manifests/metacontroller-rbac.yaml
-# Create CRDs for Metacontroller APIs, and the Metacontroller StatefulSet.
-kubectl apply -f {{ site.repo_raw }}/manifests/metacontroller.yaml
+# Apply all set of production resources defined in kustomization.yaml in `production` directory .
+kubectl apply -k {{ site.repo_raw }}/manifests/production
+
 ```
 
 If you prefer to build and host your own images, please see the
 [build instructions](../contrib/build.md) in the contributor guide.
+
+If your `kubectl` version does does not support `-k` flag, please 
+install resources mentioned in `manifests/production/kustomization.yaml`
+one by one manually with `kubectl apply -f {{filename}}` command.
+
+**Compatibility note**
+CRD's are shipped in two versions:
+* `v1` - supposed to be used when your kubernetes cluster is 1.16+
+* `v1beta1` otherwise
 
 ## Configuration
 

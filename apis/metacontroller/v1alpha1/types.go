@@ -26,7 +26,6 @@ import (
 // +genclient:noStatus
 // +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:path=compositecontrollers,scope=Cluster,shortName=cc;cctl
 type CompositeController struct {
@@ -130,7 +129,6 @@ type CompositeControllerStatus struct {
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
 type CompositeControllerList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`
@@ -140,7 +138,6 @@ type CompositeControllerList struct {
 // +genclient
 // +genclient:noStatus
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:path=controllerrevisions,scope=Namespaced
 type ControllerRevision struct {
@@ -158,7 +155,6 @@ type ControllerRevisionChildren struct {
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
 type ControllerRevisionList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`
@@ -225,7 +221,6 @@ type DecoratorControllerStatus struct {
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
 type DecoratorControllerList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`
