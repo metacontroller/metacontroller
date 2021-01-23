@@ -10,7 +10,7 @@ Finally, it scales down the old ReplicaSet.
 
 ### Prerequisites
 
-* Install [Metacontroller](https://github.com/GoogleCloudPlatform/metacontroller)
+* Install [Metacontroller](https://github.com/metacontroller/metacontroller)
 
 ### Deploy the controller
 

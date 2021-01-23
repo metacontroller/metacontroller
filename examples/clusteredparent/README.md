@@ -8,7 +8,7 @@ annotation to the default service account in the default namespace.
 
 ### Prerequisites
 
-* Install [Metacontroller](https://github.com/GoogleCloudPlatform/metacontroller)
+* Install [Metacontroller](https://github.com/metacontroller/metacontroller)
 
 ### Deploy the controller
 
