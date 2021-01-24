@@ -1,7 +1,7 @@
 tag = 0.1
 
 image:
-	docker build -t metacontroller/jsonnetd:$(tag) .
+	docker build -t metacontrollerio/examples/jsonnetd:$(tag) .
 
 push: image
-	docker push metacontroller/jsonnetd:$(tag)
+	docker push metacontrollerio/examples/jsonnetd:$(tag)

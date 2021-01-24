@@ -1,10 +1,8 @@
-FROM golang:1.10 AS build
-
-RUN curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
+FROM golang:1.15.7 AS build
 
 COPY . /go/src/jsonnetd/
 WORKDIR /go/src/jsonnetd/
-RUN dep ensure && go install
+RUN go mod vendor && go install
 
 FROM debian:stretch-slim
 COPY --from=build /go/bin/jsonnetd /jsonnetd/
