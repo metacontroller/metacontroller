@@ -6,7 +6,6 @@ go 1.15
 
 require (
 	github.com/go-logr/logr v0.3.0 // indirect
-	github.com/google/go-jsonnet v0.14.0 // test
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/prometheus/client_golang v1.9.0
 	golang.org/x/time v0.0.0-20200630173020-3af7569d3a1e // indirect

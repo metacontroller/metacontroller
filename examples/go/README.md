@@ -57,8 +57,7 @@ You don't need to build to run the example above,
 but if you make changes:
 
 ```sh
-go get -u github.com/golang/dep/cmd/dep
-dep ensure
+go mod vendor
 go build -o thing-controller
 ```
 
