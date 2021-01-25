@@ -175,14 +175,13 @@
 controllers or just to run third-party controllers that depend on it.</p>
 <h2><a class="header" href="#prerequisites" id="prerequisites">Prerequisites</a></h2>
 <ul>
-<li>Kubernetes v1.16</li>
+<li>Kubernetes v1.11+</li>
 <li>You should have <code>kubectl</code> available and configured to talk to the desired cluster.</li>
 </ul>
 <h3><a class="header" href="#running-on-kubernetes-older-than-116" id="running-on-kubernetes-older-than-116">Running on kubernetes older than 1.16</a></h3>
-<p>Metacontroller <em>should</em> work fine (as for now - December 2020) running on 1.9+, as it does not have direct dependency on kubernetes API version. 
-In this case you should use <a href="https://github.com/metacontroller/metacontroller/releases/tag/v0.4.5">0.4.5</a> release manifests, just put current (or any fixed) image version in <code>metacontroller.yaml</code>. 
-However there is no gurantee that this will work forever - the goal is to make it compatibile with supported kubernetes releases. 
-Please update your cluster in that case.</p>
+<p>As metacontroller does not have direct dependency on kubernetes API
+it have wide range of supported kubernetes versions.
+However, to be able to install it on clusters older than 1.16, CRD with schema in version <code>v1beta1</code> must be used then.</p>
 <h3><a class="header" href="#grant-yourself-cluster-admin-gke-only" id="grant-yourself-cluster-admin-gke-only">Grant yourself cluster-admin (GKE only)</a></h3>
 <p>Due to a <a href="https://cloud.google.com/container-engine/docs/role-based-access-control#defining_permissions_in_a_role">known issue</a>
 in GKE, you'll need to first grant yourself <code>cluster-admin</code> privileges before
@@ -191,15 +190,21 @@ you can install the necessary RBAC manifests.</p>
 </code></pre>
 <p>Replace <code>&lt;user&gt;</code> and <code>&lt;domain&gt;</code> above based on the account you use to authenticate to GKE.</p>
 <h2><a class="header" href="#install-metacontroller" id="install-metacontroller">Install Metacontroller</a></h2>
-<pre><code class="language-sh"># Create metacontroller namespace.
-kubectl create namespace metacontroller
-# Create metacontroller service account and role/binding.
-kubectl apply -f {{ site.repo_raw }}/manifests/metacontroller-rbac.yaml
-# Create CRDs for Metacontroller APIs, and the Metacontroller StatefulSet.
-kubectl apply -f {{ site.repo_raw }}/manifests/metacontroller.yaml
+<pre><code class="language-sh"># Apply all set of production resources defined in kustomization.yaml in `production` directory .
+kubectl apply -k {{ site.repo_raw }}/manifests/production
+
 </code></pre>
 <p>If you prefer to build and host your own images, please see the
 <a href="../contrib/build.html">build instructions</a> in the contributor guide.</p>
+<p>If your <code>kubectl</code> version does does not support <code>-k</code> flag, please 
+install resources mentioned in <code>manifests/production/kustomization.yaml</code>
+one by one manually with <code>kubectl apply -f {{filename}}</code> command.</p>
+<p><strong>Compatibility note</strong>
+CRD's are shipped in two versions:</p>
+<ul>
+<li><code>v1</code> - supposed to be used when your kubernetes cluster is 1.16+</li>
+<li><code>v1beta1</code> otherwise</li>
+</ul>
 <h2><a class="header" href="#configuration" id="configuration">Configuration</a></h2>
 <p>The Metacontroller server has a few settings that can be configured
 with command-line flags (by editing the Metacontroller StatefulSet
