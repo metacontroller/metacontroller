@@ -1,3 +1,10 @@
+# [1.4.0](https://github.com/metacontroller/metacontroller/compare/v1.3.0...v1.4.0) (2021-01-25)
+
+
+### Features
+
+* Ship CRD's manifests also in version v1beta1 for kubernetes 1.15 ([284b3e2](https://github.com/metacontroller/metacontroller/commit/284b3e222bad1a54ceedc8efc4e1b4d308c82d63))
+
 # [1.3.0](https://github.com/metacontroller/metacontroller/compare/v1.2.1...v1.3.0) (2021-01-22)
 
 
