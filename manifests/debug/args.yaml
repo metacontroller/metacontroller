@@ -1,0 +1,16 @@
+# Override args for development mode.
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: metacontroller
+  namespace: metacontroller
+spec:
+  template:
+    spec:
+      containers:
+      - name: metacontroller
+        command: ["/dlv", "--listen=:40000", "--headless=true", "--api-version=2", "exec", "/usr/bin/metacontroller", "--"]
+        args:
+        - --logtostderr
+        - -v=5
+        - --discovery-interval=5s
