@@ -155,3 +155,21 @@ Note that currently our continuous integration only runs unit and integration
 tests on PRs, since those don't require a full cluster.
 If you have access to a suitable test cluster, you can help speed up review of
 your PR by running these end-to-end tests yourself to see if they catch anything.
+
+## Debug
+
+There is special `Dockerfile` version targeting build for debugging - `Dockerfile.debug`.
+In order to build debug version of image, please execute
+```sh
+docker build -t metacontrollerio/metacontroller:debug -f Dockerfile.debug . 
+```
+afterward, you can run
+```sh
+kubectl apply -k manifests/debug
+```
+to apply manifests configured for debugging.
+To attach remote debugger, please first forward `metacontroller` port :
+```sh
+kubectl port-forward metacontroller-0 40000:40000
+```
+and attach debugger to `localhost:40000`

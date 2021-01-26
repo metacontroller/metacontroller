@@ -1,0 +1,12 @@
+# Override image for development mode (skaffold fills in the tag).
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: metacontroller
+  namespace: metacontroller
+spec:
+  template:
+    spec:
+      containers:
+      - name: metacontroller
+        image: metacontrollerio/metacontroller:debug

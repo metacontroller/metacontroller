@@ -1,0 +1,5 @@
+bases:
+- ../production
+patches:
+- image.yaml
+- args.yaml

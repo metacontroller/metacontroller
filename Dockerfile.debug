@@ -1,0 +1,14 @@
+FROM golang:1.15.7 AS build
+
+COPY . /go/src/metacontroller.io/
+WORKDIR /go/src/metacontroller.io/
+ENV CGO_ENABLED=0
+RUN make vendor && go install  -gcflags="all=-N -l"
+WORKDIR /go/src/
+RUN go get github.com/go-delve/delve/cmd/dlv
+
+FROM alpine:3.13.0@sha256:d0710affa17fad5f466a70159cc458227bd25d4afb39514ef662ead3e6c99515
+RUN apk update && apk add --no-cache ca-certificates
+COPY --from=build /go/bin/metacontroller.io /usr/bin/metacontroller
+COPY --from=build /go/bin/dlv /
+CMD ["/dlv", "--listen=:40000", "--headless=true", "--api-version=2", "exec", "/usr/bin/metacontroller"]
