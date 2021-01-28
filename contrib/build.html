@@ -272,6 +272,19 @@ For example:</p>
 tests on PRs, since those don't require a full cluster.
 If you have access to a suitable test cluster, you can help speed up review of
 your PR by running these end-to-end tests yourself to see if they catch anything.</p>
+<h2><a class="header" href="#debug" id="debug">Debug</a></h2>
+<p>There is special <code>Dockerfile</code> version targeting build for debugging - <code>Dockerfile.debug</code>.
+In order to build debug version of image, please execute</p>
+<pre><code class="language-sh">docker build -t metacontrollerio/metacontroller:debug -f Dockerfile.debug . 
+</code></pre>
+<p>afterward, you can run</p>
+<pre><code class="language-sh">kubectl apply -k manifests/debug
+</code></pre>
+<p>to apply manifests configured for debugging.
+To attach remote debugger, please first forward <code>metacontroller</code> port :</p>
+<pre><code class="language-sh">kubectl port-forward metacontroller-0 40000:40000
+</code></pre>
+<p>and attach debugger to <code>localhost:40000</code></p>
 
                     </main>
 
