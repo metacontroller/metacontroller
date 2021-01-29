@@ -1,3 +1,42 @@
+# [1.0.0](https://github.com/grzesuav/metacontroller/compare/v0.4.3...v1.0.0) (2021-01-29)
+
+
+### Bug Fixes
+
+* **deps:** update alpine docker tag to v3.12.2 ([08a9d26](https://github.com/grzesuav/metacontroller/commit/08a9d260a6366ba0caa0e747cdb96b99d01be9b2))
+* **deps:** update alpine docker tag to v3.13.0 ([2f62ec1](https://github.com/grzesuav/metacontroller/commit/2f62ec1506f21026e31c4947b29bd12ac88dafaa))
+* **deps:** Update alpine to 3.12.3 and go to 1.15.6 ([091f3b2](https://github.com/grzesuav/metacontroller/commit/091f3b2231ac3c6b481dd159183739fdcc31e7b3))
+* **deps:** Update dependencies to k8s 0.17.0 ([f61b37f](https://github.com/grzesuav/metacontroller/commit/f61b37f5137a53d528cb498065e0885ae71f9008))
+* **deps:** Update go to 1.15.7 ([e9d7a22](https://github.com/grzesuav/metacontroller/commit/e9d7a2211c3be833fa8216724fe7ba16715c1985))
+* **deps:** Update k8s.io packages to 0.17.17 ([6ff338e](https://github.com/grzesuav/metacontroller/commit/6ff338ec8c96ccf8a46456b07b5bbb86ed6e33b6))
+* **deps:** update k8s.io packages to v0.17.14 ([4be7525](https://github.com/grzesuav/metacontroller/commit/4be75251892b4fca3db91ba767865303991f5064))
+* **deps:** update k8s.io packages to v0.17.15 ([34a0c98](https://github.com/grzesuav/metacontroller/commit/34a0c98c03d4940c8abd18c85ddbcb6f876ea837))
+* **deps:** Update k8s.io packages to v0.17.16 ([2f11f21](https://github.com/grzesuav/metacontroller/commit/2f11f21b8faca344ff6a2ed041adfe3e238d49bd))
+* **deps:** Update prometheus/client_golang to v1.9.0 ([d288bce](https://github.com/grzesuav/metacontroller/commit/d288bceaed5f17073044caf85a3af52213513479))
+* **docker:** Disable `latest` tag for distroless variants ([8ce7a8d](https://github.com/grzesuav/metacontroller/commit/8ce7a8d9ada65358e9f371f30db0e25374a3a35c))
+* **security:** Update vunerable openssl packages -  CVE-2020-1971 ([060a2d9](https://github.com/grzesuav/metacontroller/commit/060a2d9b178936e7ed535310525bbf6e68ac77dd))
+
+
+### chore
+
+* **api:** Update CRD api versions to v1 ([c38b399](https://github.com/grzesuav/metacontroller/commit/c38b39944b04fa88185786c4d3ecd8d2dd951753))
+
+
+### Features
+
+* Ship CRD's manifests also in version v1beta1 for kubernetes 1.15 ([284b3e2](https://github.com/grzesuav/metacontroller/commit/284b3e222bad1a54ceedc8efc4e1b4d308c82d63))
+* **#69:** Migration of customize hook implementation ([7c959db](https://github.com/grzesuav/metacontroller/commit/7c959db081eab9f69340fcb23b46f7e5791c0321)), closes [#69](https://github.com/grzesuav/metacontroller/issues/69)
+* Implement customize hook ([2facbdb](https://github.com/grzesuav/metacontroller/commit/2facbdbaa4f775670d5aab2959e41bd2dfc9e92e))
+* **#31:** Add distroless images, migrate to build action v2 ([bbd9715](https://github.com/grzesuav/metacontroller/commit/bbd9715b08968fa146082480ddcac52c0bb67d74)), closes [#31](https://github.com/grzesuav/metacontroller/issues/31)
+* **perf:** Add a flag to configure the number of workers to run ([3f07022](https://github.com/grzesuav/metacontroller/commit/3f070229327b735a532d114b06175d6f46d30e82))
+
+
+### BREAKING CHANGES
+
+* **api:** Migrated CRD api version to 'apiextensions.k8s.io/v1' introduced in kubernetes 1.16. This now makes 1.16 the minimal supported kubernetes version
+
+Signed-off-by: Filip Petkovski <filip.petkovski@personio.de>
+
 # [1.4.0](https://github.com/metacontroller/metacontroller/compare/v1.3.0...v1.4.0) (2021-01-25)
 
 
