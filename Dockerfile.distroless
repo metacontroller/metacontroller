@@ -1,9 +1,12 @@
 FROM golang:1.15.7 AS build
 
+ARG TAG
+ENV TAG=${TAG:-dev}
+
 COPY . /go/src/metacontroller.io/
 WORKDIR /go/src/metacontroller.io/
 ENV CGO_ENABLED=0
-RUN make vendor && go install
+RUN make install
 
 FROM gcr.io/distroless/base-debian10:nonroot
 USER nonroot:nonroot

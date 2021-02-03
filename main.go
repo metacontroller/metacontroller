@@ -46,6 +46,7 @@ var (
 	clientGoQPS       = flag.Float64("client-go-qps", 5, "Number of queries per second client-go is allowed to make (default 5)")
 	clientGoBurst     = flag.Int("client-go-burst", 10, "Allowed burst queries for client-go (default 10)")
 	workers           = flag.Int("workers", 5, "Number of sync workers to run (default 5)")
+	version           = "No version provided"
 )
 
 func main() {
@@ -54,6 +55,7 @@ func main() {
 	klog.InfoS("Discovery cache flush interval", "discovery_interval", *discoveryInterval)
 	klog.InfoS("API server object cache flush interval", "cache_flush_interval", *informerRelist)
 	klog.InfoS("Http server address", "port", *debugAddr)
+	klog.InfoS("Metacontroller build information", "version", version)
 
 	var config *rest.Config
 	var err error

@@ -1,10 +1,13 @@
 FROM golang:1.15.7 AS build
 
+ARG TAG
+ENV TAG=${TAG:-dev}
+
+ENV CGO_ENABLED=0
 COPY . /go/src/metacontroller.io/
 WORKDIR /go/src/metacontroller.io/
-ENV CGO_ENABLED=0
-RUN make vendor && go install  -gcflags="all=-N -l"
-WORKDIR /go/src/
+ENV ADDITIONAL_BUILD_ARGUMENTS='-gcflags="all=-N -l"'
+RUN make install
 RUN go get github.com/go-delve/delve/cmd/dlv
 
 FROM alpine:3.13.0@sha256:d0710affa17fad5f466a70159cc458227bd25d4afb39514ef662ead3e6c99515
