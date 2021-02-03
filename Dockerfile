@@ -1,9 +1,12 @@
 FROM golang:1.15.7 AS build
 
+ARG TAG
+ENV TAG=${TAG:-dev}
+
 COPY . /go/src/metacontroller.io/
 WORKDIR /go/src/metacontroller.io/
 ENV CGO_ENABLED=0
-RUN make vendor && go install
+RUN make install
 
 FROM alpine:3.13.0@sha256:d0710affa17fad5f466a70159cc458227bd25d4afb39514ef662ead3e6c99515
 COPY --from=build /go/bin/metacontroller.io /usr/bin/metacontroller

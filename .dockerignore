@@ -2,3 +2,6 @@
 # helps Skaffold know when not to rebuild the image.
 docs
 examples
+tmp
+hack/bin
+vendor

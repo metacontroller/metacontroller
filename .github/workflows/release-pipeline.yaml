@@ -12,13 +12,14 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v2
+    - uses: rlespinasse/github-slug-action@v3.x
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v1
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v1
     - name: Login to DockerHub
       if: github.event_name != 'pull_request'
-      uses: docker/login-action@v1 
+      uses: docker/login-action@v1
       with:
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
@@ -37,6 +38,8 @@ jobs:
         push: ${{ github.event_name != 'pull_request' }}
         tags: ${{ steps.docker_meta_alpine.outputs.tags }}
         labels: ${{ steps.docker_meta_alpine.outputs.labels }}
+        build-args: |
+          TAG=${{ env.GITHUB_REF_SLUG }}
     - name: '[distroless] Docker metainformations'
       id: docker_meta_distroless
       uses: crazy-max/ghaction-docker-meta@v1
@@ -53,6 +56,8 @@ jobs:
         push: ${{ github.event_name != 'pull_request' }}
         tags: ${{ steps.docker_meta_distroless.outputs.tags }}-distroless
         labels: ${{ steps.docker_meta_distroless.outputs.labels }}
+        build-args: |
+          TAG=${{ env.GITHUB_REF_SLUG }}
     - name: '[distroless-debug] Docker metainformations'
       id: docker_meta_distroless_debug
       uses: crazy-max/ghaction-docker-meta@v1
@@ -69,3 +74,5 @@ jobs:
         push: ${{ github.event_name != 'pull_request' }}
         tags: ${{ steps.docker_meta_distroless_debug.outputs.tags }}-distroless-debug
         labels: ${{ steps.docker_meta_distroless_debug.outputs.labels }}
+        build-args: |
+          TAG=${{ env.GITHUB_REF_SLUG }}
