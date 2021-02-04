@@ -3,16 +3,24 @@ name: Test and Release (if on master)
 on: [push, pull_request]
 jobs:
   tests:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     name: Tests
     steps:
       - name: checkout
         uses: actions/checkout@v2
+        with:
+          fetch-depth: '5'
       - name: Run unit & integration tests
         shell: bash
-        run: docker build -t metacontroller:test -f Dockerfile.test .
+        run: DOCKER_BUILDKIT=1 docker build -o ./tmp -t metacontroller:test -f Dockerfile.test .
+      - name: coverage
+        uses: codecov/codecov-action@v1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
+          files: ./tmp/integration-coverage.out,./tmp/unit-coverage.out
+          fail_ci_if_error: true # optional (default = false)
   docker-linters:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     steps:
     - name: checkout
       uses: actions/checkout@v2
@@ -23,7 +31,7 @@ jobs:
       with:
         image-name: metacontrollerio/metacontroller:lint
   go-sec:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     env:
       GO111MODULE: on
     steps:
@@ -36,7 +44,7 @@ jobs:
         token: ${{ secrets.GITHUB_TOKEN }}
         flags: "-exclude-dir=examples -exclude-dir=test -exclude=G104"
   # go-shadow:
-  #   runs-on: ubuntu-18.04
+  #   runs-on: ubuntu-20.04
   #   env:
   #     GO111MODULE: on
   #   steps:
@@ -48,7 +56,7 @@ jobs:
   #       run: shadow
   #       token: ${{ secrets.GITHUB_TOKEN }}
   go-imports:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     env:
       GO111MODULE: on
     steps:
@@ -61,7 +69,7 @@ jobs:
         token: ${{ secrets.GITHUB_TOKEN }}
         flags: "-exclude-dir=examples -exclude-dir=test"
   # go-errcheck:
-  #   runs-on: ubuntu-18.04
+  #   runs-on: ubuntu-20.04
   #   env:
   #     GO111MODULE: on
   #   steps:
@@ -73,7 +81,7 @@ jobs:
   #       run: errcheck
   #       token: ${{ secrets.GITHUB_TOKEN }}
   go-vet:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     env:
       GO111MODULE: on
     steps:
@@ -85,7 +93,7 @@ jobs:
         run: vet
         token: ${{ secrets.GITHUB_TOKEN }}
   go-fmt:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     env:
       GO111MODULE: on
     steps:
@@ -97,7 +105,7 @@ jobs:
         run: fmt
         token: ${{ secrets.GITHUB_TOKEN }}
   # go-staticcheck:
-  #   runs-on: ubuntu-18.04
+  #   runs-on: ubuntu-20.04
   #   env:
   #     GO111MODULE: on
   #   steps:
@@ -111,7 +119,7 @@ jobs:
   release:
     if: github.ref == 'refs/heads/master'
     name: Release - build/push docker and create tag
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     needs: ['tests']
     steps:
     - name: Checkout

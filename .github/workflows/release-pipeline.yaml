@@ -7,7 +7,7 @@ on:
 jobs:
   release-docker:
     name: Release docker image
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     if: github.repository_owner == 'metacontroller'
     steps:
     - name: Checkout
