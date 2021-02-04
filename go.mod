@@ -5,7 +5,6 @@ module metacontroller.io
 go 1.15
 
 require (
-	github.com/go-logr/logr v0.3.0 // indirect
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/prometheus/client_golang v1.9.0
 	golang.org/x/time v0.0.0-20200630173020-3af7569d3a1e // indirect
@@ -19,7 +18,7 @@ require (
 	k8s.io/component-base v0.17.17
 	k8s.io/gengo v0.0.0-20201113003025-83324d819ded // indirect
 	k8s.io/klog v1.0.0 // test
-	k8s.io/klog/v2 v2.4.0
+	k8s.io/klog/v2 v2.5.0
 	k8s.io/utils v0.0.0-20191114184206-e782cd3c129f
 	sigs.k8s.io/controller-tools v0.2.9 // test
 )
