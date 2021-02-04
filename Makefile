@@ -27,11 +27,11 @@ vendor:
 unit-test: test-setup
 	pkgs="$$(go list ./... | grep -v '/test/integration/\|/examples/\|hack')" ; \
 		go test -i $${pkgs} && \
-		gotestsum $${pkgs}
+		gotestsum -- -coverprofile=tmp/unit-coverage.out $${pkgs}
 
 .PHONY: integration-test
 integration-test: test-setup
-	gotestsum ./test/integration/... -v -timeout 5m -args --logtostderr -v=1
+	gotestsum -- -coverprofile=tmp/integration-coverage.out ./test/integration/... -v -timeout 5m -args --logtostderr -v=1
 
 .PHONY: test-setup
 test-setup: vendor

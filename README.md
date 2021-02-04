@@ -5,6 +5,7 @@
 ![Docker Pulls](https://img.shields.io/docker/pulls/metacontrollerio/metacontroller)
 ![GitHub contributors](https://img.shields.io/github/contributors/metacontroller/metacontroller)
 [![Go Report Card](https://goreportcard.com/badge/github.com/metacontroller/metacontroller)](https://goreportcard.com/report/github.com/metacontroller/metacontroller)
+[![codecov](https://codecov.io/gh/metacontroller/metacontroller/branch/master/graph/badge.svg?token=VU0L35J51Z)](https://codecov.io/gh/metacontroller/metacontroller)
 
 # Metacontroller
 
