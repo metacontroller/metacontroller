@@ -1,3 +1,12 @@
+## [1.4.1](https://github.com/metacontroller/metacontroller/compare/v1.4.0...v1.4.1) (2021-02-05)
+
+
+### Bug Fixes
+
+* **deps:** Update klog2 to 2.5.0 ([2988b74](https://github.com/metacontroller/metacontroller/commit/2988b74142f7f378da9fa70e1e5b5421abc56494))
+* Add build information ([00f9858](https://github.com/metacontroller/metacontroller/commit/00f9858b5013962b6c9737011c012c6e26ea1d6c))
+* Update alpine to 3.13.1 ([7d10f84](https://github.com/metacontroller/metacontroller/commit/7d10f84609d51ce46a40eeedd3b0bb94e9b8edcd))
+
 # [1.4.0](https://github.com/metacontroller/metacontroller/compare/v1.3.0...v1.4.0) (2021-01-25)
 
 
