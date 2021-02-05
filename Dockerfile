@@ -5,7 +5,7 @@ WORKDIR /go/src/metacontroller.io/
 ENV CGO_ENABLED=0
 RUN make vendor && go install
 
-FROM alpine:3.13.0@sha256:d0710affa17fad5f466a70159cc458227bd25d4afb39514ef662ead3e6c99515
+FROM alpine:3.13.0@sha256:d9a7354e3845ea8466bb00b22224d9116b183e594527fb5b6c3d30bc01a20378
 COPY --from=build /go/bin/metacontroller.io /usr/bin/metacontroller
 RUN apk update && apk add --no-cache ca-certificates
 CMD ["/usr/bin/metacontroller"]
