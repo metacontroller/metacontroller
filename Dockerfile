@@ -1,4 +1,4 @@
-FROM golang:1.15.7 AS build
+FROM golang:1.15.8 AS build
 
 ARG TAG
 ENV TAG=${TAG:-dev}
