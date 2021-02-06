@@ -11,11 +11,14 @@ export GOTESTSUM_FORMAT=pkgname
 
 CODE_GENERATOR_VERSION="v0.17.17"
 
+PKGS = $(shell go list ./... | grep -v '/test/integration/\|/examples/')
+COVER_PKGS = $(shell echo ${PKGS} | tr " " ",")
+
 all: install
 
 .PHONY: install
 install: generated_files
-	go install -ldflags  "-X main.version=$(TAG)"  $(ADDITIONAL_BUILD_ARGUMENTS)
+	go install -ldflags  "-X main.version=$(TAG)" $(ADDITIONAL_BUILD_ARGUMENTS)
 
 .PHONY: vendor
 vendor: 
@@ -25,13 +28,12 @@ vendor:
 
 .PHONY: unit-test
 unit-test: test-setup
-	pkgs="$$(go list ./... | grep -v '/test/integration/\|/examples/\|hack')" ; \
-		go test -i $${pkgs} && \
-		gotestsum -- -coverprofile=tmp/unit-coverage.out $${pkgs}
+	go test -i ${PKGS} && \
+	gotestsum -- -coverpkg="${COVER_PKGS}" -coverprofile=tmp/unit-coverage.out ${PKGS}
 
 .PHONY: integration-test
 integration-test: test-setup
-	gotestsum -- -coverprofile=tmp/integration-coverage.out ./test/integration/... -v -timeout 5m -args --logtostderr -v=1
+	gotestsum -- -coverpkg="${COVER_PKGS}" -coverprofile=tmp/integration-coverage.out ./test/integration/... -v -timeout 5m -args --logtostderr -v=1
 
 .PHONY: test-setup
 test-setup: vendor
