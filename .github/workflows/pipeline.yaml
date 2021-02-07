@@ -13,11 +13,19 @@ jobs:
       - name: Run unit & integration tests
         shell: bash
         run: DOCKER_BUILDKIT=1 docker build -o ./tmp -t metacontroller:test -f Dockerfile.test .
-      - name: coverage
+      - name: coverage-unit
         uses: codecov/codecov-action@v1
         with:
           token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
-          files: ./tmp/integration-coverage.out,./tmp/unit-coverage.out
+          files: ./tmp/unit-coverage.out
+          flags: unit
+          fail_ci_if_error: true # optional (default = false)
+      - name: coverage-integration
+        uses: codecov/codecov-action@v1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
+          files: ./tmp/integration-coverage.out
+          flags: integration
           fail_ci_if_error: true # optional (default = false)
   docker-linters:
     runs-on: ubuntu-20.04
