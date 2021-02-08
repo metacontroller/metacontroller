@@ -1,0 +1,7 @@
+resources:
+- globalconfigmap.yaml
+configMapGenerator:
+- name: globalconfigmap-controller
+  namespace: metacontroller
+  files:
+  - sync.py

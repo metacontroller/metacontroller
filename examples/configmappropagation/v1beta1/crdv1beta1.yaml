@@ -1,0 +1,42 @@
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: configmappropagations.examples.metacontroller.io
+spec:
+  group: examples.metacontroller.io
+  scope: Cluster
+  names:
+    plural: configmappropagations
+    singular: configmappropagation
+    kind: ConfigMapPropagation
+    shortNames: ["cp"]
+  validation:
+    openAPIV3Schema:
+      type: object
+      properties:
+        spec:
+          type: object
+          properties:
+            sourceName:
+              description: 'Name of configmap to propagate'
+              type: string
+            sourceNamespace:
+              description: 'Namespace in which configmap to propagate is located'
+              type: string
+            targetNamespaces:
+              type: array
+              items:
+                type: string
+          required:
+            - sourceName
+            - sourceNamespace
+            - targetNamespaces
+      required:
+        - spec
+  subresources:
+    status: {}
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true

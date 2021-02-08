@@ -15,9 +15,9 @@ Finally, it scales down the old ReplicaSet.
 ### Deploy the controller
 
 ```sh
-kubectl create configmap bluegreen-controller -n metacontroller --from-file=sync.js
-kubectl apply -f bluegreen-controller.yaml
+kubectl apply -k v1
 ```
+(or pass `v1beta1` for kubernetes 1.15 or older)
 
 ### Create a BlueGreenDeployment
 

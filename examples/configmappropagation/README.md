@@ -9,9 +9,9 @@ This is an example CompositeController that propagates a speficied configmap to 
 ### Deploy the controller
 
 ```sh
-kubectl create configmap configmap-propagation-controller -n metacontroller --from-file=sync.py
-kubectl apply -f configmap-propagation.yaml
+kubectl apply -k v1
 ```
+(or pass `v1beta1` for kubernetes 1.15 or older)
 
 ### Create an example configmap, several namespaces and ConfigMapPropagation custom resource
 

@@ -1,13 +1,14 @@
 #!/bin/bash
 
+crd_version=${1:-v1}
+
 cleanup() {
   set +e
   echo "Clean up..."
   kubectl delete -f my-daemonjob.yaml
   kubectl delete daemonset hello-world-dj
   kubectl delete po -l app=hello-world
-  kubectl delete -f daemonjob-controller.yaml
-  kubectl delete configmap daemonjob-controller -n metacontroller
+  kubectl delete -k "${crd_version}"
 }
 trap cleanup EXIT
 
@@ -16,8 +17,7 @@ set -ex
 dj="daemonjobs"
 
 echo "Install controller..."
-kubectl create configmap daemonjob-controller -n metacontroller --from-file=sync.py
-kubectl apply -f daemonjob-controller.yaml
+kubectl apply -k "${crd_version}"
 
 echo "Wait until CRD is available..."
 until kubectl get $dj; do sleep 1; done

@@ -1,19 +1,19 @@
 #!/bin/bash
 
+crd_version=${1:-v1}
+
 cleanup() {
   set +e
   echo "Clean up..."
   kubectl delete -f example-globalconfigmap.yaml
-  kubectl delete -f globalconfigmap.yaml
-  kubectl delete configmap globalconfigmap-controller -n metacontroller
+  kubectl delete -k "${crd_version}"
 }
 trap cleanup EXIT
 
 set -ex
 
 echo "Install controller..."
-kubectl create configmap globalconfigmap-controller -n metacontroller --from-file=sync.py
-kubectl apply -f globalconfigmap.yaml
+kubectl apply -k "${crd_version}"
 
 echo "Create a CRD..."
 kubectl apply -f example-globalconfigmap.yaml

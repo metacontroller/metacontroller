@@ -1,0 +1,7 @@
+resources:
+- indexedjob-controller.yaml
+configMapGenerator:
+- name: indexedjob-controller
+  namespace: metacontroller
+  files:
+  - sync.py

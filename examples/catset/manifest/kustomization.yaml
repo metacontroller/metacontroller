@@ -1,0 +1,7 @@
+resources:
+- catset-controller.yaml
+configMapGenerator:
+- name: catset-controller
+  namespace: metacontroller
+  files:
+  - sync.js

@@ -9,8 +9,7 @@ This is an example DecoratorController returning a status
 ### Deploy the controller
 
 ```sh
-kubectl create configmap noop-controller -n metacontroller --from-file=sync.js
-kubectl apply -f noop-controller.yaml
+kubectl apply -k v1
 ```
 
 ### Create a Noop

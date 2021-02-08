@@ -1,0 +1,7 @@
+resources:
+- bluegreen-controller.yaml
+configMapGenerator:
+- name: bluegreen-controller
+  namespace: metacontroller
+  files:
+  - sync.js
