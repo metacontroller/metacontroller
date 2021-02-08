@@ -1,0 +1,7 @@
+resources:
+- crd-role-controller.yaml
+configMapGenerator:
+- name: crd-role-controller
+  namespace: metacontroller
+  files:
+  - sync.py

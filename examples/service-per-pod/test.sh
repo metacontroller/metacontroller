@@ -5,9 +5,8 @@ cleanup() {
   echo "Clean up..."
   kubectl patch statefulset nginx --type=merge -p '{"metadata":{"finalizers":[]}}'
   kubectl delete -f my-statefulset.yaml
-  kubectl delete -f service-per-pod.yaml
+  kubectl delete -k manifest
   kubectl delete svc -l app=service-per-pod
-  kubectl delete configmap service-per-pod-hooks -n metacontroller
 }
 trap cleanup EXIT
 
@@ -16,8 +15,7 @@ set -ex
 finalizer="metacontroller.io/service-per-pod-test"
 
 echo "Install controller..."
-kubectl create configmap service-per-pod-hooks -n metacontroller --from-file=hooks
-kubectl apply -f service-per-pod.yaml
+kubectl apply -k manifest
 
 echo "Create a StatefulSet..."
 kubectl apply -f my-statefulset.yaml

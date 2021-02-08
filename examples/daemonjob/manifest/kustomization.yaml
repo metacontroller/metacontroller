@@ -1,0 +1,7 @@
+resources:
+- daemonjob-controller.yaml
+configMapGenerator:
+- name: daemonjob-controller
+  namespace: metacontroller
+  files:
+  - sync.py

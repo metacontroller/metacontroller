@@ -4,16 +4,14 @@ cleanup() {
   set +e
   echo "Clean up..."
   kubectl delete -f my-clusterrole.yaml
-  kubectl delete -f cluster-parent.yaml
-  kubectl delete configmap cluster-parent-controller -n metacontroller
+  kubectl delete -k manifest
 }
 trap cleanup EXIT
 
 set -ex
 
 echo "Install controller..."
-kubectl create configmap cluster-parent-controller -n metacontroller --from-file=sync.py
-kubectl apply -f cluster-parent.yaml
+kubectl apply -k manifest
 
 echo "Create a ClusterRole..."
 kubectl apply -f my-clusterrole.yaml

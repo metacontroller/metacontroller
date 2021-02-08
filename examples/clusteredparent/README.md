@@ -13,8 +13,7 @@ annotation to the default service account in the default namespace.
 ### Deploy the controller
 
 ```sh
-kubectl create configmap cluster-parent-controller -n metacontroller --from-file=sync.py
-kubectl apply -f cluster-parent.yaml
+kubectl apply -k manifest
 ```
 
 ### Create a ClusterRole

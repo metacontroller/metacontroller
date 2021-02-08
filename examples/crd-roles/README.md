@@ -10,15 +10,17 @@ Both the parent and child resouces are Cluster scoped.
 ### Deploy the controller
 
 ```sh
-kubectl create configmap crd-role-controller -n metacontroller --from-file=sync.py
-kubectl apply -f crd-role-controller.yaml
+kubectl apply -k v1
 ```
+(or pass `v1beta1` for kubernetes 1.15 or older)
 
 ### Create a CRD
 
 ```sh
-kubectl apply -f my-crd.yaml
+kubectl apply -f v1/my-crd.yaml
 ```
+(or pass 'v1beta' directory for kubernetes 1.15 or older)
+
 
 A ClusterRole should be created configured with read access to the CRD.
 

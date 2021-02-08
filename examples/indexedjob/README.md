@@ -10,9 +10,9 @@ except that each Pod gets assigned a unique index, similar to StatefulSet.
 ### Deploy the controller
 
 ```sh
-kubectl create configmap indexedjob-controller -n metacontroller --from-file=sync.py
-kubectl apply -f indexedjob-controller.yaml
+kubectl apply -k v1
 ```
+(or pass `v1beta1` for kubernetes 1.15 or older)
 
 ### Create an IndexedJob
 

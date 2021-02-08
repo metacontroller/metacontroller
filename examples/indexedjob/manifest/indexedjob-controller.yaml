@@ -1,38 +1,35 @@
 ---
 apiVersion: metacontroller.k8s.io/v1alpha1
-kind: DecoratorController
+kind: CompositeController
 metadata:
-  name: crd-role-controller
+  name: indexedjob-controller
 spec:
-  resources:
-  - apiVersion: apiextensions.k8s.io/v1
-    resource: customresourcedefinitions
-    annotationSelector:
-      matchExpressions:
-      - {key: enable-default-roles, operator: Exists}
-  attachments:
-  - apiVersion: rbac.authorization.k8s.io/v1
-    resource: clusterroles
+  generateSelector: true
+  parentResource:
+    apiVersion: ctl.enisoc.com/v1
+    resource: indexedjobs
+  childResources:
+    - apiVersion: v1
+      resource: pods
   hooks:
     sync:
       webhook:
-        url: http://crd-role-controller.metacontroller/sync-crd-role
-        timeout: 10s
+        url: http://indexedjob-controller.metacontroller/sync
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: crd-role-controller
+  name: indexedjob-controller
   namespace: metacontroller
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: crd-role-controller
+      app: indexedjob-controller
   template:
     metadata:
       labels:
-        app: crd-role-controller
+        app: indexedjob-controller
     spec:
       containers:
       - name: controller
@@ -44,15 +41,15 @@ spec:
       volumes:
       - name: hooks
         configMap:
-          name: crd-role-controller
+          name: indexedjob-controller
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: crd-role-controller
+  name: indexedjob-controller
   namespace: metacontroller
 spec:
   selector:
-    app: crd-role-controller
+    app: indexedjob-controller
   ports:
   - port: 80

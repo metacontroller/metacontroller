@@ -1,0 +1,7 @@
+resources:
+- configmap-propagation.yaml
+configMapGenerator:
+- name: configmap-propagation-controller
+  namespace: metacontroller
+  files:
+  - sync.py

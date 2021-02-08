@@ -51,8 +51,7 @@ is removed to opt out of the decorator, any Services created will be cleaned up.
 ### Deploy the DecoratorControllers
 
 ```sh
-kubectl create configmap service-per-pod-hooks -n metacontroller --from-file=hooks
-kubectl apply -f service-per-pod.yaml
+kubectl apply -k manifest
 ```
 
 ### Create an Example StatefulSet

@@ -1,0 +1,7 @@
+resources:
+- cluster-parent.yaml
+configMapGenerator:
+- name: cluster-parent-controller
+  namespace: metacontroller
+  files:
+  - sync.py

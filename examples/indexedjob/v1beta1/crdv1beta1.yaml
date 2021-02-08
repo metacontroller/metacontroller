@@ -1,0 +1,16 @@
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: indexedjobs.ctl.enisoc.com
+spec:
+  group: ctl.enisoc.com
+  version: v1
+  scope: Namespaced
+  names:
+    plural: indexedjobs
+    singular: indexedjob
+    kind: IndexedJob
+    shortNames: ["ij", "idxj"]
+  subresources:
+    status: {}

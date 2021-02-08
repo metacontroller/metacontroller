@@ -15,9 +15,9 @@ CompositeController to wrap up any such pattern you could think of.
 ### Deploy the controller
 
 ```sh
-kubectl create configmap daemonjob-controller -n metacontroller --from-file=sync.py
-kubectl apply -f daemonjob-controller.yaml
+kubectl apply -k v1
 ```
+(or pass `v1beta1` for kubernetes 1.15 or older)
 
 ### Create a DaemonJob
 

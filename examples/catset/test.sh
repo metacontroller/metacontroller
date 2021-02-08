@@ -1,13 +1,14 @@
 #!/bin/bash
 
+crd_version=${1:-v1}
+
 cleanup() {
   set +e
   echo "Clean up..."
   kubectl patch $cs nginx-backend --type=merge -p '{"metadata":{"finalizers":[]}}'
   kubectl delete -f my-catset.yaml
   kubectl delete po,pvc -l app=nginx,component=backend
-  kubectl delete -f catset-controller.yaml
-  kubectl delete configmap catset-controller -n metacontroller
+  kubectl delete -k "${crd_version}"
 }
 trap cleanup EXIT
 
@@ -17,8 +18,7 @@ cs="catsets"
 finalizer="metacontroller.io/catset-test"
 
 echo "Install controller..."
-kubectl create configmap catset-controller -n metacontroller --from-file=sync.js
-kubectl apply -f catset-controller.yaml
+kubectl apply -k "${crd_version}"
 
 echo "Wait until CRD is available..."
 until kubectl get $cs; do sleep 1; done

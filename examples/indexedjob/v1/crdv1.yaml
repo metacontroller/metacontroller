@@ -1,0 +1,22 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: indexedjobs.ctl.enisoc.com
+spec:
+  group: ctl.enisoc.com
+  scope: Namespaced
+  names:
+    plural: indexedjobs
+    singular: indexedjob
+    kind: IndexedJob
+    shortNames: ["ij", "idxj"]
+  versions:
+  - name: v1
+    served: true
+    storage: true
+    schema:
+      openAPIV3Schema:
+        x-kubernetes-preserve-unknown-fields: true
+    subresources:
+      status: {}

@@ -1,12 +1,13 @@
 #!/bin/bash
 
+crd_version=${1:-v1}
+
 cleanup() {
   set +e
   echo "Clean up..."
   kubectl delete -f my-bluegreen.yaml
   kubectl delete rs,svc -l app=nginx,component=frontend
-  kubectl delete -f bluegreen-controller.yaml
-  kubectl delete configmap bluegreen-controller -n metacontroller
+  kubectl delete -k "${crd_version}"
 }
 trap cleanup EXIT
 
@@ -15,8 +16,7 @@ set -ex
 bgd="bluegreendeployments"
 
 echo "Install controller..."
-kubectl create configmap bluegreen-controller -n metacontroller --from-file=sync.js
-kubectl apply -f bluegreen-controller.yaml
+kubectl apply -k "${crd_version}"
 
 echo "Wait until CRD is available..."
 until kubectl get $bgd; do sleep 1; done

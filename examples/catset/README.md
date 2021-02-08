@@ -17,9 +17,9 @@ For this example, you need a cluster with a default storage class and a dynamic 
 ### Deploy the controller
 
 ```sh
-kubectl create configmap catset-controller -n metacontroller --from-file=sync.js
-kubectl apply -f catset-controller.yaml
+kubectl apply -k v1
 ```
+(or pass `v1beta1` for kubernetes 1.15 or older)
 
 ### Create a CatSet
 
