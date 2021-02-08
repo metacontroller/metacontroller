@@ -6,27 +6,69 @@ jobs:
     runs-on: ubuntu-20.04
     name: Tests
     steps:
-      - name: checkout
-        uses: actions/checkout@v2
-        with:
-          fetch-depth: '5'
-      - name: Run unit & integration tests
-        shell: bash
-        run: DOCKER_BUILDKIT=1 docker build -o ./tmp -t metacontroller:test -f Dockerfile.test .
-      - name: coverage-unit
-        uses: codecov/codecov-action@v1
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
-          files: ./tmp/unit-coverage.out
-          flags: unit
-          fail_ci_if_error: true # optional (default = false)
-      - name: coverage-integration
-        uses: codecov/codecov-action@v1
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
-          files: ./tmp/integration-coverage.out
-          flags: integration
-          fail_ci_if_error: true # optional (default = false)
+    - name: checkout
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: '5'
+    - name: Run unit & integration tests
+      shell: bash
+      run: DOCKER_BUILDKIT=1 docker build -o ./tmp -t metacontroller:test -f Dockerfile.test .
+    - name: coverage-unit
+      uses: codecov/codecov-action@v1
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
+        files: ./tmp/unit-coverage.out
+        flags: unit
+        fail_ci_if_error: true # optional (default = false)
+    - name: coverage-integration
+      uses: codecov/codecov-action@v1
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
+        files: ./tmp/integration-coverage.out
+        flags: integration
+        fail_ci_if_error: true # optional (default = false)
+  e2etests:
+    runs-on: ubuntu-20.04
+    strategy:
+      matrix:
+        configuration:
+#         - {version: '1.13', image: 'kindest/node:v1.13.12@sha256:1c1a48c2bfcbae4d5f4fa4310b5ed10756facad0b7a2ca93c7a4b5bae5db29f5', crd_version: 'v1beta1' }
+#         - {version: '1.14', image: 'kindest/node:v1.14.10@sha256:ce4355398a704fca68006f8a29f37aafb49f8fc2f64ede3ccd0d9198da910146', crd_version: 'v1beta1' }
+#         - {version: '1.15', image: 'kindest/node:v1.15.12@sha256:d9b939055c1e852fe3d86955ee24976cab46cba518abcb8b13ba70917e6547a6', crd_version: 'v1beta1' }
+         - {version: '1.16', image: 'kindest/node:v1.16.15@sha256:a89c771f7de234e6547d43695c7ab047809ffc71a0c3b65aa54eda051c45ed20', crd_version: 'v1' }
+         - {version: '1.17', image: 'kindest/node:v1.17.11@sha256:5240a7a2c34bf241afb54ac05669f8a46661912eab05705d660971eeb12f6555', crd_version: 'v1' }
+         - {version: '1.18', image: 'kindest/node:v1.18.8@sha256:f4bcc97a0ad6e7abaf3f643d890add7efe6ee4ab90baeb374b4f41a4c95567eb', crd_version: 'v1' }
+         - {version: '1.19', image: 'kindest/node:v1.19.1@sha256:98cf5288864662e37115e362b23e4369c8c4a408f99cbc06e58ac30ddc721600', crd_version: 'v1' }
+    name: k8s ${{ matrix.configuration.version }}
+    steps:
+    - name: checkout
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: '5'
+    - name: build local Image
+      run: docker build -t metacontrollerio/metacontroller:dev .
+    - name: setup kind
+      uses: engineerd/setup-kind@v0.5.0
+      with:
+        version: "v0.9.0"
+        image: ${{ matrix.configuration.image }}
+    - name: Load metacontroller image
+      run: |
+        kind load docker-image metacontrollerio/metacontroller:dev
+    - name: Replace CRD mnifests to v1beta1
+      if: ${{ matrix.configuration.crd_version == 'v1beta1' }}
+      run: |
+        sed -i 's/crds-v1/crds-v1beta1/' manifests/production/kustomization.yaml
+        for file in examples/**/*.yaml; do sed -i 's/apiextensions.k8s.io\/v1/apiextensions.k8s.io\/v1beta1/g' $file; done
+    - name: Apply metacontroller manifests
+      run: |
+        kubectl apply -k manifests/dev
+        sleep 20s
+        kubectl get pods -n metacontroller
+    - name: Run e2e tests
+      run: |
+        cd examples
+        ./test.sh --ignore catset
   docker-linters:
     runs-on: ubuntu-20.04
     steps:
