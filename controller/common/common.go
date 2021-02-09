@@ -190,3 +190,11 @@ func (m InformerMap) Get(apiVersion, resource string) *dynamicinformer.ResourceI
 func informerMapKey(apiVersion, resource string) string {
 	return fmt.Sprintf("%s.%s", resource, apiVersion)
 }
+
+// GetObject return object via Lister from given informer, namespaced or not.
+func GetObject(informer *dynamicinformer.ResourceInformer, namespace, name string) (*unstructured.Unstructured, error) {
+	if namespace == "" {
+		return informer.Lister().Get(name)
+	}
+	return informer.Lister().Namespace(namespace).Get(name)
+}

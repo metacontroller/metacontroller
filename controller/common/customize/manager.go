@@ -275,12 +275,12 @@ func (rm *Manager) matchesRelatedRule(parent, related *unstructured.Unstructured
 		}
 		return true, nil
 	}
-	return false, fmt.Errorf("Should not reach here")
+	return false, fmt.Errorf("should not reach here")
 }
 
 func listObjects(selector labels.Selector, namespace string, informer *dynamicinformer.ResourceInformer) ([]*unstructured.Unstructured, error) {
 	if len(namespace) != 0 {
-		return informer.Lister().ListNamespace(namespace, selector)
+		return informer.Lister().Namespace(namespace).List(selector)
 	}
 	return informer.Lister().List(selector)
 
@@ -319,7 +319,7 @@ func (rm *Manager) GetRelatedObjects(parent *unstructured.Unstructured) (common.
 			}
 			var all []*unstructured.Unstructured
 			if parentResource.Namespaced {
-				all, err = informer.Lister().ListNamespace(parentNamespace, selector)
+				all, err = informer.Lister().Namespace(parentNamespace).List(selector)
 			} else {
 				all, err = informer.Lister().List(selector)
 			}
