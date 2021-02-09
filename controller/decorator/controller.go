@@ -323,7 +323,7 @@ func (c *decoratorController) resolveControllerRef(childNamespace string, contro
 		// (except for namespaced child -> cluster-scoped parent).
 		parentNamespace = childNamespace
 	}
-	parent, err := informer.Lister().Get(parentNamespace, controllerRef.Name)
+	parent, err := common.GetObject(informer, parentNamespace, controllerRef.Name)
 	if err != nil {
 		return nil
 	}
@@ -426,7 +426,7 @@ func (c *decoratorController) sync(key string) error {
 	if informer == nil {
 		return fmt.Errorf("no informer for resource %q in apiVersion %q", resource.Name, apiVersion)
 	}
-	parent, err := informer.Lister().Get(namespace, name)
+	parent, err := common.GetObject(informer, namespace, name)
 	if apierrors.IsNotFound(err) {
 		// Swallow the error since there's no point retrying if the parent is gone.
 		klog.V(4).Infof("%v %v/%v has been deleted", kind, namespace, name)
@@ -592,7 +592,7 @@ func (c *decoratorController) getChildren(parent *unstructured.Unstructured) (co
 		var all []*unstructured.Unstructured
 		var err error
 		if parentNamespace != "" {
-			all, err = informer.Lister().ListNamespace(parentNamespace, labels.Everything())
+			all, err = informer.Lister().Namespace(parentNamespace).List(labels.Everything())
 		} else {
 			all, err = informer.Lister().List(labels.Everything())
 		}

@@ -28,8 +28,8 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/tools/cache"
 
+	"k8s.io/client-go/dynamic/dynamiclister"
 	dynamicclientset "metacontroller.io/dynamic/clientset"
-	dynamiclister "metacontroller.io/dynamic/lister"
 )
 
 // SharedIndexInformer is an extension of the standard interface of the same
@@ -81,7 +81,7 @@ func (ri *ResourceInformer) Informer() SharedIndexInformer {
 
 // Lister returns a shared, dynamic lister that's analogous to the static
 // listers generated for static types.
-func (ri *ResourceInformer) Lister() *dynamiclister.Lister {
+func (ri *ResourceInformer) Lister() dynamiclister.Lister {
 	return ri.sharedResourceInformer.lister
 }
 
@@ -98,7 +98,7 @@ func (ri *ResourceInformer) Close() {
 // multiple ResourceInformer instances.
 type sharedResourceInformer struct {
 	informer cache.SharedIndexInformer
-	lister   *dynamiclister.Lister
+	lister   dynamiclister.Lister
 
 	defaultResyncPeriod time.Duration
 
@@ -126,7 +126,8 @@ func newSharedResourceInformer(client *dynamicclientset.ResourceClient, defaultR
 		informer:            informer,
 		defaultResyncPeriod: defaultResyncPeriod,
 
-		lister: dynamiclister.New(client.GroupResource(), informer.GetIndexer()),
+		//lister: dynamiclister.New(client.GroupResource(), informer.GetIndexer()),
+		lister: dynamiclister.New(informer.GetIndexer(), client.GroupVersionResource()),
 	}
 	sri.eventHandlers = newSharedEventHandler(sri.lister, defaultResyncPeriod)
 	informer.AddEventHandler(sri.eventHandlers)
@@ -141,14 +142,14 @@ func newSharedResourceInformer(client *dynamicclientset.ResourceClient, defaultR
 // event handlers. Unlike most users of that library, we need to dynamically add
 // and remove handlers throughout the lifetime of a shared informer.
 type sharedEventHandler struct {
-	lister       *dynamiclister.Lister
+	lister       dynamiclister.Lister
 	relistPeriod time.Duration
 
 	mutex    sync.RWMutex
 	handlers map[*informerWrapper][]*eventHandler
 }
 
-func newSharedEventHandler(lister *dynamiclister.Lister, relistPeriod time.Duration) *sharedEventHandler {
+func newSharedEventHandler(lister dynamiclister.Lister, relistPeriod time.Duration) *sharedEventHandler {
 	return &sharedEventHandler{
 		lister:       lister,
 		relistPeriod: relistPeriod,

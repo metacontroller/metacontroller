@@ -298,7 +298,7 @@ func (pc *parentController) resolveControllerRef(childNamespace string, controll
 		// (except for namespaced child -> cluster-scoped parent).
 		parentNamespace = childNamespace
 	}
-	parent, err := pc.parentInformer.Lister().Get(parentNamespace, controllerRef.Name)
+	parent, err := common.GetObject(pc.parentInformer, parentNamespace, controllerRef.Name)
 	if err != nil {
 		return nil
 	}
@@ -397,7 +397,7 @@ func (pc *parentController) findPotentialParents(child *unstructured.Unstructure
 	var err error
 	if pc.parentResource.Namespaced {
 		// If the parent is namespaced, it must be in the same namespace as the child.
-		parents, err = pc.parentInformer.Lister().ListNamespace(child.GetNamespace(), labels.Everything())
+		parents, err = pc.parentInformer.Lister().Namespace(child.GetNamespace()).List(labels.Everything())
 	} else {
 		parents, err = pc.parentInformer.Lister().List(labels.Everything())
 	}
@@ -426,7 +426,7 @@ func (pc *parentController) sync(key string) error {
 
 	klog.V(4).Infof("sync %v %v/%v", pc.parentResource.Kind, namespace, name)
 
-	parent, err := pc.parentInformer.Lister().Get(namespace, name)
+	parent, err := common.GetObject(pc.parentInformer, namespace, name)
 	if apierrors.IsNotFound(err) {
 		// Swallow the error since there's no point retrying if the parent is gone.
 		klog.V(4).Infof("%v %v/%v has been deleted", pc.parentResource.Kind, namespace, name)
@@ -606,7 +606,7 @@ func (pc *parentController) claimChildren(parent *unstructured.Unstructured) (co
 		}
 		var all []*unstructured.Unstructured
 		if pc.parentResource.Namespaced {
-			all, err = informer.Lister().ListNamespace(parentNamespace, labels.Everything())
+			all, err = informer.Lister().Namespace(parentNamespace).List(labels.Everything())
 		} else {
 			all, err = informer.Lister().List(labels.Everything())
 		}
