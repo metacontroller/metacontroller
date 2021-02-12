@@ -9,16 +9,21 @@ set -u
 #
 # The integration test framework expects these binaries to be found in the PATH.
 
+PWD="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+
 # This is the kube-apiserver version to test against.
-KUBE_VERSION="${KUBE_VERSION:-v1.17.0}"
+KUBE_VERSION="${KUBE_VERSION:-v1.17.17}"
 KUBERNETES_RELEASE_URL="${KUBERNETES_RELEASE_URL:-https://dl.k8s.io}"
 
 # This should be the etcd version downloaded by kubernetes/hack/lib/etcd.sh
 # as of the above Kubernetes version.
 ETCD_VERSION="${ETCD_VERSION:-v3.4.3}"
 
-mkdir -p hack/bin
-cd hack/bin
+cd "${PWD}"
+
+mkdir -p bin
+
+cd bin
 
 # Download kubectl if not found
 if [[ -f ./kubectl ]] && ./kubectl version --client; then

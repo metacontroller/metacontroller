@@ -1,11 +1,11 @@
 /.idea/
 /vendor/
 /metacontroller
-/hack/bin/
+**/hack/bin/
 .*.swp
 .history
 **/.vscode
 **/.venv
 docs/book
-tmp
+**/tmp
 
