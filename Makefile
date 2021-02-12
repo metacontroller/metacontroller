@@ -1,9 +1,9 @@
 PWD := ${CURDIR}
-PATH := $(PWD)/hack/bin:$(PATH)
+PATH := $(PWD)/test/integration/hack/bin:$(PATH)
 TAG?= dev
 ADDITIONAL_BUILD_ARGUMENTS?=""
 
-PKG        := metacontroller.io
+PKG		:= metacontroller.io
 API_GROUPS := metacontroller/v1alpha1
 
 export GO111MODULE=on
@@ -24,29 +24,29 @@ install: generated_files
 vendor: 
 	@go mod download
 	@go mod tidy
-	@go mod vendor
 
 .PHONY: unit-test
 unit-test: test-setup
 	go test -i ${PKGS} && \
-	gotestsum -- -coverpkg="${COVER_PKGS}" -coverprofile=tmp/unit-coverage.out ${PKGS}
+	gotestsum -- -coverpkg="${COVER_PKGS}" -coverprofile=test/integration/hack/tmp/unit-coverage.out ${PKGS}
 
 .PHONY: integration-test
 integration-test: test-setup
-	gotestsum -- -coverpkg="${COVER_PKGS}" -coverprofile=tmp/integration-coverage.out ./test/integration/... -v -timeout 5m -args --logtostderr -v=1
+	cd ./test/integration; \
+	gotestsum -- -coverpkg="${COVER_PKGS}" -coverprofile=hack/tmp/integration-coverage.out ./... -v -timeout 5m -args --logtostderr -v=1
 
 .PHONY: test-setup
 test-setup: vendor
-	./hack/setup.sh 
+	./test/integration/hack/setup.sh; \
+	mkdir -p ./test/integration/hack/tmp; \
 
 .PHONY: image
 image: generated_files
 	docker build -t metacontrollerio/metacontroller:$(TAG) .
 
 
-
 # CRD generation
-# rember to remove unnesessary metadata fields and
+# remember to remove unnecessary metadata fields and
 # add "api-approved.kubernetes.io": "unapproved, request not yet submitted"
 # to annotations
 .PHONY: generate_crds
@@ -67,7 +67,7 @@ generated_files: deepcopy clientset lister informer
 # also builds vendored version of deepcopy-gen tool
 .PHONY: deepcopy
 deepcopy:
-	@go install k8s.io/code-generator/cmd/deepcopy-gen
+	@go get k8s.io/code-generator/cmd/deepcopy-gen@"${CODE_GENERATOR_VERSION}"
 	@echo "+ Generating deepcopy funcs for $(API_GROUPS)"
 	@deepcopy-gen \
 		--input-dirs $(PKG)/apis/$(API_GROUPS) \
@@ -77,7 +77,7 @@ deepcopy:
 # also builds vendored version of client-gen tool
 .PHONY: clientset
 clientset:
-	@go install k8s.io/code-generator/cmd/client-gen
+	@go get k8s.io/code-generator/cmd/client-gen@"${CODE_GENERATOR_VERSION}"
 	@echo "+ Generating clientsets for $(API_GROUPS)"
 	@client-gen \
 		--fake-clientset=false \
@@ -89,7 +89,7 @@ clientset:
 # also builds vendored version of lister-gen tool
 .PHONY: lister
 lister:
-	@go install k8s.io/code-generator/cmd/lister-gen
+	@go get k8s.io/code-generator/cmd/lister-gen@"${CODE_GENERATOR_VERSION}"
 	@echo "+ Generating lister for $(API_GROUPS)"
 	@lister-gen \
 		--input-dirs $(PKG)/apis/$(API_GROUPS) \
@@ -99,7 +99,7 @@ lister:
 # also builds vendored version of informer-gen tool
 .PHONY: informer
 informer:
-	@go install k8s.io/code-generator/cmd/informer-gen
+	@go get k8s.io/code-generator/cmd/informer-gen@"${CODE_GENERATOR_VERSION}"
 	@echo "+ Generating informer for $(API_GROUPS)"
 	@informer-gen \
 		--input-dirs $(PKG)/apis/$(API_GROUPS) \

@@ -5,8 +5,8 @@ import (
 	"time"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	utils "k8s.io/utils/pointer"
 	"metacontroller.io/apis/metacontroller/v1alpha1"
+	k8s "metacontroller.io/third_party/kubernetes"
 )
 
 func TestWebhookTimeout_defaultTimeoutIfNotSpecified(t *testing.T) {
@@ -16,7 +16,7 @@ func TestWebhookTimeout_defaultTimeoutIfNotSpecified(t *testing.T) {
 	}{
 		{
 			v1alpha1.Webhook{
-				URL:     utils.StringPtr(""),
+				URL:     k8s.StringPtr(""),
 				Timeout: &v1.Duration{},
 				Path:    new(string),
 				Service: &v1alpha1.ServiceReference{},
@@ -39,7 +39,7 @@ func TestWebhookTimeout_defaultTimeoutIfNegative(t *testing.T) {
 	}{
 		{
 			v1alpha1.Webhook{
-				URL:     utils.StringPtr(""),
+				URL:     k8s.StringPtr(""),
 				Timeout: &v1.Duration{Duration: -2 * time.Second},
 				Path:    new(string),
 				Service: &v1alpha1.ServiceReference{},
@@ -63,7 +63,7 @@ func TestWebhookTimeout_givenTimeoutIfPositive(t *testing.T) {
 	}{
 		{
 			v1alpha1.Webhook{
-				URL:     utils.StringPtr(""),
+				URL:     k8s.StringPtr(""),
 				Timeout: &v1.Duration{Duration: 2 * time.Second},
 				Path:    new(string),
 				Service: &v1alpha1.ServiceReference{},
