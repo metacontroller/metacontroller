@@ -1,5 +1,5 @@
 ---
-name: Test and Release (if on master)
+name: Test / Release
 on: [push, pull_request]
 jobs:
   tests:
@@ -69,103 +69,6 @@ jobs:
       run: |
         cd examples
         ./test.sh --ignore catset
-  docker-linters:
-    runs-on: ubuntu-20.04
-    steps:
-    - name: checkout
-      uses: actions/checkout@v2
-    - name: build local Image
-      run: docker build -t metacontrollerio/metacontroller:lint .
-    - name: Lint docker image
-      uses: Azure/container-scan@v0
-      with:
-        image-name: metacontrollerio/metacontroller:lint
-  go-sec:
-    runs-on: ubuntu-20.04
-    env:
-      GO111MODULE: on
-    steps:
-    - name: checkout
-      uses: actions/checkout@v2
-    - name: check
-      uses: grandcolline/golang-github-actions@v1.1.0
-      with:
-        run: sec
-        token: ${{ secrets.GITHUB_TOKEN }}
-        flags: "-exclude-dir=examples -exclude-dir=test -exclude=G104"
-  # go-shadow:
-  #   runs-on: ubuntu-20.04
-  #   env:
-  #     GO111MODULE: on
-  #   steps:
-  #   - name: checkout
-  #     uses: actions/checkout@v2
-  #   - name: check
-  #     uses: grandcolline/golang-github-actions@v1.1.0
-  #     with:
-  #       run: shadow
-  #       token: ${{ secrets.GITHUB_TOKEN }}
-  go-imports:
-    runs-on: ubuntu-20.04
-    env:
-      GO111MODULE: on
-    steps:
-    - name: checkout
-      uses: actions/checkout@v2
-    - name: check
-      uses: grandcolline/golang-github-actions@v1.1.0
-      with:
-        run: imports
-        token: ${{ secrets.GITHUB_TOKEN }}
-        flags: "-exclude-dir=examples -exclude-dir=test"
-  # go-errcheck:
-  #   runs-on: ubuntu-20.04
-  #   env:
-  #     GO111MODULE: on
-  #   steps:
-  #   - name: checkout
-  #     uses: actions/checkout@v2
-  #   - name: check
-  #     uses: grandcolline/golang-github-actions@v1.1.0
-  #     with:
-  #       run: errcheck
-  #       token: ${{ secrets.GITHUB_TOKEN }}
-  go-vet:
-    runs-on: ubuntu-20.04
-    env:
-      GO111MODULE: on
-    steps:
-    - name: checkout
-      uses: actions/checkout@v2
-    - name: check
-      uses: grandcolline/golang-github-actions@v1.1.0
-      with:
-        run: vet
-        token: ${{ secrets.GITHUB_TOKEN }}
-  go-fmt:
-    runs-on: ubuntu-20.04
-    env:
-      GO111MODULE: on
-    steps:
-    - name: checkout
-      uses: actions/checkout@v2
-    - name: check
-      uses: grandcolline/golang-github-actions@v1.1.0
-      with:
-        run: fmt
-        token: ${{ secrets.GITHUB_TOKEN }}
-  # go-staticcheck:
-  #   runs-on: ubuntu-20.04
-  #   env:
-  #     GO111MODULE: on
-  #   steps:
-  #   - name: checkout
-  #     uses: actions/checkout@v2
-  #   - name: check
-  #     uses: grandcolline/golang-github-actions@v1.1.0
-  #     with:
-  #       run: staticcheck
-  #       token: ${{ secrets.GITHUB_TOKEN }}
   release:
     if: github.ref == 'refs/heads/master'
     name: Release - build/push docker and create tag
