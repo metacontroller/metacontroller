@@ -22,6 +22,8 @@ import (
 	"sync"
 	"time"
 
+	"k8s.io/apimachinery/pkg/runtime/schema"
+
 	"k8s.io/klog/v2"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -107,13 +109,21 @@ func newParentController(resources *dynamicdiscovery.ResourceMap, dynClient *dyn
 		if err != nil {
 			return nil, fmt.Errorf("can't create informer for child resource: %v", err)
 		}
-		childInformers.Set(child.APIVersion, child.Resource, childInformer)
+		groupVersion, err := schema.ParseGroupVersion(child.APIVersion)
+		if err != nil {
+			return nil, fmt.Errorf("can't parse child resource groupVersion: %v", err)
+		}
+		childInformers.Set(groupVersion.WithResource(child.Resource), childInformer)
 	}
 
 	parentResources := make(common.GroupKindMap)
 	parentResources.Set(parentResource.Group, parentResource.Kind, parentResource)
 	parentInformers := make(common.InformerMap)
-	parentInformers.Set(parentResource.Group, parentResource.Name, parentInformer)
+	parentGroupVersion, err := schema.ParseGroupVersion(parentResource.Group)
+	if err != nil {
+		return nil, fmt.Errorf("can't parse parent resource groupVersion: %v", err)
+	}
+	parentInformers.Set(parentGroupVersion.WithResource(parentResource.Name), parentInformer)
 
 	pc = &parentController{
 		cc:             cc,
@@ -600,7 +610,8 @@ func (pc *parentController) claimChildren(parent *unstructured.Unstructured) (co
 		if err != nil {
 			return nil, err
 		}
-		informer := pc.childInformers.Get(child.APIVersion, child.Resource)
+		groupVersion, _ := schema.ParseGroupVersion(child.APIVersion)
+		informer := pc.childInformers.Get(groupVersion.WithResource(child.Resource))
 		if informer == nil {
 			return nil, fmt.Errorf("no informer for resource %q in apiVersion %q", child.Resource, child.APIVersion)
 		}

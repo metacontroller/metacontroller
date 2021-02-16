@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"strings"
 
+	"k8s.io/apimachinery/pkg/runtime/schema"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/tools/cache"
@@ -177,18 +179,14 @@ func groupKindKey(apiGroup, kind string) string {
 	return fmt.Sprintf("%s.%s", kind, apiGroup)
 }
 
-type InformerMap map[string]*dynamicinformer.ResourceInformer
+type InformerMap map[schema.GroupVersionResource]*dynamicinformer.ResourceInformer
 
-func (m InformerMap) Set(apiVersion, resource string, informer *dynamicinformer.ResourceInformer) {
-	m[informerMapKey(apiVersion, resource)] = informer
+func (m InformerMap) Set(gvr schema.GroupVersionResource, informer *dynamicinformer.ResourceInformer) {
+	m[gvr] = informer
 }
 
-func (m InformerMap) Get(apiVersion, resource string) *dynamicinformer.ResourceInformer {
-	return m[informerMapKey(apiVersion, resource)]
-}
-
-func informerMapKey(apiVersion, resource string) string {
-	return fmt.Sprintf("%s.%s", resource, apiVersion)
+func (m InformerMap) Get(gvr schema.GroupVersionResource) *dynamicinformer.ResourceInformer {
+	return m[gvr]
 }
 
 // GetObject return object via Lister from given informer, namespaced or not.
