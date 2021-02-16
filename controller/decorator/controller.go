@@ -23,6 +23,8 @@ import (
 	"sync"
 	"time"
 
+	"k8s.io/apimachinery/pkg/runtime/schema"
+
 	"k8s.io/klog/v2"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -142,7 +144,11 @@ func newDecoratorController(resources *dynamicdiscovery.ResourceMap, dynClient *
 		if err != nil {
 			return nil, fmt.Errorf("can't create informer for parent resource: %v", err)
 		}
-		c.parentInformers.Set(parent.APIVersion, parent.Resource, informer)
+		groupVersion, err := schema.ParseGroupVersion(parent.APIVersion)
+		if err != nil {
+			return nil, fmt.Errorf("can't parse parent resource groupVersion: %v", err)
+		}
+		c.parentInformers.Set(groupVersion.WithResource(parent.Resource), informer)
 	}
 
 	for _, child := range dc.Spec.Attachments {
@@ -150,7 +156,11 @@ func newDecoratorController(resources *dynamicdiscovery.ResourceMap, dynClient *
 		if err != nil {
 			return nil, fmt.Errorf("can't create informer for child resource: %v", err)
 		}
-		c.childInformers.Set(child.APIVersion, child.Resource, informer)
+		groupVersion, err := schema.ParseGroupVersion(child.APIVersion)
+		if err != nil {
+			return nil, fmt.Errorf("can't parse child resource groupVersion: %v", err)
+		}
+		c.childInformers.Set(groupVersion.WithResource(child.Resource), informer)
 	}
 
 	return c, nil
@@ -311,7 +321,8 @@ func (c *decoratorController) resolveControllerRef(childNamespace string, contro
 		return nil
 	}
 	// Get the lister for this resource.
-	informer := c.parentInformers.Get(resource.APIVersion, resource.Name)
+	groupVersion, _ := schema.ParseGroupVersion(resource.APIVersion)
+	informer := c.parentInformers.Get(groupVersion.WithResource(resource.Name))
 	if informer == nil {
 		return nil
 	}
@@ -422,7 +433,9 @@ func (c *decoratorController) sync(key string) error {
 	if resource == nil {
 		return fmt.Errorf("can't find kind %q in apiVersion %q", kind, apiVersion)
 	}
-	informer := c.parentInformers.Get(apiVersion, resource.Name)
+
+	groupVersion, _ := schema.ParseGroupVersion(apiVersion)
+	informer := c.parentInformers.Get(groupVersion.WithResource(resource.Name))
 	if informer == nil {
 		return fmt.Errorf("no informer for resource %q in apiVersion %q", resource.Name, apiVersion)
 	}
@@ -585,7 +598,8 @@ func (c *decoratorController) getChildren(parent *unstructured.Unstructured) (co
 	for _, child := range c.dc.Spec.Attachments {
 		// List all objects of the child kind in the parent object's namespace,
 		// or in all namespaces if the parent is cluster-scoped.
-		informer := c.childInformers.Get(child.APIVersion, child.Resource)
+		groupVersion, _ := schema.ParseGroupVersion(child.APIVersion)
+		informer := c.childInformers.Get(groupVersion.WithResource(child.Resource))
 		if informer == nil {
 			return nil, fmt.Errorf("no informer for resource %q in apiVersion %q", child.Resource, child.APIVersion)
 		}

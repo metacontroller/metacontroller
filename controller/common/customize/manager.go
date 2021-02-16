@@ -4,13 +4,15 @@ import (
 	"fmt"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/klog/v2"
 
-	v1alpha1 "metacontroller.io/apis/metacontroller/v1alpha1"
+	"metacontroller.io/apis/metacontroller/v1alpha1"
 	"metacontroller.io/controller/common"
 	dynamicclientset "metacontroller.io/dynamic/clientset"
 	dynamicinformer "metacontroller.io/dynamic/informer"
@@ -97,8 +99,8 @@ func (rm *Manager) getRelatedClient(apiVersion, resource string) (*dynamicclient
 	if err != nil {
 		return nil, nil, err
 	}
-
-	informer := rm.relatedInformers.Get(apiVersion, resource)
+	groupVersion, _ := schema.ParseGroupVersion(apiVersion)
+	informer := rm.relatedInformers.Get(groupVersion.WithResource(resource))
 	if informer == nil {
 		informer, err = rm.dynInformers.Resource(apiVersion, resource)
 
@@ -116,7 +118,8 @@ func (rm *Manager) getRelatedClient(apiVersion, resource string) (*dynamicclient
 			klog.Warningf("related Manager %s cache sync never finished", rm.name)
 		}
 
-		rm.relatedInformers.Set(apiVersion, resource, informer)
+		groupVersion, _ := schema.ParseGroupVersion(apiVersion)
+		rm.relatedInformers.Set(groupVersion.WithResource(resource), informer)
 	}
 
 	return client, informer, nil
