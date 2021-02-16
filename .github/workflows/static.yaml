@@ -1,0 +1,40 @@
+---
+name: Static Cheks
+on: [pull_request]
+jobs:
+  go-static-checks:
+    runs-on: ubuntu-20.04
+    strategy:
+      fail-fast: false
+      matrix:
+        configuration:
+        - {check: 'sec', flags: '-exclude-dir=examples -exclude-dir=test -exclude=G104'}
+        - {check: 'imports', flags: '-exclude-dir=examples -exclude-dir=test'}
+        - {check: 'vet', flags: ''}
+        - {check: 'fmt', flags: ''}
+#        - {check: 'shadow', flags: ''}
+#        - {check: 'errcheck', flags: ''}
+#        - {check: 'staticcheck', flags: ''}
+    name: go ${{ matrix.configuration.check }}
+    env:
+      GO111MODULE: on
+    steps:
+    - name: checkout
+      uses: actions/checkout@v2
+    - name: check
+      uses: grandcolline/golang-github-actions@v1.1.0
+      with:
+        run: ${{ matrix.configuration.check }}
+        token: ${{ secrets.GITHUB_TOKEN }}
+        flags: ${{ matrix.configuration.flags }}
+  docker-linters:
+    runs-on: ubuntu-20.04
+    steps:
+    - name: checkout
+      uses: actions/checkout@v2
+    - name: build local Image
+      run: docker build -t metacontrollerio/metacontroller:lint .
+    - name: Lint docker image
+      uses: Azure/container-scan@v0
+      with:
+        image-name: metacontrollerio/metacontroller:lint
