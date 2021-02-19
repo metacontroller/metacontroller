@@ -116,7 +116,7 @@ func newDecoratorController(resources *dynamicdiscovery.ResourceMap, dynClient *
 		if resource == nil {
 			return nil, fmt.Errorf("can't find resource %q in apiVersion %q", parent.Resource, parent.APIVersion)
 		}
-		c.parentKinds.Set(resource.Group, resource.Kind, resource)
+		c.parentKinds.Set(schema.GroupKind{Group: resource.Group, Kind: resource.Kind}, resource)
 	}
 
 	// Remember the update strategy for each child type.
@@ -314,8 +314,8 @@ func (c *decoratorController) resolveControllerRef(childNamespace string, contro
 	// Is the controllerRef pointing to one of the parent resources we care about?
 	// Only look at the group and kind; it doesn't matter if the controller uses
 	// a different version than we do.
-	apiGroup, _ := common.ParseAPIVersion(controllerRef.APIVersion)
-	resource := c.parentKinds.Get(apiGroup, controllerRef.Kind)
+	apiGroup, _ := schema.ParseGroupVersion(controllerRef.APIVersion)
+	resource := c.parentKinds.Get(schema.GroupKind{Group: apiGroup.Group, Kind: controllerRef.Kind})
 	if resource == nil {
 		// It's not one of the resources we care about.
 		return nil

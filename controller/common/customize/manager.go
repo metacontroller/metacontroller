@@ -244,8 +244,8 @@ func toSelector(labelSelector *metav1.LabelSelector) (labels.Selector, error) {
 }
 
 func (rm *Manager) matchesRelatedRule(parent, related *unstructured.Unstructured, relatedRule *v1alpha1.RelatedResourceRule) (bool, error) {
-	parentGroup, _ := common.ParseAPIVersion(parent.GetAPIVersion())
-	parentResource := rm.parentKinds.Get(parentGroup, parent.GetKind())
+	parentGroup, _ := schema.ParseGroupVersion(parent.GetAPIVersion())
+	parentResource := rm.parentKinds.Get(schema.GroupKind{Group: parentGroup.Group, Kind: parent.GetKind()})
 	if parentResource == nil {
 		return false, fmt.Errorf("unknown parent %v/%v", parentGroup, parent.GetKind())
 	}
@@ -291,8 +291,8 @@ func listObjects(selector labels.Selector, namespace string, informer *dynamicin
 
 func (rm *Manager) GetRelatedObjects(parent *unstructured.Unstructured) (common.ChildMap, error) {
 
-	parentGroup, _ := common.ParseAPIVersion(parent.GetAPIVersion())
-	parentResource := rm.parentKinds.Get(parentGroup, parent.GetKind())
+	parentGroup, _ := schema.ParseGroupVersion(parent.GetAPIVersion())
+	parentResource := rm.parentKinds.Get(schema.GroupKind{Group: parentGroup.Group, Kind: parent.GetKind()})
 	if parentResource == nil {
 		return nil, fmt.Errorf("unknown parent %v/%v", parentGroup, parent.GetKind())
 	}
