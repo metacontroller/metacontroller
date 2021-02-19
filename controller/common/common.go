@@ -165,18 +165,14 @@ func ParseAPIVersion(apiVersion string) (group, version string) {
 	return parts[0], parts[1]
 }
 
-type GroupKindMap map[string]*dynamicdiscovery.APIResource
+type GroupKindMap map[schema.GroupKind]*dynamicdiscovery.APIResource
 
-func (m GroupKindMap) Set(apiGroup, kind string, resource *dynamicdiscovery.APIResource) {
-	m[groupKindKey(apiGroup, kind)] = resource
+func (m GroupKindMap) Set(gk schema.GroupKind, resource *dynamicdiscovery.APIResource) {
+	m[gk] = resource
 }
 
-func (m GroupKindMap) Get(apiGroup, kind string) *dynamicdiscovery.APIResource {
-	return m[groupKindKey(apiGroup, kind)]
-}
-
-func groupKindKey(apiGroup, kind string) string {
-	return fmt.Sprintf("%s.%s", kind, apiGroup)
+func (m GroupKindMap) Get(gk schema.GroupKind) *dynamicdiscovery.APIResource {
+	return m[gk]
 }
 
 type InformerMap map[schema.GroupVersionResource]*dynamicinformer.ResourceInformer
