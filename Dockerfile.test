@@ -1,4 +1,4 @@
-FROM golang:1.15.8 as tester
+FROM golang:1.16.0 as tester
 
 COPY . /go/src/metacontroller.io/
 WORKDIR /go/src/metacontroller.io/
