@@ -33,7 +33,8 @@ module.exports = {
     [
       "@semantic-release/git",
       {
-        "assets": ["CHANGELOG.md", "manifests/production/metacontroller.yaml"]
+        "assets": ["CHANGELOG.md", "manifests/production/metacontroller.yaml"],
+        "message": "chore(release): ${nextRelease.version}\n\n${nextRelease.notes}"
       }
     ],
     [
