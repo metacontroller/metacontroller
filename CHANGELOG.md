@@ -1,3 +1,10 @@
+## [1.4.5](https://github.com/metacontroller/metacontroller/compare/v1.4.4...v1.4.5) (2021-02-21)
+
+
+### Bug Fixes
+
+* **release:** [#197](https://github.com/metacontroller/metacontroller/issues/197) - Change release message to trigger CI pipeline ([3fb3847](https://github.com/metacontroller/metacontroller/commit/3fb384787ebcf68ac3c777bdc9b9de4d4f0d60aa))
+
 ## [1.4.4](https://github.com/metacontroller/metacontroller/compare/v1.4.3...v1.4.4) (2021-02-19)
 
 
