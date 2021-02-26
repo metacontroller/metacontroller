@@ -14,7 +14,7 @@ jobs:
         - {check: 'fmt', flags: ''}
 #        - {check: 'shadow', flags: ''}
 #        - {check: 'errcheck', flags: ''}
-#        - {check: 'staticcheck', flags: ''}
+        - {check: 'staticcheck', flags: '-checks "-ST1005"'}
     name: go ${{ matrix.configuration.check }}
     env:
       GO111MODULE: on
