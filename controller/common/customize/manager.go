@@ -215,7 +215,7 @@ func determineSelectionType(relatedRule *v1alpha1.RelatedResourceRule) (relatedO
 	hasLabelSelector := relatedRule.LabelSelector != nil
 	hasNamespaceOrNames := len(relatedRule.Namespace) != 0 || len(relatedRule.Names) != 0
 	if hasLabelSelector && hasNamespaceOrNames {
-		return invalid, fmt.Errorf("Related rule cannot have both labelSelector and Namespace/Names specifcied : %#v", relatedRule)
+		return invalid, fmt.Errorf("related rule cannot have both labelSelector and Namespace/Names specifcied : %#v", relatedRule)
 	}
 	if hasNamespaceOrNames {
 		return selectByNamespaceAndNames, nil
@@ -244,7 +244,7 @@ func (rm *Manager) matchesRelatedRule(parent, related *unstructured.Unstructured
 	parentGroup, _ := common.ParseAPIVersion(parent.GetAPIVersion())
 	parentResource := rm.parentKinds.Get(parentGroup, parent.GetKind())
 	if parentResource == nil {
-		return false, fmt.Errorf("Unknown parent %v/%v", parentGroup, parent.GetKind())
+		return false, fmt.Errorf("unknown parent %v/%v", parentGroup, parent.GetKind())
 	}
 
 	selectionType, err := determineSelectionType(relatedRule)
@@ -291,7 +291,7 @@ func (rm *Manager) GetRelatedObjects(parent *unstructured.Unstructured) (common.
 	parentGroup, _ := common.ParseAPIVersion(parent.GetAPIVersion())
 	parentResource := rm.parentKinds.Get(parentGroup, parent.GetKind())
 	if parentResource == nil {
-		return nil, fmt.Errorf("Unknown parent %v/%v", parentGroup, parent.GetKind())
+		return nil, fmt.Errorf("unknown parent %v/%v", parentGroup, parent.GetKind())
 	}
 
 	parentNamespace := parent.GetNamespace()
@@ -305,6 +305,9 @@ func (rm *Manager) GetRelatedObjects(parent *unstructured.Unstructured) (common.
 	childMap := make(common.ChildMap)
 	for _, relatedRule := range customizeHookResponse.RelatedResourceRules {
 		relatedClient, informer, err := rm.getRelatedClient(relatedRule.APIVersion, relatedRule.Resource)
+		if err != nil {
+			return nil, err
+		}
 
 		selectionType, err := determineSelectionType(relatedRule)
 		if err != nil {

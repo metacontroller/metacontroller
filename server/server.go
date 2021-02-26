@@ -51,7 +51,7 @@ func Start(config *rest.Config, discoveryInterval, informerRelist time.Duration,
 	// Create informer factory for metacontroller API objects.
 	mcClient, err := mcclientset.NewForConfig(config)
 	if err != nil {
-		return nil, fmt.Errorf("Can't create client for api %s: %v", v1alpha1.SchemeGroupVersion, err)
+		return nil, fmt.Errorf("can't create client for api %s: %v", v1alpha1.SchemeGroupVersion, err)
 	}
 	mcInformerFactory := mcinformers.NewSharedInformerFactory(mcClient, informerRelist)
 

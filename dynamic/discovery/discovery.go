@@ -98,7 +98,7 @@ func (rm *ResourceMap) refresh() {
 	// Fetch all API Group-Versions and their resources from the server.
 	// We do this before acquiring the lock so we don't block readers.
 	klog.V(7).Info("Refreshing API discovery info")
-	groups, err := rm.discoveryClient.ServerResources()
+	_, groups, err := rm.discoveryClient.ServerGroupsAndResources()
 	if err != nil {
 		klog.Errorf("Failed to fetch discovery info: %v", err)
 		return
@@ -143,7 +143,7 @@ func (rm *ResourceMap) refresh() {
 		}
 
 		// Group all subresources for a resource.
-		for apiSubresourceName, _ := range gve.subresources {
+		for apiSubresourceName := range gve.subresources {
 			arr := strings.Split(apiSubresourceName, "/")
 			apiResourceName := arr[0]
 			subresourceKey := arr[1]

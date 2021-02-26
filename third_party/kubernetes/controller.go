@@ -32,7 +32,7 @@ func WaitForCacheSync(controllerName string, stopCh <-chan struct{}, cacheSyncs 
 	klog.Infof("Waiting for caches to sync for %s controller", controllerName)
 
 	if !cache.WaitForCacheSync(stopCh, cacheSyncs...) {
-		utilruntime.HandleError(fmt.Errorf("Unable to sync caches for %s controller", controllerName))
+		utilruntime.HandleError(fmt.Errorf("unable to sync caches for %s controller", controllerName))
 		return false
 	}
 
