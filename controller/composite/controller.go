@@ -119,10 +119,7 @@ func newParentController(resources *dynamicdiscovery.ResourceMap, dynClient *dyn
 	parentResources := make(common.GroupKindMap)
 	parentResources.Set(parentResource.Group, parentResource.Kind, parentResource)
 	parentInformers := make(common.InformerMap)
-	parentGroupVersion, err := schema.ParseGroupVersion(parentResource.Group)
-	if err != nil {
-		return nil, fmt.Errorf("can't parse parent resource groupVersion: %v", err)
-	}
+	parentGroupVersion := schema.GroupVersion{Group: parentResource.Group, Version: parentResource.Version}
 	parentInformers.Set(parentGroupVersion.WithResource(parentResource.Name), parentInformer)
 
 	pc = &parentController{
