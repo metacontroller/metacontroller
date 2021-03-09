@@ -8,13 +8,25 @@
   "rebaseWhen": "behind-base-branch",
   "packageRules": [
     {
-      "packagePatterns": "^k8s.io",
+      "matchPackageNames": [
+        "k8s.io/api",
+        "k8s.io/apimachinery",
+        "k8s.io/client-go"
+      ],
       "semanticCommitType": "fix",
       "separateMinorPatch": "true",
-      "groupName": ["k8s.io packages"]
+      "groupName": [
+        "k8s.io packages"
+      ],
+      "extends": [
+        "schedule:weekly"
+      ]
     },
     {
-      "managers": ["dockerfile", "gomod"],
+      "managers": [
+        "dockerfile",
+        "gomod"
+      ],
       "semanticCommitType": "fix"
     }
   ]
