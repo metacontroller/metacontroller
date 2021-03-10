@@ -9,7 +9,7 @@ require (
 	k8s.io/apimachinery v0.17.17
 	k8s.io/client-go v0.17.17
 	k8s.io/component-base v0.17.17
-	k8s.io/klog/v2 v2.5.0
+	k8s.io/klog/v2 v2.6.0
 )
 
 replace (
