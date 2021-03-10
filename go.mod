@@ -7,7 +7,7 @@ go 1.15
 require (
 	github.com/prometheus/client_golang v1.9.0
 	k8s.io/apimachinery v0.17.17
-	k8s.io/client-go v0.17.17
+	k8s.io/client-go/v12 v12.0.0
 	k8s.io/component-base v0.17.17
 	k8s.io/klog/v2 v2.5.0
 )
