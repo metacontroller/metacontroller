@@ -9,10 +9,11 @@
   "packageRules": [
     {
       "matchPackageNames": [
-        "k8s.io/api",
+        "k8s.io/component-base",
         "k8s.io/apimachinery",
         "k8s.io/client-go"
       ],
+      "allowedVersions": "/^v0\\.[0-9]+\\.[0-9]+/",
       "semanticCommitType": "fix",
       "separateMinorPatch": "true",
       "groupName": [
