@@ -21,53 +21,69 @@ import (
 	"sync"
 	"time"
 
-	"k8s.io/client-go/discovery"
-	"k8s.io/client-go/rest"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"metacontroller.io/controller/decorator"
+	"metacontroller.io/options"
 
+	"k8s.io/client-go/discovery"
 	"metacontroller.io/apis/metacontroller/v1alpha1"
 	mcclientset "metacontroller.io/client/generated/clientset/internalclientset"
 	mcinformers "metacontroller.io/client/generated/informer/externalversions"
 	"metacontroller.io/controller/composite"
-	"metacontroller.io/controller/decorator"
 	dynamicclientset "metacontroller.io/dynamic/clientset"
 	dynamicdiscovery "metacontroller.io/dynamic/discovery"
 	dynamicinformer "metacontroller.io/dynamic/informer"
+	"metacontroller.io/events"
 
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
 )
+
+var (
+	scheme = runtime.NewScheme()
+)
+
+func init() {
+	v1alpha1.AddToScheme(scheme)
+}
 
 type controller interface {
 	Start()
 	Stop()
 }
 
-func Start(config *rest.Config, discoveryInterval, informerRelist time.Duration, numWorkers int) (stop func(), err error) {
+func Start(options options.Options) (stop func(), err error) {
 	// Periodically refresh discovery to pick up newly-installed resources.
-	dc := discovery.NewDiscoveryClientForConfigOrDie(config)
+	dc := discovery.NewDiscoveryClientForConfigOrDie(options.Config)
 	resources := dynamicdiscovery.NewResourceMap(dc)
 	// We don't care about stopping this cleanly since it has no external effects.
-	resources.Start(discoveryInterval)
+	resources.Start(options.DiscoveryInterval)
 
 	// Create informer factory for metacontroller API objects.
-	mcClient, err := mcclientset.NewForConfig(config)
+	mcClient, err := mcclientset.NewForConfig(options.Config)
 	if err != nil {
 		return nil, fmt.Errorf("can't create client for api %s: %v", v1alpha1.SchemeGroupVersion, err)
 	}
-	mcInformerFactory := mcinformers.NewSharedInformerFactory(mcClient, informerRelist)
+	mcInformerFactory := mcinformers.NewSharedInformerFactory(mcClient, options.InformerRelist)
 
 	// Create dynamic clientset (factory for dynamic clients).
-	dynClient, err := dynamicclientset.New(config, resources)
+	dynClient, err := dynamicclientset.New(options.Config, resources)
 	if err != nil {
 		return nil, err
 	}
 	// Create dynamic informer factory (for sharing dynamic informers).
-	dynInformers := dynamicinformer.NewSharedInformerFactory(dynClient, informerRelist)
+	dynInformers := dynamicinformer.NewSharedInformerFactory(dynClient, options.InformerRelist)
 
 	// Start metacontrollers (controllers that spawn controllers).
 	// Each one requests the informers it needs from the factory.
+	broadcaster, err := events.NewBroadcaster(options.Config, options.CorrelatorOptions)
+	if err != nil {
+		return nil, err
+	}
+	recorder := broadcaster.NewRecorder(scheme, corev1.EventSource{Component: "metacontroller"})
 	controllers := []controller{
-		composite.NewMetacontroller(resources, dynClient, dynInformers, mcInformerFactory, mcClient, numWorkers),
-		decorator.NewMetacontroller(resources, dynClient, dynInformers, mcInformerFactory, numWorkers),
+		composite.NewMetacontroller(resources, dynClient, dynInformers, mcInformerFactory, mcClient, options.Workers, recorder),
+		decorator.NewMetacontroller(resources, dynClient, dynInformers, mcInformerFactory, options.Workers, recorder),
 	}
 
 	// Start all requested informers.
@@ -90,5 +106,7 @@ func Start(config *rest.Config, discoveryInterval, informerRelist time.Duration,
 			}(c)
 		}
 		wg.Wait()
+		time.Sleep(1 * time.Second)
+		broadcaster.Shutdown()
 	}, nil
 }

@@ -20,6 +20,10 @@ import (
 	"fmt"
 	"sync"
 
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/tools/record"
+	"metacontroller.io/events"
+
 	"k8s.io/klog/v2"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
@@ -55,9 +59,11 @@ type Metacontroller struct {
 	stopCh, doneCh chan struct{}
 
 	numWorkers int
+
+	eventRecorder record.EventRecorder
 }
 
-func NewMetacontroller(resources *dynamicdiscovery.ResourceMap, dynClient *dynamicclientset.Clientset, dynInformers *dynamicinformer.SharedInformerFactory, mcInformerFactory mcinformers.SharedInformerFactory, mcClient mcclientset.Interface, numWorkers int) *Metacontroller {
+func NewMetacontroller(resources *dynamicdiscovery.ResourceMap, dynClient *dynamicclientset.Clientset, dynInformers *dynamicinformer.SharedInformerFactory, mcInformerFactory mcinformers.SharedInformerFactory, mcClient mcclientset.Interface, numWorkers int, recorder record.EventRecorder) *Metacontroller {
 	mc := &Metacontroller{
 		resources:    resources,
 		mcClient:     mcClient,
@@ -72,7 +78,8 @@ func NewMetacontroller(resources *dynamicdiscovery.ResourceMap, dynClient *dynam
 		queue:             workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "CompositeController"),
 		parentControllers: make(map[string]*parentController),
 
-		numWorkers: numWorkers,
+		numWorkers:    numWorkers,
+		eventRecorder: recorder,
 	}
 
 	mc.ccInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -156,11 +163,13 @@ func (mc *Metacontroller) sync(key string) error {
 		// Stop and remove the controller if it exists.
 		if pc, ok := mc.parentControllers[name]; ok {
 			pc.Stop()
+			defer pc.eventRecorder.Eventf(pc.cc, v1.EventTypeNormal, events.ReasonStopped, "Stopped controller: %s", pc.cc.Name)
 			delete(mc.parentControllers, name)
 		}
 		return nil
 	}
 	if err != nil {
+		mc.eventRecorder.Eventf(cc, v1.EventTypeNormal, events.ReasonSyncError, "[%s] Sync error - %s", cc.Name, err)
 		return err
 	}
 	return mc.syncCompositeController(cc)
@@ -175,14 +184,16 @@ func (mc *Metacontroller) syncCompositeController(cc *v1alpha1.CompositeControll
 		}
 		// Stop and remove the controller so it can be recreated.
 		pc.Stop()
+		mc.eventRecorder.Eventf(cc, v1.EventTypeNormal, events.ReasonStopped, "Stopped controller: %s", cc.Name)
 		delete(mc.parentControllers, cc.Name)
 	}
 
-	pc, err := newParentController(mc.resources, mc.dynClient, mc.dynInformers, mc.mcClient, mc.revisionLister, cc, mc.numWorkers)
+	pc, err := newParentController(mc.resources, mc.dynClient, mc.dynInformers, mc.mcClient, mc.revisionLister, cc, mc.numWorkers, mc.eventRecorder)
 	if err != nil {
 		return err
 	}
 	pc.Start()
+	mc.eventRecorder.Eventf(cc, v1.EventTypeNormal, events.ReasonStarted, "Started controller: %s", cc.Name)
 	mc.parentControllers[cc.Name] = pc
 	return nil
 }

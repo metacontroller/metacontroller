@@ -59,5 +59,7 @@ in `manifests/metacontroller.yaml`):
 | `--cache-flush-interval` | How often to flush local caches and relist objects from the API server (e.g. `--cache-flush-interval=30m`). |
 | `--client-config-path` | Path to kubeconfig file (same format as used by kubectl); if not specified, use in-cluster config (e.g. `--client-config-path=/path/to/kubeconfig`). |
 | `--client-go-qps` | Number of queries per second client-go is allowed to make (default 5, e.g. `--client-go-qps=100`) |
-| `--client-go-burst` |Allowed burst queries for client-go (default 10, e.g. `--client-go-burst=200`) |
+| `--client-go-burst` | Allowed burst queries for client-go (default 10, e.g. `--client-go-burst=200`) |
 | `--workers` | Number of sync workers to run (default 5, e.g. `--workers=100`) |
+| `--events-qps` | Rate of events flowing per object (default - 1 event per 5 minutes, e.g. `--client-go-qps=0.0033`) |
+| `--events-burst` | Number of events allowed to send per object (default 25, e.g. `--client-go-burst=25`) |

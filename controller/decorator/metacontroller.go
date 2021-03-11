@@ -20,6 +20,10 @@ import (
 	"fmt"
 	"sync"
 
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/tools/record"
+	"metacontroller.io/events"
+
 	"k8s.io/klog/v2"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
@@ -50,10 +54,11 @@ type Metacontroller struct {
 
 	stopCh, doneCh chan struct{}
 
-	numWorkers int
+	numWorkers    int
+	eventRecorder record.EventRecorder
 }
 
-func NewMetacontroller(resources *dynamicdiscovery.ResourceMap, dynClient *dynamicclientset.Clientset, dynInformers *dynamicinformer.SharedInformerFactory, mcInformerFactory mcinformers.SharedInformerFactory, numWorkers int) *Metacontroller {
+func NewMetacontroller(resources *dynamicdiscovery.ResourceMap, dynClient *dynamicclientset.Clientset, dynInformers *dynamicinformer.SharedInformerFactory, mcInformerFactory mcinformers.SharedInformerFactory, numWorkers int, recorder record.EventRecorder) *Metacontroller {
 	mc := &Metacontroller{
 		resources:    resources,
 		dynClient:    dynClient,
@@ -65,7 +70,8 @@ func NewMetacontroller(resources *dynamicdiscovery.ResourceMap, dynClient *dynam
 		queue:                workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "DecoratorController"),
 		decoratorControllers: make(map[string]*decoratorController),
 
-		numWorkers: numWorkers,
+		numWorkers:    numWorkers,
+		eventRecorder: recorder,
 	}
 
 	mc.dcInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -149,11 +155,13 @@ func (mc *Metacontroller) sync(key string) error {
 		// Stop and remove the controller if it exists.
 		if c, ok := mc.decoratorControllers[name]; ok {
 			c.Stop()
+			defer c.eventRecorder.Eventf(c.dc, v1.EventTypeNormal, events.ReasonStopped, "Stopped controller: %s", c.dc.Name)
 			delete(mc.decoratorControllers, name)
 		}
 		return nil
 	}
 	if err != nil {
+		mc.eventRecorder.Eventf(dc, v1.EventTypeNormal, events.ReasonSyncError, "[%s] sync error - %s", dc.Name, err)
 		return err
 	}
 	return mc.syncDecoratorController(dc)
@@ -168,14 +176,16 @@ func (mc *Metacontroller) syncDecoratorController(dc *v1alpha1.DecoratorControll
 		}
 		// Stop and remove the controller so it can be recreated.
 		c.Stop()
+		mc.eventRecorder.Eventf(dc, v1.EventTypeNormal, events.ReasonStopped, "Stopped controller: %s", dc.Name)
 		delete(mc.decoratorControllers, dc.Name)
 	}
 
-	c, err := newDecoratorController(mc.resources, mc.dynClient, mc.dynInformers, dc, mc.numWorkers)
+	c, err := newDecoratorController(mc.resources, mc.dynClient, mc.dynInformers, dc, mc.numWorkers, mc.eventRecorder)
 	if err != nil {
 		return err
 	}
 	c.Start()
+	mc.eventRecorder.Eventf(dc, v1.EventTypeNormal, events.ReasonStarted, "Started controller: %s", dc.Name)
 	mc.decoratorControllers[dc.Name] = c
 	return nil
 }

@@ -20,7 +20,6 @@
     - [Customize Hook](./api/customize.md)
     - [Hook](./api/hook.md)
 - [Design Docs](./design.md)
-    - [Customize Hook](./design/customize-hook.md)
     - [MapController](./design/map-controller.md)
 - [Contributing](./contrib.md)
     - [Building](./contrib/build.md)

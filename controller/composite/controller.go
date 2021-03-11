@@ -22,6 +22,10 @@ import (
 	"sync"
 	"time"
 
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/tools/record"
+	"metacontroller.io/events"
+
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"k8s.io/klog/v2"
@@ -67,13 +71,14 @@ type parentController struct {
 	updateStrategy updateStrategyMap
 	childInformers common.InformerMap
 
-	numWorkers int
+	numWorkers    int
+	eventRecorder record.EventRecorder
 
 	finalizer *finalizer.Manager
 	customize customize.Manager
 }
 
-func newParentController(resources *dynamicdiscovery.ResourceMap, dynClient *dynamicclientset.Clientset, dynInformers *dynamicinformer.SharedInformerFactory, mcClient mcclientset.Interface, revisionLister mclisters.ControllerRevisionLister, cc *v1alpha1.CompositeController, numWorkers int) (pc *parentController, newErr error) {
+func newParentController(resources *dynamicdiscovery.ResourceMap, dynClient *dynamicclientset.Clientset, dynInformers *dynamicinformer.SharedInformerFactory, mcClient mcclientset.Interface, revisionLister mclisters.ControllerRevisionLister, cc *v1alpha1.CompositeController, numWorkers int, eventRecorder record.EventRecorder) (pc *parentController, newErr error) {
 	// Make a dynamic client for the parent resource.
 	parentClient, err := dynClient.Resource(cc.Spec.ParentResource.APIVersion, cc.Spec.ParentResource.Resource)
 	if err != nil {
@@ -136,6 +141,7 @@ func newParentController(resources *dynamicdiscovery.ResourceMap, dynClient *dyn
 		updateStrategy: updateStrategy,
 		queue:          workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "CompositeController-"+cc.Name),
 		numWorkers:     numWorkers,
+		eventRecorder:  eventRecorder,
 		finalizer: &finalizer.Manager{
 			Name:    "metacontroller.io/compositecontroller-" + cc.Name,
 			Enabled: cc.Spec.Hooks.Finalize != nil,
@@ -193,7 +199,9 @@ func (pc *parentController) Start() {
 		defer utilruntime.HandleCrash()
 
 		klog.InfoS("Starting CompositeController", "controller", klog.KObj(pc.cc))
+		pc.eventRecorder.Eventf(pc.cc, v1.EventTypeNormal, events.ReasonStarting, "Starting controller: %s", pc.cc.Name)
 		defer klog.InfoS("Shutting down CompositeController", "controller", klog.KObj(pc.cc))
+		defer pc.eventRecorder.Eventf(pc.cc, v1.EventTypeNormal, events.ReasonStopping, "Stopping controller: %s", pc.cc.Name)
 
 		// Wait for dynamic client and all informers.
 		klog.InfoS("Waiting for CompositeController caches to sync", "controller", klog.KObj(pc.cc))
