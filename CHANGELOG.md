@@ -1,3 +1,10 @@
+## [1.4.6](https://github.com/metacontroller/metacontroller/compare/v1.4.5...v1.4.6) (2021-03-11)
+
+
+### Bug Fixes
+
+* **composite controller:** Fixed GroupVersion management ([c5f4c09](https://github.com/metacontroller/metacontroller/commit/c5f4c09a49f1c8192980e7c799d9d457c6dddb2c))
+
 ## [1.4.5](https://github.com/metacontroller/metacontroller/compare/v1.4.4...v1.4.5) (2021-02-21)
 
 
