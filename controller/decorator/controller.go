@@ -23,6 +23,10 @@ import (
 	"sync"
 	"time"
 
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/tools/record"
+	"metacontroller.io/events"
+
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"k8s.io/klog/v2"
@@ -68,13 +72,14 @@ type decoratorController struct {
 	parentInformers common.InformerMap
 	childInformers  common.InformerMap
 
-	numWorkers int
+	numWorkers    int
+	eventRecorder record.EventRecorder
 
 	finalizer *finalizer.Manager
 	customize customize.Manager
 }
 
-func newDecoratorController(resources *dynamicdiscovery.ResourceMap, dynClient *dynamicclientset.Clientset, dynInformers *dynamicinformer.SharedInformerFactory, dc *v1alpha1.DecoratorController, numWorkers int) (controller *decoratorController, newErr error) {
+func newDecoratorController(resources *dynamicdiscovery.ResourceMap, dynClient *dynamicclientset.Clientset, dynInformers *dynamicinformer.SharedInformerFactory, dc *v1alpha1.DecoratorController, numWorkers int, eventRecorder record.EventRecorder) (controller *decoratorController, newErr error) {
 	c := &decoratorController{
 		dc:              dc,
 		resources:       resources,
@@ -83,8 +88,9 @@ func newDecoratorController(resources *dynamicdiscovery.ResourceMap, dynClient *
 		parentInformers: make(common.InformerMap),
 		childInformers:  make(common.InformerMap),
 
-		queue:      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "DecoratorController-"+dc.Name),
-		numWorkers: numWorkers,
+		queue:         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "DecoratorController-"+dc.Name),
+		numWorkers:    numWorkers,
+		eventRecorder: eventRecorder,
 		finalizer: &finalizer.Manager{
 			Name:    "metacontroller.io/decoratorcontroller-" + dc.Name,
 			Enabled: dc.Spec.Hooks.Finalize != nil,
@@ -206,7 +212,9 @@ func (c *decoratorController) Start() {
 		defer utilruntime.HandleCrash()
 
 		klog.InfoS("Starting DecoratorController", "controller", klog.KObj(c.dc))
+		c.eventRecorder.Eventf(c.dc, v1.EventTypeNormal, events.ReasonStarting, "Starting controller: %s", c.dc.Name)
 		defer klog.InfoS("Shutting down DecoratorController", "controller", klog.KObj(c.dc))
+		defer c.eventRecorder.Eventf(c.dc, v1.EventTypeNormal, events.ReasonStopping, "Stopping controller: %s", c.dc.Name)
 
 		// Wait for dynamic client and all informers.
 		klog.InfoS("Waiting for DecoratorController caches to sync", "controller", klog.KObj(c.dc))

@@ -25,6 +25,9 @@ import (
 	"path"
 	"time"
 
+	"k8s.io/client-go/tools/record"
+	"metacontroller.io/options"
+
 	"k8s.io/client-go/discovery"
 	"k8s.io/klog/v2"
 
@@ -111,7 +114,14 @@ func testMain(tests func() int) error {
 	// metacontroller StatefulSet will not actually run anything.
 	// Instead, we start the Metacontroller server locally inside the test binary,
 	// since that's part of the code under test.
-	stopServer, err := server.Start(ApiserverConfig(), 500*time.Millisecond, 30*time.Minute, 5)
+	options := options.Options{
+		Config:            ApiserverConfig(),
+		DiscoveryInterval: 500 * time.Millisecond,
+		InformerRelist:    30 * time.Minute,
+		Workers:           5,
+		CorrelatorOptions: record.CorrelatorOptions{},
+	}
+	stopServer, err := server.Start(options)
 	if err != nil {
 		return fmt.Errorf("cannot start metacontroller server: %v", err)
 	}
