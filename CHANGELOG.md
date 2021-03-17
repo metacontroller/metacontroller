@@ -1,3 +1,10 @@
+## [1.4.7](https://github.com/metacontroller/metacontroller/compare/v1.4.6...v1.4.7) (2021-03-17)
+
+
+### Bug Fixes
+
+* **deps:** Update klog2 to v2.8.0 ([9cf1ecc](https://github.com/metacontroller/metacontroller/commit/9cf1ecc9b66636fcff74e8c4336341052620fa73))
+
 ## [1.4.6](https://github.com/metacontroller/metacontroller/compare/v1.4.5...v1.4.6) (2021-03-11)
 
 
