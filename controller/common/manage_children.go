@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"reflect"
 
+	"k8s.io/utils/pointer"
+
 	"k8s.io/klog/v2"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -30,7 +32,6 @@ import (
 	"metacontroller.io/apis/metacontroller/v1alpha1"
 	dynamicapply "metacontroller.io/dynamic/apply"
 	dynamicclientset "metacontroller.io/dynamic/clientset"
-	k8s "metacontroller.io/third_party/kubernetes"
 )
 
 func ApplyUpdate(orig, update *unstructured.Unstructured) (*unstructured.Unstructured, error) {
@@ -114,8 +115,8 @@ func MakeControllerRef(parent *unstructured.Unstructured) *metav1.OwnerReference
 		Kind:               parent.GetKind(),
 		Name:               parent.GetName(),
 		UID:                parent.GetUID(),
-		Controller:         k8s.BoolPtr(true),
-		BlockOwnerDeletion: k8s.BoolPtr(true),
+		Controller:         pointer.BoolPtr(true),
+		BlockOwnerDeletion: pointer.BoolPtr(true),
 	}
 }
 

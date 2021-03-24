@@ -16,7 +16,6 @@ import (
 	"metacontroller.io/controller/common"
 	dynamicclientset "metacontroller.io/dynamic/clientset"
 	dynamicinformer "metacontroller.io/dynamic/informer"
-	k8s "metacontroller.io/third_party/kubernetes"
 )
 
 type relatedObjectsSelectionType string
@@ -114,7 +113,7 @@ func (rm *Manager) getRelatedClient(apiVersion, resource string) (*dynamicclient
 			DeleteFunc: rm.onRelatedDelete,
 		})
 
-		if !k8s.WaitForCacheSync(rm.name, rm.stopCh, informer.Informer().HasSynced) {
+		if !cache.WaitForNamedCacheSync(rm.name, rm.stopCh, informer.Informer().HasSynced) {
 			klog.Warningf("related Manager %s cache sync never finished", rm.name)
 		}
 

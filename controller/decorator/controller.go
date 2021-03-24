@@ -218,7 +218,7 @@ func (c *decoratorController) Start() {
 		for _, informer := range c.childInformers {
 			syncFuncs = append(syncFuncs, informer.Informer().HasSynced)
 		}
-		if !k8s.WaitForCacheSync(c.dc.Name, c.stopCh, syncFuncs...) {
+		if !cache.WaitForNamedCacheSync(c.dc.Name, c.stopCh, syncFuncs...) {
 			// We wait forever unless Stop() is called, so this isn't an error.
 			klog.InfoS("DecoratorController cache sync never finished", "controller", klog.KObj(c.dc))
 			return
