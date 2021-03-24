@@ -115,7 +115,9 @@ func (pc *parentController) syncRollingUpdate(parentRevisions []*parentRevision,
 					Reason:  "RolloutWaiting",
 					Message: err.Error(),
 				}
-				dynamicobject.SetCondition(latest.syncResult.Status, updatedCondition)
+				if err := dynamicobject.SetCondition(latest.syncResult.Status, updatedCondition); err != nil {
+					return err
+				}
 				return nil
 			}
 
@@ -133,7 +135,9 @@ func (pc *parentController) syncRollingUpdate(parentRevisions []*parentRevision,
 				Reason:  "RolloutProgressing",
 				Message: fmt.Sprintf("updating %v %v", kind, name),
 			}
-			dynamicobject.SetCondition(latest.syncResult.Status, updatedCondition)
+			if err := dynamicobject.SetCondition(latest.syncResult.Status, updatedCondition); err != nil {
+				return err
+			}
 			return nil
 		}
 	}
@@ -145,7 +149,9 @@ func (pc *parentController) syncRollingUpdate(parentRevisions []*parentRevision,
 		Reason:  "OnLatestRevision",
 		Message: fmt.Sprintf("latest ControllerRevision: %v", latest.revision.Name),
 	}
-	dynamicobject.SetCondition(latest.syncResult.Status, updatedCondition)
+	if err := dynamicobject.SetCondition(latest.syncResult.Status, updatedCondition); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -181,7 +187,10 @@ func (pc *parentController) shouldContinueRolling(latest *parentRevision, observ
 			if strategy.Method == v1alpha1.ChildUpdateRollingInPlace {
 				// Ideally every controller would support ObservedGeneration, but not
 				// all do, so we have to ignore it if it's not present.
-				if observedGeneration := dynamicobject.GetObservedGeneration(child.UnstructuredContent()); observedGeneration > 0 {
+				if observedGeneration, _, err := dynamicobject.GetObservedGeneration(child.UnstructuredContent()); observedGeneration > 0 {
+					if err != nil {
+						return err
+					}
 					// Ideally we would remember the Generation from our own last Update,
 					// but we don't have a good place to persist that.
 					// Instead, we compare with the latest Generation, which should be
@@ -266,8 +275,8 @@ func childStatusCheck(checks *v1alpha1.ChildUpdateStatusChecks, child *unstructu
 	}
 
 	for _, condCheck := range checks.Conditions {
-		cond := dynamicobject.GetStatusCondition(child.UnstructuredContent(), condCheck.Type)
-		if cond == nil {
+		cond, err := dynamicobject.GetStatusCondition(child.UnstructuredContent(), condCheck.Type)
+		if err != nil || cond == nil {
 			return fmt.Errorf("required condition type missing: %q", condCheck.Type)
 		}
 		if condCheck.Status != nil {

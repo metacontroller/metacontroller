@@ -44,7 +44,6 @@ import (
 	dynamicdiscovery "metacontroller.io/dynamic/discovery"
 	dynamicinformer "metacontroller.io/dynamic/informer"
 	dynamicobject "metacontroller.io/dynamic/object"
-	k8s "metacontroller.io/third_party/kubernetes"
 )
 
 const (
@@ -520,7 +519,10 @@ func (c *decoratorController) syncParentObject(parent *unstructured.Unstructured
 	if parentAnnotations == nil {
 		parentAnnotations = make(map[string]string)
 	}
-	parentStatus := k8s.GetNestedObject(updatedParent.Object, "status")
+	parentStatus, _, err := unstructured.NestedMap(updatedParent.Object, "status")
+	if err != nil {
+		return err
+	}
 	if syncResult.Status == nil {
 		// A null .status in the sync response means leave it unchanged.
 		syncResult.Status = parentStatus
@@ -535,7 +537,9 @@ func (c *decoratorController) syncParentObject(parent *unstructured.Unstructured
 		(syncResult.Finalized && dynamicobject.HasFinalizer(parent, c.finalizer.Name)) {
 		updatedParent.SetLabels(parentLabels)
 		updatedParent.SetAnnotations(parentAnnotations)
-		k8s.SetNestedField(updatedParent.Object, syncResult.Status, "status")
+		if err := unstructured.SetNestedField(updatedParent.Object, syncResult.Status, "status"); err != nil {
+			return err
+		}
 
 		if statusChanged && parentClient.HasSubresource("status") {
 			// The regular Update below will ignore changes to .status so we do it separately.

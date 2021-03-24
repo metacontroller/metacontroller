@@ -35,7 +35,6 @@ import (
 
 	"metacontroller.io/apis/metacontroller/v1alpha1"
 	dynamiccontrollerref "metacontroller.io/dynamic/controllerref"
-	k8s "metacontroller.io/third_party/kubernetes"
 )
 
 const (
@@ -108,7 +107,10 @@ func (pc *parentController) syncRevisions(parent *unstructured.Unstructured, obs
 	} else {
 		fieldPaths = []string{"spec"}
 	}
-	latestPatch := makePatch(parent.UnstructuredContent(), fieldPaths)
+	latestPatch, err := makePatch(parent.UnstructuredContent(), fieldPaths)
+	if err != nil {
+		return nil, err
+	}
 
 	// The first item in the list is always the latest parent.
 	// The rest are in no particular order.
@@ -131,7 +133,9 @@ func (pc *parentController) syncRevisions(parent *unstructured.Unstructured, obs
 		}
 		// Also deep copy parent, so we can apply the patch to it.
 		pr := &parentRevision{parent: latest.parent.DeepCopy(), revision: revision.DeepCopy()}
-		applyPatch(pr.parent.UnstructuredContent(), patch, fieldPaths)
+		if err := applyPatch(pr.parent.UnstructuredContent(), patch, fieldPaths); err != nil {
+			return nil, err
+		}
 		parentRevisions = append(parentRevisions, pr)
 	}
 
@@ -301,8 +305,10 @@ func newControllerRevision(parentResource *metav1.APIResource, parent *unstructu
 
 	// Get labels from the parent object's spec.template.
 	// This is how we find any orphaned ControllerRevisions for a given parent.
-	labels := k8s.GetNestedMap(parent.UnstructuredContent(), "spec", "template", "metadata", "labels")
-
+	labels, _, err := unstructured.NestedStringMap(parent.UnstructuredContent(), "spec", "template", "metadata", "labels")
+	if err != nil {
+		return nil, fmt.Errorf("invalid labels on parent %v %v/%v: %v", parent.GetKind(), parent.GetNamespace(), parent.GetName(), err)
+	}
 	// Add labels to prevent accidental overlap between different parent types.
 	if labels == nil {
 		labels = make(map[string]string)
@@ -355,24 +361,37 @@ func controllerRevisionHash(parentUID, patchData []byte) string {
 	return hex.EncodeToString(hasher.Sum(nil))
 }
 
-func makePatch(src map[string]interface{}, fieldPaths []string) map[string]interface{} {
+func makePatch(src map[string]interface{}, fieldPaths []string) (map[string]interface{}, error) {
 	patch := make(map[string]interface{})
 	for _, fieldPath := range fieldPaths {
 		pathParts := strings.Split(fieldPath, ".")
-		if value := k8s.GetNestedField(src, pathParts...); value != nil {
-			k8s.SetNestedField(patch, value, pathParts...)
+		value, found, err := unstructured.NestedFieldNoCopy(src, pathParts...)
+		if err != nil {
+			return nil, err
+		}
+		if found {
+			if err := unstructured.SetNestedField(patch, value, pathParts...); err != nil {
+				return nil, fmt.Errorf("can't make patch for field %v: %v", fieldPath, err)
+			}
 		}
 	}
-	return patch
+	return patch, nil
 }
 
-func applyPatch(dest, patch map[string]interface{}, fieldPaths []string) {
+func applyPatch(dest, patch map[string]interface{}, fieldPaths []string) error {
 	for _, fieldPath := range fieldPaths {
 		pathParts := strings.Split(fieldPath, ".")
-		if value := k8s.GetNestedField(patch, pathParts...); value != nil {
-			k8s.SetNestedField(dest, value, pathParts...)
+		value, found, err := unstructured.NestedFieldNoCopy(patch, pathParts...)
+		if err != nil {
+			return err
+		}
+		if found {
+			if err := unstructured.SetNestedField(dest, value, pathParts...); err != nil {
+				return fmt.Errorf("can't apply patch for field %v: %v", fieldPath, err)
+			}
 		}
 	}
+	return nil
 }
 
 type parentRevision struct {
