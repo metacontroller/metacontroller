@@ -202,7 +202,7 @@ func (pc *parentController) Start() {
 		for _, childInformer := range pc.childInformers {
 			syncFuncs = append(syncFuncs, childInformer.Informer().HasSynced)
 		}
-		if !k8s.WaitForCacheSync(pc.parentResource.Kind, pc.stopCh, syncFuncs...) {
+		if !cache.WaitForNamedCacheSync(pc.parentResource.Kind, pc.stopCh, syncFuncs...) {
 			// We wait forever unless Stop() is called, so this isn't an error.
 			klog.InfoS("CompositeController cache sync never finished", "controller", klog.KObj(pc.cc))
 			return

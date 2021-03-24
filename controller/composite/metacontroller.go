@@ -36,7 +36,6 @@ import (
 	dynamicclientset "metacontroller.io/dynamic/clientset"
 	dynamicdiscovery "metacontroller.io/dynamic/discovery"
 	dynamicinformer "metacontroller.io/dynamic/informer"
-	k8s "metacontroller.io/third_party/kubernetes"
 )
 
 type Metacontroller struct {
@@ -96,7 +95,7 @@ func (mc *Metacontroller) Start() {
 		klog.InfoS("Starting CompositeController metacontroller")
 		defer klog.InfoS("Shutting down CompositeController metacontroller")
 
-		if !k8s.WaitForCacheSync("CompositeController", mc.stopCh, mc.ccInformer.HasSynced) {
+		if !cache.WaitForNamedCacheSync("CompositeController", mc.stopCh, mc.ccInformer.HasSynced) {
 			return
 		}
 
