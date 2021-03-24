@@ -17,7 +17,7 @@ limitations under the License.
 package object
 
 import (
-	k8s "metacontroller.io/third_party/kubernetes"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 type StatusCondition struct {
@@ -58,43 +58,60 @@ func NewStatusCondition(obj map[string]interface{}) *StatusCondition {
 	return cond
 }
 
-func GetStatusCondition(obj map[string]interface{}, conditionType string) *StatusCondition {
-	conditions := k8s.GetNestedArray(obj, "status", "conditions")
+func GetStatusCondition(obj map[string]interface{}, conditionType string) (*StatusCondition, error) {
+	conditions, found, err := unstructured.NestedSlice(obj, "status", "conditions")
+	if !found || err != nil {
+		return nil, err
+	}
 	for _, item := range conditions {
 		if obj, ok := item.(map[string]interface{}); ok {
 			if ctype, ok := obj["type"].(string); ok && ctype == conditionType {
-				return NewStatusCondition(obj)
+				return NewStatusCondition(obj), nil
 			}
 		}
 	}
-	return nil
+	return nil, nil
 }
 
-func SetCondition(status map[string]interface{}, condition *StatusCondition) {
-	conditions := k8s.GetNestedArray(status, "conditions")
+func SetCondition(status map[string]interface{}, condition *StatusCondition) error {
+	conditions, found, err := unstructured.NestedSlice(status, "conditions")
+	if err != nil {
+		return err
+	}
 	// If the condition is already there, update it.
-	for i, item := range conditions {
-		if cobj, ok := item.(map[string]interface{}); ok {
-			if ctype, ok := cobj["type"].(string); ok && ctype == condition.Type {
-				conditions[i] = condition.Object()
-				return
+	if found {
+		for i, item := range conditions {
+			if cobj, ok := item.(map[string]interface{}); ok {
+				if ctype, ok := cobj["type"].(string); ok && ctype == condition.Type {
+					conditions[i] = condition.Object()
+					return nil
+				}
 			}
 		}
 	}
 	// The condition wasn't found. Append it.
 	conditions = append(conditions, condition.Object())
-	k8s.SetNestedField(status, conditions, "conditions")
+	if err := unstructured.SetNestedField(status, conditions, "conditions"); err != nil {
+		return err
+	}
+	return nil
 }
 
-func SetStatusCondition(obj map[string]interface{}, condition *StatusCondition) {
-	status := k8s.GetNestedObject(obj, "status")
-	if status == nil {
+func SetStatusCondition(obj map[string]interface{}, condition *StatusCondition) error {
+	status, found, err := unstructured.NestedMap(obj, "status")
+	if err != nil {
+		return err
+	}
+	if !found {
 		status = make(map[string]interface{})
 	}
 	SetCondition(status, condition)
-	k8s.SetNestedField(obj, status, "status")
+	if err := unstructured.SetNestedField(obj, status, "status"); err != nil {
+		return err
+	}
+	return nil
 }
 
-func GetObservedGeneration(obj map[string]interface{}) int64 {
-	return k8s.GetNestedInt64(obj, "status", "observedGeneration")
+func GetObservedGeneration(obj map[string]interface{}) (int64, bool, error) {
+	return unstructured.NestedInt64(obj, "status", "observedGeneration")
 }
