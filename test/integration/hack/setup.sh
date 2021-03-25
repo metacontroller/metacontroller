@@ -14,6 +14,7 @@ else
     echo ""
     echo "+++ downloading gotestsum"
     echo ""
+    mkdir -p "${PWD}"/bin/
     curl -sSL "https://github.com/gotestyourself/gotestsum/releases/download/v0.6.0/gotestsum_0.6.0_linux_amd64.tar.gz" | tar -xz -C ${PWD}/bin gotestsum
     chmod +x "${PWD}"/bin/gotestsum
 fi

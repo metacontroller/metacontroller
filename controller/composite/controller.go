@@ -431,6 +431,8 @@ func (pc *parentController) findPotentialParents(child *unstructured.Unstructure
 	}
 
 	var matchingParents []*unstructured.Unstructured
+
+	// TODO if `generateSelector` is `true` - forbid, no way to find a parent via geUID
 	for _, parent := range parents {
 		selector, err := pc.makeSelector(parent, nil)
 		if err != nil || selector.Empty() {
@@ -570,10 +572,14 @@ func (pc *parentController) syncParentObject(parent *unstructured.Unstructured) 
 	return manageErr
 }
 
+func (pc *parentController) isUsingGeneratedLabelSelector() bool {
+	return pc.cc.Spec.GenerateSelector != nil && *pc.cc.Spec.GenerateSelector
+}
+
 func (pc *parentController) makeSelector(parent *unstructured.Unstructured, extraMatchLabels map[string]string) (labels.Selector, error) {
 	labelSelector := &metav1.LabelSelector{}
 
-	if pc.cc.Spec.GenerateSelector != nil && *pc.cc.Spec.GenerateSelector {
+	if pc.isUsingGeneratedLabelSelector() {
 		// Select by controller-uid, like Job does.
 		// Any selector on the parent is ignored in this case.
 		labelSelector = metav1.AddLabelToSelector(labelSelector, "controller-uid", string(parent.GetUID()))

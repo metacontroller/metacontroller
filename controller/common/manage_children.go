@@ -20,13 +20,14 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/google/go-cmp/cmp"
+
 	"k8s.io/utils/pointer"
 
 	"k8s.io/klog/v2"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/util/diff"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 
 	"metacontroller.io/apis/metacontroller/v1alpha1"
@@ -72,6 +73,7 @@ var objectMetaSystemFields = []string{
 	"generation",
 	"creationTimestamp",
 	"deletionTimestamp",
+	"deletionGracePeriodSeconds",
 }
 
 // revertObjectMetaSystemFields overwrites the read-only, system-populated
@@ -208,7 +210,7 @@ func updateChildren(client *dynamicclientset.ResourceClient, updateStrategy Chil
 				continue
 			}
 			if klog.V(5).Enabled() {
-				klog.InfoS("Reflect diff: a=observed, b=desired", "diff", diff.ObjectReflectDiff(oldObj.UnstructuredContent(), newObj.UnstructuredContent()))
+				klog.InfoS("Reflect diff: a=observed, b=desired", "diff", cmp.Diff(oldObj.UnstructuredContent(), newObj.UnstructuredContent()))
 			}
 
 			// Leave it alone if it's pending deletion.

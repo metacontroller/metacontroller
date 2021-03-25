@@ -4,8 +4,9 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
+
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/util/diff"
 	"k8s.io/apimachinery/pkg/util/json"
 )
 
@@ -60,7 +61,7 @@ func TestRevertObjectMetaSystemFields(t *testing.T) {
 	}
 
 	if got := newObj; !reflect.DeepEqual(got, want) {
-		t.Logf("reflect diff: a=got, b=want:\n%s", diff.ObjectReflectDiff(got, want))
+		t.Logf("reflect diff: a=got, b=want:\n%s", cmp.Diff(got, want))
 		t.Fatalf("revertObjectMetaSystemFields() = %#v, want %#v", got, want)
 	}
 }

@@ -22,8 +22,9 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
+
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/util/diff"
 )
 
 func TestAddFinalizer(t *testing.T) {
@@ -97,7 +98,7 @@ func TestAddFinalizer(t *testing.T) {
 		AddFinalizer(obj, "test")
 
 		if got, want := obj.Object, wantObj.Object; !reflect.DeepEqual(got, want) {
-			t.Logf("reflect diff: a=got, b=want:\n%s", diff.ObjectReflectDiff(got, want))
+			t.Logf("reflect diff: a=got, b=want:\n%s", cmp.Diff(got, want))
 			t.Errorf("%v: obj = %#v, want %#v", tc.name, got, want)
 		}
 	}
@@ -218,7 +219,7 @@ func TestRemoveFinalizer(t *testing.T) {
 		RemoveFinalizer(obj, "test")
 
 		if got, want := obj.Object, wantObj.Object; !reflect.DeepEqual(got, want) {
-			t.Logf("reflect diff: a=got, b=want:\n%s", diff.ObjectReflectDiff(got, want))
+			t.Logf("reflect diff: a=got, b=want:\n%s", cmp.Diff(got, want))
 			t.Errorf("%v: obj = %#v, want %#v", tc.name, got, want)
 		}
 	}

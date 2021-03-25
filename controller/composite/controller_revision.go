@@ -141,7 +141,7 @@ func (pc *parentController) syncRevisions(parent *unstructured.Unstructured, obs
 
 	// Create a new ControllerRevision for the latest parent state, if needed.
 	if latest.revision == nil {
-		revision, err := newControllerRevision(&pc.parentResource.APIResource, latest.parent, latestPatch)
+		revision, err := pc.newControllerRevision(latest.parent, latestPatch)
 		if err != nil {
 			return nil, err
 		}
@@ -279,14 +279,17 @@ func (pc *parentController) manageRevisions(parent *unstructured.Unstructured, o
 				// We didn't change anything.
 				continue
 			}
-			klog.InfoS("Updating ControllerRevision", "parent_kind", parent.GetKind(), "parent", klog.KObj(parent), "name", revision.GetName())
-			if _, err := client.Update(revision); err != nil {
+			if oldObj.GetResourceVersion() != revision.GetResourceVersion() {
+				revision.SetResourceVersion(oldObj.GetResourceVersion())
+				klog.V(5).InfoS("ControllerRevision's resource version updated", "old", oldObj.GetObjectMeta().GetResourceVersion(), "new", revision.GetObjectMeta().GetResourceVersion())
+			}
+			updated, err := client.Update(revision)
+			if err != nil {
 				return fmt.Errorf("can't update ControllerRevision %v for %v %v/%v: %v", revision.Name, pc.parentResource.Kind, parent.GetNamespace(), parent.GetName(), err)
 			}
+			klog.InfoS("ControllerRevision updated", "parent_kind", parent.GetKind(), "parent", klog.KObj(parent), "name", revision.GetName(), "resource_version", updated.GetResourceVersion())
 		} else {
 			// Create
-			controllerRef := common.MakeControllerRef(parent)
-			revision.OwnerReferences = append(revision.OwnerReferences, *controllerRef)
 			klog.InfoS("Creating ControllerRevision", "parent_kind", parent.GetKind(), "parent", klog.KObj(parent), "name", revision.GetName())
 			if _, err := client.Create(revision); err != nil {
 				return fmt.Errorf("can't create ControllerRevision %v for %v %v/%v: %v", revision.Name, pc.parentResource.Kind, parent.GetNamespace(), parent.GetName(), err)
@@ -297,24 +300,30 @@ func (pc *parentController) manageRevisions(parent *unstructured.Unstructured, o
 	return nil
 }
 
-func newControllerRevision(parentResource *metav1.APIResource, parent *unstructured.Unstructured, patch map[string]interface{}) (*v1alpha1.ControllerRevision, error) {
+func (pc *parentController) newControllerRevision(parent *unstructured.Unstructured, patch map[string]interface{}) (*v1alpha1.ControllerRevision, error) {
 	patchData, err := json.Marshal(patch)
 	if err != nil {
 		return nil, fmt.Errorf("can't marshal ControllerRevision parentPatch: %v", err)
 	}
-
-	// Get labels from the parent object's spec.template.
-	// This is how we find any orphaned ControllerRevisions for a given parent.
-	labels, _, err := unstructured.NestedStringMap(parent.UnstructuredContent(), "spec", "template", "metadata", "labels")
-	if err != nil {
-		return nil, fmt.Errorf("invalid labels on parent %v %v/%v: %v", parent.GetKind(), parent.GetNamespace(), parent.GetName(), err)
+	var labels map[string]string
+	if pc.isUsingGeneratedLabelSelector() {
+		labels = make(map[string]string)
+		labels["controller-uid"] = string(parent.GetUID())
+	} else {
+		// TODO https://github.com/metacontroller/metacontroller/issues/194
+		// Get labels from the parent object's spec.template.
+		// This is how we find any orphaned ControllerRevisions for a given parent.
+		labels, _, err = unstructured.NestedStringMap(parent.UnstructuredContent(), "spec", "template", "metadata", "labels")
+		if err != nil {
+			return nil, fmt.Errorf("invalid labels on parent %v %v/%v: %v", parent.GetKind(), parent.GetNamespace(), parent.GetName(), err)
+		}
 	}
 	// Add labels to prevent accidental overlap between different parent types.
 	if labels == nil {
 		labels = make(map[string]string)
 	}
-	labels[labelKeyAPIGroup] = parentResource.Group
-	labels[labelKeyResource] = parentResource.Name
+	labels[labelKeyAPIGroup] = pc.parentResource.APIResource.Group
+	labels[labelKeyResource] = pc.parentResource.APIResource.Name
 
 	revision := &v1alpha1.ControllerRevision{
 		TypeMeta: metav1.TypeMeta{
@@ -322,12 +331,14 @@ func newControllerRevision(parentResource *metav1.APIResource, parent *unstructu
 			Kind:       "ControllerRevision",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      controllerRevisionName(parentResource, parent, patchData),
+			Name:      controllerRevisionName(&pc.parentResource.APIResource, parent, patchData),
 			Namespace: parent.GetNamespace(),
 			Labels:    labels,
 		},
 		ParentPatch: runtime.RawExtension{Raw: patchData},
 	}
+	controllerRef := common.MakeControllerRef(parent)
+	revision.OwnerReferences = append(revision.OwnerReferences, *controllerRef)
 	return revision, nil
 }
 
