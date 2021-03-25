@@ -70,9 +70,10 @@ jobs:
         sleep 20s
         kubectl get pods -n metacontroller
     - name: Run e2e tests
+      timeout-minutes: 30
       run: |
         cd examples
-        ./test.sh --ignore catset --crd_version ${{ matrix.configuration.crd_version }}
+        ./test.sh --crd_version ${{ matrix.configuration.crd_version }}
   release:
     if: (github.ref == 'refs/heads/master') && (github.repository_owner == 'metacontroller')
     name: Release - Create tag
