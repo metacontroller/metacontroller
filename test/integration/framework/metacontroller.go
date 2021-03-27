@@ -17,6 +17,8 @@ limitations under the License.
 package framework
 
 import (
+	"context"
+
 	apiextensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
@@ -73,12 +75,12 @@ func (f *Fixture) CreateCompositeController(name, syncHookURL string, customizeH
 		},
 	}
 
-	cc, err := f.metacontroller.MetacontrollerV1alpha1().CompositeControllers().Create(cc)
+	err := f.metacontroller.Create(context.Background(), cc)
 	if err != nil {
 		f.t.Fatal(err)
 	}
 	f.deferTeardown(func() error {
-		return f.metacontroller.MetacontrollerV1alpha1().CompositeControllers().Delete(cc.Name, nil)
+		return f.metacontroller.Delete(context.Background(), cc)
 	})
 
 	return cc
@@ -128,12 +130,12 @@ func (f *Fixture) CreateDecoratorController(name, syncHookURL string, customizeH
 		},
 	}
 
-	dc, err := f.metacontroller.MetacontrollerV1alpha1().DecoratorControllers().Create(dc)
+	err := f.metacontroller.Create(context.Background(), dc)
 	if err != nil {
 		f.t.Fatal(err)
 	}
 	f.deferTeardown(func() error {
-		return f.metacontroller.MetacontrollerV1alpha1().DecoratorControllers().Delete(dc.Name, nil)
+		return f.metacontroller.Delete(context.Background(), dc)
 	})
 
 	return dc

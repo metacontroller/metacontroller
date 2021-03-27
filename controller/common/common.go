@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"strings"
 
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/discovery"
@@ -54,14 +56,16 @@ func init() {
 
 // ControllerContext holds various object related to interacting with kubernetes cluster
 type ControllerContext struct {
+	// K8sClient is a client used to interact with the Kubernetes API
+	K8sClient         client.Client
 	Resources         *dynamicdiscovery.ResourceMap
 	DynClient         *dynamicclientset.Clientset
 	DynInformers      *dynamicinformer.SharedInformerFactory
 	McInformerFactory mcinformers.SharedInformerFactory
 	McClient          mcclientset.Interface
 	EventRecorder     record.EventRecorder
+	Broadcaster       record.EventBroadcaster
 	configuration     options.Configuration
-	broadcaster       record.EventBroadcaster
 }
 
 // NewControllerContext creates a new ControllerContext using given Configuration and metacontroller client
@@ -88,14 +92,21 @@ func NewControllerContext(configuration options.Configuration, mcClient *mcclien
 	}
 	recorder := broadcaster.NewRecorder(scheme, corev1.EventSource{Component: "metacontroller"})
 
+	// Create a new Kubernetes client for interacting with the Kubernetes API
+	k8sClient, err := client.New(configuration.RestConfig, client.Options{})
+	if err != nil {
+		return nil, err
+	}
+
 	return &ControllerContext{
+		K8sClient:         k8sClient,
 		Resources:         resources,
 		DynClient:         dynClient,
 		DynInformers:      dynInformers,
 		McInformerFactory: mcInformerFactory,
 		EventRecorder:     recorder,
+		Broadcaster:       broadcaster,
 		configuration:     configuration,
-		broadcaster:       broadcaster,
 	}, nil
 }
 
@@ -108,7 +119,7 @@ func (controllerContext ControllerContext) Start() {
 }
 
 func (controllerContext ControllerContext) Stop() {
-	controllerContext.broadcaster.Shutdown()
+	controllerContext.Broadcaster.Shutdown()
 }
 
 type ChildMap map[string]map[string]*unstructured.Unstructured
