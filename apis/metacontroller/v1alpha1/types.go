@@ -22,9 +22,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-// +genclient
-// +genclient:noStatus
-// +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:path=compositecontrollers,scope=Cluster,shortName=cc;cctl
@@ -161,9 +158,6 @@ type ControllerRevisionList struct {
 	Items           []ControllerRevision `json:"items"`
 }
 
-// +genclient
-// +genclient:noStatus
-// +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:path=decoratorcontrollers,scope=Cluster,shortName=dec;decorators

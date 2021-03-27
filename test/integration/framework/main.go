@@ -110,6 +110,14 @@ func testMain(tests func() int) error {
 		return fmt.Errorf("cannot install metacontroller CRDs: %v", err)
 	}
 
+	// Wait for CRDs to be created
+	if err := execKubectl("wait", "--for=condition=Established", "crd", "compositecontrollers.metacontroller.k8s.io"); err != nil {
+		return fmt.Errorf("cannot install metacontroller CRDs: %v", err)
+	}
+	if err := execKubectl("wait", "--for=condition=Established", "crd", "decoratorcontrollers.metacontroller.k8s.io"); err != nil {
+		return fmt.Errorf("cannot install metacontroller CRDs: %v", err)
+	}
+
 	// In this integration test environment, there are no Nodes, so the
 	// metacontroller StatefulSet will not actually run anything.
 	// Instead, we start the Metacontroller server locally inside the test binary,
@@ -121,11 +129,17 @@ func testMain(tests func() int) error {
 		Workers:           5,
 		CorrelatorOptions: record.CorrelatorOptions{},
 	}
-	stopServer, err := server.Start(configuration)
+	mgr, stopServer, err := server.New(configuration)
 	if err != nil {
-		return fmt.Errorf("cannot start metacontroller server: %v", err)
+		return fmt.Errorf("cannot create a metacontroller server: %v", err)
 	}
 	defer stopServer()
+	go func() {
+		if err := mgr.Start(make(chan struct{})); err != nil {
+			klog.ErrorS(err, "Terminating")
+			os.Exit(1)
+		}
+	}()
 
 	// Periodically refresh discovery to pick up newly-installed resources.
 	discoveryClient := discovery.NewDiscoveryClientForConfigOrDie(ApiserverConfig())

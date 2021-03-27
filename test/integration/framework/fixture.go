@@ -21,12 +21,13 @@ import (
 	"testing"
 	"time"
 
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	v1 "k8s.io/api/core/v1"
 	apiextensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/typed/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
-	mcclientset "metacontroller.io/client/generated/clientset/internalclientset"
 	dynamicclientset "metacontroller.io/dynamic/clientset"
 )
 
@@ -44,7 +45,7 @@ type Fixture struct {
 	dynamic        *dynamicclientset.Clientset
 	kubernetes     kubernetes.Interface
 	apiextensions  apiextensionsclient.ApiextensionsV1Interface
-	metacontroller mcclientset.Interface
+	metacontroller client.Client
 }
 
 func NewFixture(t *testing.T) *Fixture {
@@ -57,7 +58,7 @@ func NewFixture(t *testing.T) *Fixture {
 	if err != nil {
 		t.Fatal(err)
 	}
-	mcClient, err := mcclientset.NewForConfig(config)
+	mcClient, err := client.New(config, client.Options{})
 	if err != nil {
 		t.Fatal(err)
 	}
