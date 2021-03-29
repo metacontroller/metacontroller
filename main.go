@@ -81,8 +81,8 @@ func main() {
 	config.QPS = float32(*clientGoQPS)
 	config.Burst = *clientGoBurst
 
-	options := options.Options{
-		Config:            config,
+	configuration := options.Configuration{
+		RestConfig:        config,
 		DiscoveryInterval: *discoveryInterval,
 		InformerRelist:    *informerRelist,
 		Workers:           *workers,
@@ -92,7 +92,7 @@ func main() {
 		},
 	}
 
-	stopServer, err := server.Start(options)
+	stopServer, err := server.Start(configuration)
 	if err != nil {
 		klog.ErrorS(err, "Terminating")
 		os.Exit(1)

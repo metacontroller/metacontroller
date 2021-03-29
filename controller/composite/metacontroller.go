@@ -20,8 +20,13 @@ import (
 	"fmt"
 	"sync"
 
-	v1 "k8s.io/api/core/v1"
+	dynamicclientset "metacontroller.io/dynamic/clientset"
+	dynamicdiscovery "metacontroller.io/dynamic/discovery"
+	dynamicinformer "metacontroller.io/dynamic/informer"
+
 	"k8s.io/client-go/tools/record"
+
+	v1 "k8s.io/api/core/v1"
 	"metacontroller.io/events"
 
 	"k8s.io/klog/v2"
@@ -34,19 +39,17 @@ import (
 
 	"metacontroller.io/apis/metacontroller/v1alpha1"
 	mcclientset "metacontroller.io/client/generated/clientset/internalclientset"
-	mcinformers "metacontroller.io/client/generated/informer/externalversions"
 	mclisters "metacontroller.io/client/generated/lister/metacontroller/v1alpha1"
 	"metacontroller.io/controller/common"
-	dynamicclientset "metacontroller.io/dynamic/clientset"
-	dynamicdiscovery "metacontroller.io/dynamic/discovery"
-	dynamicinformer "metacontroller.io/dynamic/informer"
 )
 
 type Metacontroller struct {
-	resources    *dynamicdiscovery.ResourceMap
-	mcClient     mcclientset.Interface
-	dynClient    *dynamicclientset.Clientset
-	dynInformers *dynamicinformer.SharedInformerFactory
+	resources     *dynamicdiscovery.ResourceMap
+	dynClient     *dynamicclientset.Clientset
+	dynInformers  *dynamicinformer.SharedInformerFactory
+	eventRecorder record.EventRecorder
+
+	mcClient mcclientset.Interface
 
 	ccLister         mclisters.CompositeControllerLister
 	ccInformer       cache.SharedIndexInformer
@@ -59,27 +62,26 @@ type Metacontroller struct {
 	stopCh, doneCh chan struct{}
 
 	numWorkers int
-
-	eventRecorder record.EventRecorder
 }
 
-func NewMetacontroller(resources *dynamicdiscovery.ResourceMap, dynClient *dynamicclientset.Clientset, dynInformers *dynamicinformer.SharedInformerFactory, mcInformerFactory mcinformers.SharedInformerFactory, mcClient mcclientset.Interface, numWorkers int, recorder record.EventRecorder) *Metacontroller {
+func NewMetacontroller(controllerContext common.ControllerContext, mcClient mcclientset.Interface, numWorkers int) *Metacontroller {
 	mc := &Metacontroller{
-		resources:    resources,
-		mcClient:     mcClient,
-		dynClient:    dynClient,
-		dynInformers: dynInformers,
+		resources:     controllerContext.Resources,
+		dynClient:     controllerContext.DynClient,
+		dynInformers:  controllerContext.DynInformers,
+		eventRecorder: controllerContext.EventRecorder,
 
-		ccLister:         mcInformerFactory.Metacontroller().V1alpha1().CompositeControllers().Lister(),
-		ccInformer:       mcInformerFactory.Metacontroller().V1alpha1().CompositeControllers().Informer(),
-		revisionLister:   mcInformerFactory.Metacontroller().V1alpha1().ControllerRevisions().Lister(),
-		revisionInformer: mcInformerFactory.Metacontroller().V1alpha1().ControllerRevisions().Informer(),
+		mcClient: mcClient,
+
+		ccLister:         controllerContext.McInformerFactory.Metacontroller().V1alpha1().CompositeControllers().Lister(),
+		ccInformer:       controllerContext.McInformerFactory.Metacontroller().V1alpha1().CompositeControllers().Informer(),
+		revisionLister:   controllerContext.McInformerFactory.Metacontroller().V1alpha1().ControllerRevisions().Lister(),
+		revisionInformer: controllerContext.McInformerFactory.Metacontroller().V1alpha1().ControllerRevisions().Informer(),
 
 		queue:             workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "CompositeController"),
 		parentControllers: make(map[string]*parentController),
 
-		numWorkers:    numWorkers,
-		eventRecorder: recorder,
+		numWorkers: numWorkers,
 	}
 
 	mc.ccInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -163,14 +165,21 @@ func (mc *Metacontroller) sync(key string) error {
 		// Stop and remove the controller if it exists.
 		if pc, ok := mc.parentControllers[name]; ok {
 			pc.Stop()
-			defer pc.eventRecorder.Eventf(pc.cc, v1.EventTypeNormal, events.ReasonStopped, "Stopped controller: %s", pc.cc.Name)
+			defer pc.eventRecorder.Eventf(
+				pc.cc,
+				v1.EventTypeNormal,
+				events.ReasonStopped,
+				"Stopped controller: %s", pc.cc.Name)
 			delete(mc.parentControllers, name)
 		}
 		return nil
 	}
 
 	if err != nil {
-		mc.eventRecorder.Eventf(cc, v1.EventTypeNormal, events.ReasonSyncError, "[%s] Sync error - %s", cc.Name, err)
+		mc.eventRecorder.Eventf(
+			cc, v1.EventTypeNormal,
+			events.ReasonSyncError,
+			"[%s] Sync error - %s", cc.Name, err)
 		return err
 	}
 	parentClient, err := mc.dynClient.Resource(cc.Spec.ParentResource.APIVersion, cc.Spec.ParentResource.Resource)
@@ -208,7 +217,15 @@ func (mc *Metacontroller) syncCompositeController(cc *v1alpha1.CompositeControll
 		delete(mc.parentControllers, cc.Name)
 	}
 
-	pc, err := newParentController(mc.resources, mc.dynClient, mc.dynInformers, mc.mcClient, mc.revisionLister, cc, mc.numWorkers, mc.eventRecorder)
+	pc, err := newParentController(
+		mc.resources,
+		mc.dynClient,
+		mc.dynInformers,
+		mc.eventRecorder,
+		mc.mcClient,
+		mc.revisionLister,
+		cc,
+		mc.numWorkers)
 	if err != nil {
 		return err
 	}

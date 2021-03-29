@@ -78,7 +78,16 @@ type parentController struct {
 	customize customize.Manager
 }
 
-func newParentController(resources *dynamicdiscovery.ResourceMap, dynClient *dynamicclientset.Clientset, dynInformers *dynamicinformer.SharedInformerFactory, mcClient mcclientset.Interface, revisionLister mclisters.ControllerRevisionLister, cc *v1alpha1.CompositeController, numWorkers int, eventRecorder record.EventRecorder) (pc *parentController, newErr error) {
+func newParentController(
+	resources *dynamicdiscovery.ResourceMap,
+	dynClient *dynamicclientset.Clientset,
+	dynInformers *dynamicinformer.SharedInformerFactory,
+	eventRecorder record.EventRecorder,
+	mcClient mcclientset.Interface,
+	revisionLister mclisters.ControllerRevisionLister,
+	cc *v1alpha1.CompositeController,
+	numWorkers int,
+) (pc *parentController, newErr error) {
 	// Make a dynamic client for the parent resource.
 	parentClient, err := dynClient.Resource(cc.Spec.ParentResource.APIVersion, cc.Spec.ParentResource.Resource)
 	if err != nil {

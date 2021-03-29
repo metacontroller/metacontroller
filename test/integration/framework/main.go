@@ -114,14 +114,14 @@ func testMain(tests func() int) error {
 	// metacontroller StatefulSet will not actually run anything.
 	// Instead, we start the Metacontroller server locally inside the test binary,
 	// since that's part of the code under test.
-	options := options.Options{
-		Config:            ApiserverConfig(),
+	configuration := options.Configuration{
+		RestConfig:        ApiserverConfig(),
 		DiscoveryInterval: 500 * time.Millisecond,
 		InformerRelist:    30 * time.Minute,
 		Workers:           5,
 		CorrelatorOptions: record.CorrelatorOptions{},
 	}
-	stopServer, err := server.Start(options)
+	stopServer, err := server.Start(configuration)
 	if err != nil {
 		return fmt.Errorf("cannot start metacontroller server: %v", err)
 	}
