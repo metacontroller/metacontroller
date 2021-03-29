@@ -23,6 +23,8 @@ import (
 	"sync"
 	"time"
 
+	dynamicinformer "metacontroller.io/dynamic/informer"
+
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/record"
 	"metacontroller.io/events"
@@ -46,7 +48,6 @@ import (
 	"metacontroller.io/controller/common/finalizer"
 	dynamicclientset "metacontroller.io/dynamic/clientset"
 	dynamicdiscovery "metacontroller.io/dynamic/discovery"
-	dynamicinformer "metacontroller.io/dynamic/informer"
 	dynamicobject "metacontroller.io/dynamic/object"
 )
 
@@ -79,7 +80,14 @@ type decoratorController struct {
 	customize customize.Manager
 }
 
-func newDecoratorController(resources *dynamicdiscovery.ResourceMap, dynClient *dynamicclientset.Clientset, dynInformers *dynamicinformer.SharedInformerFactory, dc *v1alpha1.DecoratorController, numWorkers int, eventRecorder record.EventRecorder) (controller *decoratorController, newErr error) {
+func newDecoratorController(
+	resources *dynamicdiscovery.ResourceMap,
+	dynClient *dynamicclientset.Clientset,
+	dynInformers *dynamicinformer.SharedInformerFactory,
+	eventRecorder record.EventRecorder,
+	dc *v1alpha1.DecoratorController,
+	numWorkers int,
+) (controller *decoratorController, newErr error) {
 	c := &decoratorController{
 		dc:              dc,
 		resources:       resources,

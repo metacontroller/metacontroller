@@ -20,6 +20,19 @@ import (
 	"fmt"
 	"strings"
 
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/discovery"
+	"metacontroller.io/apis/metacontroller/v1alpha1"
+	"metacontroller.io/options"
+
+	"metacontroller.io/events"
+
+	"k8s.io/client-go/tools/record"
+	mcclientset "metacontroller.io/client/generated/clientset/internalclientset"
+	mcinformers "metacontroller.io/client/generated/informer/externalversions"
+	dynamicclientset "metacontroller.io/dynamic/clientset"
+
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -32,7 +45,71 @@ import (
 
 var (
 	KeyFunc = cache.DeletionHandlingMetaNamespaceKeyFunc
+	scheme  = runtime.NewScheme()
 )
+
+func init() {
+	v1alpha1.AddToScheme(scheme)
+}
+
+// ControllerContext holds various object related to interacting with kubernetes cluster
+type ControllerContext struct {
+	Resources         *dynamicdiscovery.ResourceMap
+	DynClient         *dynamicclientset.Clientset
+	DynInformers      *dynamicinformer.SharedInformerFactory
+	McInformerFactory mcinformers.SharedInformerFactory
+	McClient          mcclientset.Interface
+	EventRecorder     record.EventRecorder
+	configuration     options.Configuration
+	broadcaster       record.EventBroadcaster
+}
+
+// NewControllerContext creates a new ControllerContext using given Configuration and metacontroller client
+func NewControllerContext(configuration options.Configuration, mcClient *mcclientset.Clientset) (*ControllerContext, error) {
+	// Periodically refresh discovery to pick up newly-installed resources.
+	dc := discovery.NewDiscoveryClientForConfigOrDie(configuration.RestConfig)
+	resources := dynamicdiscovery.NewResourceMap(dc)
+
+	mcInformerFactory := mcinformers.NewSharedInformerFactory(mcClient, configuration.InformerRelist)
+
+	// Create dynamic clientset (factory for dynamic clients).
+	dynClient, err := dynamicclientset.New(configuration.RestConfig, resources)
+	if err != nil {
+		return nil, err
+	}
+	// Create dynamic informer factory (for sharing dynamic informers).
+	dynInformers := dynamicinformer.NewSharedInformerFactory(dynClient, configuration.InformerRelist)
+
+	// Start metacontrollers (controllers that spawn controllers).
+	// Each one requests the informers it needs from the factory.
+	broadcaster, err := events.NewBroadcaster(configuration.RestConfig, configuration.CorrelatorOptions)
+	if err != nil {
+		return nil, err
+	}
+	recorder := broadcaster.NewRecorder(scheme, corev1.EventSource{Component: "metacontroller"})
+
+	return &ControllerContext{
+		Resources:         resources,
+		DynClient:         dynClient,
+		DynInformers:      dynInformers,
+		McInformerFactory: mcInformerFactory,
+		EventRecorder:     recorder,
+		configuration:     configuration,
+		broadcaster:       broadcaster,
+	}, nil
+}
+
+func (controllerContext ControllerContext) Start() {
+	// We don't care about stopping this cleanly since it has no external effects.
+	controllerContext.Resources.Start(controllerContext.configuration.DiscoveryInterval)
+	// Start all requested informers.
+	// We don't care about stopping this cleanly since it has no external effects.
+	controllerContext.McInformerFactory.Start(nil)
+}
+
+func (controllerContext ControllerContext) Stop() {
+	controllerContext.broadcaster.Shutdown()
+}
 
 type ChildMap map[string]map[string]*unstructured.Unstructured
 

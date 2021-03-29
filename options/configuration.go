@@ -7,8 +7,8 @@ import (
 	"k8s.io/client-go/tools/record"
 )
 
-type Options struct {
-	Config            *rest.Config
+type Configuration struct {
+	RestConfig        *rest.Config
 	DiscoveryInterval time.Duration
 	InformerRelist    time.Duration
 	Workers           int

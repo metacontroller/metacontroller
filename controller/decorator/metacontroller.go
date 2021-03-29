@@ -20,8 +20,13 @@ import (
 	"fmt"
 	"sync"
 
-	v1 "k8s.io/api/core/v1"
+	dynamicclientset "metacontroller.io/dynamic/clientset"
+	dynamicdiscovery "metacontroller.io/dynamic/discovery"
+	dynamicinformer "metacontroller.io/dynamic/informer"
+
 	"k8s.io/client-go/tools/record"
+
+	v1 "k8s.io/api/core/v1"
 	"metacontroller.io/events"
 
 	"k8s.io/klog/v2"
@@ -33,18 +38,16 @@ import (
 	"k8s.io/client-go/util/workqueue"
 
 	"metacontroller.io/apis/metacontroller/v1alpha1"
-	mcinformers "metacontroller.io/client/generated/informer/externalversions"
 	mclisters "metacontroller.io/client/generated/lister/metacontroller/v1alpha1"
 	"metacontroller.io/controller/common"
-	dynamicclientset "metacontroller.io/dynamic/clientset"
-	dynamicdiscovery "metacontroller.io/dynamic/discovery"
-	dynamicinformer "metacontroller.io/dynamic/informer"
 )
 
 type Metacontroller struct {
 	resources    *dynamicdiscovery.ResourceMap
 	dynClient    *dynamicclientset.Clientset
 	dynInformers *dynamicinformer.SharedInformerFactory
+
+	eventRecorder record.EventRecorder
 
 	dcLister   mclisters.DecoratorControllerLister
 	dcInformer cache.SharedIndexInformer
@@ -54,24 +57,23 @@ type Metacontroller struct {
 
 	stopCh, doneCh chan struct{}
 
-	numWorkers    int
-	eventRecorder record.EventRecorder
+	numWorkers int
 }
 
-func NewMetacontroller(resources *dynamicdiscovery.ResourceMap, dynClient *dynamicclientset.Clientset, dynInformers *dynamicinformer.SharedInformerFactory, mcInformerFactory mcinformers.SharedInformerFactory, numWorkers int, recorder record.EventRecorder) *Metacontroller {
+func NewMetacontroller(controllerContext common.ControllerContext, numWorkers int) *Metacontroller {
 	mc := &Metacontroller{
-		resources:    resources,
-		dynClient:    dynClient,
-		dynInformers: dynInformers,
+		resources:     controllerContext.Resources,
+		dynClient:     controllerContext.DynClient,
+		dynInformers:  controllerContext.DynInformers,
+		eventRecorder: controllerContext.EventRecorder,
 
-		dcLister:   mcInformerFactory.Metacontroller().V1alpha1().DecoratorControllers().Lister(),
-		dcInformer: mcInformerFactory.Metacontroller().V1alpha1().DecoratorControllers().Informer(),
+		dcLister:   controllerContext.McInformerFactory.Metacontroller().V1alpha1().DecoratorControllers().Lister(),
+		dcInformer: controllerContext.McInformerFactory.Metacontroller().V1alpha1().DecoratorControllers().Informer(),
 
 		queue:                workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "DecoratorController"),
 		decoratorControllers: make(map[string]*decoratorController),
 
-		numWorkers:    numWorkers,
-		eventRecorder: recorder,
+		numWorkers: numWorkers,
 	}
 
 	mc.dcInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -155,13 +157,21 @@ func (mc *Metacontroller) sync(key string) error {
 		// Stop and remove the controller if it exists.
 		if c, ok := mc.decoratorControllers[name]; ok {
 			c.Stop()
-			defer c.eventRecorder.Eventf(c.dc, v1.EventTypeNormal, events.ReasonStopped, "Stopped controller: %s", c.dc.Name)
+			defer c.eventRecorder.Eventf(
+				c.dc,
+				v1.EventTypeNormal,
+				events.ReasonStopped,
+				"Stopped controller: %s", c.dc.Name)
 			delete(mc.decoratorControllers, name)
 		}
 		return nil
 	}
 	if err != nil {
-		mc.eventRecorder.Eventf(dc, v1.EventTypeNormal, events.ReasonSyncError, "[%s] sync error - %s", dc.Name, err)
+		mc.eventRecorder.Eventf(
+			dc,
+			v1.EventTypeNormal,
+			events.ReasonSyncError,
+			"[%s] sync error - %s", dc.Name, err)
 		return err
 	}
 	return mc.syncDecoratorController(dc)
@@ -180,7 +190,14 @@ func (mc *Metacontroller) syncDecoratorController(dc *v1alpha1.DecoratorControll
 		delete(mc.decoratorControllers, dc.Name)
 	}
 
-	c, err := newDecoratorController(mc.resources, mc.dynClient, mc.dynInformers, dc, mc.numWorkers, mc.eventRecorder)
+	c, err := newDecoratorController(
+		mc.resources,
+		mc.dynClient,
+		mc.dynInformers,
+		mc.eventRecorder,
+		dc,
+		mc.numWorkers,
+	)
 	if err != nil {
 		return err
 	}
