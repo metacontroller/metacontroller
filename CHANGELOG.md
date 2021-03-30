@@ -1,3 +1,10 @@
+# [1.5.0](https://github.com/metacontroller/metacontroller/compare/v1.4.8...v1.5.0) (2021-03-30)
+
+
+### Features
+
+* [#170](https://github.com/metacontroller/metacontroller/issues/170) - Emit kubernetes events ([260acca](https://github.com/metacontroller/metacontroller/commit/260accaffe954c77614d14859ef4aba07c61bcc6))
+
 ## [1.4.8](https://github.com/metacontroller/metacontroller/compare/v1.4.7...v1.4.8) (2021-03-26)
 
 
