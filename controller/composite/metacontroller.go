@@ -168,9 +168,29 @@ func (mc *Metacontroller) sync(key string) error {
 		}
 		return nil
 	}
+
 	if err != nil {
 		mc.eventRecorder.Eventf(cc, v1.EventTypeNormal, events.ReasonSyncError, "[%s] Sync error - %s", cc.Name, err)
 		return err
+	}
+	parentClient, err := mc.dynClient.Resource(cc.Spec.ParentResource.APIVersion, cc.Spec.ParentResource.Resource)
+	if err != nil {
+		return err
+	}
+	if found := parentClient.APIResource.HasSubresource("status"); !found {
+		mc.eventRecorder.Eventf(
+			cc,
+			v1.EventTypeWarning,
+			events.ReasonSyncError,
+			"[%s] Sync error - ignoring, parent resource %s does not have subresource 'Status' enabled",
+			cc.Name,
+			parentClient.GroupVersionKind())
+		klog.InfoS("Ignoring CompositeController",
+			"name", name,
+			"reason", "subresource 'Status' not enabled",
+			"groupVersionKind", parentClient.GroupVersionKind())
+		// returning, as we cannot do anything until 'Status' subresource is added to parent resource
+		return nil
 	}
 	return mc.syncCompositeController(cc)
 }

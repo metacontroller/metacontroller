@@ -17,6 +17,7 @@ limitations under the License.
 package composite
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -300,7 +301,7 @@ func TestCustomizeWebhook(t *testing.T) {
 		}
 		resp := customize.CustomizeHookResponse{
 			RelatedResourceRules: []*v1alpha1.RelatedResourceRule{
-				&v1alpha1.RelatedResourceRule{
+				{
 					ResourceRule: v1alpha1.ResourceRule{
 						APIVersion: "v1",
 						Resource:   "configmaps",
@@ -351,5 +352,49 @@ func TestCustomizeWebhook(t *testing.T) {
 	})
 	if err != nil {
 		t.Errorf("didn't find expected child: %v", err)
+	}
+}
+
+func TestFailIfNoStatusSubresourceInParentCRD(t *testing.T) {
+	namespace := "test-sync-subresource-status"
+	labels := map[string]string{
+		"test": namespace,
+	}
+
+	f := framework.NewFixture(t)
+	defer f.TearDown()
+
+	f.CreateNamespace(namespace)
+	parentCRD, parentClient := f.CreateCRDWithoutStatusSubresource("TestSyncWebhookParent", apiextensions.NamespaceScoped)
+	childCRD, _ := f.CreateCRD("TestSyncWebhookChild", apiextensions.NamespaceScoped)
+	eventsClient := f.Clientset().CoreV1().Events("default")
+	hook := f.ServeWebhook(func(body []byte) ([]byte, error) {
+
+		resp := composite.SyncHookResponse{}
+		return json.Marshal(resp)
+	})
+
+	f.CreateCompositeController("test-sync-webhook", hook.URL, "", framework.CRDResourceRule(parentCRD), framework.CRDResourceRule(childCRD))
+
+	parent := framework.UnstructuredCRD(parentCRD, "test-sync-webhook")
+	unstructured.SetNestedStringMap(parent.Object, labels, "spec", "selector", "matchLabels")
+	_, err := parentClient.Namespace(namespace).Create(parent, metav1.CreateOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Logf("Waiting for warn event to be created...")
+	err = f.Wait(func() (bool, error) {
+		events, err := eventsClient.List(metav1.ListOptions{})
+		for _, event := range events.Items {
+			t.Logf("Event: %s", event.Message)
+			if strings.Contains(event.Message, "does not have subresource 'Status' enabled") {
+				return true, nil
+			}
+		}
+		return false, err
+	})
+	if err != nil {
+		t.Errorf("didn't find expected event: %v", err)
 	}
 }
