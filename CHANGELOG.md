@@ -1,3 +1,10 @@
+## [1.5.1](https://github.com/metacontroller/metacontroller/compare/v1.5.0...v1.5.1) (2021-03-31)
+
+
+### Bug Fixes
+
+* **deps:** update alpine docker tag to v3.13.4 ([c3901c9](https://github.com/metacontroller/metacontroller/commit/c3901c92d3d7dee61707a0777967690c5b0dae77))
+
 # [1.5.0](https://github.com/metacontroller/metacontroller/compare/v1.4.8...v1.5.0) (2021-03-30)
 
 
