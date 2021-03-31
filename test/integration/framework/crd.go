@@ -38,9 +38,27 @@ const (
 // CreateCRD generates a quick-and-dirty CRD for use in tests,
 // and installs it in the test environment's API server.
 func (f *Fixture) CreateCRD(kind string, scope apiextensionsv1.ResourceScope) (*apiextensionsv1.CustomResourceDefinition, *dynamicclientset.ResourceClient) {
+	return f.createCRD(kind, scope, true)
+}
+
+// CreateCRDWithoutStatusSubresource generates a quick-and-dirty CRD for use in tests, but without 'Status' subresource
+// and installs it in the test environment's API server.
+func (f *Fixture) CreateCRDWithoutStatusSubresource(kind string, scope apiextensionsv1.ResourceScope) (*apiextensionsv1.CustomResourceDefinition, *dynamicclientset.ResourceClient) {
+	return f.createCRD(kind, scope, false)
+}
+
+func (f *Fixture) createCRD(kind string, scope apiextensionsv1.ResourceScope, withSubresourceStatus bool) (*apiextensionsv1.CustomResourceDefinition, *dynamicclientset.ResourceClient) {
 	singular := strings.ToLower(kind)
 	plural := singular + "s"
 	xPreserveUnknownFields := true
+	var subresources *apiextensionsv1.CustomResourceSubresources
+	if withSubresourceStatus {
+		subresources = &apiextensionsv1.CustomResourceSubresources{
+			Status: &apiextensionsv1.CustomResourceSubresourceStatus{},
+		}
+	} else {
+		subresources = nil
+	}
 	crd := &apiextensionsv1.CustomResourceDefinition{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: fmt.Sprintf("%s.%s", plural, APIGroup),
@@ -63,6 +81,7 @@ func (f *Fixture) CreateCRD(kind string, scope apiextensionsv1.ResourceScope) (*
 							XPreserveUnknownFields: &xPreserveUnknownFields,
 						},
 					},
+					Subresources: subresources,
 				},
 			},
 		},
