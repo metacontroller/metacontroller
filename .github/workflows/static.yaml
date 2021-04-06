@@ -27,6 +27,22 @@ jobs:
         run: ${{ matrix.configuration.check }}
         token: ${{ secrets.GITHUB_TOKEN }}
         flags: ${{ matrix.configuration.flags }}
+  go-logcheck:
+    runs-on: ubuntu-20.04
+    env:
+      GO111MODULE: on
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+        with:
+          go-version: '1.16.2' # The Go version to download (if necessary) and use.
+      - run: |
+          go get k8s.io/klog/hack/tools/logcheck@latest
+          go get k8s.io/client-go/rest@v0.17.17
+          go get golang.org/x/oauth2/internal@v0.0.0-20190604053449-0f29369cfe45
+          go install k8s.io/klog/hack/tools/logcheck@latest
+      - run: logcheck ./...
   docker-linters:
     runs-on: ubuntu-20.04
     steps:

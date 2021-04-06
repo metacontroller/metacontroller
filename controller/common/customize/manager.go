@@ -114,7 +114,7 @@ func (rm *Manager) getRelatedClient(apiVersion, resource string) (*dynamicclient
 		})
 
 		if !cache.WaitForNamedCacheSync(rm.name, rm.stopCh, informer.Informer().HasSynced) {
-			klog.Warningf("related Manager %s cache sync never finished", rm.name)
+			klog.InfoS("related Manager - cache sync never finished", "name", rm.name)
 		}
 
 		groupVersion, _ := schema.ParseGroupVersion(apiVersion)
