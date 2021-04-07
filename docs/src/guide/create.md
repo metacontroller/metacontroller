@@ -171,7 +171,7 @@ the Metacontroller server takes care of
 Save the following to a file called `sync.py`:
 
 ```python
-from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
 
 class Controller(BaseHTTPRequestHandler):
@@ -207,13 +207,13 @@ class Controller(BaseHTTPRequestHandler):
 
   def do_POST(self):
     # Serve the sync() function as a JSON webhook.
-    observed = json.loads(self.rfile.read(int(self.headers.getheader("content-length"))))
+    observed = json.loads(self.rfile.read(int(self.headers.get("content-length"))))
     desired = self.sync(observed["parent"], observed["children"])
 
     self.send_response(200)
     self.send_header("Content-type", "application/json")
     self.end_headers()
-    self.wfile.write(json.dumps(desired))
+    self.wfile.write(json.dumps(desired).encode())
 
 HTTPServer(("", 80), Controller).serve_forever()
 ```
@@ -256,8 +256,8 @@ spec:
     spec:
       containers:
       - name: controller
-        image: python:2.7
-        command: ["python", "/hooks/sync.py"]
+        image: python:3
+        command: ["python3", "/hooks/sync.py"]
         volumeMounts:
         - name: hooks
           mountPath: /hooks
