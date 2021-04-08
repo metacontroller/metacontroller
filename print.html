@@ -1022,7 +1022,7 @@ because it's only responsible for computing the desired state;
 the Metacontroller server takes care of
 <a href="guide/../features.html#declarative-reconciliation">reconciling with the observed state</a>.</p>
 <p>Save the following to a file called <code>sync.py</code>:</p>
-<pre><code class="language-python">from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
+<pre><code class="language-python">from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
 
 class Controller(BaseHTTPRequestHandler):
@@ -1058,13 +1058,13 @@ class Controller(BaseHTTPRequestHandler):
 
   def do_POST(self):
     # Serve the sync() function as a JSON webhook.
-    observed = json.loads(self.rfile.read(int(self.headers.getheader(&quot;content-length&quot;))))
+    observed = json.loads(self.rfile.read(int(self.headers.get(&quot;content-length&quot;))))
     desired = self.sync(observed[&quot;parent&quot;], observed[&quot;children&quot;])
 
     self.send_response(200)
     self.send_header(&quot;Content-type&quot;, &quot;application/json&quot;)
     self.end_headers()
-    self.wfile.write(json.dumps(desired))
+    self.wfile.write(json.dumps(desired).encode())
 
 HTTPServer((&quot;&quot;, 80), Controller).serve_forever()
 </code></pre>
@@ -1097,8 +1097,8 @@ spec:
     spec:
       containers:
       - name: controller
-        image: python:2.7
-        command: [&quot;python&quot;, &quot;/hooks/sync.py&quot;]
+        image: python:3
+        command: [&quot;python3&quot;, &quot;/hooks/sync.py&quot;]
         volumeMounts:
         - name: hooks
           mountPath: /hooks
