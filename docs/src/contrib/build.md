@@ -9,7 +9,7 @@ First, check out the code:
 # place the repo according to the Go import path:
 #   $GOPATH/src/metacontroller.io
 cd $GOPATH/src
-git clone {{ site.repo_url }}.git metacontroller.io
+git clone git@github.com:metacontroller/metacontroller.git metacontroller.io
 cd metacontroller.io
 ```
 
