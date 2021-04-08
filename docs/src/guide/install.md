@@ -30,7 +30,7 @@ Replace `<user>` and `<domain>` above based on the account you use to authentica
 
 ```sh
 # Apply all set of production resources defined in kustomization.yaml in `production` directory .
-kubectl apply -k {{ site.repo_raw }}/manifests/production
+kubectl apply -k https://github.com/metacontroller/metacontroller/manifests/production
 
 ```
 
