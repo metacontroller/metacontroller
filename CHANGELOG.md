@@ -1,3 +1,10 @@
+## [1.5.3](https://github.com/metacontroller/metacontroller/compare/v1.5.2...v1.5.3) (2021-04-09)
+
+
+### Bug Fixes
+
+* **deps:** update golang docker tag to v1.16.3 ([a5ab1fc](https://github.com/metacontroller/metacontroller/commit/a5ab1fcab058af2db3d203fe3afeb8371ceabc92))
+
 ## [1.5.2](https://github.com/metacontroller/metacontroller/compare/v1.5.1...v1.5.2) (2021-04-01)
 
 
