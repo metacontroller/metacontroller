@@ -191,7 +191,7 @@ you can install the necessary RBAC manifests.</p>
 <p>Replace <code>&lt;user&gt;</code> and <code>&lt;domain&gt;</code> above based on the account you use to authenticate to GKE.</p>
 <h2><a class="header" href="#install-metacontroller" id="install-metacontroller">Install Metacontroller</a></h2>
 <pre><code class="language-sh"># Apply all set of production resources defined in kustomization.yaml in `production` directory .
-kubectl apply -k {{ site.repo_raw }}/manifests/production
+kubectl apply -k https://github.com/metacontroller/metacontroller/manifests/production
 
 </code></pre>
 <p>If you prefer to build and host your own images, please see the
