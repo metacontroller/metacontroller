@@ -28,7 +28,21 @@
         "dockerfile",
         "gomod"
       ],
-      "semanticCommitType": "fix"
+      "semanticCommitType": "fix",
+      "postUpdateOptions": [
+        "gomodTidy",
+        "gomodUpdateImportPaths"
+      ]
+    },
+    {
+      "matchFiles": [
+        "test/integration/go.mod"
+      ],
+      "semanticCommitType": "test",
+      "postUpdateOptions": [
+        "gomodTidy",
+        "gomodUpdateImportPaths"
+      ]
     }
   ]
 }
