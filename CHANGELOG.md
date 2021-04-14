@@ -1,3 +1,10 @@
+## [1.5.4](https://github.com/metacontroller/metacontroller/compare/v1.5.3...v1.5.4) (2021-04-14)
+
+
+### Bug Fixes
+
+* **composite controller:** [#68](https://github.com/metacontroller/metacontroller/issues/68) - Skip registration until parent resource ([71fd2df](https://github.com/metacontroller/metacontroller/commit/71fd2df5c5505750636b94a3c83459cb85970fda))
+
 ## [1.5.3](https://github.com/metacontroller/metacontroller/compare/v1.5.2...v1.5.3) (2021-04-09)
 
 
