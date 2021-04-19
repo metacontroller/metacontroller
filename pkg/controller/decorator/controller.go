@@ -525,7 +525,7 @@ func (c *decoratorController) syncParentObject(parent *unstructured.Unstructured
 	if err != nil {
 		return err
 	}
-	desiredChildren := common.MakeChildMap(parent, syncResult.Attachments)
+	desiredChildren := common.MakeRelativeObjectMap(parent, syncResult.Attachments)
 
 	// Enqueue a delayed resync, if requested.
 	if syncResult.ResyncAfterSeconds > 0 {
@@ -619,10 +619,10 @@ func (c *decoratorController) syncParentObject(parent *unstructured.Unstructured
 	return manageErr
 }
 
-func (c *decoratorController) getChildren(parent *unstructured.Unstructured) (common.ChildMap, error) {
+func (c *decoratorController) getChildren(parent *unstructured.Unstructured) (common.RelativeObjectMap, error) {
 	parentUID := parent.GetUID()
 	parentNamespace := parent.GetNamespace()
-	childMap := make(common.ChildMap)
+	childMap := make(common.RelativeObjectMap)
 
 	for _, child := range c.dc.Spec.Attachments {
 		// List all objects of the child kind in the parent object's namespace,
@@ -648,7 +648,7 @@ func (c *decoratorController) getChildren(parent *unstructured.Unstructured) (co
 		if resource == nil {
 			return nil, fmt.Errorf("can't find resource %q in apiVersion %q", child.Resource, child.APIVersion)
 		}
-		childMap.InitGroup(child.APIVersion, resource.Kind)
+		childMap.InitGroup(resource.GroupVersionKind())
 
 		// Take only the objects that belong to this parent,
 		// and that were created by this decorator.

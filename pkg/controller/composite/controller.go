@@ -502,7 +502,7 @@ func (pc *parentController) syncParentObject(parent *unstructured.Unstructured) 
 	if err != nil {
 		return err
 	}
-	desiredChildren := common.MakeChildMap(parent, syncResult.Children)
+	desiredChildren := common.MakeRelativeObjectMap(parent, syncResult.Children)
 
 	// Enqueue a delayed resync, if requested.
 	if syncResult.ResyncAfterSeconds > 0 {
@@ -621,7 +621,7 @@ func (pc *parentController) canAdoptFunc(parent *unstructured.Unstructured) func
 	})
 }
 
-func (pc *parentController) claimChildren(parent *unstructured.Unstructured) (common.ChildMap, error) {
+func (pc *parentController) claimChildren(parent *unstructured.Unstructured) (common.RelativeObjectMap, error) {
 	// Set up values common to all child types.
 	parentNamespace := parent.GetNamespace()
 	parentGVK := pc.parentResource.GroupVersionKind()
@@ -632,7 +632,7 @@ func (pc *parentController) claimChildren(parent *unstructured.Unstructured) (co
 	canAdoptFunc := pc.canAdoptFunc(parent)
 
 	// Claim all child types.
-	childMap := make(common.ChildMap)
+	childMap := make(common.RelativeObjectMap)
 	for _, child := range pc.cc.Spec.ChildResources {
 		// List all objects of the child kind in the parent object's namespace,
 		// or in all namespaces if the parent is cluster-scoped.
@@ -656,7 +656,7 @@ func (pc *parentController) claimChildren(parent *unstructured.Unstructured) (co
 		}
 
 		// Always include the requested groups, even if there are no entries.
-		childMap.InitGroup(child.APIVersion, childClient.Kind)
+		childMap.InitGroup(childClient.GroupVersionKind())
 
 		// Handle orphan/adopt and filter by owner+selector.
 		crm := dynamiccontrollerref.NewUnstructuredManager(childClient, parent, selector, parentGVK, childClient.GroupVersionKind(), canAdoptFunc)

@@ -6,6 +6,7 @@ go 1.16
 
 require (
 	github.com/google/go-cmp v0.5.6
+	github.com/nsf/jsondiff v0.0.0-20210303162244-6ea32392771e // test
 	github.com/prometheus/client_golang v1.11.0
 	k8s.io/api v0.21.1
 	k8s.io/apimachinery v0.21.1
