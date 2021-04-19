@@ -129,15 +129,14 @@ type ChildUpdateStrategy interface {
 	GetMethod(apiGroup, kind string) v1alpha1.ChildUpdateMethod
 }
 
-func ManageChildren(dynClient *dynamicclientset.Clientset, updateStrategy ChildUpdateStrategy, parent *unstructured.Unstructured, observedChildren, desiredChildren ChildMap) error {
+func ManageChildren(dynClient *dynamicclientset.Clientset, updateStrategy ChildUpdateStrategy, parent *unstructured.Unstructured, observedChildren, desiredChildren RelativeObjectMap) error {
 	// If some operations fail, keep trying others so, for example,
 	// we don't block recovery (create new Pod) on a failed delete.
 	var errs []error
 
 	// Delete observed, owned objects that are not desired.
 	for key, objects := range observedChildren {
-		apiVersion, kind := ParseChildMapKey(key)
-		client, err := dynClient.Kind(apiVersion, kind)
+		client, err := dynClient.Kind(key.GroupVersion().String(), key.Kind)
 		if err != nil {
 			errs = append(errs, err)
 			continue
@@ -150,8 +149,7 @@ func ManageChildren(dynClient *dynamicclientset.Clientset, updateStrategy ChildU
 
 	// Create or update desired objects.
 	for key, objects := range desiredChildren {
-		apiVersion, kind := ParseChildMapKey(key)
-		client, err := dynClient.Kind(apiVersion, kind)
+		client, err := dynClient.Kind(key.GroupVersion().String(), key.Kind)
 		if err != nil {
 			errs = append(errs, err)
 			continue

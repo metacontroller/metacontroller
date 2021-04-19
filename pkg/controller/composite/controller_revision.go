@@ -27,6 +27,8 @@ import (
 
 	"metacontroller/pkg/controller/common"
 
+	"k8s.io/apimachinery/pkg/runtime/schema"
+
 	"k8s.io/klog/v2"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -74,7 +76,7 @@ func (pc *parentController) claimRevisions(parent *unstructured.Unstructured) ([
 	return revisions, nil
 }
 
-func (pc *parentController) syncRevisions(parent *unstructured.Unstructured, observedChildren common.ChildMap, relatedObjects common.ChildMap) (*SyncHookResponse, error) {
+func (pc *parentController) syncRevisions(parent *unstructured.Unstructured, observedChildren common.RelativeObjectMap, relatedObjects common.RelativeObjectMap) (*SyncHookResponse, error) {
 	// If no child resources use rolling updates, just sync the latest parent.
 	// Also, if the parent object is being deleted and we don't have a finalizer,
 	// just sync the latest parent to get the status since we won't manage
@@ -168,7 +170,7 @@ func (pc *parentController) syncRevisions(parent *unstructured.Unstructured, obs
 				return
 			}
 			pr.syncResult = syncResult
-			pr.desiredChildMap = common.MakeChildMap(parent, syncResult.Children)
+			pr.desiredChildMap = common.MakeRelativeObjectMap(parent, syncResult.Children)
 		}(pr)
 	}
 	wg.Wait()
@@ -212,9 +214,13 @@ func (pc *parentController) syncRevisions(parent *unstructured.Unstructured, obs
 	for _, pr := range parentRevisions[1:] {
 		for _, ck := range pr.revision.Children {
 			for _, name := range ck.Names {
-				child := pr.desiredChildMap.FindGroupKindName(ck.APIGroup, ck.Kind, name)
+				child := pr.desiredChildMap.FindGroupKindName(
+					schema.GroupKind{
+						Group: ck.APIGroup,
+						Kind:  ck.Kind},
+					name)
 				if child != nil {
-					desiredChildren.ReplaceChild(parent, child)
+					desiredChildren.ReplaceObject(parent, child)
 				}
 			}
 		}
@@ -414,7 +420,7 @@ type parentRevision struct {
 	syncResult *SyncHookResponse
 	syncError  error
 
-	desiredChildMap common.ChildMap
+	desiredChildMap common.RelativeObjectMap
 }
 
 func (pr *parentRevision) countChildren() int {

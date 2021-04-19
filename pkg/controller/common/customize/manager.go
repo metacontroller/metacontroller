@@ -286,7 +286,7 @@ func listObjects(selector labels.Selector, namespace string, informer *dynamicin
 	return informer.Lister().List(selector)
 }
 
-func (rm *Manager) GetRelatedObjects(parent *unstructured.Unstructured) (common.ChildMap, error) {
+func (rm *Manager) GetRelatedObjects(parent *unstructured.Unstructured) (common.RelativeObjectMap, error) {
 	parentGroup, _ := schema.ParseGroupVersion(parent.GetAPIVersion())
 	parentResource := rm.parentKinds.Get(schema.GroupKind{Group: parentGroup.Group, Kind: parent.GetKind()})
 	if parentResource == nil {
@@ -301,7 +301,7 @@ func (rm *Manager) GetRelatedObjects(parent *unstructured.Unstructured) (common.
 		return nil, err
 	}
 
-	childMap := make(common.ChildMap)
+	childMap := make(common.RelativeObjectMap)
 	for _, relatedRule := range customizeHookResponse.RelatedResourceRules {
 		relatedClient, informer, err := rm.getRelatedClient(relatedRule.APIVersion, relatedRule.Resource)
 		if err != nil {
@@ -325,7 +325,7 @@ func (rm *Manager) GetRelatedObjects(parent *unstructured.Unstructured) (common.
 			if err != nil {
 				return nil, fmt.Errorf("can't list %v related objects: %w", relatedClient.Kind, err)
 			}
-			childMap.InitGroup(relatedRule.APIVersion, relatedClient.Kind)
+			childMap.InitGroup(relatedClient.GroupVersionKind())
 			childMap.InsertAll(parent, all)
 
 		case selectByNamespaceAndNames:
@@ -336,7 +336,7 @@ func (rm *Manager) GetRelatedObjects(parent *unstructured.Unstructured) (common.
 			if err != nil {
 				return nil, fmt.Errorf("can't list %v related objects: %w", relatedClient.Kind, err)
 			}
-			childMap.InitGroup(relatedRule.APIVersion, relatedClient.Kind)
+			childMap.InitGroup(relatedClient.GroupVersionKind())
 			if len(relatedRule.Names) == 0 {
 				childMap.InsertAll(parent, all)
 			} else {
