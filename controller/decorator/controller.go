@@ -463,7 +463,15 @@ func (c *decoratorController) sync(key string) error {
 	if err != nil {
 		return err
 	}
-	return c.syncParentObject(parent)
+	err = c.syncParentObject(parent)
+	if err != nil {
+		c.eventRecorder.Eventf(
+			parent,
+			v1.EventTypeWarning,
+			events.ReasonSyncError,
+			"Sync error: %s", err.Error())
+	}
+	return err
 }
 
 func (c *decoratorController) syncParentObject(parent *unstructured.Unstructured) error {
