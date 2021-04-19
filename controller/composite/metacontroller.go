@@ -227,6 +227,11 @@ func (mc *Metacontroller) syncCompositeController(cc *v1alpha1.CompositeControll
 		cc,
 		mc.numWorkers)
 	if err != nil {
+		mc.eventRecorder.Eventf(
+			cc,
+			v1.EventTypeWarning,
+			events.ReasonCreateError,
+			"Cannot create new controller: %s", err.Error())
 		return err
 	}
 	pc.Start()

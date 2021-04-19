@@ -218,9 +218,8 @@ func (m ChildMap) List() []*unstructured.Unstructured {
 func MakeChildMap(parent metav1.Object, list []*unstructured.Unstructured) ChildMap {
 	children := make(ChildMap)
 
-	for _, child := range list {
-		children.Insert(parent, child)
-	}
+	children.InsertAll(parent, list)
+
 	return children
 }
 

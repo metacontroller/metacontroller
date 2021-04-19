@@ -460,7 +460,15 @@ func (pc *parentController) sync(key string) error {
 	if err != nil {
 		return err
 	}
-	return pc.syncParentObject(parent)
+	err = pc.syncParentObject(parent)
+	if err != nil {
+		pc.eventRecorder.Eventf(
+			parent,
+			v1.EventTypeWarning,
+			events.ReasonSyncError,
+			"Sync error: %s", err)
+	}
+	return err
 }
 
 func (pc *parentController) syncParentObject(parent *unstructured.Unstructured) error {

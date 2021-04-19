@@ -9,11 +9,12 @@ import (
 )
 
 const (
-	ReasonStarted   string = "Started"
-	ReasonStarting  string = "Starting"
-	ReasonStopped   string = "Stopped"
-	ReasonStopping  string = "Stopping"
-	ReasonSyncError string = "SyncError"
+	ReasonStarted     string = "Started"
+	ReasonStarting    string = "Starting"
+	ReasonStopped     string = "Stopped"
+	ReasonStopping    string = "Stopping"
+	ReasonSyncError   string = "SyncError"
+	ReasonCreateError string = "CreateError"
 )
 
 func NewBroadcaster(config *rest.Config, options record.CorrelatorOptions) (record.EventBroadcaster, error) {

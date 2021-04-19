@@ -186,7 +186,11 @@ func (mc *Metacontroller) syncDecoratorController(dc *v1alpha1.DecoratorControll
 		}
 		// Stop and remove the controller so it can be recreated.
 		c.Stop()
-		mc.eventRecorder.Eventf(dc, v1.EventTypeNormal, events.ReasonStopped, "Stopped controller: %s", dc.Name)
+		mc.eventRecorder.Eventf(
+			dc,
+			v1.EventTypeNormal,
+			events.ReasonStopped,
+			"Stopped controller: %s", dc.Name)
 		delete(mc.decoratorControllers, dc.Name)
 	}
 
@@ -199,10 +203,19 @@ func (mc *Metacontroller) syncDecoratorController(dc *v1alpha1.DecoratorControll
 		mc.numWorkers,
 	)
 	if err != nil {
+		mc.eventRecorder.Eventf(
+			dc,
+			v1.EventTypeWarning,
+			events.ReasonCreateError,
+			"Cannot create new controller: %s", err.Error())
 		return err
 	}
 	c.Start()
-	mc.eventRecorder.Eventf(dc, v1.EventTypeNormal, events.ReasonStarted, "Started controller: %s", dc.Name)
+	mc.eventRecorder.Eventf(
+		dc,
+		v1.EventTypeNormal,
+		events.ReasonStarted,
+		"Started controller: %s", dc.Name)
 	mc.decoratorControllers[dc.Name] = c
 	return nil
 }
