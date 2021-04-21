@@ -74,8 +74,8 @@ jobs:
         cd examples
         ./test.sh --ignore catset --crd_version ${{ matrix.configuration.crd_version }}
   release:
-    if: github.ref == 'refs/heads/master'
-    name: Release - build/push docker and create tag
+    if: (github.ref == 'refs/heads/master') && (github.repository_owner == 'metacontroller')
+    name: Release - Create tag
     runs-on: ubuntu-20.04
     needs: ['tests', 'e2etests']
     steps:
