@@ -13,6 +13,8 @@ Just like the [CustomResourceDefinition](https://kubernetes.io/docs/tasks/access
 the [Metacontroller APIs](./api.md) make it easy to define behavior for a new extension API
 or add custom behavior to existing APIs.
 
+[[_TOC_]]
+
 ## Simple Automation
 
 Kubernetes provides a lot of powerful automation through its built-in APIs,

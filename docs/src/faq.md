@@ -7,6 +7,8 @@ If you have any questions that aren't answered here,
 please ask on the [mailing list](https://groups.google.com/forum/#!forum/metacontroller)
 or [Slack channel](https://kubernetes.slack.com/messages/metacontroller/).
 
+[[_TOC_]]
+
 ## Evaluating Metacontroller
 
 ### How does Metacontroller compare with other tools?

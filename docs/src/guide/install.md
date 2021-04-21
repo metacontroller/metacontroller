@@ -3,6 +3,8 @@
 This page describes how to install Metacontroller, either to develop your own
 controllers or just to run third-party controllers that depend on it.
 
+[[_TOC_]]
+
 ## Prerequisites
 
 * Kubernetes v1.11+

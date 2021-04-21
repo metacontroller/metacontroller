@@ -7,6 +7,8 @@ resources to watch, as well as filters on labels and annotations.
 This page is a detailed reference of all the features available in this API.
 See the [Create a Controller](../guide/create.md) guide for a step-by-step walkthrough.
 
+[[_TOC_]]
+
 ## Example
 
 This [example DecoratorController](../examples.md#decoratorcontroller)

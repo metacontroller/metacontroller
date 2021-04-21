@@ -7,6 +7,8 @@ as being the same as `kubectl apply`, but there are some differences.
 
 [kubectl apply]: https://kubernetes.io/docs/concepts/cluster-administration/manage-deployment/#kubectl-apply
 
+[[_TOC_]]
+
 ## Motivation
 
 This section explains why Metacontroller uses `apply` semantics.

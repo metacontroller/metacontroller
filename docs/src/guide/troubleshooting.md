@@ -5,6 +5,8 @@ This is a collection of tips for debugging controllers written with Metacontroll
 If you have something to add to the collection, please send a pull request against
 [this document](https://github.com/metacontroller/metacontroller/tree/master/docs/src/guide/troubleshooting.md).
 
+[[_TOC_]]
+
 ## Metacontroller Logs
 
 Until Metacontroller [emits events](https://www.github.com/GoogleCloudPlatform/metacontroller/issues/7),

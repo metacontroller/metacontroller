@@ -13,6 +13,8 @@ See the [Create a Controller](../guide/create.md) guide for a step-by-step walkt
 [Deployment]: https://kubernetes.io/docs/concepts/workloads/controllers/deployment/
 [StatefulSet]: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/
 
+[[_TOC_]]
+
 ## Example
 
 This [example CompositeController](../examples.md#compositecontroller)

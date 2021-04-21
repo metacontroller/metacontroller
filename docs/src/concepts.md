@@ -1,7 +1,10 @@
 # Concepts
 
+
 This page provides some background on terms that are used throughout
 the Metacontroller documentation.
+
+[[_TOC_]]
 
 ## Kubernetes Concepts
 

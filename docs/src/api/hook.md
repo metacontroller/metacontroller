@@ -9,6 +9,8 @@ has the following fields:
 | ----- | ----------- |
 | [webhook](#webhook) | Specify how to invoke this hook over HTTP(S). |
 
+[[_TOC_]]
+
 ## Example
 
 ```yaml
