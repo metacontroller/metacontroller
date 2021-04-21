@@ -1,6 +1,6 @@
 ---
 name: Static Cheks
-on: [pull_request]
+on: [pull_request_target]
 jobs:
   go-static-checks:
     runs-on: ubuntu-20.04
