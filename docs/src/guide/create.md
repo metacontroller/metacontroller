@@ -3,6 +3,8 @@
 This tutorial walks through a simple example of creating a controller in Python
 with Metacontroller.
 
+[[_TOC_]]
+
 ## Prerequisites
 
 * Kubernetes v1.9+

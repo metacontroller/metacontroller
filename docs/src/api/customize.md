@@ -11,6 +11,8 @@ the parent object.
 
 This hook may also accept other fields in future, for other customizations.
 
+[[_TOC_]]
+
 ## Customize Hook Request
 
 A separate request will be sent for each parent object,

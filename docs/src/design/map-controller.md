@@ -2,6 +2,8 @@
 
 This is a design proposal for an API called MapController.
 
+[[_TOC_]]
+
 ## Background
 
 Metacontroller APIs are meant to represent common controller patterns.

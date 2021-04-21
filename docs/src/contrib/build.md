@@ -2,6 +2,8 @@
 
 The page describes how to build Metacontroller for yourself.
 
+[[_TOC_]]
+
 First, check out the code:
 
 ```sh
@@ -65,6 +67,23 @@ you may need to update generated files before building:
 go get -u k8s.io/code-generator/cmd/{lister,client,informer,deepcopy}-gen
 make generated_files
 ```
+
+## Documentation build
+
+Documentation is generated from `.md` files with [mdbook](https://github.com/rust-lang/mdBook).
+To generate documentation, you need to install:
+* mdbook
+* mdbook plugins:
+    * [linkcheck](https://crates.io/crates/mdbook-linkcheck) - verifies link corectness
+    * [toc](https://crates.io/crates/mdbook-linkcheck) - creates TOC's - table of content
+    * [graphviz](https://crates.io/crates/mdbook-graphviz) - generation of dot diagrams
+    * [open-on-gh](https://crates.io/crates/mdbook-open-on-gh) - adds open-on-gh link
+* graphviz
+
+To generate documentation
+* `cd docs`
+* `mdbook build`
+There will be `book` folder generated with html content.
 
 ## Tests
 

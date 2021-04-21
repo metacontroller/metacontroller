@@ -28,6 +28,8 @@ deletion, and then create a replacement parent to adopt them.
 ControllerRevisions are adopted based on the parent's label selector,
 the same way controllers like ReplicaSet adopt Pods.
 
+[[_TOC_]]
+
 ## Example
 
 ```yaml

@@ -1,9 +1,19 @@
-# Best Practices
+# Constraints and best practices
 
 This is a collection of recommendations for writing controllers with Metacontroller.
 
 If you have something to add to the collection, please send a pull request against
 [this document](https://www.github.com/metacontroller/metacontroller/tree/master/docs/src/guide/best-practices.md).
+
+[[_TOC_]]
+
+## Constraints
+
+### Parent - child relationship
+
+Because of limitations of Kubernetes [garbage collection](https://github.com/kubernetes/community/blob/master/contributors/design-proposals/api-machinery/garbage-collection.md#api-changes):
+* cluster scope parent can have both cluster-scope and/or namespaced scope child (in any namespace)
+* namespace scope parent can have only namespace children, in the same namespace as parent
 
 ## Lambda Hooks
 

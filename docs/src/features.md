@@ -3,6 +3,8 @@
 This is a high-level overview of what Metacontroller provides
 for Kubernetes controller authors.
 
+[[_TOC_]]
+
 ## Dynamic Scripting
 
 With Metacontroller's [hook-based design][], you can write [controllers][]

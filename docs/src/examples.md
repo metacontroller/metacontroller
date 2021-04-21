@@ -6,6 +6,8 @@ If you'd like to add a link to another example that demonstrates a new
 language or technique, please send a pull request against
 [this document](https://www.github.com/metacontroller/metacontroller/tree/master/docs/src/examples.md).
 
+[[_TOC_]]
+
 ## CompositeController
 
 [CompositeController](./api/compositecontroller.md)

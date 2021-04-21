@@ -5,8 +5,17 @@ src = "src"
 title = "Metacontroller"
 description = "Lightweight Kubernetes controllers as a service"
 
+[preprocessor.graphviz]
+command = "mdbook-graphviz"
+
+[preprocessor.toc]
+command = "mdbook-toc"
+marker = "[[_TOC_]]"
+
 [output.html]
 mathjax-support = true
 git-repository-url = "https://github.com/metacontroller/metacontroller"
 git-repository-icon = "fa-github"
 site-url = "/metacontroller/"
+
+[output.linkcheck]

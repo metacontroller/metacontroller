@@ -10,7 +10,7 @@
 - [User Guide](./guide.md)
     - [Install Metacontroller](./guide/install.md)
     - [Create a controller](./guide/create.md)
-    - [Best Practices](./guide/best-practices.md)
+    - [Constraints and best practices](./guide/best-practices.md)
     - [Troubleshooting](./guide/troubleshooting.md)
 - [API Reference](./api.md)
     - [Apply Semantics](./api/apply.md)
