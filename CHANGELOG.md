@@ -1,3 +1,10 @@
+## [1.5.6](https://github.com/metacontroller/metacontroller/compare/v1.5.5...v1.5.6) (2021-04-21)
+
+
+### Bug Fixes
+
+* **events:** Emit events for controller sync errors ([9b7258d](https://github.com/metacontroller/metacontroller/commit/9b7258d10fb72ab6e7f49d6cf9af4eaf8d538dc7))
+
 ## [1.5.5](https://github.com/metacontroller/metacontroller/compare/v1.5.4...v1.5.5) (2021-04-15)
 
 
