@@ -61,7 +61,7 @@ an output list (of child objects) containing the results of each call.
 
 A single `sync` pass for a MapController roughly resembles this pseudocode:
 
-```
+```python
 def sync_map_controller():
   input_list = get_matching_objects(input_resource, input_selector)
   output_list = list()
