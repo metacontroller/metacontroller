@@ -15,7 +15,7 @@ the Metacontroller server itself.
 
 For example, you can fetch the last 25 lines with a command like this:
 
-```sh
+```bash
 kubectl -n metacontroller logs --tail=25 -l app=metacontroller
 ```
 
@@ -43,7 +43,7 @@ the JSON request and response bodies.
 Since API discovery info is refreshed periodically, you may see log messages
 like this when you start a controller that depends on a recently-installed CRD:
 
-```
+```plaintext
 failed to sync CompositeController "my-controller": discovery: can't find resource <resource> in apiVersion <group>/<version>
 ```
 
@@ -53,7 +53,7 @@ group/version are correct.
 
 You may also notice periodic log messages like this:
 
-```
+```plaintext
 Watch close - *unstructured.Unstructured total <X> items received
 ```
 
