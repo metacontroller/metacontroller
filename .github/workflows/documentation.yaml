@@ -17,6 +17,10 @@ jobs:
       run: |
         cd docs
         mdbook build
+    - name: Install git
+      run: |
+        apt-get update
+        apt-get install -y git
     - name: Deploy
       uses: peaceiris/actions-gh-pages@v3
       with:
