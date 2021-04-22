@@ -252,7 +252,7 @@ This is analogous to the general concept of a <a href="https://en.wikipedia.org/
 your hook for each object in some input list (of non-owned objects), and creates
 an output list (of child objects) containing the results of each call.</p>
 <p>A single <code>sync</code> pass for a MapController roughly resembles this pseudocode:</p>
-<pre><code>def sync_map_controller():
+<pre><code class="language-python">def sync_map_controller():
   input_list = get_matching_objects(input_resource, input_selector)
   output_list = list()
 

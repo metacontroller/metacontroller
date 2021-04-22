@@ -1413,7 +1413,7 @@ This is important so that Status reflects present reality, not future desires.</
 the first place to look when troubleshooting controller behavior is the logs for
 the Metacontroller server itself.</p>
 <p>For example, you can fetch the last 25 lines with a command like this:</p>
-<pre><code class="language-sh">kubectl -n metacontroller logs --tail=25 -l app=metacontroller
+<pre><code class="language-bash">kubectl -n metacontroller logs --tail=25 -l app=metacontroller
 </code></pre>
 <h3 id="log-levels"><a class="header" href="#log-levels">Log Levels</a></h3>
 <p>You can customize the verbosity of the Metacontroller server's logs with the
@@ -1431,13 +1431,13 @@ the JSON request and response bodies.</p>
 <h3 id="common-log-messages"><a class="header" href="#common-log-messages">Common Log Messages</a></h3>
 <p>Since API discovery info is refreshed periodically, you may see log messages
 like this when you start a controller that depends on a recently-installed CRD:</p>
-<pre><code>failed to sync CompositeController &quot;my-controller&quot;: discovery: can't find resource &lt;resource&gt; in apiVersion &lt;group&gt;/&lt;version&gt;
+<pre><code class="language-plaintext">failed to sync CompositeController &quot;my-controller&quot;: discovery: can't find resource &lt;resource&gt; in apiVersion &lt;group&gt;/&lt;version&gt;
 </code></pre>
 <p>Usually, this should fix itself within about 30s when the new CRD is discovered.
 If this message continues indefinitely, check that the resource name and API
 group/version are correct.</p>
 <p>You may also notice periodic log messages like this:</p>
-<pre><code>Watch close - *unstructured.Unstructured total &lt;X&gt; items received
+<pre><code class="language-plaintext">Watch close - *unstructured.Unstructured total &lt;X&gt; items received
 </code></pre>
 <p>This comes from the underlying client-go library, and just indicates when the
 shared caches are periodically flushed to place an upper bound on cache
@@ -2793,7 +2793,7 @@ This is analogous to the general concept of a <a href="https://en.wikipedia.org/
 your hook for each object in some input list (of non-owned objects), and creates
 an output list (of child objects) containing the results of each call.</p>
 <p>A single <code>sync</code> pass for a MapController roughly resembles this pseudocode:</p>
-<pre><code>def sync_map_controller():
+<pre><code class="language-python">def sync_map_controller():
   input_list = get_matching_objects(input_resource, input_selector)
   output_list = list()
 
