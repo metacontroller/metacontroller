@@ -177,7 +177,7 @@
 <ul>
 <li><a href="#constraints">Constraints</a>
 <ul>
-<li><a href="#parent---child-relationship">Parent - child relationship</a></li>
+<li><a href="#objects-relationship">Objects relationship</a></li>
 </ul>
 </li>
 <li><a href="#lambda-hooks">Lambda Hooks</a>
@@ -189,12 +189,13 @@
 </li>
 </ul>
 <h2 id="constraints"><a class="header" href="#constraints">Constraints</a></h2>
-<h3 id="parent---child-relationship"><a class="header" href="#parent---child-relationship">Parent - child relationship</a></h3>
-<p>Because of limitations of Kubernetes <a href="https://github.com/kubernetes/community/blob/master/contributors/design-proposals/api-machinery/garbage-collection.md#api-changes">garbage collection</a>:</p>
-<ul>
-<li>cluster scope parent can have both cluster-scope and/or namespaced scope child (in any namespace)</li>
-<li>namespace scope parent can have only namespace children, in the same namespace as parent</li>
-</ul>
+<h3 id="objects-relationship"><a class="header" href="#objects-relationship">Objects relationship</a></h3>
+<p>Because of limitations of Kubernetes <a href="https://github.com/kubernetes/community/blob/master/contributors/design-proposals/api-machinery/garbage-collection.md#api-changes">garbage collection</a>
+we have following restrictions between objects:</p>
+<table><thead><tr><th>Parent</th><th>Child</th><th>Related</th></tr></thead><tbody>
+<tr><td>Cluster</td><td>- Cluster <br> - Namespaced (any namespace)</td><td>- Cluster <br> - Namespaced (any namespace)</td></tr>
+<tr><td>Namespaced</td><td>- Namespaced (the same namespace as parent)</td><td>-  Namespaced (the same namespace as parent)</td></tr>
+</tbody></table>
 <h2 id="lambda-hooks"><a class="header" href="#lambda-hooks">Lambda Hooks</a></h2>
 <h3 id="apply-semantics"><a class="header" href="#apply-semantics">Apply Semantics</a></h3>
 <p>Because Metacontroller uses <a href="../api/apply.html">apply semantics</a>, you don't have to
