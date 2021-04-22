@@ -75,7 +75,7 @@ To generate documentation, you need to install:
 * mdbook
 * mdbook plugins:
     * [linkcheck](https://crates.io/crates/mdbook-linkcheck) - verifies link corectness
-    * [toc](https://crates.io/crates/mdbook-linkcheck) - creates TOC's - table of content
+    * [toc](https://crates.io/crates/mdbook-toc) - creates TOC's - table of content
     * [graphviz](https://crates.io/crates/mdbook-graphviz) - generation of dot diagrams
     * [open-on-gh](https://crates.io/crates/mdbook-open-on-gh) - adds open-on-gh link
 * graphviz
