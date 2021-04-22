@@ -9,11 +9,16 @@ If you have something to add to the collection, please send a pull request again
 
 ## Constraints
 
-### Parent - child relationship
+### Objects relationship
 
-Because of limitations of Kubernetes [garbage collection](https://github.com/kubernetes/community/blob/master/contributors/design-proposals/api-machinery/garbage-collection.md#api-changes):
-* cluster scope parent can have both cluster-scope and/or namespaced scope child (in any namespace)
-* namespace scope parent can have only namespace children, in the same namespace as parent
+Because of limitations of Kubernetes [garbage collection](https://github.com/kubernetes/community/blob/master/contributors/design-proposals/api-machinery/garbage-collection.md#api-changes)
+we have following restrictions between objects:
+
+| Parent        | Child         | Related  |
+| ------------- |-------------| -----|
+| Cluster      | - Cluster <br> - Namespaced (any namespace) | - Cluster <br> - Namespaced (any namespace) |
+| Namespaced      |  - Namespaced (the same namespace as parent)     | -  Namespaced (the same namespace as parent) |
+
 
 ## Lambda Hooks
 
