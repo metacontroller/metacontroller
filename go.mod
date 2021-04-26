@@ -12,7 +12,7 @@ require (
 	k8s.io/component-base v0.17.17
 	k8s.io/klog/v2 v2.8.0
 	k8s.io/utils v0.0.0-20210305010621-2afb4311ab10
-	sigs.k8s.io/controller-runtime v0.5.4
+	sigs.k8s.io/controller-runtime v0.8.3
 )
 
 replace (
