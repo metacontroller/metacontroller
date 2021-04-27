@@ -110,6 +110,8 @@ func NewControllerContext(configuration options.Configuration, mcClient *mcclien
 	}, nil
 }
 
+// Start starts all informers created up to that point.
+// Informers created after Start is called will not be automatically started
 func (controllerContext ControllerContext) Start() {
 	// We don't care about stopping this cleanly since it has no external effects.
 	controllerContext.Resources.Start(controllerContext.configuration.DiscoveryInterval)
