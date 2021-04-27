@@ -53,9 +53,9 @@ image: generated_files
 generate_crds:
 	@echo "+ Generating crds"
 	@go install sigs.k8s.io/controller-tools/cmd/controller-gen
-	@controller-gen "crd:trivialVersions=true,crdVersions=v1beta1" rbac:roleName=manager-role paths="./apis/..." output:crd:artifacts:config=tmp/crds-v1beta1
+	@controller-gen "crd:trivialVersions=true,crdVersions=v1beta1" rbac:roleName=manager-role paths="./pkg/apis/..." output:crd:artifacts:config=tmp/crds-v1beta1
 	@cat tmp/crds-v1beta1/*.yaml > manifests/production/metacontroller-crds-v1beta1.yaml
-	@controller-gen "crd:trivialVersions=false,crdVersions=v1" rbac:roleName=manager-role paths="./apis/..." output:crd:artifacts:config=tmp/crds-v1
+	@controller-gen "crd:trivialVersions=false,crdVersions=v1" rbac:roleName=manager-role paths="./pkg/apis/..." output:crd:artifacts:config=tmp/crds-v1
 	@cat tmp/crds-v1/*.yaml > manifests/production/metacontroller-crds-v1.yaml
 
 # Code generators
@@ -70,7 +70,7 @@ deepcopy:
 	@go get k8s.io/code-generator/cmd/deepcopy-gen@"${CODE_GENERATOR_VERSION}"
 	@echo "+ Generating deepcopy funcs for $(API_GROUPS)"
 	@deepcopy-gen \
-		--input-dirs $(PKG)/apis/$(API_GROUPS) \
+		--input-dirs $(PKG)/pkg/apis/$(API_GROUPS) \
 		--go-header-file ./hack/boilerplate.go.txt \
 		--output-file-base zz_generated.deepcopy
 
@@ -83,8 +83,8 @@ clientset:
 		--fake-clientset=false \
 		--go-header-file ./hack/boilerplate.go.txt \
 		--input $(API_GROUPS) \
-		--input-base $(PKG)/apis \
-		--clientset-path $(PKG)/client/generated/clientset
+		--input-base $(PKG)/pkg/apis \
+		--clientset-path $(PKG)/pkg/client/generated/clientset
 
 # also builds vendored version of lister-gen tool
 .PHONY: lister
@@ -92,9 +92,9 @@ lister:
 	@go get k8s.io/code-generator/cmd/lister-gen@"${CODE_GENERATOR_VERSION}"
 	@echo "+ Generating lister for $(API_GROUPS)"
 	@lister-gen \
-		--input-dirs $(PKG)/apis/$(API_GROUPS) \
+		--input-dirs $(PKG)/pkg/apis/$(API_GROUPS) \
 		--go-header-file ./hack/boilerplate.go.txt \
-		--output-package $(PKG)/client/generated/lister
+		--output-package $(PKG)/pkg/client/generated/lister
 
 # also builds vendored version of informer-gen tool
 .PHONY: informer
@@ -102,8 +102,8 @@ informer:
 	@go get k8s.io/code-generator/cmd/informer-gen@"${CODE_GENERATOR_VERSION}"
 	@echo "+ Generating informer for $(API_GROUPS)"
 	@informer-gen \
-		--input-dirs $(PKG)/apis/$(API_GROUPS) \
+		--input-dirs $(PKG)/pkg/apis/$(API_GROUPS) \
 		--go-header-file ./hack/boilerplate.go.txt \
-		--output-package $(PKG)/client/generated/informer \
-		--versioned-clientset-package $(PKG)/client/generated/clientset/internalclientset \
-		--listers-package $(PKG)/client/generated/lister
+		--output-package $(PKG)/pkg/client/generated/informer \
+		--versioned-clientset-package $(PKG)/pkg/client/generated/clientset/internalclientset \
+		--listers-package $(PKG)/pkg/client/generated/lister

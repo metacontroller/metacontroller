@@ -26,13 +26,13 @@ import (
 	"time"
 
 	"k8s.io/client-go/tools/record"
-	"metacontroller.io/options"
+	"metacontroller.io/pkg/options"
 
 	"k8s.io/client-go/discovery"
 	"k8s.io/klog/v2"
 
-	dynamicdiscovery "metacontroller.io/dynamic/discovery"
-	"metacontroller.io/server"
+	dynamicdiscovery "metacontroller.io/pkg/dynamic/discovery"
+	"metacontroller.io/pkg/server"
 )
 
 var resourceMap *dynamicdiscovery.ResourceMap

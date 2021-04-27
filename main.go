@@ -19,6 +19,8 @@ package main
 import (
 	"context"
 	"flag"
+	"metacontroller.io/pkg/options"
+	"metacontroller.io/pkg/server"
 	"net/http"
 	"os"
 	"os/signal"
@@ -36,9 +38,6 @@ import (
 
 	"k8s.io/component-base/metrics/legacyregistry"
 	_ "k8s.io/component-base/metrics/prometheus/clientgo"
-
-	"metacontroller.io/options"
-	"metacontroller.io/server"
 
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
 )

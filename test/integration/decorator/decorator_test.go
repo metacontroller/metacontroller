@@ -26,9 +26,9 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/json"
 
-	"metacontroller.io/apis/metacontroller/v1alpha1"
-	"metacontroller.io/controller/common/customize"
-	"metacontroller.io/controller/decorator"
+	"metacontroller.io/pkg/apis/metacontroller/v1alpha1"
+	"metacontroller.io/pkg/controller/common/customize"
+	"metacontroller.io/pkg/controller/decorator"
 	"metacontroller.io/test/integration/framework"
 )
 
