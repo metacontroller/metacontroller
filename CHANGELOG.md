@@ -1,3 +1,10 @@
+## [1.5.7](https://github.com/metacontroller/metacontroller/compare/v1.5.6...v1.5.7) (2021-04-27)
+
+
+### Bug Fixes
+
+* **ControllerRevision:** [#144](https://github.com/metacontroller/metacontroller/issues/144) - Fix ControllerRevision management ([d405959](https://github.com/metacontroller/metacontroller/commit/d4059597ebc222ef01e4156b00b04536fa97ca64))
+
 ## [1.5.6](https://github.com/metacontroller/metacontroller/compare/v1.5.5...v1.5.6) (2021-04-21)
 
 
