@@ -50,7 +50,6 @@ func New(configuration options.Configuration) (controllerruntime.Manager, func()
 	if err != nil {
 		return nil, nil, err
 	}
-	controllerContext.Start()
 
 	mgr, err := controllerruntime.NewManager(configuration.RestConfig, manager.Options{
 		// Disables serving built-in metrics.
@@ -90,6 +89,10 @@ func New(configuration options.Configuration) (controllerruntime.Manager, func()
 	if err != nil {
 		return nil, nil, err
 	}
+
+	// We need to call Start after initializing the controllers
+	// to make sure all the needed informers are already created
+	controllerContext.Start()
 
 	stopFunc := func() {
 		controllerContext.Stop()
