@@ -27,6 +27,14 @@ Following is the immediate plan of actions:
 Please see the [documentation site](https://metacontroller.github.io/metacontroller/) for details
 on how to install, use, or contribute to Metacontroller.
 
+## Migrating from https://github.com/GoogleCloudPlatform/metacontroller
+As current version of metacontroller uses different name of the finalizer than GCP version (GCP - `metacontroller.app`, 
+current version - `metacontroller.io`) thus after installing `metacontroller` you might need to clean up old finalizers, 
+i.e. by running:
+```shell
+kubectl get <comma separated list of your resource types here> --no-headers --all-namespaces | awk '{print $2 " -n " $1}' | xargs -L1 -P 50 -r kubectl patch -p '{"metadata":{"finalizers": [null]}}' --type=merge
+```
+
 ## Contact
 
 Please file [GitHub issues](https://github.com/metacontroller/metacontroller/issues) for bugs, feature requests, and proposals.

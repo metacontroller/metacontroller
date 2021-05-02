@@ -65,3 +65,11 @@ in `manifests/metacontroller.yaml`):
 | `--workers` | Number of sync workers to run (default 5, e.g. `--workers=100`) |
 | `--events-qps` | Rate of events flowing per object (default - 1 event per 5 minutes, e.g. `--client-go-qps=0.0033`) |
 | `--events-burst` | Number of events allowed to send per object (default 25, e.g. `--client-go-burst=25`) |
+
+## Migrating from /GoogleCloudPlatform/metacontroller
+As current version of metacontroller uses different name of the finalizer than GCP version (GCP - `metacontroller.app`,
+current version - `metacontroller.io`) thus after installing `metacontroller` you might need to clean up old finalizers,
+i.e. by running:
+```shell
+kubectl get <comma separated list of your resource types here> --no-headers --all-namespaces | awk '{print $2 " -n " $1}' | xargs -L1 -P 50 -r kubectl patch -p '{"metadata":{"finalizers": [null]}}' --type=merge
+```

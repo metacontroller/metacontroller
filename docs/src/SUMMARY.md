@@ -23,3 +23,4 @@
     - [MapController](./design/map-controller.md)
 - [Contributing](./contrib.md)
     - [Building](./contrib/build.md)
+    - [Local development/debug](./contrib/debug.md)

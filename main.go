@@ -19,14 +19,15 @@ package main
 import (
 	"context"
 	"flag"
-	"metacontroller.io/pkg/options"
-	"metacontroller.io/pkg/server"
 	"net/http"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
 	"time"
+
+	"metacontroller.io/pkg/options"
+	"metacontroller.io/pkg/server"
 
 	"k8s.io/client-go/tools/record"
 	"k8s.io/klog/v2/klogr"
