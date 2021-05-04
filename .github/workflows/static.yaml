@@ -48,9 +48,9 @@ jobs:
     steps:
     - name: checkout
       uses: actions/checkout@v2
-    - name: build local Image
-      run: docker build -t metacontrollerio/metacontroller:lint .
+    - name: Build local image
+      run: docker build -t metacontrollerio/metacontroller:lint-${{ github.sha }} .
     - name: Lint docker image
       uses: Azure/container-scan@v0
       with:
-        image-name: metacontrollerio/metacontroller:lint
+        image-name: metacontrollerio/metacontroller:lint-${{ github.sha }}
