@@ -1,3 +1,11 @@
+## [1.5.8](https://github.com/metacontroller/metacontroller/compare/v1.5.7...v1.5.8) (2021-05-09)
+
+
+### Bug Fixes
+
+* **deps:** Update golang to 1.16.4 ([b7e8a33](https://github.com/metacontroller/metacontroller/commit/b7e8a33a376d38f02f924fc5e154b3a07130af1e))
+* **deps:** Update golang.org/x/text dependency due to CVE-2020-14040 ([3e6ae6a](https://github.com/metacontroller/metacontroller/commit/3e6ae6a6bb83804f9efc25b59e2024a7e159ac09))
+
 ## [1.5.7](https://github.com/metacontroller/metacontroller/compare/v1.5.6...v1.5.7) (2021-04-27)
 
 
