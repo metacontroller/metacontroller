@@ -25,7 +25,7 @@ jobs:
         password: ${{ secrets.DOCKER_PASSWORD }}
     - name: '[alpine] Docker metainformations'
       id: docker_meta_alpine
-      uses: crazy-max/ghaction-docker-meta@v1
+      uses: crazy-max/ghaction-docker-meta@v2
       with:
         images: metacontrollerio/metacontroller # list of Docker images to use as base name for tags
     - name: '[alpine] Build and push'
@@ -42,7 +42,7 @@ jobs:
           TAG=${{ env.GITHUB_REF_SLUG }}
     - name: '[distroless] Docker metainformations'
       id: docker_meta_distroless
-      uses: crazy-max/ghaction-docker-meta@v1
+      uses: crazy-max/ghaction-docker-meta@v2
       with:
         images: metacontrollerio/metacontroller # list of Docker images to use as base name for tags
         tag-latest: false
@@ -60,7 +60,7 @@ jobs:
           TAG=${{ env.GITHUB_REF_SLUG }}
     - name: '[distroless-debug] Docker metainformations'
       id: docker_meta_distroless_debug
-      uses: crazy-max/ghaction-docker-meta@v1
+      uses: crazy-max/ghaction-docker-meta@v2
       with:
         images: metacontrollerio/metacontroller # list of Docker images to use as base name for tags
         tag-latest: false
