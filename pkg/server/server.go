@@ -66,6 +66,11 @@ func New(configuration options.Configuration) (controllerruntime.Manager, func()
 		return nil, nil, err
 	}
 
+	// Set the Kubernetes client to the one created by the manager.
+	// In this way we can take advantage of the underlying caching
+	// mechanism for reads instead of hitting the API directly.
+	controllerContext.K8sClient = mgr.GetClient()
+
 	compositeReconciler := composite.NewMetacontroller(*controllerContext, mcClient, configuration.Workers)
 	compositeCtrl, err := controller.New("composite-metacontroller", mgr, controller.Options{
 		Reconciler: compositeReconciler,
