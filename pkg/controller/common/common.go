@@ -92,14 +92,7 @@ func NewControllerContext(configuration options.Configuration, mcClient *mcclien
 	}
 	recorder := broadcaster.NewRecorder(scheme, corev1.EventSource{Component: "metacontroller"})
 
-	// Create a new Kubernetes client for interacting with the Kubernetes API
-	k8sClient, err := client.New(configuration.RestConfig, client.Options{})
-	if err != nil {
-		return nil, err
-	}
-
 	return &ControllerContext{
-		K8sClient:         k8sClient,
 		Resources:         resources,
 		DynClient:         dynClient,
 		DynInformers:      dynInformers,
