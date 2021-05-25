@@ -14,6 +14,7 @@ require (
 )
 
 replace (
+	golang.org/x/crypto => golang.org/x/crypto v0.0.0-20210513164829-c07d793c2f9a
 	golang.org/x/text => golang.org/x/text v0.3.3
 	k8s.io/api => k8s.io/api v0.17.17
 	k8s.io/apimachinery => k8s.io/apimachinery v0.17.17
