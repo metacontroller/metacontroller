@@ -1,3 +1,10 @@
+## [1.5.9](https://github.com/metacontroller/metacontroller/compare/v1.5.8...v1.5.9) (2021-05-25)
+
+
+### Performance Improvements
+
+* **k8sClient:** use a cache-based version of k8s client ([17f3dd2](https://github.com/metacontroller/metacontroller/commit/17f3dd259890f4942ba22347e3dbe6bd2c9eedd3))
+
 ## [1.5.8](https://github.com/metacontroller/metacontroller/compare/v1.5.7...v1.5.8) (2021-05-09)
 
 
