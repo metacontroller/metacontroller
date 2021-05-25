@@ -1,3 +1,10 @@
+## [1.5.10](https://github.com/metacontroller/metacontroller/compare/v1.5.9...v1.5.10) (2021-05-25)
+
+
+### Bug Fixes
+
+* **deps:** Update go-cmp v0.5.6 prometheus/client_golang v1.10.0 ([1748a91](https://github.com/metacontroller/metacontroller/commit/1748a9171b37dde7d527edc16b74cf0ba7f49cc5))
+
 ## [1.5.9](https://github.com/metacontroller/metacontroller/compare/v1.5.8...v1.5.9) (2021-05-25)
 
 
