@@ -25,10 +25,10 @@ import (
 	"path"
 	"time"
 
-	"k8s.io/client-go/tools/record"
 	"metacontroller/pkg/options"
 
 	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/tools/record"
 	"k8s.io/klog/v2"
 
 	dynamicdiscovery "metacontroller/pkg/dynamic/discovery"

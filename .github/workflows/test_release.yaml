@@ -8,6 +8,7 @@ jobs:
     steps:
     - name: checkout
       uses: actions/checkout@v2
+      run: git pull --no-rebase
       with:
         fetch-depth: '5'
     - name: Run unit & integration tests
@@ -47,6 +48,7 @@ jobs:
     steps:
     - name: checkout
       uses: actions/checkout@v2
+      run: git pull --no-rebase
       with:
         fetch-depth: '5'
     - name: build local Image
