@@ -5,7 +5,7 @@ module metacontroller.io
 go 1.16
 
 require (
-	github.com/google/go-cmp v0.5.5
+	github.com/google/go-cmp v0.5.6
 	github.com/prometheus/client_golang v1.9.0
 	k8s.io/api v0.17.17
 	k8s.io/apimachinery v0.17.17
