@@ -22,18 +22,20 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"metacontroller/pkg/apis/metacontroller/v1alpha1"
+	"metacontroller/pkg/options"
+
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/discovery"
-	"metacontroller.io/pkg/apis/metacontroller/v1alpha1"
-	"metacontroller.io/pkg/options"
 
-	"metacontroller.io/pkg/events"
+	"metacontroller/pkg/events"
+
+	mcclientset "metacontroller/pkg/client/generated/clientset/internalclientset"
+	mcinformers "metacontroller/pkg/client/generated/informer/externalversions"
+	dynamicclientset "metacontroller/pkg/dynamic/clientset"
 
 	"k8s.io/client-go/tools/record"
-	mcclientset "metacontroller.io/pkg/client/generated/clientset/internalclientset"
-	mcinformers "metacontroller.io/pkg/client/generated/informer/externalversions"
-	dynamicclientset "metacontroller.io/pkg/dynamic/clientset"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
@@ -41,8 +43,8 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/tools/cache"
 
-	dynamicdiscovery "metacontroller.io/pkg/dynamic/discovery"
-	dynamicinformer "metacontroller.io/pkg/dynamic/informer"
+	dynamicdiscovery "metacontroller/pkg/dynamic/discovery"
+	dynamicinformer "metacontroller/pkg/dynamic/informer"
 )
 
 var (

@@ -24,8 +24,9 @@ import (
 	"strings"
 	"sync"
 
+	"metacontroller/pkg/controller/common"
+
 	"k8s.io/klog/v2"
-	"metacontroller.io/pkg/controller/common"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -33,8 +34,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/json"
 
-	"metacontroller.io/pkg/apis/metacontroller/v1alpha1"
-	dynamiccontrollerref "metacontroller.io/pkg/dynamic/controllerref"
+	"metacontroller/pkg/apis/metacontroller/v1alpha1"
+	dynamiccontrollerref "metacontroller/pkg/dynamic/controllerref"
 )
 
 const (

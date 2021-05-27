@@ -26,10 +26,10 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/json"
 
-	"metacontroller.io/pkg/apis/metacontroller/v1alpha1"
-	"metacontroller.io/pkg/controller/common/customize"
-	"metacontroller.io/pkg/controller/decorator"
-	"metacontroller.io/test/integration/framework"
+	"metacontroller/pkg/apis/metacontroller/v1alpha1"
+	"metacontroller/pkg/controller/common/customize"
+	"metacontroller/pkg/controller/decorator"
+	"metacontroller/test/integration/framework"
 )
 
 func TestMain(m *testing.M) {

@@ -19,23 +19,25 @@ package decorator
 import (
 	ctx "context"
 
-	dynamicclientset "metacontroller.io/pkg/dynamic/clientset"
-	dynamicdiscovery "metacontroller.io/pkg/dynamic/discovery"
-	dynamicinformer "metacontroller.io/pkg/dynamic/informer"
+	dynamicclientset "metacontroller/pkg/dynamic/clientset"
+	dynamicdiscovery "metacontroller/pkg/dynamic/discovery"
+	dynamicinformer "metacontroller/pkg/dynamic/informer"
 
 	"k8s.io/client-go/tools/record"
 
+	"metacontroller/pkg/events"
+
 	v1 "k8s.io/api/core/v1"
-	"metacontroller.io/pkg/events"
 
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"metacontroller/pkg/apis/metacontroller/v1alpha1"
+	"metacontroller/pkg/controller/common"
+
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"metacontroller.io/pkg/apis/metacontroller/v1alpha1"
-	"metacontroller.io/pkg/controller/common"
 )
 
 type Metacontroller struct {

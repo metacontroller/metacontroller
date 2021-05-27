@@ -5,12 +5,13 @@ import (
 	"reflect"
 	"testing"
 
+	v1alpha1 "metacontroller/pkg/apis/metacontroller/v1alpha1"
+	"metacontroller/pkg/controller/common"
+	dynamicclientset "metacontroller/pkg/dynamic/clientset"
+	dynamicinformer "metacontroller/pkg/dynamic/informer"
+
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	v1alpha1 "metacontroller.io/pkg/apis/metacontroller/v1alpha1"
-	"metacontroller.io/pkg/controller/common"
-	dynamicclientset "metacontroller.io/pkg/dynamic/clientset"
-	dynamicinformer "metacontroller.io/pkg/dynamic/informer"
 )
 
 var fakeEnqueueParent func(interface{}) = func(obj interface{}) {}

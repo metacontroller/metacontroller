@@ -12,10 +12,10 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/klog/v2"
 
-	"metacontroller.io/pkg/apis/metacontroller/v1alpha1"
-	"metacontroller.io/pkg/controller/common"
-	dynamicclientset "metacontroller.io/pkg/dynamic/clientset"
-	dynamicinformer "metacontroller.io/pkg/dynamic/informer"
+	"metacontroller/pkg/apis/metacontroller/v1alpha1"
+	"metacontroller/pkg/controller/common"
+	dynamicclientset "metacontroller/pkg/dynamic/clientset"
+	dynamicinformer "metacontroller/pkg/dynamic/informer"
 )
 
 type relatedObjectsSelectionType string

@@ -22,9 +22,10 @@ import (
 	"sync"
 	"time"
 
+	"metacontroller/pkg/events"
+
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/record"
-	"metacontroller.io/pkg/events"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
@@ -39,17 +40,17 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 
-	"metacontroller.io/pkg/apis/metacontroller/v1alpha1"
-	mcclientset "metacontroller.io/pkg/client/generated/clientset/internalclientset"
-	mclisters "metacontroller.io/pkg/client/generated/lister/metacontroller/v1alpha1"
-	"metacontroller.io/pkg/controller/common"
-	"metacontroller.io/pkg/controller/common/customize"
-	"metacontroller.io/pkg/controller/common/finalizer"
-	dynamicclientset "metacontroller.io/pkg/dynamic/clientset"
-	dynamiccontrollerref "metacontroller.io/pkg/dynamic/controllerref"
-	dynamicdiscovery "metacontroller.io/pkg/dynamic/discovery"
-	dynamicinformer "metacontroller.io/pkg/dynamic/informer"
-	k8s "metacontroller.io/pkg/third_party/kubernetes"
+	"metacontroller/pkg/apis/metacontroller/v1alpha1"
+	mcclientset "metacontroller/pkg/client/generated/clientset/internalclientset"
+	mclisters "metacontroller/pkg/client/generated/lister/metacontroller/v1alpha1"
+	"metacontroller/pkg/controller/common"
+	"metacontroller/pkg/controller/common/customize"
+	"metacontroller/pkg/controller/common/finalizer"
+	dynamicclientset "metacontroller/pkg/dynamic/clientset"
+	dynamiccontrollerref "metacontroller/pkg/dynamic/controllerref"
+	dynamicdiscovery "metacontroller/pkg/dynamic/discovery"
+	dynamicinformer "metacontroller/pkg/dynamic/informer"
+	k8s "metacontroller/pkg/third_party/kubernetes"
 )
 
 type parentController struct {

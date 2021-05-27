@@ -19,26 +19,29 @@ package composite
 import (
 	ctx "context"
 
-	"k8s.io/client-go/tools/record"
-	"metacontroller.io/pkg/controller/common"
+	"metacontroller/pkg/controller/common"
 
-	dynamicclientset "metacontroller.io/pkg/dynamic/clientset"
-	dynamicdiscovery "metacontroller.io/pkg/dynamic/discovery"
-	dynamicinformer "metacontroller.io/pkg/dynamic/informer"
+	"k8s.io/client-go/tools/record"
+
+	dynamicclientset "metacontroller/pkg/dynamic/clientset"
+	dynamicdiscovery "metacontroller/pkg/dynamic/discovery"
+	dynamicinformer "metacontroller/pkg/dynamic/informer"
+
+	"metacontroller/pkg/events"
 
 	v1 "k8s.io/api/core/v1"
-	"metacontroller.io/pkg/events"
 
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"metacontroller/pkg/apis/metacontroller/v1alpha1"
+	mcclientset "metacontroller/pkg/client/generated/clientset/internalclientset"
+	mclisters "metacontroller/pkg/client/generated/lister/metacontroller/v1alpha1"
+
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/tools/cache"
-	"metacontroller.io/pkg/apis/metacontroller/v1alpha1"
-	mcclientset "metacontroller.io/pkg/client/generated/clientset/internalclientset"
-	mclisters "metacontroller.io/pkg/client/generated/lister/metacontroller/v1alpha1"
 )
 
 type Metacontroller struct {

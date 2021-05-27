@@ -5,8 +5,8 @@ import (
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	v1alpha1 "metacontroller.io/pkg/apis/metacontroller/v1alpha1"
-	"metacontroller.io/pkg/hooks"
+	v1alpha1 "metacontroller/pkg/apis/metacontroller/v1alpha1"
+	"metacontroller/pkg/hooks"
 )
 
 var callCustomizeHook = hooks.Call
