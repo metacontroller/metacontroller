@@ -26,8 +26,8 @@ import (
 	"syscall"
 	"time"
 
-	"metacontroller.io/pkg/options"
-	"metacontroller.io/pkg/server"
+	"metacontroller/pkg/options"
+	"metacontroller/pkg/server"
 
 	"k8s.io/client-go/tools/record"
 	"k8s.io/klog/v2/klogr"

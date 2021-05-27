@@ -25,12 +25,12 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/json"
 
-	dynamicclientset "metacontroller.io/pkg/dynamic/clientset"
+	dynamicclientset "metacontroller/pkg/dynamic/clientset"
 )
 
 const (
 	// APIGroup is the group used for CRDs created as part of the test.
-	APIGroup = "test.metacontroller.io"
+	APIGroup = "test.metacontroller"
 	// APIVersion is the group-version used for CRDs created as part of the test.
 	APIVersion = APIGroup + "/v1"
 )

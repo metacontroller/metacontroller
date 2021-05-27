@@ -23,11 +23,12 @@ import (
 	"sync"
 	"time"
 
-	dynamicinformer "metacontroller.io/pkg/dynamic/informer"
+	dynamicinformer "metacontroller/pkg/dynamic/informer"
+
+	"metacontroller/pkg/events"
 
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/record"
-	"metacontroller.io/pkg/events"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
@@ -42,13 +43,13 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 
-	"metacontroller.io/pkg/apis/metacontroller/v1alpha1"
-	"metacontroller.io/pkg/controller/common"
-	"metacontroller.io/pkg/controller/common/customize"
-	"metacontroller.io/pkg/controller/common/finalizer"
-	dynamicclientset "metacontroller.io/pkg/dynamic/clientset"
-	dynamicdiscovery "metacontroller.io/pkg/dynamic/discovery"
-	dynamicobject "metacontroller.io/pkg/dynamic/object"
+	"metacontroller/pkg/apis/metacontroller/v1alpha1"
+	"metacontroller/pkg/controller/common"
+	"metacontroller/pkg/controller/common/customize"
+	"metacontroller/pkg/controller/common/finalizer"
+	dynamicclientset "metacontroller/pkg/dynamic/clientset"
+	dynamicdiscovery "metacontroller/pkg/dynamic/discovery"
+	dynamicobject "metacontroller/pkg/dynamic/object"
 )
 
 const (

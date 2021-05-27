@@ -23,7 +23,7 @@ import (
 
 	"k8s.io/klog/v2"
 
-	dynamicclientset "metacontroller.io/pkg/dynamic/clientset"
+	dynamicclientset "metacontroller/pkg/dynamic/clientset"
 )
 
 // SharedInformerFactory is a factory for requesting dynamic informers from a

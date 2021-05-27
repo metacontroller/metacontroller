@@ -30,8 +30,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 
-	dynamicclientset "metacontroller.io/pkg/dynamic/clientset"
-	k8s "metacontroller.io/pkg/third_party/kubernetes"
+	dynamicclientset "metacontroller/pkg/dynamic/clientset"
+	k8s "metacontroller/pkg/third_party/kubernetes"
 )
 
 type UnstructuredManager struct {

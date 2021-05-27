@@ -30,9 +30,9 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 
-	"metacontroller.io/pkg/apis/metacontroller/v1alpha1"
-	dynamicapply "metacontroller.io/pkg/dynamic/apply"
-	dynamicclientset "metacontroller.io/pkg/dynamic/clientset"
+	"metacontroller/pkg/apis/metacontroller/v1alpha1"
+	dynamicapply "metacontroller/pkg/dynamic/apply"
+	dynamicclientset "metacontroller/pkg/dynamic/clientset"
 )
 
 func ApplyUpdate(orig, update *unstructured.Unstructured) (*unstructured.Unstructured, error) {

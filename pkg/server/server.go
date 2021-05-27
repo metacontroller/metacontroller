@@ -19,18 +19,19 @@ package server
 import (
 	"fmt"
 
-	"metacontroller.io/pkg/controller/common"
+	"metacontroller/pkg/controller/common"
 
-	"metacontroller.io/pkg/controller/decorator"
-	"metacontroller.io/pkg/options"
+	"metacontroller/pkg/controller/decorator"
+	"metacontroller/pkg/options"
 
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	"metacontroller.io/pkg/apis/metacontroller/v1alpha1"
-	mcclientset "metacontroller.io/pkg/client/generated/clientset/internalclientset"
-	"metacontroller.io/pkg/controller/composite"
+	"metacontroller/pkg/apis/metacontroller/v1alpha1"
+	mcclientset "metacontroller/pkg/client/generated/clientset/internalclientset"
+	"metacontroller/pkg/controller/composite"
+
 	controllerruntime "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 

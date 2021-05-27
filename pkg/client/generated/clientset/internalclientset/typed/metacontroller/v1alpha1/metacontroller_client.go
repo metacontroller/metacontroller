@@ -18,9 +18,10 @@ limitations under the License.
 package v1alpha1
 
 import (
+	v1alpha1 "metacontroller/pkg/apis/metacontroller/v1alpha1"
+	"metacontroller/pkg/client/generated/clientset/internalclientset/scheme"
+
 	rest "k8s.io/client-go/rest"
-	v1alpha1 "metacontroller.io/pkg/apis/metacontroller/v1alpha1"
-	"metacontroller.io/pkg/client/generated/clientset/internalclientset/scheme"
 )
 
 type MetacontrollerV1alpha1Interface interface {

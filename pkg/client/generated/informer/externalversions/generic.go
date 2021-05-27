@@ -19,10 +19,10 @@ package externalversions
 
 import (
 	"fmt"
+	v1alpha1 "metacontroller/pkg/apis/metacontroller/v1alpha1"
 
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	cache "k8s.io/client-go/tools/cache"
-	v1alpha1 "metacontroller.io/pkg/apis/metacontroller/v1alpha1"
 )
 
 // GenericInformer is type of SharedIndexInformer which will locate and delegate to other

@@ -26,8 +26,8 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/util/retry"
 
-	dynamicdiscovery "metacontroller.io/pkg/dynamic/discovery"
-	dynamicobject "metacontroller.io/pkg/dynamic/object"
+	dynamicdiscovery "metacontroller/pkg/dynamic/discovery"
+	dynamicobject "metacontroller/pkg/dynamic/object"
 )
 
 type Clientset struct {

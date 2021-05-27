@@ -3,7 +3,7 @@ PATH := $(PWD)/test/integration/hack/bin:$(PATH)
 TAG?= dev
 ADDITIONAL_BUILD_ARGUMENTS?=""
 
-PKG		:= metacontroller.io
+PKG		:= metacontroller
 API_GROUPS := metacontroller/v1alpha1
 
 export GO111MODULE=on
