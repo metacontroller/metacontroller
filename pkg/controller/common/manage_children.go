@@ -30,7 +30,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 
-	"metacontroller.io/pkg/apis/metacontroller/v1alpha1"
+	"metacontroller.io/pkg/apis/metacontroller.io/v1alpha1"
 	dynamicapply "metacontroller.io/pkg/dynamic/apply"
 	dynamicclientset "metacontroller.io/pkg/dynamic/clientset"
 )

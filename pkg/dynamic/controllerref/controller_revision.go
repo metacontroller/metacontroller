@@ -28,7 +28,7 @@ import (
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 
 	"k8s.io/utils/pointer"
-	"metacontroller.io/pkg/apis/metacontroller/v1alpha1"
+	"metacontroller.io/pkg/apis/metacontroller.io/v1alpha1"
 	client "metacontroller.io/pkg/client/generated/clientset/internalclientset/typed/metacontroller/v1alpha1"
 	k8s "metacontroller.io/pkg/third_party/kubernetes"
 )

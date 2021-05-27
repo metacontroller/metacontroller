@@ -21,7 +21,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	"metacontroller.io/pkg/apis/metacontroller/v1alpha1"
+	"metacontroller.io/pkg/apis/metacontroller.io/v1alpha1"
 	"metacontroller.io/pkg/controller/common"
 	"metacontroller.io/pkg/hooks"
 )

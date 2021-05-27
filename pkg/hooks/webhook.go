@@ -26,7 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/json"
 	"k8s.io/klog/v2"
 
-	"metacontroller.io/pkg/apis/metacontroller/v1alpha1"
+	"metacontroller.io/pkg/apis/metacontroller.io/v1alpha1"
 )
 
 func callWebhook(webhook *v1alpha1.Webhook, request interface{}, response interface{}) error {

@@ -22,7 +22,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/tools/cache"
-	v1alpha1 "metacontroller.io/pkg/apis/metacontroller/v1alpha1"
+	v1alpha1 "metacontroller.io/pkg/apis/metacontroller.io/v1alpha1"
 )
 
 // ControllerRevisionLister helps list ControllerRevisions.

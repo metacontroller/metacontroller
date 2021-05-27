@@ -7,7 +7,7 @@ import (
 	"k8s.io/utils/pointer"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"metacontroller.io/pkg/apis/metacontroller/v1alpha1"
+	"metacontroller.io/pkg/apis/metacontroller.io/v1alpha1"
 )
 
 func TestWebhookTimeout_defaultTimeoutIfNotSpecified(t *testing.T) {

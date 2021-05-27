@@ -19,7 +19,7 @@ package hooks
 import (
 	"fmt"
 
-	"metacontroller.io/pkg/apis/metacontroller/v1alpha1"
+	"metacontroller.io/pkg/apis/metacontroller.io/v1alpha1"
 )
 
 func Call(hook *v1alpha1.Hook, request interface{}, response interface{}) error {

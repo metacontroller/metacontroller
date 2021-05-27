@@ -42,7 +42,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 
-	"metacontroller.io/pkg/apis/metacontroller/v1alpha1"
+	"metacontroller.io/pkg/apis/metacontroller.io/v1alpha1"
 	"metacontroller.io/pkg/controller/common"
 	"metacontroller.io/pkg/controller/common/customize"
 	"metacontroller.io/pkg/controller/common/finalizer"

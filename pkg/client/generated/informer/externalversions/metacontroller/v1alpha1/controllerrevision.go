@@ -25,7 +25,7 @@ import (
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
 	cache "k8s.io/client-go/tools/cache"
-	metacontrollerv1alpha1 "metacontroller.io/pkg/apis/metacontroller/v1alpha1"
+	metacontrollerv1alpha1 "metacontroller.io/pkg/apis/metacontroller.io/v1alpha1"
 	internalclientset "metacontroller.io/pkg/client/generated/clientset/internalclientset"
 	internalinterfaces "metacontroller.io/pkg/client/generated/informer/externalversions/internalinterfaces"
 	v1alpha1 "metacontroller.io/pkg/client/generated/lister/metacontroller/v1alpha1"

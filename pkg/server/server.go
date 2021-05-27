@@ -28,7 +28,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	"metacontroller.io/pkg/apis/metacontroller/v1alpha1"
+	"metacontroller.io/pkg/apis/metacontroller.io/v1alpha1"
 	mcclientset "metacontroller.io/pkg/client/generated/clientset/internalclientset"
 	"metacontroller.io/pkg/controller/composite"
 	controllerruntime "sigs.k8s.io/controller-runtime"

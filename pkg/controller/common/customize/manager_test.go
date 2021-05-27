@@ -7,7 +7,7 @@ import (
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	v1alpha1 "metacontroller.io/pkg/apis/metacontroller/v1alpha1"
+	v1alpha1 "metacontroller.io/pkg/apis/metacontroller.io/v1alpha1"
 	"metacontroller.io/pkg/controller/common"
 	dynamicclientset "metacontroller.io/pkg/dynamic/clientset"
 	dynamicinformer "metacontroller.io/pkg/dynamic/informer"
