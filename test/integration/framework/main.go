@@ -25,6 +25,8 @@ import (
 	"path"
 	"time"
 
+	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
+
 	"metacontroller/pkg/options"
 
 	"k8s.io/client-go/discovery"
@@ -133,9 +135,10 @@ func testMain(tests func() int) error {
 	if err != nil {
 		return fmt.Errorf("cannot create a metacontroller server: %v", err)
 	}
+	mgrStopChan := signals.SetupSignalHandler()
 	defer stopServer()
 	go func() {
-		if err := mgr.Start(make(chan struct{})); err != nil {
+		if err := mgr.Start(mgrStopChan); err != nil {
 			klog.ErrorS(err, "Terminating")
 			os.Exit(1)
 		}

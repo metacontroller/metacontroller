@@ -81,7 +81,7 @@ func (m *ControllerRevisionManager) ClaimControllerRevisions(children []*v1alpha
 
 func (m *ControllerRevisionManager) adoptControllerRevision(obj *v1alpha1.ControllerRevision) error {
 	if err := m.CanAdopt(); err != nil {
-		return fmt.Errorf("can't adopt ControllerRevision %v/%v (%v): %v", obj.GetNamespace(), obj.GetName(), obj.GetUID(), err)
+		return fmt.Errorf("can't adopt ControllerRevision %v/%v (%v): %w", obj.GetNamespace(), obj.GetName(), obj.GetUID(), err)
 	}
 	klog.InfoS("Adopting ControllerRevision", "kind", m.parentKind.Kind, "controller", klog.KRef(m.Controller.GetNamespace(), m.Controller.GetName()), "object", klog.KObj(obj))
 	controllerRef := metav1.OwnerReference{

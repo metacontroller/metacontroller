@@ -17,6 +17,7 @@ limitations under the License.
 package clientset
 
 import (
+	"context"
 	"fmt"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -39,7 +40,7 @@ type Clientset struct {
 func New(config *rest.Config, resources *dynamicdiscovery.ResourceMap) (*Clientset, error) {
 	dc, err := dynamic.NewForConfig(config)
 	if err != nil {
-		return nil, fmt.Errorf("can't create dynamic client when creating clientset: %v", err)
+		return nil, fmt.Errorf("can't create dynamic client when creating clientset: %w", err)
 	}
 	return &Clientset{
 		config:    *config,
@@ -133,7 +134,7 @@ func (rc *ResourceClient) AtomicUpdate(orig *unstructured.Unstructured, update f
 	name := orig.GetName()
 
 	err = retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-		current, err := rc.Get(name, metav1.GetOptions{})
+		current, err := rc.Get(context.TODO(), name, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
@@ -146,7 +147,7 @@ func (rc *ResourceClient) AtomicUpdate(orig *unstructured.Unstructured, update f
 			result = current
 			return nil
 		}
-		result, err = rc.Update(current, metav1.UpdateOptions{})
+		result, err = rc.Update(context.TODO(), current, metav1.UpdateOptions{})
 		return err
 	})
 	return result, err
@@ -183,7 +184,7 @@ func (rc *ResourceClient) AtomicStatusUpdate(orig *unstructured.Unstructured, up
 	// We should call GetStatus (if it HasSubresource) to respect subresource
 	// RBAC rules, but the dynamic client does not support this yet.
 	err = retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-		current, err := rc.Get(name, metav1.GetOptions{})
+		current, err := rc.Get(context.TODO(), name, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
@@ -198,9 +199,9 @@ func (rc *ResourceClient) AtomicStatusUpdate(orig *unstructured.Unstructured, up
 		}
 
 		if rc.HasSubresource("status") {
-			result, err = rc.UpdateStatus(current, metav1.UpdateOptions{})
+			result, err = rc.UpdateStatus(context.TODO(), current, metav1.UpdateOptions{})
 		} else {
-			result, err = rc.Update(current, metav1.UpdateOptions{})
+			result, err = rc.Update(context.TODO(), current, metav1.UpdateOptions{})
 		}
 		return err
 	})

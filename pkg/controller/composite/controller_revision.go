@@ -17,6 +17,7 @@ limitations under the License.
 package composite
 
 import (
+	"context"
 	"crypto/sha1" // #nosec
 	"encoding/hex"
 	"fmt"
@@ -60,7 +61,7 @@ func (pc *parentController) claimRevisions(parent *unstructured.Unstructured) ([
 	// List all ControllerRevisions in the parent object's namespace.
 	all, err := pc.revisionLister.ControllerRevisions(parent.GetNamespace()).List(labels.Everything())
 	if err != nil {
-		return nil, fmt.Errorf("can't list ControllerRevisions: %v", err)
+		return nil, fmt.Errorf("can't list ControllerRevisions: %w", err)
 	}
 
 	// Handle orphan/adopt and filter by owner+selector.
@@ -68,7 +69,7 @@ func (pc *parentController) claimRevisions(parent *unstructured.Unstructured) ([
 	crm := dynamiccontrollerref.NewControllerRevisionManager(client, parent, selector, parentGVK, canAdoptFunc)
 	revisions, err := crm.ClaimControllerRevisions(all)
 	if err != nil {
-		return nil, fmt.Errorf("can't claim ControllerRevisions: %v", err)
+		return nil, fmt.Errorf("can't claim ControllerRevisions: %w", err)
 	}
 	return revisions, nil
 }
@@ -88,7 +89,7 @@ func (pc *parentController) syncRevisions(parent *unstructured.Unstructured, obs
 		}
 		syncResult, err := callSyncHook(pc.cc, syncRequest)
 		if err != nil {
-			return nil, fmt.Errorf("sync hook failed for %v %v/%v: %v", pc.parentResource.Kind, parent.GetNamespace(), parent.GetName(), err)
+			return nil, fmt.Errorf("sync hook failed for %v %v/%v: %w", pc.parentResource.Kind, parent.GetNamespace(), parent.GetName(), err)
 		}
 		return syncResult, nil
 	}
@@ -125,7 +126,7 @@ func (pc *parentController) syncRevisions(parent *unstructured.Unstructured, obs
 	for _, revision := range observedRevisions {
 		patch := make(map[string]interface{})
 		if err := json.Unmarshal(revision.ParentPatch.Raw, &patch); err != nil {
-			return nil, fmt.Errorf("can't unmarshal ControllerRevision parentPatch: %v", err)
+			return nil, fmt.Errorf("can't unmarshal ControllerRevision parentPatch: %w", err)
 		}
 		if reflect.DeepEqual(patch, latestPatch) {
 			// This ControllerRevision matches the latest parent state.
@@ -175,7 +176,7 @@ func (pc *parentController) syncRevisions(parent *unstructured.Unstructured, obs
 	// If any of the sync calls failed, abort.
 	for _, pr := range parentRevisions {
 		if pr.syncError != nil {
-			return nil, fmt.Errorf("sync hook failed for %v %v/%v: %v", pc.parentResource.Kind, parent.GetNamespace(), parent.GetName(), pr.syncError)
+			return nil, fmt.Errorf("sync hook failed for %v %v/%v: %w", pc.parentResource.Kind, parent.GetNamespace(), parent.GetName(), pr.syncError)
 		}
 	}
 
@@ -201,7 +202,7 @@ func (pc *parentController) syncRevisions(parent *unstructured.Unstructured, obs
 		}
 	}
 	if err := pc.manageRevisions(parent, observedRevisions, desiredRevisions); err != nil {
-		return nil, fmt.Errorf("%v %v/%v: can't reconcile ControllerRevisions: %v", pc.parentResource.Kind, parent.GetNamespace(), parent.GetName(), err)
+		return nil, fmt.Errorf("%v %v/%v: can't reconcile ControllerRevisions: %w", pc.parentResource.Kind, parent.GetNamespace(), parent.GetName(), err)
 	}
 
 	// We now know which revision ought to be responsible for which children.
@@ -262,12 +263,12 @@ func (pc *parentController) manageRevisions(parent *unstructured.Unstructured, o
 		observedMap[revision.Name] = revision
 
 		if _, desired := desiredMap[revision.Name]; !desired {
-			opts := &metav1.DeleteOptions{
+			opts := metav1.DeleteOptions{
 				Preconditions: &metav1.Preconditions{UID: &revision.UID},
 			}
 			klog.InfoS("Deleting ControllerRevision", "parent_kind", parent.GetKind(), "parent", klog.KObj(parent), "name", revision.GetName())
-			if err := client.Delete(revision.Name, opts); err != nil {
-				return fmt.Errorf("can't delete ControllerRevision %v for %v %v/%v: %v", revision.Name, pc.parentResource.Kind, parent.GetNamespace(), parent.GetName(), err)
+			if err := client.Delete(context.TODO(), revision.Name, opts); err != nil {
+				return fmt.Errorf("can't delete ControllerRevision %v for %v %v/%v: %w", revision.Name, pc.parentResource.Kind, parent.GetNamespace(), parent.GetName(), err)
 			}
 		}
 	}
@@ -284,16 +285,16 @@ func (pc *parentController) manageRevisions(parent *unstructured.Unstructured, o
 				revision.SetResourceVersion(oldObj.GetResourceVersion())
 				klog.V(5).InfoS("ControllerRevision's resource version updated", "old", oldObj.GetObjectMeta().GetResourceVersion(), "new", revision.GetObjectMeta().GetResourceVersion())
 			}
-			updated, err := client.Update(revision)
+			updated, err := client.Update(context.TODO(), revision, metav1.UpdateOptions{})
 			if err != nil {
-				return fmt.Errorf("can't update ControllerRevision %v for %v %v/%v: %v", revision.Name, pc.parentResource.Kind, parent.GetNamespace(), parent.GetName(), err)
+				return fmt.Errorf("can't update ControllerRevision %v for %v %v/%v: %w", revision.Name, pc.parentResource.Kind, parent.GetNamespace(), parent.GetName(), err)
 			}
 			klog.InfoS("ControllerRevision updated", "parent_kind", parent.GetKind(), "parent", klog.KObj(parent), "name", revision.GetName(), "resource_version", updated.GetResourceVersion())
 		} else {
 			// Create
 			klog.InfoS("Creating ControllerRevision", "parent_kind", parent.GetKind(), "parent", klog.KObj(parent), "name", revision.GetName())
-			if _, err := client.Create(revision); err != nil {
-				return fmt.Errorf("can't create ControllerRevision %v for %v %v/%v: %v", revision.Name, pc.parentResource.Kind, parent.GetNamespace(), parent.GetName(), err)
+			if _, err := client.Create(context.TODO(), revision, metav1.CreateOptions{}); err != nil {
+				return fmt.Errorf("can't create ControllerRevision %v for %v %v/%v: %w", revision.Name, pc.parentResource.Kind, parent.GetNamespace(), parent.GetName(), err)
 			}
 		}
 	}
@@ -304,7 +305,7 @@ func (pc *parentController) manageRevisions(parent *unstructured.Unstructured, o
 func (pc *parentController) newControllerRevision(parent *unstructured.Unstructured, patch map[string]interface{}) (*v1alpha1.ControllerRevision, error) {
 	patchData, err := json.Marshal(patch)
 	if err != nil {
-		return nil, fmt.Errorf("can't marshal ControllerRevision parentPatch: %v", err)
+		return nil, fmt.Errorf("can't marshal ControllerRevision parentPatch: %w", err)
 	}
 	var labels map[string]string
 	if pc.isUsingGeneratedLabelSelector() {
@@ -316,7 +317,7 @@ func (pc *parentController) newControllerRevision(parent *unstructured.Unstructu
 		// This is how we find any orphaned ControllerRevisions for a given parent.
 		labels, _, err = unstructured.NestedStringMap(parent.UnstructuredContent(), "spec", "template", "metadata", "labels")
 		if err != nil {
-			return nil, fmt.Errorf("invalid labels on parent %v %v/%v: %v", parent.GetKind(), parent.GetNamespace(), parent.GetName(), err)
+			return nil, fmt.Errorf("invalid labels on parent %v %v/%v: %w", parent.GetKind(), parent.GetNamespace(), parent.GetName(), err)
 		}
 	}
 	// Add labels to prevent accidental overlap between different parent types.
@@ -383,7 +384,7 @@ func makePatch(src map[string]interface{}, fieldPaths []string) (map[string]inte
 		}
 		if found {
 			if err := unstructured.SetNestedField(patch, value, pathParts...); err != nil {
-				return nil, fmt.Errorf("can't make patch for field %v: %v", fieldPath, err)
+				return nil, fmt.Errorf("can't make patch for field %v: %w", fieldPath, err)
 			}
 		}
 	}
@@ -399,7 +400,7 @@ func applyPatch(dest, patch map[string]interface{}, fieldPaths []string) error {
 		}
 		if found {
 			if err := unstructured.SetNestedField(dest, value, pathParts...); err != nil {
-				return fmt.Errorf("can't apply patch for field %v: %v", fieldPath, err)
+				return fmt.Errorf("can't apply patch for field %v: %w", fieldPath, err)
 			}
 		}
 	}

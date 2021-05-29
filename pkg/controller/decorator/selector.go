@@ -52,7 +52,7 @@ func newDecoratorSelector(resources *dynamicdiscovery.ResourceMap, dc *v1alpha1.
 		if parent.LabelSelector != nil {
 			ds.labelSelectors[key], err = metav1.LabelSelectorAsSelector(parent.LabelSelector)
 			if err != nil {
-				return nil, fmt.Errorf("can't convert label selector for parent resource %q in apiVersion %q: %v", parent.Resource, parent.APIVersion, err)
+				return nil, fmt.Errorf("can't convert label selector for parent resource %q in apiVersion %q: %w", parent.Resource, parent.APIVersion, err)
 			}
 		} else {
 			// Add an explicit selector so we can tell the difference between
@@ -68,7 +68,7 @@ func newDecoratorSelector(resources *dynamicdiscovery.ResourceMap, dc *v1alpha1.
 			}
 			ds.annotationSelectors[key], err = metav1.LabelSelectorAsSelector(labelSelector)
 			if err != nil {
-				return nil, fmt.Errorf("can't convert annotation selector for parent resource %q in apiVersion %q: %v", parent.Resource, parent.APIVersion, err)
+				return nil, fmt.Errorf("can't convert annotation selector for parent resource %q in apiVersion %q: %w", parent.Resource, parent.APIVersion, err)
 			}
 		} else {
 			// Add an explicit selector so we can tell the difference between

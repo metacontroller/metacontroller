@@ -17,9 +17,12 @@ limitations under the License.
 package informer
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"time"
+
+	"k8s.io/apimachinery/pkg/watch"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -112,9 +115,11 @@ func newSharedResourceInformer(client *dynamicclientset.ResourceClient, defaultR
 	informer := cache.NewSharedIndexInformer(
 		&cache.ListWatch{
 			ListFunc: func(opts metav1.ListOptions) (runtime.Object, error) {
-				return client.List(opts)
+				return client.List(context.TODO(), opts)
 			},
-			WatchFunc: client.Watch,
+			WatchFunc: func(opts metav1.ListOptions) (watch.Interface, error) {
+				return client.Watch(context.TODO(), opts)
+			},
 		},
 		&unstructured.Unstructured{},
 		defaultResyncPeriod,
@@ -269,7 +274,7 @@ func (eh *eventHandler) resync() {
 	// List everything from the cache (not from the server).
 	list, err := eh.sharedEventHandler.lister.List(labels.Everything())
 	if err != nil {
-		utilruntime.HandleError(fmt.Errorf("can't list for resync: %v", err))
+		utilruntime.HandleError(fmt.Errorf("can't list for resync: %w", err))
 		return
 	}
 

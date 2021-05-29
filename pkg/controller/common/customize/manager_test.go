@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"testing"
 
-	v1alpha1 "metacontroller/pkg/apis/metacontroller/v1alpha1"
+	"metacontroller/pkg/apis/metacontroller/v1alpha1"
 	"metacontroller/pkg/controller/common"
 	dynamicclientset "metacontroller/pkg/dynamic/clientset"
 	dynamicinformer "metacontroller/pkg/dynamic/informer"
@@ -14,7 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-var fakeEnqueueParent func(interface{}) = func(obj interface{}) {}
+var fakeEnqueueParent = func(obj interface{}) {}
 var dynClient = dynamicclientset.Clientset{}
 var dynInformers = dynamicinformer.SharedInformerFactory{}
 
@@ -93,7 +93,9 @@ func TestGetCustomizeHookResponse_returnResponse(t *testing.T) {
 	}
 	callCustomizeHook = func(hook *v1alpha1.Hook, request, response interface{}) error {
 		byteArray, _ := json.Marshal(expectedResponse)
-		json.Unmarshal(byteArray, response)
+		if err := json.Unmarshal(byteArray, response); err != nil {
+			return nil
+		}
 		return nil
 	}
 

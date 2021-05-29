@@ -68,7 +68,7 @@ func (c *decoratorController) callSyncHook(request *SyncHookRequest) (*SyncHookR
 		// Finalize
 		request.Finalizing = true
 		if err := hooks.Call(c.dc.Spec.Hooks.Finalize, request, &response); err != nil {
-			return nil, fmt.Errorf("finalize hook failed: %v", err)
+			return nil, fmt.Errorf("finalize hook failed: %w", err)
 		}
 	} else {
 		// Sync
@@ -78,7 +78,7 @@ func (c *decoratorController) callSyncHook(request *SyncHookRequest) (*SyncHookR
 		}
 
 		if err := hooks.Call(c.dc.Spec.Hooks.Sync, request, &response); err != nil {
-			return nil, fmt.Errorf("sync hook failed: %v", err)
+			return nil, fmt.Errorf("sync hook failed: %w", err)
 		}
 	}
 

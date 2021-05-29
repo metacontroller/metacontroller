@@ -17,7 +17,7 @@ limitations under the License.
 package composite
 
 import (
-	ctx "context"
+	"context"
 
 	"metacontroller/pkg/controller/common"
 
@@ -59,8 +59,6 @@ type Metacontroller struct {
 
 	parentControllers map[string]*parentController
 
-	stopCh, doneCh chan struct{}
-
 	numWorkers int
 }
 
@@ -85,12 +83,12 @@ func NewMetacontroller(controllerContext common.ControllerContext, mcClient mccl
 	return mc
 }
 
-func (mc *Metacontroller) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (mc *Metacontroller) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	compositeControllerName := request.Name
 	klog.V(4).InfoS("Sync CompositeController", "name", compositeControllerName)
 
 	cc := v1alpha1.CompositeController{}
-	err := mc.k8sClient.Get(ctx.Background(), request.NamespacedName, &cc)
+	err := mc.k8sClient.Get(ctx, request.NamespacedName, &cc)
 	if apierrors.IsNotFound(err) {
 		klog.V(4).InfoS("CompositeController has been deleted", "name", compositeControllerName)
 		// Stop and remove the controller if it exists.

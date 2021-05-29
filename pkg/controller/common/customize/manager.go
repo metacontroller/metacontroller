@@ -104,7 +104,7 @@ func (rm *Manager) getRelatedClient(apiVersion, resource string) (*dynamicclient
 		informer, err = rm.dynInformers.Resource(apiVersion, resource)
 
 		if err != nil {
-			return nil, nil, fmt.Errorf("can't create informer for related resource: %v", err)
+			return nil, nil, fmt.Errorf("can't create informer for related resource: %w", err)
 		}
 
 		informer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -285,11 +285,9 @@ func listObjects(selector labels.Selector, namespace string, informer *dynamicin
 		return informer.Lister().Namespace(namespace).List(selector)
 	}
 	return informer.Lister().List(selector)
-
 }
 
 func (rm *Manager) GetRelatedObjects(parent *unstructured.Unstructured) (common.ChildMap, error) {
-
 	parentGroup, _ := schema.ParseGroupVersion(parent.GetAPIVersion())
 	parentResource := rm.parentKinds.Get(schema.GroupKind{Group: parentGroup.Group, Kind: parent.GetKind()})
 	if parentResource == nil {
@@ -329,7 +327,7 @@ func (rm *Manager) GetRelatedObjects(parent *unstructured.Unstructured) (common.
 				all, err = informer.Lister().List(selector)
 			}
 			if err != nil {
-				return nil, fmt.Errorf("can't list %v related objects: %v", relatedClient.Kind, err)
+				return nil, fmt.Errorf("can't list %v related objects: %w", relatedClient.Kind, err)
 			}
 			childMap.InitGroup(relatedRule.APIVersion, relatedClient.Kind)
 			childMap.InsertAll(parent, all)
@@ -340,7 +338,7 @@ func (rm *Manager) GetRelatedObjects(parent *unstructured.Unstructured) (common.
 			}
 			all, err := listObjects(labels.Everything(), relatedRule.Namespace, informer)
 			if err != nil {
-				return nil, fmt.Errorf("can't list %v related objects: %v", relatedClient.Kind, err)
+				return nil, fmt.Errorf("can't list %v related objects: %w", relatedClient.Kind, err)
 			}
 			childMap.InitGroup(relatedRule.APIVersion, relatedClient.Kind)
 			if len(relatedRule.Names) == 0 {

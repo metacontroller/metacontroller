@@ -17,6 +17,7 @@ limitations under the License.
 package framework
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -86,12 +87,12 @@ func (f *Fixture) createCRD(kind string, scope apiextensionsv1.ResourceScope, wi
 			},
 		},
 	}
-	crd, err := f.apiextensions.CustomResourceDefinitions().Create(crd)
+	crd, err := f.apiextensions.CustomResourceDefinitions().Create(context.TODO(), crd, metav1.CreateOptions{})
 	if err != nil {
 		f.t.Fatal(err)
 	}
 	f.deferTeardown(func() error {
-		return f.apiextensions.CustomResourceDefinitions().Delete(crd.Name, nil)
+		return f.apiextensions.CustomResourceDefinitions().Delete(context.TODO(), crd.Name, metav1.DeleteOptions{})
 	})
 
 	f.t.Logf("Waiting for %v CRD to appear in API server discovery info...", kind)
@@ -109,7 +110,7 @@ func (f *Fixture) createCRD(kind string, scope apiextensionsv1.ResourceScope, wi
 
 	f.t.Logf("Waiting for %v CRD client List() to succeed...", kind)
 	err = f.Wait(func() (bool, error) {
-		_, err := client.List(metav1.ListOptions{})
+		_, err := client.List(context.TODO(), metav1.ListOptions{})
 		return err == nil, err
 	})
 	if err != nil {

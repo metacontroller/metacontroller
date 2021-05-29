@@ -17,6 +17,7 @@ limitations under the License.
 package common
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 
@@ -52,14 +53,16 @@ func ApplyUpdate(orig, update *unstructured.Unstructured) (*unstructured.Unstruc
 	// by DeepEqual, which would cause needless, no-op updates or recreates.
 	// See: https://github.com/GoogleCloudPlatform/metacontroller/issues/76
 	if err := revertObjectMetaSystemFields(newObj, orig); err != nil {
-		return nil, fmt.Errorf("failed to revert ObjectMeta system fields: %v", err)
+		return nil, fmt.Errorf("failed to revert ObjectMeta system fields: %w", err)
 	}
 	// Revert status because we don't currently support a parent changing status of
 	// its children, so we need to ensure no diffs on the children involve status.
 	if err := revertField(newObj, orig, "status"); err != nil {
-		return nil, fmt.Errorf("failed to revert .status: %v", err)
+		return nil, fmt.Errorf("failed to revert .status: %w", err)
 	}
-	dynamicapply.SetLastApplied(newObj, update.UnstructuredContent())
+	if err = dynamicapply.SetLastApplied(newObj, update.UnstructuredContent()); err != nil {
+		klog.ErrorS(err, "failed to set lastApplied")
+	}
 	return newObj, nil
 }
 
@@ -93,14 +96,14 @@ func revertObjectMetaSystemFields(newObj, orig *unstructured.Unstructured) error
 func revertField(newObj, orig *unstructured.Unstructured, fieldPath ...string) error {
 	field, found, err := unstructured.NestedFieldNoCopy(orig.UnstructuredContent(), fieldPath...)
 	if err != nil {
-		return fmt.Errorf("can't traverse UnstructuredContent to look for field %v: %v", fieldPath, err)
+		return fmt.Errorf("can't traverse UnstructuredContent to look for field %v: %w", fieldPath, err)
 	}
 	if found {
 		// The original had this field set, so make sure it remains the same.
 		// SetNestedField will recursively ensure the field and all its parent
 		// fields exist, and then set the value.
 		if err := unstructured.SetNestedField(newObj.UnstructuredContent(), field, fieldPath...); err != nil {
-			return fmt.Errorf("can't revert field %v: %v", fieldPath, err)
+			return fmt.Errorf("can't revert field %v: %w", fieldPath, err)
 		}
 	} else {
 		// The original had this field unset, so make sure it remains unset.
@@ -176,12 +179,16 @@ func deleteChildren(client *dynamicclientset.ResourceClient, parent *unstructure
 			// Explicitly request deletion propagation, which is what users expect,
 			// since some objects default to orphaning for backwards compatibility.
 			propagation := metav1.DeletePropagationBackground
-			err := client.Namespace(obj.GetNamespace()).Delete(obj.GetName(), &metav1.DeleteOptions{
-				Preconditions:     &metav1.Preconditions{UID: &uid},
-				PropagationPolicy: &propagation,
-			})
+			err := client.Namespace(obj.GetNamespace()).Delete(
+				context.TODO(),
+				obj.GetName(),
+				metav1.DeleteOptions{
+					Preconditions:     &metav1.Preconditions{UID: &uid},
+					PropagationPolicy: &propagation,
+				},
+			)
 			if err != nil {
-				errs = append(errs, fmt.Errorf("can't delete %v: %v", describeObject(obj), err))
+				errs = append(errs, fmt.Errorf("can't delete %v: %w", describeObject(obj), err))
 				continue
 			}
 		}
@@ -233,10 +240,14 @@ func updateChildren(client *dynamicclientset.ResourceClient, updateStrategy Chil
 				// Explicitly request deletion propagation, which is what users expect,
 				// since some objects default to orphaning for backwards compatibility.
 				propagation := metav1.DeletePropagationBackground
-				err := client.Namespace(ns).Delete(obj.GetName(), &metav1.DeleteOptions{
-					Preconditions:     &metav1.Preconditions{UID: &uid},
-					PropagationPolicy: &propagation,
-				})
+				err := client.Namespace(ns).Delete(
+					context.TODO(),
+					obj.GetName(),
+					metav1.DeleteOptions{
+						Preconditions:     &metav1.Preconditions{UID: &uid},
+						PropagationPolicy: &propagation,
+					},
+				)
 				if err != nil {
 					errs = append(errs, err)
 					continue
@@ -244,7 +255,7 @@ func updateChildren(client *dynamicclientset.ResourceClient, updateStrategy Chil
 			case v1alpha1.ChildUpdateInPlace, v1alpha1.ChildUpdateRollingInPlace:
 				// Update the object in-place.
 				klog.InfoS("Updating", "parent", klog.KObj(parent), "child", klog.KObj(obj), "reason", "Recreate update strategy selected")
-				if _, err := client.Namespace(ns).Update(newObj, metav1.UpdateOptions{}); err != nil {
+				if _, err := client.Namespace(ns).Update(context.TODO(), newObj, metav1.UpdateOptions{}); err != nil {
 					errs = append(errs, err)
 					continue
 				}
@@ -272,7 +283,7 @@ func updateChildren(client *dynamicclientset.ResourceClient, updateStrategy Chil
 			ownerRefs = append(ownerRefs, *controllerRef)
 			obj.SetOwnerReferences(ownerRefs)
 
-			if _, err := client.Namespace(ns).Create(obj, metav1.CreateOptions{}); err != nil {
+			if _, err := client.Namespace(ns).Create(context.TODO(), obj, metav1.CreateOptions{}); err != nil {
 				errs = append(errs, err)
 				continue
 			}

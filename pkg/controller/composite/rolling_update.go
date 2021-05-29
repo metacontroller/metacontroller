@@ -178,7 +178,7 @@ func (pc *parentController) shouldContinueRolling(latest *parentRevision, observ
 			update := latest.desiredChildMap.FindGroupKindName(ck.APIGroup, ck.Kind, name)
 			updated, err := common.ApplyUpdate(child, update)
 			if err != nil {
-				return fmt.Errorf("can't check if child %v %v is updated: %v", ck.Kind, name, err)
+				return fmt.Errorf("can't check if child %v %v is updated: %w", ck.Kind, name, err)
 			}
 			if !reflect.DeepEqual(child, updated) {
 				return fmt.Errorf("child %v %v is not updated yet", ck.Kind, name)
@@ -205,7 +205,7 @@ func (pc *parentController) shouldContinueRolling(latest *parentRevision, observ
 			if err := childStatusCheck(&strategy.StatusChecks, child); err != nil {
 				// If any child already on the latest revision fails the status check,
 				// pause the rollout.
-				return fmt.Errorf("child %v %v failed status check: %v", ck.Kind, name, err)
+				return fmt.Errorf("child %v %v failed status check: %w", ck.Kind, name, err)
 			}
 		}
 	}

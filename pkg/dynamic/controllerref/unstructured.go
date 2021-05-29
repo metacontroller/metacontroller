@@ -92,7 +92,7 @@ func atomicUpdate(rc *dynamicclientset.ResourceClient, obj *unstructured.Unstruc
 
 func (m *UnstructuredManager) adoptChild(obj *unstructured.Unstructured) error {
 	if err := m.CanAdopt(); err != nil {
-		return fmt.Errorf("can't adopt %v %v/%v (%v): %v", m.childKind.Kind, obj.GetNamespace(), obj.GetName(), obj.GetUID(), err)
+		return fmt.Errorf("can't adopt %v %v/%v (%v): %w", m.childKind.Kind, obj.GetNamespace(), obj.GetName(), obj.GetUID(), err)
 	}
 	klog.InfoS("Adopting", "parent_kind", m.parentKind.Kind, "controller", klog.KObj(m.Controller), "child_kind", m.childKind.Kind, "object", klog.KObj(obj))
 	controllerRef := metav1.OwnerReference{

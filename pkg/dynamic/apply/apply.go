@@ -39,7 +39,7 @@ const (
 func SetLastApplied(obj *unstructured.Unstructured, lastApplied map[string]interface{}) error {
 	lastAppliedJSON, err := json.Marshal(lastApplied)
 	if err != nil {
-		return fmt.Errorf("can't marshal last applied config: %v", err)
+		return fmt.Errorf("can't marshal last applied config: %w", err)
 	}
 
 	ann := obj.GetAnnotations()
@@ -59,7 +59,7 @@ func GetLastApplied(obj *unstructured.Unstructured) (map[string]interface{}, err
 	lastApplied := make(map[string]interface{})
 	err := json.Unmarshal([]byte(lastAppliedJSON), &lastApplied)
 	if err != nil {
-		return nil, fmt.Errorf("can't unmarshal %q annotation: %v", lastAppliedAnnotation, err)
+		return nil, fmt.Errorf("can't unmarshal %q annotation: %w", lastAppliedAnnotation, err)
 	}
 	return lastApplied, nil
 }
@@ -71,7 +71,7 @@ func Merge(observed, lastApplied, desired map[string]interface{}) (map[string]in
 	destination := runtime.DeepCopyJSON(observed)
 
 	if _, err := merge("", destination, lastApplied, desired); err != nil {
-		return nil, fmt.Errorf("can't merge desired changes: %v", err)
+		return nil, fmt.Errorf("can't merge desired changes: %w", err)
 	}
 	return destination, nil
 }

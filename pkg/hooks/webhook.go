@@ -41,7 +41,7 @@ func callWebhook(webhook *v1alpha1.Webhook, request interface{}, response interf
 	// Encode request.
 	reqBody, err := json.Marshal(request)
 	if err != nil {
-		return fmt.Errorf("can't marshal request: %v", err)
+		return fmt.Errorf("can't marshal request: %w", err)
 	}
 	if klog.V(6).Enabled() {
 		klog.InfoS("Webhook request", "url", url, "body", string(reqBody))
@@ -52,14 +52,14 @@ func callWebhook(webhook *v1alpha1.Webhook, request interface{}, response interf
 	klog.V(6).InfoS("Webhook timeout", "timeout", hookTimeout)
 	resp, err := client.Post(url, "application/json", bytes.NewReader(reqBody))
 	if err != nil {
-		return fmt.Errorf("http error: %v", err)
+		return fmt.Errorf("http error: %w", err)
 	}
 	defer resp.Body.Close()
 
 	// Read response.
 	respBody, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return fmt.Errorf("can't read response body: %v", err)
+		return fmt.Errorf("can't read response body: %w", err)
 	}
 	klog.V(6).InfoS("Webhook response", "url", url, "body", string(respBody))
 
@@ -70,7 +70,7 @@ func callWebhook(webhook *v1alpha1.Webhook, request interface{}, response interf
 
 	// Decode response.
 	if err := json.Unmarshal(respBody, response); err != nil {
-		return fmt.Errorf("can't unmarshal response: %v", err)
+		return fmt.Errorf("can't unmarshal response: %w", err)
 	}
 	return nil
 }

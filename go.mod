@@ -7,19 +7,18 @@ go 1.16
 require (
 	github.com/google/go-cmp v0.5.6
 	github.com/prometheus/client_golang v1.10.0
-	k8s.io/api v0.17.17
-	k8s.io/apimachinery v0.17.17
-	k8s.io/client-go v0.17.17
-	k8s.io/component-base v0.17.17
+	k8s.io/api v0.20.2
+	k8s.io/apimachinery v0.20.2
+	k8s.io/client-go v0.20.2
+	k8s.io/component-base v0.20.2
 	k8s.io/klog/v2 v2.9.0
 	k8s.io/utils v0.0.0-20210527160623-6fdb442a123b
-	sigs.k8s.io/controller-runtime v0.5.4
+	sigs.k8s.io/controller-runtime v0.8.3
 )
 
 replace (
 	golang.org/x/crypto => golang.org/x/crypto v0.0.0-20210513164829-c07d793c2f9a
-	golang.org/x/text => golang.org/x/text v0.3.3
-	k8s.io/apimachinery => k8s.io/apimachinery v0.17.17
-	k8s.io/client-go => k8s.io/client-go v0.17.17
-	k8s.io/component-base => k8s.io/component-base v0.17.17
+	k8s.io/apimachinery => k8s.io/apimachinery v0.20.2
+	k8s.io/client-go => k8s.io/client-go v0.20.2
+	k8s.io/component-base => k8s.io/component-base v0.20.2
 )

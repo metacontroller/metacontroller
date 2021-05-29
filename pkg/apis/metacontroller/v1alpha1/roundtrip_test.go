@@ -33,7 +33,10 @@ func TestRoundTrip(t *testing.T) {
 	scheme := runtime.NewScheme()
 	codecs := serializer.NewCodecFactory(scheme)
 
-	AddToScheme(scheme)
+	err := AddToScheme(scheme)
+	if err != nil {
+		t.Error(err.Error())
+	}
 
 	fuzzer := fuzzer.FuzzerFor(metafuzzer.Funcs, rand.NewSource(1), codecs)
 

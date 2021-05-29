@@ -44,7 +44,7 @@ func New(configuration options.Configuration) (controllerruntime.Manager, func()
 	// Create informer factory for metacontroller API objects.
 	mcClient, err := mcclientset.NewForConfig(configuration.RestConfig)
 	if err != nil {
-		return nil, nil, fmt.Errorf("can't create client for api %s: %v", v1alpha1.SchemeGroupVersion, err)
+		return nil, nil, fmt.Errorf("can't create client for api %s: %w", v1alpha1.SchemeGroupVersion, err)
 	}
 
 	controllerContext, err := common.NewControllerContext(configuration, mcClient)
