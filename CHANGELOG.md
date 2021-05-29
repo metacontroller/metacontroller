@@ -1,3 +1,11 @@
+## [1.5.11](https://github.com/metacontroller/metacontroller/compare/v1.5.10...v1.5.11) (2021-05-29)
+
+
+### Bug Fixes
+
+* **deps:** update k8s.io/utils commit hash to 6fdb442 ([f713086](https://github.com/metacontroller/metacontroller/commit/f713086f6c93f0873e3257e1bc035cb6f4900819))
+* **security:** Update golang.org/x/crypto because of CVE-2020-29652 ([38c0c2f](https://github.com/metacontroller/metacontroller/commit/38c0c2fdb7e24345a9fde27ad005cd095a6e29fc))
+
 ## [1.5.10](https://github.com/metacontroller/metacontroller/compare/v1.5.9...v1.5.10) (2021-05-25)
 
 
