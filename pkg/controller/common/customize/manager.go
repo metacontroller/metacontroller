@@ -37,7 +37,7 @@ type Manager struct {
 	parentInformers common.InformerMap
 
 	relatedInformers common.InformerMap
-	customizeCache   CustomizeResponseCache
+	customizeCache   *ResponseCache
 
 	stopCh chan struct{}
 
@@ -57,7 +57,7 @@ func NewCustomizeManager(
 		name:             name,
 		metacontroller:   metacontroller,
 		parentKinds:      parentKinds,
-		customizeCache:   make(CustomizeResponseCache),
+		customizeCache:   NewResponseCache(),
 		dynClient:        dynClient,
 		dynInformers:     dynInformers,
 		parentInformers:  parentInformers,
