@@ -28,7 +28,7 @@ vendor:
 .PHONY: unit-test
 unit-test: test-setup
 	go test -i ${PKGS} && \
-	gotestsum -- -coverpkg="${COVER_PKGS}" -coverprofile=test/integration/hack/tmp/unit-coverage.out ${PKGS}
+	gotestsum -- -race -coverpkg="${COVER_PKGS}" -coverprofile=test/integration/hack/tmp/unit-coverage.out ${PKGS}
 
 .PHONY: integration-test
 integration-test: test-setup

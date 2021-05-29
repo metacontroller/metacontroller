@@ -5,35 +5,35 @@ import (
 )
 
 func TestAdd_ElementFirstTime(t *testing.T) {
-	customizeCache := make(CustomizeResponseCache)
+	responseCache := NewResponseCache()
 	mockResponse := CustomizeHookResponse{}
 
-	customizeCache.Add("some", 12, &mockResponse)
+	responseCache.Add("some", 12, &mockResponse)
 
 	expected := customizeResponseCacheEntry{parentGeneration: 12, cachedResponse: &mockResponse}
 
-	if customizeCache["some"] != expected {
-		t.Errorf("Incorrect cache entry, got: %v, expected: %v", customizeCache["someName"], expected)
+	if responseCache.cache["some"] != expected {
+		t.Errorf("Incorrect responseCache entry, got: %v, expected: %v", responseCache.cache["someName"], expected)
 	}
 }
 
 func TestAdd_ElementOverridePreviousOne(t *testing.T) {
-	customizeCache := make(CustomizeResponseCache)
+	responseCache := NewResponseCache()
 	mockResponse := CustomizeHookResponse{}
 	expected := customizeResponseCacheEntry{parentGeneration: 14, cachedResponse: &mockResponse}
-	customizeCache.Add("some", 12, &mockResponse)
+	responseCache.Add("some", 12, &mockResponse)
 
-	customizeCache.Add("some", 14, &mockResponse)
+	responseCache.Add("some", 14, &mockResponse)
 
-	if customizeCache["some"] != expected {
-		t.Errorf("Incorrect cache entry, got: %v, expected: %v", customizeCache["someName"], expected)
+	if responseCache.cache["some"] != expected {
+		t.Errorf("Incorrect cache entry, got: %v, expected: %v", responseCache.cache["someName"], expected)
 	}
 }
 
 func TestGet_IfNotPresent(t *testing.T) {
-	customizeCache := make(CustomizeResponseCache)
+	responseCache := NewResponseCache()
 
-	response := customizeCache.Get("some", 13)
+	response := responseCache.Get("some", 13)
 
 	if response != nil {
 		t.Errorf("Incorrect cache entry, should be nil, got: %v", response)
@@ -41,11 +41,11 @@ func TestGet_IfNotPresent(t *testing.T) {
 }
 
 func TestGet_IfPresentWithDifferentGeneration(t *testing.T) {
-	customizeCache := make(CustomizeResponseCache)
+	responseCache := NewResponseCache()
 	mockResponse := CustomizeHookResponse{}
-	customizeCache.Add("some", 12, &mockResponse)
+	responseCache.Add("some", 12, &mockResponse)
 
-	response := customizeCache.Get("some", 13)
+	response := responseCache.Get("some", 13)
 
 	if response != nil {
 		t.Errorf("Incorrect cache entry, should be nil, got: %v", response)
@@ -53,13 +53,25 @@ func TestGet_IfPresentWithDifferentGeneration(t *testing.T) {
 }
 
 func TestGet_IfExistsAndGenerationMatches(t *testing.T) {
-	customizeCache := make(CustomizeResponseCache)
+	responseCache := NewResponseCache()
 	expectedResponse := CustomizeHookResponse{}
-	customizeCache.Add("some", 12, &expectedResponse)
+	responseCache.Add("some", 12, &expectedResponse)
 
-	response := customizeCache.Get("some", 12)
+	response := responseCache.Get("some", 12)
 
 	if response != &expectedResponse {
 		t.Errorf("Incorrect cache entry, expected: %v, got: %v", expectedResponse, response)
 	}
+}
+
+func Test_ConcurrentMapAccess(t *testing.T) {
+	responseCache := NewResponseCache()
+	someResponse := CustomizeHookResponse{}
+
+	go responseCache.Add("some", 1, &someResponse)
+	go responseCache.Add("some_one", 1, &someResponse)
+	go responseCache.Add("some_two", 1, &someResponse)
+	go responseCache.Add("some_three", 1, &someResponse)
+	go responseCache.Add("some_four", 1, &someResponse)
+
 }
