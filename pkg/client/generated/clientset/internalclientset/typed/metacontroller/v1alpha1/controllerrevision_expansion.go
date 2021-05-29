@@ -17,13 +17,14 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"context"
 	"fmt"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
 
-	v1alpha1 "metacontroller/pkg/apis/metacontroller/v1alpha1"
+	"metacontroller/pkg/apis/metacontroller/v1alpha1"
 )
 
 type ControllerRevisionExpansion interface {
@@ -33,7 +34,7 @@ type ControllerRevisionExpansion interface {
 func (c *controllerRevisions) UpdateWithRetries(orig *v1alpha1.ControllerRevision, updateFn func(*v1alpha1.ControllerRevision) bool) (result *v1alpha1.ControllerRevision, err error) {
 	name := orig.GetName()
 	err = retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-		current, err := c.Get(name, metav1.GetOptions{})
+		current, err := c.Get(context.TODO(), name, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
@@ -44,7 +45,7 @@ func (c *controllerRevisions) UpdateWithRetries(orig *v1alpha1.ControllerRevisio
 			// There's nothing to do.
 			return nil
 		}
-		result, err = c.Update(current)
+		result, err = c.Update(context.TODO(), current, metav1.UpdateOptions{})
 		return err
 	})
 	return result, err

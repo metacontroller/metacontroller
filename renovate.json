@@ -32,7 +32,12 @@
       "postUpdateOptions": [
         "gomodTidy",
         "gomodUpdateImportPaths"
-      ]
+      ],
+      "postUpgradeTasks": {
+        "commands": ["cd test/integration && go mod tidy"],
+        "fileFilters": ["**/go.mod", "**/go.sum"],
+        "executionMode": "update"
+      }
     },
     {
       "matchFiles": [

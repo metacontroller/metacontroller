@@ -60,7 +60,7 @@ func callSyncHook(cc *v1alpha1.CompositeController, request *SyncHookRequest) (*
 		// Finalize
 		request.Finalizing = true
 		if err := hooks.Call(cc.Spec.Hooks.Finalize, request, &response); err != nil {
-			return nil, fmt.Errorf("finalize hook failed: %v", err)
+			return nil, fmt.Errorf("finalize hook failed: %w", err)
 		}
 	} else {
 		// Sync
@@ -70,7 +70,7 @@ func callSyncHook(cc *v1alpha1.CompositeController, request *SyncHookRequest) (*
 		}
 
 		if err := hooks.Call(cc.Spec.Hooks.Sync, request, &response); err != nil {
-			return nil, fmt.Errorf("sync hook failed: %v", err)
+			return nil, fmt.Errorf("sync hook failed: %w", err)
 		}
 	}
 

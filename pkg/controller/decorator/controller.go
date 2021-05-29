@@ -17,6 +17,7 @@ limitations under the License.
 package decorator
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"strings"
@@ -156,11 +157,11 @@ func newDecoratorController(
 	for _, parent := range dc.Spec.Resources {
 		informer, err := dynInformers.Resource(parent.APIVersion, parent.Resource)
 		if err != nil {
-			return nil, fmt.Errorf("can't create informer for parent resource: %v", err)
+			return nil, fmt.Errorf("can't create informer for parent resource: %w", err)
 		}
 		groupVersion, err := schema.ParseGroupVersion(parent.APIVersion)
 		if err != nil {
-			return nil, fmt.Errorf("can't parse parent resource groupVersion: %v", err)
+			return nil, fmt.Errorf("can't parse parent resource groupVersion: %w", err)
 		}
 		c.parentInformers.Set(groupVersion.WithResource(parent.Resource), informer)
 	}
@@ -168,11 +169,11 @@ func newDecoratorController(
 	for _, child := range dc.Spec.Attachments {
 		informer, err := dynInformers.Resource(child.APIVersion, child.Resource)
 		if err != nil {
-			return nil, fmt.Errorf("can't create informer for child resource: %v", err)
+			return nil, fmt.Errorf("can't create informer for child resource: %w", err)
 		}
 		groupVersion, err := schema.ParseGroupVersion(child.APIVersion)
 		if err != nil {
-			return nil, fmt.Errorf("can't parse child resource groupVersion: %v", err)
+			return nil, fmt.Errorf("can't parse child resource groupVersion: %w", err)
 		}
 		c.childInformers.Set(groupVersion.WithResource(child.Resource), informer)
 	}
@@ -283,7 +284,7 @@ func (c *decoratorController) processNextWorkItem() bool {
 
 	err := c.sync(key.(string))
 	if err != nil {
-		utilruntime.HandleError(fmt.Errorf("failed to sync %v %q: %v", c.dc.Name, key, err))
+		utilruntime.HandleError(fmt.Errorf("failed to sync %v %q: %w", c.dc.Name, key, err))
 		c.queue.AddRateLimited(key)
 		return true
 	}
@@ -303,7 +304,7 @@ func (c *decoratorController) enqueueParentObject(obj interface{}) {
 
 	key, err := parentQueueKey(obj)
 	if err != nil {
-		utilruntime.HandleError(fmt.Errorf("couldn't get key for object %+v: %v", obj, err))
+		utilruntime.HandleError(fmt.Errorf("couldn't get key for object %+v: %w", obj, err))
 		return
 	}
 	c.queue.Add(key)
@@ -312,7 +313,7 @@ func (c *decoratorController) enqueueParentObject(obj interface{}) {
 func (c *decoratorController) enqueueParentObjectAfter(obj interface{}, delay time.Duration) {
 	key, err := parentQueueKey(obj)
 	if err != nil {
-		utilruntime.HandleError(fmt.Errorf("couldn't get key for object %+v: %v", obj, err))
+		utilruntime.HandleError(fmt.Errorf("couldn't get key for object %+v: %w", obj, err))
 		return
 	}
 	c.queue.AddAfter(key, delay)
@@ -485,7 +486,7 @@ func (c *decoratorController) syncParentObject(parent *unstructured.Unstructured
 
 	parentClient, err := c.dynClient.Kind(parent.GetAPIVersion(), parent.GetKind())
 	if err != nil {
-		return fmt.Errorf("can't get client for %v %v/%v: %v", parent.GetKind(), parent.GetNamespace(), parent.GetName(), err)
+		return fmt.Errorf("can't get client for %v %v/%v: %w", parent.GetKind(), parent.GetNamespace(), parent.GetName(), err)
 	}
 
 	// Before taking any other action, add our finalizer (if desired).
@@ -493,7 +494,7 @@ func (c *decoratorController) syncParentObject(parent *unstructured.Unstructured
 	updatedParent, err := c.finalizer.SyncObject(parentClient, parent)
 	if err != nil {
 		// If we fail to do this, abort before doing anything else and requeue.
-		return fmt.Errorf("can't sync finalizer for %v %v/%v: %v", parent.GetKind(), parent.GetNamespace(), parent.GetName(), err)
+		return fmt.Errorf("can't sync finalizer for %v %v/%v: %w", parent.GetKind(), parent.GetNamespace(), parent.GetName(), err)
 	}
 	parent = updatedParent
 
@@ -568,9 +569,9 @@ func (c *decoratorController) syncParentObject(parent *unstructured.Unstructured
 
 		if statusChanged && parentClient.HasSubresource("status") {
 			// The regular Update below will ignore changes to .status so we do it separately.
-			result, err := parentClient.Namespace(parent.GetNamespace()).UpdateStatus(updatedParent, metav1.UpdateOptions{})
+			result, err := parentClient.Namespace(parent.GetNamespace()).UpdateStatus(context.TODO(), updatedParent, metav1.UpdateOptions{})
 			if err != nil {
-				return fmt.Errorf("can't update status: %v", err)
+				return fmt.Errorf("can't update status: %w", err)
 			}
 			// The Update below needs to use the latest ResourceVersion.
 			updatedParent.SetResourceVersion(result.GetResourceVersion())
@@ -581,9 +582,9 @@ func (c *decoratorController) syncParentObject(parent *unstructured.Unstructured
 		}
 
 		klog.V(4).InfoS("DecoratorController updating", "controller", klog.KObj(c.dc), "parent_kind", parent.GetKind(), "parent", klog.KObj(parent))
-		_, err = parentClient.Namespace(parent.GetNamespace()).Update(updatedParent, metav1.UpdateOptions{})
+		_, err = parentClient.Namespace(parent.GetNamespace()).Update(context.TODO(), updatedParent, metav1.UpdateOptions{})
 		if err != nil {
-			return fmt.Errorf("can't update %v %v/%v: %v", parent.GetKind(), parent.GetNamespace(), parent.GetName(), err)
+			return fmt.Errorf("can't update %v %v/%v: %w", parent.GetKind(), parent.GetNamespace(), parent.GetName(), err)
 		}
 	}
 
@@ -612,7 +613,7 @@ func (c *decoratorController) syncParentObject(parent *unstructured.Unstructured
 	if parent.GetDeletionTimestamp() == nil || c.finalizer.ShouldFinalize(parent) {
 		// Reconcile children.
 		if err := common.ManageChildren(c.dynClient, c.updateStrategy, parent, observedChildren, desiredChildren); err != nil {
-			manageErr = fmt.Errorf("can't reconcile children for %v %v/%v: %v", parent.GetKind(), parent.GetNamespace(), parent.GetName(), err)
+			manageErr = fmt.Errorf("can't reconcile children for %v %v/%v: %w", parent.GetKind(), parent.GetNamespace(), parent.GetName(), err)
 		}
 	}
 
@@ -640,7 +641,7 @@ func (c *decoratorController) getChildren(parent *unstructured.Unstructured) (co
 			all, err = informer.Lister().List(labels.Everything())
 		}
 		if err != nil {
-			return nil, fmt.Errorf("can't list children for resource %q in apiVersion %q: %v", child.Resource, child.APIVersion, err)
+			return nil, fmt.Errorf("can't list children for resource %q in apiVersion %q: %w", child.Resource, child.APIVersion, err)
 		}
 
 		// Always include the requested groups, even if there are no entries.

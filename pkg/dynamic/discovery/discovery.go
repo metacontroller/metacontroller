@@ -111,7 +111,7 @@ func (rm *ResourceMap) refresh() {
 		gv, err := schema.ParseGroupVersion(group.GroupVersion)
 		if err != nil {
 			// This shouldn't happen because we get these values from the server.
-			panic(fmt.Errorf("received invalid GroupVersion from server: %v", err))
+			panic(fmt.Errorf("received invalid GroupVersion from server: %w", err))
 		}
 		gve := groupVersionEntry{
 			resources:    make(map[string]*APIResource, len(group.APIResources)),

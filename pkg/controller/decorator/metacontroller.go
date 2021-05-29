@@ -17,7 +17,7 @@ limitations under the License.
 package decorator
 
 import (
-	ctx "context"
+	"context"
 
 	dynamicclientset "metacontroller/pkg/dynamic/clientset"
 	dynamicdiscovery "metacontroller/pkg/dynamic/discovery"
@@ -51,8 +51,6 @@ type Metacontroller struct {
 
 	decoratorControllers map[string]*decoratorController
 
-	stopCh, doneCh chan struct{}
-
 	numWorkers int
 }
 
@@ -72,12 +70,12 @@ func NewMetacontroller(controllerContext common.ControllerContext, numWorkers in
 	return mc
 }
 
-func (mc *Metacontroller) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (mc *Metacontroller) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	decoratorControllerName := request.Name
 	klog.V(4).InfoS("Sync DecoratorController", "name", decoratorControllerName)
 
 	dc := v1alpha1.DecoratorController{}
-	err := mc.k8sClient.Get(ctx.Background(), request.NamespacedName, &dc)
+	err := mc.k8sClient.Get(ctx, request.NamespacedName, &dc)
 	if apierrors.IsNotFound(err) {
 		klog.V(4).InfoS("DecoratorController has been deleted", "name", decoratorControllerName)
 		// Stop and remove the controller if it exists.

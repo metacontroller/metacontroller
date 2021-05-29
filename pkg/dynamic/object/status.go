@@ -105,7 +105,9 @@ func SetStatusCondition(obj map[string]interface{}, condition *StatusCondition) 
 	if !found {
 		status = make(map[string]interface{})
 	}
-	SetCondition(status, condition)
+	if err = SetCondition(status, condition); err != nil {
+		return err
+	}
 	if err := unstructured.SetNestedField(obj, status, "status"); err != nil {
 		return err
 	}

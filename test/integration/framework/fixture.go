@@ -17,6 +17,7 @@ limitations under the License.
 package framework
 
 import (
+	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -89,12 +90,12 @@ func (f *Fixture) CreateNamespace(namespace string) *v1.Namespace {
 			Name: namespace,
 		},
 	}
-	ns, err := f.kubernetes.CoreV1().Namespaces().Create(ns)
+	ns, err := f.kubernetes.CoreV1().Namespaces().Create(context.TODO(), ns, metav1.CreateOptions{})
 	if err != nil {
 		f.t.Fatal(err)
 	}
 	f.deferTeardown(func() error {
-		return f.kubernetes.CoreV1().Namespaces().Delete(ns.Name, nil)
+		return f.kubernetes.CoreV1().Namespaces().Delete(context.TODO(), ns.Name, metav1.DeleteOptions{})
 	})
 	return ns
 }

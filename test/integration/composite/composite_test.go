@@ -17,6 +17,7 @@ limitations under the License.
 package composite
 
 import (
+	"context"
 	"strings"
 	"testing"
 	"time"
@@ -73,14 +74,14 @@ func TestSyncWebhook(t *testing.T) {
 
 	parent := framework.UnstructuredCRD(parentCRD, "test-sync-webhook")
 	unstructured.SetNestedStringMap(parent.Object, labels, "spec", "selector", "matchLabels")
-	_, err := parentClient.Namespace(ns).Create(parent, metav1.CreateOptions{})
+	_, err := parentClient.Namespace(ns).Create(context.TODO(), parent, metav1.CreateOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	t.Logf("Waiting for child object to be created...")
 	err = f.Wait(func() (bool, error) {
-		_, err := childClient.Namespace(ns).Get("test-sync-webhook", metav1.GetOptions{})
+		_, err := childClient.Namespace(ns).Get(context.TODO(), "test-sync-webhook", metav1.GetOptions{})
 		return err == nil, err
 	})
 	if err != nil {
@@ -142,13 +143,13 @@ func TestCascadingDelete(t *testing.T) {
 	unstructured.SetNestedStringMap(parent.Object, labels, "spec", "selector", "matchLabels")
 	unstructured.SetNestedField(parent.Object, int64(1), "spec", "replicas")
 	var err error
-	if parent, err = parentClient.Namespace(ns).Create(parent, metav1.CreateOptions{}); err != nil {
+	if parent, err = parentClient.Namespace(ns).Create(context.TODO(), parent, metav1.CreateOptions{}); err != nil {
 		t.Fatal(err)
 	}
 
 	t.Logf("Waiting for child object to be created...")
 	err = f.Wait(func() (bool, error) {
-		_, err := childClient.Get("test-cascading-delete", metav1.GetOptions{})
+		_, err := childClient.Get(context.TODO(), "test-cascading-delete", metav1.GetOptions{})
 		return err == nil, err
 	})
 	if err != nil {
@@ -173,7 +174,7 @@ func TestCascadingDelete(t *testing.T) {
 	var child *batchv1.Job
 	err = f.Wait(func() (bool, error) {
 		var getErr error
-		child, getErr = childClient.Get("test-cascading-delete", metav1.GetOptions{})
+		child, getErr = childClient.Get(context.TODO(), "test-cascading-delete", metav1.GetOptions{})
 		return apierrors.IsNotFound(getErr), nil
 	})
 	if err != nil {
@@ -230,7 +231,7 @@ func TestResyncAfter(t *testing.T) {
 
 	parent := framework.UnstructuredCRD(parentCRD, "test-resync-after")
 	unstructured.SetNestedStringMap(parent.Object, labels, "spec", "selector", "matchLabels")
-	_, err := parentClient.Namespace(ns).Create(parent, metav1.CreateOptions{})
+	_, err := parentClient.Namespace(ns).Create(context.TODO(), parent, metav1.CreateOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -238,7 +239,7 @@ func TestResyncAfter(t *testing.T) {
 	t.Logf("Waiting for elapsed time to be reported...")
 	var elapsedSeconds float64
 	err = f.Wait(func() (bool, error) {
-		parent, err := parentClient.Namespace(ns).Get("test-resync-after", metav1.GetOptions{})
+		parent, err := parentClient.Namespace(ns).Get(context.TODO(), "test-resync-after", metav1.GetOptions{})
 		val, found, err := unstructured.NestedFloat64(parent.Object, "status", "elapsedSeconds")
 		if err != nil || !found {
 			// The value hasn't been populated. Keep waiting.
@@ -285,7 +286,7 @@ func TestCustomizeWebhook(t *testing.T) {
 		Data: make(map[string]string, 0),
 	}
 
-	_, err := relatedClient.Create(&relatedConfigMap)
+	_, err := relatedClient.Create(context.TODO(), &relatedConfigMap, metav1.CreateOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -340,14 +341,14 @@ func TestCustomizeWebhook(t *testing.T) {
 
 	parent := framework.UnstructuredCRD(parentCRD, "test-customize-webhook")
 	unstructured.SetNestedStringMap(parent.Object, labels, "spec", "selector", "matchLabels")
-	_, err = parentClient.Namespace(namespace).Create(parent, metav1.CreateOptions{})
+	_, err = parentClient.Namespace(namespace).Create(context.TODO(), parent, metav1.CreateOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	t.Logf("Waiting for child object to be created...")
 	err = f.Wait(func() (bool, error) {
-		_, err := childClient.Namespace(namespace).Get("test-customize-webhook-"+relatedResourceName, metav1.GetOptions{})
+		_, err := childClient.Namespace(namespace).Get(context.TODO(), "test-customize-webhook-"+relatedResourceName, metav1.GetOptions{})
 		return err == nil, err
 	})
 	if err != nil {
@@ -378,14 +379,14 @@ func TestFailIfNoStatusSubresourceInParentCRD(t *testing.T) {
 
 	parent := framework.UnstructuredCRD(parentCRD, "test-sync-webhook")
 	unstructured.SetNestedStringMap(parent.Object, labels, "spec", "selector", "matchLabels")
-	_, err := parentClient.Namespace(namespace).Create(parent, metav1.CreateOptions{})
+	_, err := parentClient.Namespace(namespace).Create(context.TODO(), parent, metav1.CreateOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	t.Logf("Waiting for warn event to be created...")
 	err = f.Wait(func() (bool, error) {
-		events, err := eventsClient.List(metav1.ListOptions{})
+		events, err := eventsClient.List(context.TODO(), metav1.ListOptions{})
 		for _, event := range events.Items {
 			t.Logf("Event: %s", event.Message)
 			if strings.Contains(event.Message, "does not have subresource 'Status' enabled") {

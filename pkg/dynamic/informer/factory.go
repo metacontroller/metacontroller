@@ -73,7 +73,7 @@ func (f *SharedInformerFactory) Resource(apiVersion, resource string) (*Resource
 	// Create one if it doesn't exist.
 	client, err := f.clientset.Resource(apiVersion, resource)
 	if err != nil {
-		return nil, fmt.Errorf("can't create client for %v shared informer: %v", key, err)
+		return nil, fmt.Errorf("can't create client for %v shared informer: %w", key, err)
 	}
 	stopCh := make(chan struct{})
 

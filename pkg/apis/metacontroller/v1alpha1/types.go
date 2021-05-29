@@ -22,6 +22,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
+// CompositeController
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:path=compositecontrollers,scope=Cluster,shortName=cc;cctl
@@ -125,6 +126,7 @@ type Webhook struct {
 type CompositeControllerStatus struct {
 }
 
+// CompositeControllerList
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type CompositeControllerList struct {
 	metav1.TypeMeta `json:",inline"`
@@ -132,6 +134,7 @@ type CompositeControllerList struct {
 	Items           []CompositeController `json:"items"`
 }
 
+// ControllerRevision
 // +genclient
 // +genclient:noStatus
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -151,6 +154,7 @@ type ControllerRevisionChildren struct {
 	Names    []string `json:"names"`
 }
 
+// ControllerRevisionList
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type ControllerRevisionList struct {
 	metav1.TypeMeta `json:",inline"`
@@ -158,6 +162,7 @@ type ControllerRevisionList struct {
 	Items           []ControllerRevision `json:"items"`
 }
 
+// DecoratorController
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:path=decoratorcontrollers,scope=Cluster,shortName=dec;decorators
@@ -214,6 +219,7 @@ type DecoratorControllerHooks struct {
 type DecoratorControllerStatus struct {
 }
 
+// DecoratorControllerList
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type DecoratorControllerList struct {
 	metav1.TypeMeta `json:",inline"`

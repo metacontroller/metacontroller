@@ -34,7 +34,7 @@ func CallCustomizeHook(cc CustomizableController, request *CustomizeHookRequest)
 	}
 
 	if err := callCustomizeHook(hook, request, &response); err != nil {
-		return nil, fmt.Errorf("related hook failed: %v", err)
+		return nil, fmt.Errorf("related hook failed: %w", err)
 	}
 
 	return &response, nil

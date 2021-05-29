@@ -73,5 +73,4 @@ func Test_ConcurrentMapAccess(t *testing.T) {
 	go responseCache.Add("some_two", 1, &someResponse)
 	go responseCache.Add("some_three", 1, &someResponse)
 	go responseCache.Add("some_four", 1, &someResponse)
-
 }

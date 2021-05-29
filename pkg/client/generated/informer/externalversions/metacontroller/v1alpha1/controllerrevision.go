@@ -18,6 +18,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"context"
 	metacontrollerv1alpha1 "metacontroller/pkg/apis/metacontroller/v1alpha1"
 	internalclientset "metacontroller/pkg/client/generated/clientset/internalclientset"
 	internalinterfaces "metacontroller/pkg/client/generated/informer/externalversions/internalinterfaces"
@@ -60,13 +61,13 @@ func NewFilteredControllerRevisionInformer(client internalclientset.Interface, n
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.MetacontrollerV1alpha1().ControllerRevisions(namespace).List(options)
+				return client.MetacontrollerV1alpha1().ControllerRevisions(namespace).List(context.TODO(), options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.MetacontrollerV1alpha1().ControllerRevisions(namespace).Watch(options)
+				return client.MetacontrollerV1alpha1().ControllerRevisions(namespace).Watch(context.TODO(), options)
 			},
 		},
 		&metacontrollerv1alpha1.ControllerRevision{},

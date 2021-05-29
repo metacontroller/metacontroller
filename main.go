@@ -18,13 +18,14 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"net/http"
 	"os"
-	"os/signal"
 	"sync"
-	"syscall"
 	"time"
+
+	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 
 	"metacontroller/pkg/options"
 	"metacontroller/pkg/server"
@@ -108,7 +109,7 @@ func main() {
 	// before we exit
 	var wg sync.WaitGroup
 	wg.Add(1)
-	mgrStopChan := make(chan struct{})
+	mgrStopChan := signals.SetupSignalHandler()
 	go func() {
 		defer wg.Done()
 		if err := mgr.Start(mgrStopChan); err != nil {
@@ -130,19 +131,15 @@ func main() {
 	go func() {
 		defer wg.Done()
 		klog.InfoS("Serving metrics")
-		if err := srv.ListenAndServe(); err != http.ErrServerClosed {
+		if err := srv.ListenAndServe(); errors.Is(err, http.ErrServerClosed) {
 			klog.ErrorS(err, "Error serving http endpoint")
 		}
 		klog.InfoS("Stopped metrics server")
 	}()
 
-	// On SIGTERM, stop all controllers and the metrics server gracefully.
-	sigchan := make(chan os.Signal, 2)
-	signal.Notify(sigchan, os.Interrupt, syscall.SIGTERM)
-	sig := <-sigchan
-
-	klog.InfoS("Shutting down...", "signal", sig)
-	close(mgrStopChan)
-	srv.Shutdown(context.Background())
+	mgrStopChan.Done()
+	if err = srv.Shutdown(context.Background()); err != nil {
+		klog.ErrorS(err, "Error shutting down...")
+	}
 	wg.Wait()
 }

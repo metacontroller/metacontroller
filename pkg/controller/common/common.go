@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"strings"
 
+	"k8s.io/klog/v2"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"metacontroller/pkg/apis/metacontroller/v1alpha1"
@@ -53,7 +55,9 @@ var (
 )
 
 func init() {
-	v1alpha1.AddToScheme(scheme)
+	if err := v1alpha1.AddToScheme(scheme); err != nil {
+		klog.ErrorS(err, "failed adding v1alpha1 to scheme")
+	}
 }
 
 // ControllerContext holds various object related to interacting with kubernetes cluster

@@ -17,6 +17,7 @@ limitations under the License.
 package composite
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"sync"
@@ -104,7 +105,7 @@ func newParentController(
 	// Create informer for the parent resource.
 	parentInformer, err := dynInformers.Resource(cc.Spec.ParentResource.APIVersion, cc.Spec.ParentResource.Resource)
 	if err != nil {
-		return nil, fmt.Errorf("can't create informer for parent resource: %v", err)
+		return nil, fmt.Errorf("can't create informer for parent resource: %w", err)
 	}
 
 	// Create informers for all child resources.
@@ -122,11 +123,11 @@ func newParentController(
 	for _, child := range cc.Spec.ChildResources {
 		childInformer, err := dynInformers.Resource(child.APIVersion, child.Resource)
 		if err != nil {
-			return nil, fmt.Errorf("can't create informer for child resource: %v", err)
+			return nil, fmt.Errorf("can't create informer for child resource: %w", err)
 		}
 		groupVersion, err := schema.ParseGroupVersion(child.APIVersion)
 		if err != nil {
-			return nil, fmt.Errorf("can't parse child resource groupVersion: %v", err)
+			return nil, fmt.Errorf("can't parse child resource groupVersion: %w", err)
 		}
 		childInformers.Set(groupVersion.WithResource(child.Resource), childInformer)
 	}
@@ -267,7 +268,7 @@ func (pc *parentController) processNextWorkItem() bool {
 
 	err := pc.sync(key.(string))
 	if err != nil {
-		utilruntime.HandleError(fmt.Errorf("failed to sync %v %q: %v", pc.parentResource.Kind, key, err))
+		utilruntime.HandleError(fmt.Errorf("failed to sync %v %q: %w", pc.parentResource.Kind, key, err))
 		pc.queue.AddRateLimited(key)
 		return true
 	}
@@ -279,7 +280,7 @@ func (pc *parentController) processNextWorkItem() bool {
 func (pc *parentController) enqueueParentObject(obj interface{}) {
 	key, err := common.KeyFunc(obj)
 	if err != nil {
-		utilruntime.HandleError(fmt.Errorf("couldn't get key for object %+v: %v", obj, err))
+		utilruntime.HandleError(fmt.Errorf("couldn't get key for object %+v: %w", obj, err))
 		return
 	}
 	pc.queue.Add(key)
@@ -288,7 +289,7 @@ func (pc *parentController) enqueueParentObject(obj interface{}) {
 func (pc *parentController) enqueueParentObjectAfter(obj interface{}, delay time.Duration) {
 	key, err := common.KeyFunc(obj)
 	if err != nil {
-		utilruntime.HandleError(fmt.Errorf("couldn't get key for object %+v: %v", obj, err))
+		utilruntime.HandleError(fmt.Errorf("couldn't get key for object %+v: %w", obj, err))
 		return
 	}
 	pc.queue.AddAfter(key, delay)
@@ -480,7 +481,7 @@ func (pc *parentController) syncParentObject(parent *unstructured.Unstructured) 
 	updatedParent, err := pc.finalizer.SyncObject(pc.parentClient, parent)
 	if err != nil {
 		// If we fail to do this, abort before doing anything else and requeue.
-		return fmt.Errorf("can't sync finalizer for %v %v/%v: %v", parent.GetKind(), parent.GetNamespace(), parent.GetName(), err)
+		return fmt.Errorf("can't sync finalizer for %v %v/%v: %w", parent.GetKind(), parent.GetNamespace(), parent.GetName(), err)
 	}
 	parent = updatedParent
 
@@ -514,7 +515,7 @@ func (pc *parentController) syncParentObject(parent *unstructured.Unstructured) 
 	if syncResult.Finalized {
 		updatedParent, err := pc.parentClient.Namespace(parent.GetNamespace()).RemoveFinalizer(parent, pc.finalizer.Name)
 		if err != nil {
-			return fmt.Errorf("can't remove finalizer for %v %v/%v: %v", parent.GetKind(), parent.GetNamespace(), parent.GetName(), err)
+			return fmt.Errorf("can't remove finalizer for %v %v/%v: %w", parent.GetKind(), parent.GetNamespace(), parent.GetName(), err)
 		}
 		parent = updatedParent
 	}
@@ -529,7 +530,7 @@ func (pc *parentController) syncParentObject(parent *unstructured.Unstructured) 
 			// We don't use GetLabels() because that swallows conversion errors.
 			objLabels, _, err := unstructured.NestedStringMap(obj.UnstructuredContent(), "metadata", "labels")
 			if err != nil {
-				return fmt.Errorf("invalid labels on desired child %v %v/%v: %v", obj.GetKind(), obj.GetNamespace(), obj.GetName(), err)
+				return fmt.Errorf("invalid labels on desired child %v %v/%v: %w", obj.GetKind(), obj.GetNamespace(), obj.GetName(), err)
 			}
 			// If selector generation is enabled, add the controller-uid label to all
 			// desired children so they match the generated selector.
@@ -560,14 +561,14 @@ func (pc *parentController) syncParentObject(parent *unstructured.Unstructured) 
 	if parent.GetDeletionTimestamp() == nil || pc.finalizer.ShouldFinalize(parent) {
 		// Reconcile children.
 		if err := common.ManageChildren(pc.dynClient, pc.updateStrategy, parent, observedChildren, desiredChildren); err != nil {
-			manageErr = fmt.Errorf("can't reconcile children for %v %v/%v: %v", pc.parentResource.Kind, parent.GetNamespace(), parent.GetName(), err)
+			manageErr = fmt.Errorf("can't reconcile children for %v %v/%v: %w", pc.parentResource.Kind, parent.GetNamespace(), parent.GetName(), err)
 		}
 	}
 
 	// Update parent status.
 	// We'll want to make sure this happens after manageChildren once we support observedGeneration.
 	if _, err := pc.updateParentStatus(parent, syncResult.Status); err != nil {
-		return fmt.Errorf("can't update status for %v %v/%v: %v", pc.parentResource.Kind, parent.GetNamespace(), parent.GetName(), err)
+		return fmt.Errorf("can't update status for %v %v/%v: %w", pc.parentResource.Kind, parent.GetNamespace(), parent.GetName(), err)
 	}
 
 	return manageErr
@@ -602,7 +603,7 @@ func (pc *parentController) makeSelector(parent *unstructured.Unstructured, extr
 
 	selector, err := metav1.LabelSelectorAsSelector(labelSelector)
 	if err != nil {
-		return nil, fmt.Errorf("can't convert label selector (%#v): %v", labelSelector, err)
+		return nil, fmt.Errorf("can't convert label selector (%#v): %w", labelSelector, err)
 	}
 	return selector, nil
 }
@@ -610,7 +611,7 @@ func (pc *parentController) makeSelector(parent *unstructured.Unstructured, extr
 func (pc *parentController) canAdoptFunc(parent *unstructured.Unstructured) func() error {
 	return k8s.RecheckDeletionTimestamp(func() (metav1.Object, error) {
 		// Make sure this is always an uncached read.
-		fresh, err := pc.parentClient.Namespace(parent.GetNamespace()).Get(parent.GetName(), metav1.GetOptions{})
+		fresh, err := pc.parentClient.Namespace(parent.GetNamespace()).Get(context.TODO(), parent.GetName(), metav1.GetOptions{})
 		if err != nil {
 			return nil, err
 		}
@@ -652,7 +653,7 @@ func (pc *parentController) claimChildren(parent *unstructured.Unstructured) (co
 			all, err = informer.Lister().List(labels.Everything())
 		}
 		if err != nil {
-			return nil, fmt.Errorf("can't list %v children: %v", childClient.Kind, err)
+			return nil, fmt.Errorf("can't list %v children: %w", childClient.Kind, err)
 		}
 
 		// Always include the requested groups, even if there are no entries.
@@ -662,7 +663,7 @@ func (pc *parentController) claimChildren(parent *unstructured.Unstructured) (co
 		crm := dynamiccontrollerref.NewUnstructuredManager(childClient, parent, selector, parentGVK, childClient.GroupVersionKind(), canAdoptFunc)
 		children, err := crm.ClaimChildren(all)
 		if err != nil {
-			return nil, fmt.Errorf("can't claim %v children: %v", childClient.Kind, err)
+			return nil, fmt.Errorf("can't claim %v children: %w", childClient.Kind, err)
 		}
 
 		// Add children to map by name.
