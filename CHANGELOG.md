@@ -1,3 +1,11 @@
+## [1.5.12](https://github.com/metacontroller/metacontroller/compare/v1.5.11...v1.5.12) (2021-05-30)
+
+
+### Bug Fixes
+
+* **customize:** [#259](https://github.com/metacontroller/metacontroller/issues/259) - Add guard for customize cache against concurrent writes ([b765c17](https://github.com/metacontroller/metacontroller/commit/b765c1731dfe28917fd84aee35c3e8e175a3850f))
+* **deps:** Update klog/v2 to v2.9.0 ([47aa552](https://github.com/metacontroller/metacontroller/commit/47aa552f6648a016ca69edf7527404f006032224))
+
 ## [1.5.11](https://github.com/metacontroller/metacontroller/compare/v1.5.10...v1.5.11) (2021-05-29)
 
 
