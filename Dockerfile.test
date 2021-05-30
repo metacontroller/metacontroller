@@ -9,4 +9,4 @@ RUN make unit-test
 RUN make integration-test
 
 FROM scratch as artifact
-COPY --from=tester /go/src/metacontroller.io/test/integration/hack/tmp/*.out  /
+COPY --from=tester /go/src/metacontroller/test/integration/hack/tmp/*.out  /
