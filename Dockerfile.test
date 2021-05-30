@@ -1,7 +1,7 @@
 FROM golang:1.16.4 as tester
 
-COPY . /go/src/metacontroller.io/
-WORKDIR /go/src/metacontroller.io/
+COPY . /go/src/metacontroller/
+WORKDIR /go/src/metacontroller/
 RUN mkdir tmp
 RUN test/integration/hack/get-kube-binaries.sh
 RUN make vendor
