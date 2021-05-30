@@ -4,8 +4,8 @@ ARG TAG
 ENV TAG=${TAG:-dev}
 
 ENV CGO_ENABLED=0
-COPY . /go/src/metacontroller.io/
-WORKDIR /go/src/metacontroller.io/
+COPY . /go/src/metacontroller/
+WORKDIR /go/src/metacontroller/
 ENV ADDITIONAL_BUILD_ARGUMENTS='-gcflags="all=-N -l"'
 RUN make install
 RUN go get github.com/go-delve/delve/cmd/dlv

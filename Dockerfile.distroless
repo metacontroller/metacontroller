@@ -3,8 +3,8 @@ FROM golang:1.16.4 AS build
 ARG TAG
 ENV TAG=${TAG:-dev}
 
-COPY . /go/src/metacontroller.io/
-WORKDIR /go/src/metacontroller.io/
+COPY . /go/src/metacontroller/
+WORKDIR /go/src/metacontroller/
 ENV CGO_ENABLED=0
 RUN make install
 
