@@ -1,3 +1,10 @@
+## [1.5.13](https://github.com/metacontroller/metacontroller/compare/v1.5.12...v1.5.13) (2021-06-10)
+
+
+### Bug Fixes
+
+* **deps:** Update k8s and controller-runtime dependencies ([256f20e](https://github.com/metacontroller/metacontroller/commit/256f20e2c5c3e86fcacf882d781ed2881cbe6f95))
+
 ## [1.5.12](https://github.com/metacontroller/metacontroller/compare/v1.5.11...v1.5.12) (2021-05-30)
 
 
