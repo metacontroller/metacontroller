@@ -67,7 +67,7 @@ func (c *decoratorController) callSyncHook(request *SyncHookRequest) (*SyncHookR
 		(request.Object.GetDeletionTimestamp() != nil || !c.parentSelector.Matches(request.Object)) {
 		// Finalize
 		request.Finalizing = true
-		if err := hooks.Call(c.dc.Spec.Hooks.Finalize, request, &response); err != nil {
+		if err := hooks.Call(c.dc.Spec.Hooks.Finalize, hooks.FinalizeHook, request, &response); err != nil {
 			return nil, fmt.Errorf("finalize hook failed: %w", err)
 		}
 	} else {
@@ -77,7 +77,7 @@ func (c *decoratorController) callSyncHook(request *SyncHookRequest) (*SyncHookR
 			return nil, fmt.Errorf("sync hook not defined")
 		}
 
-		if err := hooks.Call(c.dc.Spec.Hooks.Sync, request, &response); err != nil {
+		if err := hooks.Call(c.dc.Spec.Hooks.Sync, hooks.SyncHook, request, &response); err != nil {
 			return nil, fmt.Errorf("sync hook failed: %w", err)
 		}
 	}

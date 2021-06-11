@@ -59,7 +59,7 @@ func callSyncHook(cc *v1alpha1.CompositeController, request *SyncHookRequest) (*
 	if request.Parent.GetDeletionTimestamp() != nil && cc.Spec.Hooks.Finalize != nil {
 		// Finalize
 		request.Finalizing = true
-		if err := hooks.Call(cc.Spec.Hooks.Finalize, request, &response); err != nil {
+		if err := hooks.Call(cc.Spec.Hooks.Finalize, hooks.FinalizeHook, request, &response); err != nil {
 			return nil, fmt.Errorf("finalize hook failed: %w", err)
 		}
 	} else {
@@ -69,7 +69,7 @@ func callSyncHook(cc *v1alpha1.CompositeController, request *SyncHookRequest) (*
 			return nil, fmt.Errorf("sync hook not defined")
 		}
 
-		if err := hooks.Call(cc.Spec.Hooks.Sync, request, &response); err != nil {
+		if err := hooks.Call(cc.Spec.Hooks.Sync, hooks.SyncHook, request, &response); err != nil {
 			return nil, fmt.Errorf("sync hook failed: %w", err)
 		}
 	}

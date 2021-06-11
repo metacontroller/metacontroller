@@ -5,7 +5,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	v1alpha1 "metacontroller/pkg/apis/metacontroller/v1alpha1"
+	"metacontroller/pkg/apis/metacontroller/v1alpha1"
 	"metacontroller/pkg/hooks"
 )
 
@@ -33,7 +33,7 @@ func CallCustomizeHook(cc CustomizableController, request *CustomizeHookRequest)
 		return &response, nil
 	}
 
-	if err := callCustomizeHook(hook, request, &response); err != nil {
+	if err := callCustomizeHook(hook, hooks.CustomizeHook, request, &response); err != nil {
 		return nil, fmt.Errorf("related hook failed: %w", err)
 	}
 
