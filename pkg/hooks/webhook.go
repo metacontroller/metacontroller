@@ -29,7 +29,7 @@ import (
 	"metacontroller/pkg/apis/metacontroller/v1alpha1"
 )
 
-func callWebhook(webhook *v1alpha1.Webhook, request interface{}, response interface{}) error {
+func callWebhook(webhook *v1alpha1.Webhook, hookType string, request interface{}, response interface{}) error {
 	url, err := webhookURL(webhook)
 	if err != nil {
 		return err
@@ -44,12 +44,12 @@ func callWebhook(webhook *v1alpha1.Webhook, request interface{}, response interf
 		return fmt.Errorf("can't marshal request: %w", err)
 	}
 	if klog.V(6).Enabled() {
-		klog.InfoS("Webhook request", "url", url, "body", string(reqBody))
+		klog.InfoS("Webhook request", "type", hookType, "url", url, "body", string(reqBody))
 	}
 
 	// Send request.
 	client := &http.Client{Timeout: hookTimeout}
-	klog.V(6).InfoS("Webhook timeout", "timeout", hookTimeout)
+	klog.V(6).InfoS("Webhook timeout", "type", hookType, "url", url, "timeout", hookTimeout)
 	resp, err := client.Post(url, "application/json", bytes.NewReader(reqBody))
 	if err != nil {
 		return fmt.Errorf("http error: %w", err)
@@ -61,7 +61,7 @@ func callWebhook(webhook *v1alpha1.Webhook, request interface{}, response interf
 	if err != nil {
 		return fmt.Errorf("can't read response body: %w", err)
 	}
-	klog.V(6).InfoS("Webhook response", "url", url, "body", string(respBody))
+	klog.V(6).InfoS("Webhook response", "type", hookType, "url", url, "body", string(respBody))
 
 	// Check status code.
 	if resp.StatusCode != http.StatusOK {

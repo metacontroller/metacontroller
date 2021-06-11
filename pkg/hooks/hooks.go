@@ -22,9 +22,15 @@ import (
 	"metacontroller/pkg/apis/metacontroller/v1alpha1"
 )
 
-func Call(hook *v1alpha1.Hook, request interface{}, response interface{}) error {
+const (
+	FinalizeHook  string = "Finalize"
+	CustomizeHook string = "Customize"
+	SyncHook      string = "Sync"
+)
+
+func Call(hook *v1alpha1.Hook, hookType string, request interface{}, response interface{}) error {
 	if hook.Webhook != nil {
-		return callWebhook(hook.Webhook, request, response)
+		return callWebhook(hook.Webhook, hookType, request, response)
 	}
 	return fmt.Errorf("hook spec not defined")
 }
