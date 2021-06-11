@@ -1,3 +1,11 @@
+## [1.5.15](https://github.com/metacontroller/metacontroller/compare/v1.5.14...v1.5.15) (2021-06-11)
+
+
+### Bug Fixes
+
+* **deps:** update module github.com/prometheus/client_golang to v1.11.0 ([06ea53d](https://github.com/metacontroller/metacontroller/commit/06ea53db876f3888004c34beab1bacc19aa50cd3))
+* **deps:** update module sigs.k8s.io/controller-runtime to v0.9.0 and k8s.io packages to v0.21.1 ([c07dcb3](https://github.com/metacontroller/metacontroller/commit/c07dcb3a50a7d1976dd85a294ec71b69843c4a24))
+
 ## [1.5.14](https://github.com/metacontroller/metacontroller/compare/v1.5.13...v1.5.14) (2021-06-11)
 
 
