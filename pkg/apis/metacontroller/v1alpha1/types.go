@@ -123,8 +123,7 @@ type Webhook struct {
 	Service *ServiceReference `json:"service,omitempty"`
 }
 
-type CompositeControllerStatus struct {
-}
+type CompositeControllerStatus struct{}
 
 // CompositeControllerList
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -216,8 +215,7 @@ type DecoratorControllerHooks struct {
 	Finalize  *Hook `json:"finalize,omitempty"`
 }
 
-type DecoratorControllerStatus struct {
-}
+type DecoratorControllerStatus struct{}
 
 // DecoratorControllerList
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

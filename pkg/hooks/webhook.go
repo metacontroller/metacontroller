@@ -23,10 +23,10 @@ import (
 	"net/http"
 	"time"
 
+	"metacontroller/pkg/apis/metacontroller/v1alpha1"
+
 	"k8s.io/apimachinery/pkg/util/json"
 	"k8s.io/klog/v2"
-
-	"metacontroller/pkg/apis/metacontroller/v1alpha1"
 )
 
 func callWebhook(webhook *v1alpha1.Webhook, hookType string, request interface{}, response interface{}) error {

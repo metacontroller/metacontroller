@@ -94,7 +94,7 @@ func TestGetCustomizeHookResponse_returnResponse(t *testing.T) {
 	callCustomizeHook = func(hook *v1alpha1.Hook, hookType string, request, response interface{}) error {
 		byteArray, _ := json.Marshal(expectedResponse)
 		if err := json.Unmarshal(byteArray, response); err != nil {
-			return nil
+			return err
 		}
 		return nil
 	}

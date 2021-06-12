@@ -266,8 +266,7 @@ func (pc *parentController) processNextWorkItem() bool {
 	}
 	defer pc.queue.Done(key)
 
-	err := pc.sync(key.(string))
-	if err != nil {
+	if err := pc.sync(key.(string)); err != nil {
 		utilruntime.HandleError(fmt.Errorf("failed to sync %v %q: %w", pc.parentResource.Kind, key, err))
 		pc.queue.AddRateLimited(key)
 		return true

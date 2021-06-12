@@ -2,3 +2,7 @@ run:
   skip-dirs:
     - pkg/client/generated
     - examples
+
+linters-settings:
+  exhaustive:
+    default-signifies-exhaustive: true

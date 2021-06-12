@@ -178,7 +178,7 @@ func (rm *Manager) notifyRelatedParents(related ...*unstructured.Unstructured) {
 	}
 }
 
-func (rm *Manager) findRelatedParents(relateds ...*unstructured.Unstructured) []*unstructured.Unstructured {
+func (rm *Manager) findRelatedParents(relatedSlice ...*unstructured.Unstructured) []*unstructured.Unstructured {
 	var matchingParents []*unstructured.Unstructured
 
 	for _, parentInformer := range rm.parentInformers {
@@ -196,7 +196,7 @@ func (rm *Manager) findRelatedParents(relateds ...*unstructured.Unstructured) []
 			}
 
 			for _, relatedRule := range customizeHookResponse.RelatedResourceRules {
-				for _, related := range relateds {
+				for _, related := range relatedSlice {
 					matches, err := rm.matchesRelatedRule(parent, related, relatedRule)
 					if err != nil {
 						utilruntime.HandleError(err)
@@ -250,9 +250,6 @@ func (rm *Manager) matchesRelatedRule(parent, related *unstructured.Unstructured
 	}
 
 	selectionType, err := determineSelectionType(relatedRule)
-	if err != nil {
-		return false, err
-	}
 
 	switch selectionType {
 	case selectByLabels:
@@ -276,6 +273,8 @@ func (rm *Manager) matchesRelatedRule(parent, related *unstructured.Unstructured
 			return stringInArray(relatedName, relatedRule.Names), nil
 		}
 		return true, nil
+	case invalid:
+		return false, err
 	}
 	return false, fmt.Errorf("should not reach here")
 }
@@ -310,9 +309,6 @@ func (rm *Manager) GetRelatedObjects(parent *unstructured.Unstructured) (common.
 		}
 
 		selectionType, err := determineSelectionType(relatedRule)
-		if err != nil {
-			return nil, err
-		}
 
 		switch selectionType {
 		case selectByLabels:
@@ -350,6 +346,8 @@ func (rm *Manager) GetRelatedObjects(parent *unstructured.Unstructured) (common.
 					}
 				}
 			}
+		case invalid:
+			return nil, err
 		}
 	}
 	return childMap, err
