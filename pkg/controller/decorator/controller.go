@@ -282,8 +282,7 @@ func (c *decoratorController) processNextWorkItem() bool {
 	}
 	defer c.queue.Done(key)
 
-	err := c.sync(key.(string))
-	if err != nil {
+	if err := c.sync(key.(string)); err != nil {
 		utilruntime.HandleError(fmt.Errorf("failed to sync %v %q: %w", c.dc.Name, key, err))
 		c.queue.AddRateLimited(key)
 		return true

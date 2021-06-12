@@ -329,8 +329,9 @@ func isRollingStrategy(strategy *v1alpha1.CompositeControllerChildUpdateStrategy
 	switch strategy.Method {
 	case v1alpha1.ChildUpdateRollingInPlace, v1alpha1.ChildUpdateRollingRecreate:
 		return true
+	default:
+		return false
 	}
-	return false
 }
 
 func makeUpdateStrategyMap(resources *dynamicdiscovery.ResourceMap, cc *v1alpha1.CompositeController) (updateStrategyMap, error) {

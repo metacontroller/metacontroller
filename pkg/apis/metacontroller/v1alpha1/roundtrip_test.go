@@ -21,7 +21,7 @@ import (
 	"testing"
 
 	"k8s.io/apimachinery/pkg/api/apitesting/fuzzer"
-	roundtrip "k8s.io/apimachinery/pkg/api/apitesting/roundtrip"
+	"k8s.io/apimachinery/pkg/api/apitesting/roundtrip"
 	metafuzzer "k8s.io/apimachinery/pkg/apis/meta/fuzzer"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -33,8 +33,7 @@ func TestRoundTrip(t *testing.T) {
 	scheme := runtime.NewScheme()
 	codecs := serializer.NewCodecFactory(scheme)
 
-	err := AddToScheme(scheme)
-	if err != nil {
+	if err := AddToScheme(scheme); err != nil {
 		t.Error(err.Error())
 	}
 
