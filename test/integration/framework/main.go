@@ -23,6 +23,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"strconv"
 	"time"
 
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
@@ -124,12 +125,17 @@ func testMain(tests func() int) error {
 	// metacontroller StatefulSet will not actually run anything.
 	// Instead, we start the Metacontroller server locally inside the test binary,
 	// since that's part of the code under test.
+	port, err := getAvailablePort()
+	if err != nil {
+		return fmt.Errorf("cannot find a port: %v", err)
+	}
 	configuration := options.Configuration{
 		RestConfig:        ApiserverConfig(),
 		DiscoveryInterval: 500 * time.Millisecond,
 		InformerRelist:    30 * time.Minute,
 		Workers:           5,
 		CorrelatorOptions: record.CorrelatorOptions{},
+		MetricsEndpoint:   ":" + strconv.Itoa(port),
 	}
 	mgr, stopServer, err := server.New(configuration)
 	if err != nil {

@@ -59,6 +59,7 @@ in `manifests/metacontroller.yaml`):
 | `-v` | Set the logging verbosity level (e.g. `-v=4`). Level 4 logs Metacontroller's interaction with the API server. Levels 5 and up additionally log details of Metacontroller's invocation of lambda hooks. See the [troubleshooting guide](./troubleshooting.md) for more. |
 | `--discovery-interval` | How often to refresh discovery cache to pick up newly-installed resources (e.g. `--discovery-interval=10s`). |
 | `--cache-flush-interval` | How often to flush local caches and relist objects from the API server (e.g. `--cache-flush-interval=30m`). |
+| `--debug-addr` | The address to bind metrics endpoint - /metrics (e.g. `--debug-addr=":9999"`). |
 | `--client-config-path` | Path to kubeconfig file (same format as used by kubectl); if not specified, use in-cluster config (e.g. `--client-config-path=/path/to/kubeconfig`). |
 | `--client-go-qps` | Number of queries per second client-go is allowed to make (default 5, e.g. `--client-go-qps=100`) |
 | `--client-go-burst` | Allowed burst queries for client-go (default 10, e.g. `--client-go-burst=200`) |
