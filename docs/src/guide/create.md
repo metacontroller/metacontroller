@@ -50,6 +50,8 @@ spec:
     plural: helloworlds
     singular: helloworld
   scope: Namespaced
+  subresources:
+    status: {}
 ```
 
 Then apply it to your cluster:
