@@ -13,4 +13,5 @@ type Configuration struct {
 	InformerRelist    time.Duration
 	Workers           int
 	CorrelatorOptions record.CorrelatorOptions
+	MetricsEndpoint   string
 }

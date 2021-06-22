@@ -17,10 +17,7 @@ limitations under the License.
 package main
 
 import (
-	"context"
-	"errors"
 	"flag"
-	"net/http"
 	"os"
 	"sync"
 	"time"
@@ -35,11 +32,7 @@ import (
 	controllerruntime "sigs.k8s.io/controller-runtime"
 	controllerruntimelog "sigs.k8s.io/controller-runtime/pkg/log"
 
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"k8s.io/klog/v2"
-
-	"k8s.io/component-base/metrics/legacyregistry"
-	_ "k8s.io/component-base/metrics/prometheus/clientgo"
 
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
 )
@@ -47,7 +40,7 @@ import (
 var (
 	discoveryInterval = flag.Duration("discovery-interval", 30*time.Second, "How often to refresh discovery cache to pick up newly-installed resources")
 	informerRelist    = flag.Duration("cache-flush-interval", 30*time.Minute, "How often to flush local caches and relist objects from the API server")
-	debugAddr         = flag.String("debug-addr", ":9999", "The address to bind the debug http endpoints")
+	metricsAddr       = flag.String("debug-addr", ":9999", "The address to bind metrics endpoint - /metrics")
 	clientConfigPath  = flag.String("client-config-path", "", "(Deprecated: switch to `--kubeconfig`) Path to kubeconfig file (same format as used by kubectl); if not specified, use in-cluster config")
 	clientGoQPS       = flag.Float64("client-go-qps", 5, "Number of queries per second client-go is allowed to make (default 5)")
 	clientGoBurst     = flag.Int("client-go-burst", 10, "Allowed burst queries for client-go (default 10)")
@@ -72,7 +65,7 @@ func main() {
 
 	klog.InfoS("Discovery cache flush interval", "discovery_interval", *discoveryInterval)
 	klog.InfoS("API server object cache flush interval", "cache_flush_interval", *informerRelist)
-	klog.InfoS("Http server address", "port", *debugAddr)
+	klog.InfoS("Metrics http server address", "port", *metricsAddr)
 	klog.InfoS("Metacontroller build information", "version", version)
 
 	logger := klogr.NewWithOptions(klogr.WithFormat(klogr.FormatKlog))
@@ -94,6 +87,7 @@ func main() {
 			BurstSize: *eventsBurst,
 			QPS:       float32(*eventsQPS),
 		},
+		MetricsEndpoint: *metricsAddr,
 	}
 
 	// Create a new manager with a stop function
@@ -120,26 +114,7 @@ func main() {
 		klog.InfoS("Stopped metacontroller")
 	}()
 
-	mux := http.NewServeMux()
-	mux.Handle("/metrics", promhttp.HandlerFor(legacyregistry.DefaultGatherer, promhttp.HandlerOpts{}))
-	srv := &http.Server{
-		Addr:    *debugAddr,
-		Handler: mux,
-	}
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		klog.InfoS("Serving metrics")
-		if err := srv.ListenAndServe(); errors.Is(err, http.ErrServerClosed) {
-			klog.ErrorS(err, "Error serving http endpoint")
-		}
-		klog.InfoS("Stopped metrics server")
-	}()
-
 	<-mgrStopChan.Done()
-	if err = srv.Shutdown(context.Background()); err != nil {
-		klog.ErrorS(err, "Error shutting down...")
-	}
+	klog.InfoS("Stopped controller manager")
 	wg.Wait()
 }
