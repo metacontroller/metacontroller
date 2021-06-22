@@ -137,7 +137,7 @@ func main() {
 		klog.InfoS("Stopped metrics server")
 	}()
 
-	mgrStopChan.Done()
+	<-mgrStopChan.Done()
 	if err = srv.Shutdown(context.Background()); err != nil {
 		klog.ErrorS(err, "Error shutting down...")
 	}
