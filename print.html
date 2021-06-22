@@ -1062,6 +1062,8 @@ spec:
     plural: helloworlds
     singular: helloworld
   scope: Namespaced
+  subresources:
+    status: {}
 </code></pre>
 <p>Then apply it to your cluster:</p>
 <pre><code class="language-sh">kubectl apply -f crd.yaml
