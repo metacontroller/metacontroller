@@ -998,6 +998,7 @@ in <code>manifests/metacontroller.yaml</code>):</p>
 <tr><td><code>-v</code></td><td>Set the logging verbosity level (e.g. <code>-v=4</code>). Level 4 logs Metacontroller's interaction with the API server. Levels 5 and up additionally log details of Metacontroller's invocation of lambda hooks. See the <a href="guide/./troubleshooting.html">troubleshooting guide</a> for more.</td></tr>
 <tr><td><code>--discovery-interval</code></td><td>How often to refresh discovery cache to pick up newly-installed resources (e.g. <code>--discovery-interval=10s</code>).</td></tr>
 <tr><td><code>--cache-flush-interval</code></td><td>How often to flush local caches and relist objects from the API server (e.g. <code>--cache-flush-interval=30m</code>).</td></tr>
+<tr><td><code>--debug-addr</code></td><td>The address to bind metrics endpoint - /metrics (e.g. <code>--debug-addr=&quot;:9999&quot;</code>).</td></tr>
 <tr><td><code>--client-config-path</code></td><td>Path to kubeconfig file (same format as used by kubectl); if not specified, use in-cluster config (e.g. <code>--client-config-path=/path/to/kubeconfig</code>).</td></tr>
 <tr><td><code>--client-go-qps</code></td><td>Number of queries per second client-go is allowed to make (default 5, e.g. <code>--client-go-qps=100</code>)</td></tr>
 <tr><td><code>--client-go-burst</code></td><td>Allowed burst queries for client-go (default 10, e.g. <code>--client-go-burst=200</code>)</td></tr>
