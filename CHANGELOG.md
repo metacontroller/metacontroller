@@ -1,3 +1,10 @@
+## [1.5.18](https://github.com/metacontroller/metacontroller/compare/v1.5.17...v1.5.18) (2021-06-23)
+
+
+### Bug Fixes
+
+* **metrics:** Utilize controller-runtime  metrics server ([45b80c3](https://github.com/metacontroller/metacontroller/commit/45b80c35170863e7377a2960bb8dacac0893a186))
+
 ## [1.5.17](https://github.com/metacontroller/metacontroller/compare/v1.5.16...v1.5.17) (2021-06-23)
 
 
