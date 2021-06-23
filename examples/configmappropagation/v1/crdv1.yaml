@@ -36,6 +36,15 @@ spec:
             - sourceName
             - sourceNamespace
             - targetNamespaces
+          status:
+            type: object
+            properties:
+              expected_copies:
+                type: integer
+              actual_copies:
+                type: integer
+              observedGeneration:
+                type: integer
         required:
         - spec
     subresources:

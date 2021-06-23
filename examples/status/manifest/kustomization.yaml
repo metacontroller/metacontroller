@@ -1,7 +1,0 @@
-resources:
-- noop-controller.yaml
-configMapGenerator:
-- name: noop-controller
-  namespace: metacontroller
-  files:
-  - sync.js

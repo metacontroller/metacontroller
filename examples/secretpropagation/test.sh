@@ -21,3 +21,5 @@ kubectl apply -f example-secret.yaml
 echo "Wait for Secret propagation..."
 until [[ "$(kubectl get secret shareable -n alpha -o 'jsonpath={.metadata.name}')" == "shareable" ]]; do sleep 1; done
 until [[ "$(kubectl get secret shareable -n beta -o 'jsonpath={.metadata.name}')" == "shareable" ]]; do sleep 1; done
+echo "Check status update on parent..."
+until [[ "$(kubectl get SecretPropagation secret-propagation -o 'jsonpath={.status.working}')" == "fine" ]]; do sleep 1; done

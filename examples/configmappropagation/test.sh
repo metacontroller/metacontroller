@@ -22,3 +22,5 @@ echo "Wait for ConfigMap propagation..."
 until [[ "$(kubectl get cm settings -n one -o 'jsonpath={.metadata.name}')" == "settings" ]]; do sleep 1; done
 until [[ "$(kubectl get cm settings -n two -o 'jsonpath={.metadata.name}')" == "settings" ]]; do sleep 1; done
 until [[ "$(kubectl get cm settings -n three -o 'jsonpath={.metadata.name}')" == "settings" ]]; do sleep 1; done
+echo "Check status update on parent..."
+until [[ "$(kubectl get ConfigMapPropagation settings-propagation -o 'jsonpath={.status.actual_copies}')" == "3" ]]; do sleep 1; done

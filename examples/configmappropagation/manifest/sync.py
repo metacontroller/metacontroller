@@ -68,8 +68,8 @@ class Controller(BaseHTTPRequestHandler):
             actual_copies: int = len(observed['children']['ConfigMap.v1'])
             response: dict = {
                 'status': {
-                    'expected_copies': f'{expected_copies}',
-                    'actual_copies': f'{actual_copies}'
+                    'expected_copies': expected_copies,
+                    'actual_copies': actual_copies
                 },
                 'children': self.sync(parent, related)
             }

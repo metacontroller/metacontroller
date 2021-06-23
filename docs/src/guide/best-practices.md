@@ -101,3 +101,46 @@ For example, if you observe 2 Pods, but you return a desired list of 3 Pods,
 you should return a Status that reflects only the observed Pods
 (e.g. `replicas: 2`).
 This is important so that Status reflects present reality, not future desires.
+
+#### Working with Status subresource in metacontroller
+ If you would like to expose and use the `Status` subresource in your custom resource, you should take care of:
+ 1. having a proper CRD schema definition for `Status` section in order to let metacontroller
+ update it successfully - it must be a part of CRD schema, i.e.
+ ```yaml
+ ---
+ apiVersion: apiextensions.k8s.io/v1
+ kind: CustomResourceDefinition
+ metadata:
+   name: configmappropagations.examples.metacontroller.io
+ spec:
+   ...
+   versions:
+   - name: v1alpha1
+     served: true
+     storage: true
+     schema:
+       openAPIV3Schema:
+         type: object
+         properties:
+           spec:
+             ...
+           status:
+             type: object
+             properties:
+               expected_copies:
+                 type: integer
+               actual_copies:
+                 type: integer
+               observedGeneration:
+                 type: integer
+         required:
+         - spec
+     subresources:
+       status: {}
+ ```
+2. your controller must be strict about the types in the schema defined in CRD, i.e., in example above
+do not try to set any of the `integer` fields as `string`s, or add additional fields there.
+
+
+To read more about `Status` subresource please look at:
+* Kubernetes documentation - https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/#status-subresource
