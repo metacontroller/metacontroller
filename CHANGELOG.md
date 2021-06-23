@@ -1,3 +1,10 @@
+## [1.5.17](https://github.com/metacontroller/metacontroller/compare/v1.5.16...v1.5.17) (2021-06-23)
+
+
+### Bug Fixes
+
+* **metrics:** [#289](https://github.com/metacontroller/metacontroller/issues/289) - Wait on signal before exiting to fix http server with metrics ([f646a90](https://github.com/metacontroller/metacontroller/commit/f646a9078785aef40deda04db9e870805f89f026))
+
 ## [1.5.16](https://github.com/metacontroller/metacontroller/compare/v1.5.15...v1.5.16) (2021-06-16)
 
 
