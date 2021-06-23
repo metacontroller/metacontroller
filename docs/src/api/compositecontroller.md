@@ -155,7 +155,7 @@ has the following subfields:
 | Field | Description |
 | ----- | ----------- |
 | [`method`](#child-update-methods) | A string indicating the overall method that should be used for updating this type of child resource. **The default is `OnDelete`, which means don't try to update children that already exist.** |
-| [`statusChecks`](#child-update-status-checks) | If any rolling update method is selected, children that have already been updated must pass these status checks before the rollout will continue. |
+| [`statusChecks`](#child-update-status-checks) | If any rolling update method is selected, children that have already been updated must pass these status checks before the rollout will continue, please also read [this section](../guide/best-practices.md#Status) |
 
 ### Child Update Methods
 

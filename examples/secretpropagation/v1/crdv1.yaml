@@ -62,6 +62,11 @@ spec:
             - sourceName
             - sourceNamespace
             - targetNamespaceLabelSelector
+          status:
+            type: object
+            properties:
+              working:
+                type: string
         required:
         - spec
     subresources:

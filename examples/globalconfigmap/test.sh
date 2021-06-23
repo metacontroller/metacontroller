@@ -22,3 +22,5 @@ echo "Wait for ConfigMap propagation..."
 until [[ "$(kubectl get cm globalsettings -n first -o 'jsonpath={.metadata.name}')" == "globalsettings" ]]; do sleep 1; done
 until [[ "$(kubectl get cm globalsettings -n second -o 'jsonpath={.metadata.name}')" == "globalsettings" ]]; do sleep 1; done
 until [[ "$(kubectl get cm globalsettings -n third -o 'jsonpath={.metadata.name}')" == "globalsettings" ]]; do sleep 1; done
+echo "Check status update on parent..."
+until [[ "$(kubectl get GlobalConfigMap globalsettings -o 'jsonpath={.status.working}')" == "fine" ]]; do sleep 1; done

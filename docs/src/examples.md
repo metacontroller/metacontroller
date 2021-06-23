@@ -69,7 +69,8 @@ new behavior to StatefulSet without having to reimplement it.
 ### ConfigMapPropagation
 
 [ConfigMapPropagation](https://www.github.com/metacontroller/metacontroller/tree/master/examples/configmappropagation) is
-a simple mechanizm to propagate given `ConfigMap` to other namespaces, specified in given objects. Source `ConfigMap` is also specifcied.
+a simple mechanism to propagate given `ConfigMap` to other namespaces, specified in given objects. Source `ConfigMap` is also specified.
+This is also an example how `Status` subresource should be handled.
 
 
 ### Global Config Map
