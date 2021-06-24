@@ -24,7 +24,7 @@ jobs:
           go-version: '1.16.5' # The Go version to download (if necessary) and use.
       - run: |
           go get k8s.io/klog/hack/tools/logcheck@latest
-          go get k8s.io/client-go@v0.21.1
+          go get k8s.io/client-go@v0.21.2
           go install k8s.io/klog/hack/tools/logcheck@latest
       - run: logcheck ./...
   docker-linters:
