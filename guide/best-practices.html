@@ -184,7 +184,11 @@
 <ul>
 <li><a href="#apply-semantics">Apply Semantics</a></li>
 <li><a href="#side-effects">Side Effects</a></li>
-<li><a href="#status">Status</a></li>
+<li><a href="#status">Status</a>
+<ul>
+<li><a href="#working-with-status-subresource-in-metacontroller">Working with Status subresource in metacontroller</a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
@@ -258,6 +262,51 @@ the actual state of the world may not match what you want yet.</p>
 you should return a Status that reflects only the observed Pods
 (e.g. <code>replicas: 2</code>).
 This is important so that Status reflects present reality, not future desires.</p>
+<h4 id="working-with-status-subresource-in-metacontroller"><a class="header" href="#working-with-status-subresource-in-metacontroller">Working with Status subresource in metacontroller</a></h4>
+<p>If you would like to expose and use the <code>Status</code> subresource in your custom resource, you should take care of:</p>
+<ol>
+<li>having a proper CRD schema definition for <code>Status</code> section in order to let metacontroller
+update it successfully - it must be a part of CRD schema, i.e.</li>
+</ol>
+<pre><code class="language-yaml">---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: configmappropagations.examples.metacontroller.io
+spec:
+  ...
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            ...
+          status:
+            type: object
+            properties:
+              expected_copies:
+                type: integer
+              actual_copies:
+                type: integer
+              observedGeneration:
+                type: integer
+        required:
+        - spec
+    subresources:
+      status: {}
+</code></pre>
+<ol start="2">
+<li>your controller must be strict about the types in the schema defined in CRD, i.e., in example above
+do not try to set any of the <code>integer</code> fields as <code>string</code>s, or add additional fields there.</li>
+</ol>
+<p>To read more about <code>Status</code> subresource please look at:</p>
+<ul>
+<li>Kubernetes documentation - https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/#status-subresource</li>
+</ul>
 
                     </main>
 

@@ -482,7 +482,8 @@ new behavior to StatefulSet without having to reimplement it.</p>
 <p><a href="./api/customize.html">Customize hook</a> is addition to Composite/Decorator controllers, extending information given in <code>sync</code> hook of other objects (called <code>related</code>) in addition to parent.</p>
 <h3 id="configmappropagation"><a class="header" href="#configmappropagation">ConfigMapPropagation</a></h3>
 <p><a href="https://www.github.com/metacontroller/metacontroller/tree/master/examples/configmappropagation">ConfigMapPropagation</a> is
-a simple mechanizm to propagate given <code>ConfigMap</code> to other namespaces, specified in given objects. Source <code>ConfigMap</code> is also specifcied.</p>
+a simple mechanism to propagate given <code>ConfigMap</code> to other namespaces, specified in given objects. Source <code>ConfigMap</code> is also specified.
+This is also an example how <code>Status</code> subresource should be handled.</p>
 <h3 id="global-config-map"><a class="header" href="#global-config-map">Global Config Map</a></h3>
 <p><a href="https://www.github.com/metacontroller/metacontroller/tree/master/examples/globalconfigmap">Global Config Map</a> is similar to <code>ConfigMapPropagation</code>. but populates <code>ConfigMap</code> to all namespaces.</p>
 <h3 id="secret-propagation"><a class="header" href="#secret-propagation">Secret propagation</a></h3>
@@ -1331,7 +1332,11 @@ kubectl delete ns hello
 <ul>
 <li><a href="guide/best-practices.html#apply-semantics">Apply Semantics</a></li>
 <li><a href="guide/best-practices.html#side-effects">Side Effects</a></li>
-<li><a href="guide/best-practices.html#status">Status</a></li>
+<li><a href="guide/best-practices.html#status">Status</a>
+<ul>
+<li><a href="guide/best-practices.html#working-with-status-subresource-in-metacontroller">Working with Status subresource in metacontroller</a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
@@ -1405,6 +1410,51 @@ the actual state of the world may not match what you want yet.</p>
 you should return a Status that reflects only the observed Pods
 (e.g. <code>replicas: 2</code>).
 This is important so that Status reflects present reality, not future desires.</p>
+<h4 id="working-with-status-subresource-in-metacontroller"><a class="header" href="#working-with-status-subresource-in-metacontroller">Working with Status subresource in metacontroller</a></h4>
+<p>If you would like to expose and use the <code>Status</code> subresource in your custom resource, you should take care of:</p>
+<ol>
+<li>having a proper CRD schema definition for <code>Status</code> section in order to let metacontroller
+update it successfully - it must be a part of CRD schema, i.e.</li>
+</ol>
+<pre><code class="language-yaml">---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: configmappropagations.examples.metacontroller.io
+spec:
+  ...
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            ...
+          status:
+            type: object
+            properties:
+              expected_copies:
+                type: integer
+              actual_copies:
+                type: integer
+              observedGeneration:
+                type: integer
+        required:
+        - spec
+    subresources:
+      status: {}
+</code></pre>
+<ol start="2">
+<li>your controller must be strict about the types in the schema defined in CRD, i.e., in example above
+do not try to set any of the <code>integer</code> fields as <code>string</code>s, or add additional fields there.</li>
+</ol>
+<p>To read more about <code>Status</code> subresource please look at:</p>
+<ul>
+<li>Kubernetes documentation - https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/#status-subresource</li>
+</ul>
 <h1 id="troubleshooting"><a class="header" href="#troubleshooting">Troubleshooting</a></h1>
 <p>This is a collection of tips for debugging controllers written with Metacontroller.</p>
 <p>If you have something to add to the collection, please send a pull request against
@@ -1864,7 +1914,7 @@ that your controller creates on behalf of each parent.</p>
 has the following subfields:</p>
 <table><thead><tr><th>Field</th><th>Description</th></tr></thead><tbody>
 <tr><td><a href="api/compositecontroller.html#child-update-methods"><code>method</code></a></td><td>A string indicating the overall method that should be used for updating this type of child resource. <strong>The default is <code>OnDelete</code>, which means don't try to update children that already exist.</strong></td></tr>
-<tr><td><a href="api/compositecontroller.html#child-update-status-checks"><code>statusChecks</code></a></td><td>If any rolling update method is selected, children that have already been updated must pass these status checks before the rollout will continue.</td></tr>
+<tr><td><a href="api/compositecontroller.html#child-update-status-checks"><code>statusChecks</code></a></td><td>If any rolling update method is selected, children that have already been updated must pass these status checks before the rollout will continue, please also read <a href="api/../guide/best-practices.html#Status">this section</a></td></tr>
 </tbody></table>
 <h3 id="child-update-methods"><a class="header" href="#child-update-methods">Child Update Methods</a></h3>
 <p>Within each child resource's <code>updateStrategy</code>, the <code>method</code> field can have

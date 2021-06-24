@@ -242,7 +242,8 @@ new behavior to StatefulSet without having to reimplement it.</p>
 <p><a href="./api/customize.html">Customize hook</a> is addition to Composite/Decorator controllers, extending information given in <code>sync</code> hook of other objects (called <code>related</code>) in addition to parent.</p>
 <h3 id="configmappropagation"><a class="header" href="#configmappropagation">ConfigMapPropagation</a></h3>
 <p><a href="https://www.github.com/metacontroller/metacontroller/tree/master/examples/configmappropagation">ConfigMapPropagation</a> is
-a simple mechanizm to propagate given <code>ConfigMap</code> to other namespaces, specified in given objects. Source <code>ConfigMap</code> is also specifcied.</p>
+a simple mechanism to propagate given <code>ConfigMap</code> to other namespaces, specified in given objects. Source <code>ConfigMap</code> is also specified.
+This is also an example how <code>Status</code> subresource should be handled.</p>
 <h3 id="global-config-map"><a class="header" href="#global-config-map">Global Config Map</a></h3>
 <p><a href="https://www.github.com/metacontroller/metacontroller/tree/master/examples/globalconfigmap">Global Config Map</a> is similar to <code>ConfigMapPropagation</code>. but populates <code>ConfigMap</code> to all namespaces.</p>
 <h3 id="secret-propagation"><a class="header" href="#secret-propagation">Secret propagation</a></h3>

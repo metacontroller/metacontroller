@@ -318,7 +318,7 @@ that your controller creates on behalf of each parent.</p>
 has the following subfields:</p>
 <table><thead><tr><th>Field</th><th>Description</th></tr></thead><tbody>
 <tr><td><a href="#child-update-methods"><code>method</code></a></td><td>A string indicating the overall method that should be used for updating this type of child resource. <strong>The default is <code>OnDelete</code>, which means don't try to update children that already exist.</strong></td></tr>
-<tr><td><a href="#child-update-status-checks"><code>statusChecks</code></a></td><td>If any rolling update method is selected, children that have already been updated must pass these status checks before the rollout will continue.</td></tr>
+<tr><td><a href="#child-update-status-checks"><code>statusChecks</code></a></td><td>If any rolling update method is selected, children that have already been updated must pass these status checks before the rollout will continue, please also read <a href="../guide/best-practices.html#Status">this section</a></td></tr>
 </tbody></table>
 <h3 id="child-update-methods"><a class="header" href="#child-update-methods">Child Update Methods</a></h3>
 <p>Within each child resource's <code>updateStrategy</code>, the <code>method</code> field can have
