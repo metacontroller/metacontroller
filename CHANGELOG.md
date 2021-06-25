@@ -1,3 +1,10 @@
+## [1.5.19](https://github.com/metacontroller/metacontroller/compare/v1.5.18...v1.5.19) (2021-06-25)
+
+
+### Bug Fixes
+
+* **deps:** Update controllrt-runtime to 0.9.2 & k8s.io to v0.21.2 ([4031180](https://github.com/metacontroller/metacontroller/commit/4031180ed0c416b727da8c84efb3ee5b50b01dbd))
+
 ## [1.5.18](https://github.com/metacontroller/metacontroller/compare/v1.5.17...v1.5.18) (2021-06-23)
 
 
