@@ -33,7 +33,7 @@ unit-test: test-setup
 .PHONY: integration-test
 integration-test: test-setup
 	cd ./test/integration; \
-	gotestsum -- -coverpkg="${COVER_PKGS}" -coverprofile=hack/tmp/integration-coverage.out ./... -v -timeout 5m -args --logtostderr -v=1
+	gotestsum -- -coverpkg="${COVER_PKGS}" -coverprofile=hack/tmp/integration-coverage.out ./... -timeout 5m
 
 .PHONY: test-setup
 test-setup: vendor

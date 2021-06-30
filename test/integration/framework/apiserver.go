@@ -29,12 +29,12 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"metacontroller/pkg/logging"
 	"os"
 	"os/exec"
 	"strconv"
 
 	"k8s.io/client-go/rest"
-	"k8s.io/klog/v2"
 )
 
 var apiserverURL = ""
@@ -69,13 +69,13 @@ func startApiserver() (func(), error) {
 		return nil, fmt.Errorf("could not get a secure port: %v", err)
 	}
 	apiserverURL = fmt.Sprintf("http://127.0.0.1:%d", apiserverInsecurePort)
-	klog.InfoS("Starting kube-apiserver", "url", apiserverURL)
+	logging.Logger.Info("Starting kube-apiserver", "url", apiserverURL)
 
 	apiserverDataDir, err := ioutil.TempDir(os.TempDir(), "integration_test_apiserver_data")
 	if err != nil {
 		return nil, fmt.Errorf("unable to make temp kube-apiserver data dir: %v", err)
 	}
-	klog.InfoS("Storing kube-apiserver data", "data_directory", apiserverDataDir)
+	logging.Logger.Info("Storing kube-apiserver data", "data_directory", apiserverDataDir)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cmd := exec.CommandContext(
@@ -96,10 +96,10 @@ func startApiserver() (func(), error) {
 	stop := func() {
 		cancel()
 		err := cmd.Wait()
-		klog.InfoS("Kube-apiserver exit", "status", err)
+		logging.Logger.Info("Kube-apiserver exit", "status", err)
 		err = os.RemoveAll(apiserverDataDir)
 		if err != nil {
-			klog.ErrorS(err, "Error during kube-apiserver cleanup")
+			logging.Logger.Error(err, "Error during kube-apiserver cleanup")
 		}
 	}
 

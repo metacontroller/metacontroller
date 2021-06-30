@@ -24,6 +24,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-logr/logr"
+
 	dynamicinformer "metacontroller/pkg/dynamic/informer"
 
 	"metacontroller/pkg/events"
@@ -80,16 +82,11 @@ type decoratorController struct {
 
 	finalizer *finalizer.Manager
 	customize customize.Manager
+
+	logger logr.Logger
 }
 
-func newDecoratorController(
-	resources *dynamicdiscovery.ResourceMap,
-	dynClient *dynamicclientset.Clientset,
-	dynInformers *dynamicinformer.SharedInformerFactory,
-	eventRecorder record.EventRecorder,
-	dc *v1alpha1.DecoratorController,
-	numWorkers int,
-) (controller *decoratorController, newErr error) {
+func newDecoratorController(resources *dynamicdiscovery.ResourceMap, dynClient *dynamicclientset.Clientset, dynInformers *dynamicinformer.SharedInformerFactory, eventRecorder record.EventRecorder, dc *v1alpha1.DecoratorController, numWorkers int, logger logr.Logger) (controller *decoratorController, newErr error) {
 	c := &decoratorController{
 		dc:              dc,
 		resources:       resources,
@@ -105,17 +102,10 @@ func newDecoratorController(
 			Name:    "metacontroller.io/decoratorcontroller-" + dc.Name,
 			Enabled: dc.Spec.Hooks.Finalize != nil,
 		},
+		logger: logger.WithName(dc.Name),
 	}
 
-	customize := customize.NewCustomizeManager(
-		dc.Name,
-		c.enqueueParentObject,
-		dc,
-		dynClient,
-		dynInformers,
-		c.parentInformers,
-		c.parentKinds,
-	)
+	customize := customize.NewCustomizeManager(dc.Name, c.enqueueParentObject, dc, dynClient, dynInformers, c.parentInformers, c.parentKinds, nil)
 	c.customize = customize
 
 	var err error
@@ -221,13 +211,13 @@ func (c *decoratorController) Start() {
 		defer close(c.doneCh)
 		defer utilruntime.HandleCrash()
 
-		klog.InfoS("Starting DecoratorController", "controller", klog.KObj(c.dc))
+		c.logger.Info("Starting DecoratorController", "controller", c.dc)
 		c.eventRecorder.Eventf(c.dc, v1.EventTypeNormal, events.ReasonStarting, "Starting controller: %s", c.dc.Name)
-		defer klog.InfoS("Shutting down DecoratorController", "controller", klog.KObj(c.dc))
+		defer c.logger.Info("Shutting down DecoratorController", "controller", c.dc)
 		defer c.eventRecorder.Eventf(c.dc, v1.EventTypeNormal, events.ReasonStopping, "Stopping controller: %s", c.dc.Name)
 
 		// Wait for dynamic client and all informers.
-		klog.InfoS("Waiting for DecoratorController caches to sync", "controller", klog.KObj(c.dc))
+		c.logger.Info("Waiting for DecoratorController caches to sync", "controller", c.dc)
 		syncFuncs := make([]cache.InformerSynced, 0, 1+len(c.dc.Spec.Resources)+len(c.dc.Spec.Attachments))
 		for _, informer := range c.parentInformers {
 			syncFuncs = append(syncFuncs, informer.Informer().HasSynced)
@@ -237,7 +227,7 @@ func (c *decoratorController) Start() {
 		}
 		if !cache.WaitForNamedCacheSync(c.dc.Name, c.stopCh, syncFuncs...) {
 			// We wait forever unless Stop() is called, so this isn't an error.
-			klog.InfoS("DecoratorController cache sync never finished", "controller", klog.KObj(c.dc))
+			c.logger.Info("DecoratorController cache sync never finished", "controller", c.dc)
 			return
 		}
 
@@ -283,7 +273,7 @@ func (c *decoratorController) processNextWorkItem() bool {
 	defer c.queue.Done(key)
 
 	if err := c.sync(key.(string)); err != nil {
-		utilruntime.HandleError(fmt.Errorf("failed to sync %v %q: %w", c.dc.Name, key, err))
+		utilruntime.HandleError(fmt.Errorf("failed to sync %v '%v': %w", c.dc.Name, key, err))
 		c.queue.AddRateLimited(key)
 		return true
 	}
@@ -387,7 +377,7 @@ func (c *decoratorController) onChildAdd(obj interface{}) {
 		// The controllerRef isn't a parent we know about.
 		return
 	}
-	klog.V(4).InfoS("Child created or updated", "controller", klog.KObj(c.dc), "parent_kind", parent.GetKind(), "parent", klog.KObj(parent), "child_kind", child.GetKind(), "child", klog.KObj(child))
+	c.logger.V(4).Info("Child created or updated", "controller", c.dc, "parent", parent, "child", child)
 	c.enqueueParentObject(parent)
 }
 
@@ -435,7 +425,7 @@ func (c *decoratorController) onChildDelete(obj interface{}) {
 		// The controllerRef isn't a parent we know about.
 		return
 	}
-	klog.V(4).InfoS("DecoratorController child deleted", "controller", klog.KObj(c.dc), "parent_kind", parent.GetKind(), "parent", klog.KObj(parent), "child_kind", child.GetKind(), "child", klog.KObj(child))
+	c.logger.V(4).Info("DecoratorController child deleted", "controller", c.dc, "parent", parent, "child", child)
 	c.enqueueParentObject(parent)
 }
 
@@ -444,6 +434,8 @@ func (c *decoratorController) sync(key string) error {
 	if err != nil {
 		return err
 	}
+
+	c.logger.V(4).Info("Sync", "object", klog.KRef(namespace, name))
 
 	resource := c.resources.GetKind(apiVersion, kind)
 	if resource == nil {
@@ -458,7 +450,7 @@ func (c *decoratorController) sync(key string) error {
 	parent, err := common.GetObject(informer, namespace, name)
 	if apierrors.IsNotFound(err) {
 		// Swallow the error since there's no point retrying if the parent is gone.
-		klog.V(4).InfoS("Object has been deleted", "kind", kind, "object", klog.KRef(namespace, name))
+		c.logger.V(4).Info("Parent object has been deleted", "kind", kind, "object", klog.KRef(namespace, name))
 		return nil
 	}
 	if err != nil {
@@ -481,7 +473,7 @@ func (c *decoratorController) syncParentObject(parent *unstructured.Unstructured
 		return nil
 	}
 
-	klog.V(4).InfoS("DecoratorController sync", "controller", klog.KObj(c.dc), "parent_kind", parent.GetKind(), "parent", klog.KObj(parent))
+	c.logger.V(4).Info("DecoratorController sync", "controller", c.dc, "parent", parent)
 
 	parentClient, err := c.dynClient.Kind(parent.GetAPIVersion(), parent.GetKind())
 	if err != nil {
@@ -580,7 +572,7 @@ func (c *decoratorController) syncParentObject(parent *unstructured.Unstructured
 			dynamicobject.RemoveFinalizer(updatedParent, c.finalizer.Name)
 		}
 
-		klog.V(4).InfoS("DecoratorController updating", "controller", klog.KObj(c.dc), "parent_kind", parent.GetKind(), "parent", klog.KObj(parent))
+		c.logger.V(4).Info("DecoratorController updating", "controller", c.dc, "parent", parent)
 		_, err = parentClient.Namespace(parent.GetNamespace()).Update(context.TODO(), updatedParent, metav1.UpdateOptions{})
 		if err != nil {
 			return fmt.Errorf("can't update %v %v/%v: %w", parent.GetKind(), parent.GetNamespace(), parent.GetName(), err)

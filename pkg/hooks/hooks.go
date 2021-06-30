@@ -23,9 +23,9 @@ import (
 )
 
 const (
-	FinalizeHook  string = "Finalize"
-	CustomizeHook string = "Customize"
-	SyncHook      string = "Sync"
+	FinalizeHook  string = "finalize"
+	CustomizeHook string = "customize"
+	SyncHook      string = "sync"
 )
 
 func Call(hook *v1alpha1.Hook, hookType string, request interface{}, response interface{}) error {

@@ -10,8 +10,6 @@ spec:
       containers:
       - name: metacontroller
         args:
-        - --logtostderr
-        - -v=5
+        - --zap-devel
+        - --zap-log-level=5
         - --discovery-interval=5s
-        - --client-go-qps=100
-        - --client-go-burst=200

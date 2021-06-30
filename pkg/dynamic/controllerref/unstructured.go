@@ -18,10 +18,9 @@ package controllerref
 
 import (
 	"fmt"
+	"metacontroller/pkg/logging"
 
 	"k8s.io/utils/pointer"
-
-	"k8s.io/klog/v2"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -90,11 +89,11 @@ func atomicUpdate(rc *dynamicclientset.ResourceClient, obj *unstructured.Unstruc
 	return err
 }
 
-func (m *UnstructuredManager) adoptChild(obj *unstructured.Unstructured) error {
+func (m *UnstructuredManager) adoptChild(child *unstructured.Unstructured) error {
 	if err := m.CanAdopt(); err != nil {
-		return fmt.Errorf("can't adopt %v %v/%v (%v): %w", m.childKind.Kind, obj.GetNamespace(), obj.GetName(), obj.GetUID(), err)
+		return fmt.Errorf("can't adopt %v %v/%v (%v): %w", m.childKind.Kind, child.GetNamespace(), child.GetName(), child.GetUID(), err)
 	}
-	klog.InfoS("Adopting", "parent_kind", m.parentKind.Kind, "controller", klog.KObj(m.Controller), "child_kind", m.childKind.Kind, "object", klog.KObj(obj))
+	logging.Logger.Info("Adopting", "parent", m.Controller, "child", child)
 	controllerRef := metav1.OwnerReference{
 		APIVersion:         m.parentKind.GroupVersion().String(),
 		Kind:               m.parentKind.Kind,
@@ -103,7 +102,7 @@ func (m *UnstructuredManager) adoptChild(obj *unstructured.Unstructured) error {
 		Controller:         pointer.BoolPtr(true),
 		BlockOwnerDeletion: pointer.BoolPtr(true),
 	}
-	return atomicUpdate(m.client, obj, func(obj *unstructured.Unstructured) bool {
+	return atomicUpdate(m.client, child, func(obj *unstructured.Unstructured) bool {
 		ownerRefs := addOwnerReference(obj.GetOwnerReferences(), controllerRef)
 		obj.SetOwnerReferences(ownerRefs)
 		return true
@@ -111,7 +110,7 @@ func (m *UnstructuredManager) adoptChild(obj *unstructured.Unstructured) error {
 }
 
 func (m *UnstructuredManager) releaseChild(obj *unstructured.Unstructured) error {
-	klog.InfoS("Releasing", "parent_kind", m.parentKind.Kind, "controller", klog.KObj(m.Controller), "child_kind", m.childKind.Kind, "object", klog.KObj(obj))
+	logging.Logger.Info("Releasing", "parent", m.Controller, "child", obj)
 	err := atomicUpdate(m.client, obj, func(obj *unstructured.Unstructured) bool {
 		ownerRefs := removeOwnerReference(obj.GetOwnerReferences(), m.Controller.GetUID())
 		obj.SetOwnerReferences(ownerRefs)

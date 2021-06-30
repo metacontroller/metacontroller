@@ -19,9 +19,12 @@ package composite
 import (
 	"context"
 	"fmt"
+	"metacontroller/pkg/logging"
 	"reflect"
 	"sync"
 	"time"
+
+	"github.com/go-logr/logr"
 
 	"metacontroller/pkg/events"
 
@@ -78,6 +81,8 @@ type parentController struct {
 
 	finalizer *finalizer.Manager
 	customize customize.Manager
+
+	logger logr.Logger
 }
 
 func newParentController(
@@ -89,6 +94,7 @@ func newParentController(
 	revisionLister mclisters.ControllerRevisionLister,
 	cc *v1alpha1.CompositeController,
 	numWorkers int,
+	logger logr.Logger,
 ) (pc *parentController, newErr error) {
 	// Make a dynamic client for the parent resource.
 	parentClient, err := dynClient.Resource(cc.Spec.ParentResource.APIVersion, cc.Spec.ParentResource.Resource)
@@ -157,6 +163,7 @@ func newParentController(
 			Name:    "metacontroller.io/compositecontroller-" + cc.Name,
 			Enabled: cc.Spec.Hooks.Finalize != nil,
 		},
+		logger: logger.WithName(cc.Name),
 	}
 
 	pc.customize = customize.NewCustomizeManager(
@@ -167,6 +174,7 @@ func newParentController(
 		dynInformers,
 		parentInformers,
 		parentResources,
+		pc.logger,
 	)
 
 	return pc, nil
@@ -209,13 +217,13 @@ func (pc *parentController) Start() {
 		defer close(pc.doneCh)
 		defer utilruntime.HandleCrash()
 
-		klog.InfoS("Starting CompositeController", "controller", klog.KObj(pc.cc))
+		pc.logger.Info("Starting CompositeController", "controller", pc.cc)
 		pc.eventRecorder.Eventf(pc.cc, v1.EventTypeNormal, events.ReasonStarting, "Starting controller: %s", pc.cc.Name)
-		defer klog.InfoS("Shutting down CompositeController", "controller", klog.KObj(pc.cc))
+		defer logging.Logger.Info("Shutting down CompositeController", "controller", pc.cc)
 		defer pc.eventRecorder.Eventf(pc.cc, v1.EventTypeNormal, events.ReasonStopping, "Stopping controller: %s", pc.cc.Name)
 
 		// Wait for dynamic client and all informers.
-		klog.InfoS("Waiting for CompositeController caches to sync", "controller", klog.KObj(pc.cc))
+		pc.logger.Info("Waiting for CompositeController caches to sync", "controller", pc.cc)
 		syncFuncs := make([]cache.InformerSynced, 0, 2+len(pc.cc.Spec.ChildResources))
 		syncFuncs = append(syncFuncs, pc.dynClient.HasSynced, pc.parentInformer.Informer().HasSynced)
 		for _, childInformer := range pc.childInformers {
@@ -223,7 +231,7 @@ func (pc *parentController) Start() {
 		}
 		if !cache.WaitForNamedCacheSync(pc.parentResource.Kind, pc.stopCh, syncFuncs...) {
 			// We wait forever unless Stop() is called, so this isn't an error.
-			klog.InfoS("CompositeController cache sync never finished", "controller", klog.KObj(pc.cc))
+			pc.logger.Info("CompositeController cache sync never finished", "controller", pc.cc)
 			return
 		}
 
@@ -267,7 +275,7 @@ func (pc *parentController) processNextWorkItem() bool {
 	defer pc.queue.Done(key)
 
 	if err := pc.sync(key.(string)); err != nil {
-		utilruntime.HandleError(fmt.Errorf("failed to sync %v %q: %w", pc.parentResource.Kind, key, err))
+		utilruntime.HandleError(fmt.Errorf("failed to sync %v '%v': %w", pc.parentResource.Kind, key, err))
 		pc.queue.AddRateLimited(key)
 		return true
 	}
@@ -351,7 +359,7 @@ func (pc *parentController) onChildAdd(obj interface{}) {
 			// The controllerRef isn't a parent we know about.
 			return
 		}
-		klog.V(4).InfoS("Child created or updated", "parent_kind", pc.parentResource.Kind, "parent", klog.KObj(parent), "child_kind", child.GetKind(), "child", klog.KObj(child))
+		pc.logger.V(4).Info("Child created or updated", "parent_kind", pc.parentResource.Kind, "parent", parent, "child", child)
 		pc.enqueueParentObject(parent)
 		return
 	}
@@ -362,7 +370,7 @@ func (pc *parentController) onChildAdd(obj interface{}) {
 	if len(parents) == 0 {
 		return
 	}
-	klog.V(4).InfoS("Orphan child created or updated", "parent_kind", pc.parentResource.Kind, "child_kind", child.GetKind(), "child", klog.KObj(child))
+	pc.logger.V(4).Info("Orphan child created or updated", "parent_kind", pc.parentResource.Kind, "child", child)
 	for _, parent := range parents {
 		pc.enqueueParentObject(parent)
 	}
@@ -412,7 +420,7 @@ func (pc *parentController) onChildDelete(obj interface{}) {
 		// The controllerRef isn't a parent we know about.
 		return
 	}
-	klog.V(4).InfoS("Child deleted", "parent_kind", pc.parentResource.Kind, "parent", klog.KObj(parent), "child_kind", child.GetKind(), "child", klog.KObj(child))
+	pc.logger.V(4).Info("Child deleted", "parent_kind", pc.parentResource.Kind, "parent", parent, "child", child)
 	pc.enqueueParentObject(parent)
 }
 
@@ -452,12 +460,12 @@ func (pc *parentController) sync(key string) error {
 		return err
 	}
 
-	klog.V(4).InfoS("Sync", "parent_kind", pc.parentResource.Kind, "object", klog.KRef(namespace, name))
+	pc.logger.V(4).Info("Sync", "object", klog.KRef(namespace, name))
 
 	parent, err := common.GetObject(pc.parentInformer, namespace, name)
 	if apierrors.IsNotFound(err) {
 		// Swallow the error since there's no point retrying if the parent is gone.
-		klog.V(4).InfoS("Object has been deleted", "parent_kind", pc.parentResource.Kind, "object", klog.KRef(namespace, name))
+		pc.logger.V(4).Info("Parent object has been deleted", "parent_kind", pc.parentResource.Kind, "object", klog.KRef(namespace, name))
 		return nil
 	}
 	if err != nil {

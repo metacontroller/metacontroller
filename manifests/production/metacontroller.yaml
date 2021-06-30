@@ -23,7 +23,6 @@ spec:
         image: metacontrollerio/metacontroller:v1.5.20
         command: ["/usr/bin/metacontroller"]
         args:
-        - --logtostderr
-        - -v=4
+        - --zap-log-level=4
         - --discovery-interval=20s
   volumeClaimTemplates: []
