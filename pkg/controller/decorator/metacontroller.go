@@ -18,6 +18,9 @@ package decorator
 
 import (
 	"context"
+	"metacontroller/pkg/logging"
+
+	"github.com/go-logr/logr"
 
 	dynamicclientset "metacontroller/pkg/dynamic/clientset"
 	dynamicdiscovery "metacontroller/pkg/dynamic/discovery"
@@ -29,7 +32,6 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 
-	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -52,6 +54,8 @@ type Metacontroller struct {
 	decoratorControllers map[string]*decoratorController
 
 	numWorkers int
+
+	logger logr.Logger
 }
 
 func NewMetacontroller(controllerContext common.ControllerContext, numWorkers int) *Metacontroller {
@@ -65,6 +69,8 @@ func NewMetacontroller(controllerContext common.ControllerContext, numWorkers in
 		decoratorControllers: make(map[string]*decoratorController),
 
 		numWorkers: numWorkers,
+
+		logger: logging.Logger.WithName("decorator"),
 	}
 
 	return mc
@@ -72,12 +78,12 @@ func NewMetacontroller(controllerContext common.ControllerContext, numWorkers in
 
 func (mc *Metacontroller) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	decoratorControllerName := request.Name
-	klog.V(4).InfoS("Sync DecoratorController", "name", decoratorControllerName)
+	mc.logger.V(4).Info("Sync DecoratorController", "name", decoratorControllerName)
 
 	dc := v1alpha1.DecoratorController{}
 	err := mc.k8sClient.Get(ctx, request.NamespacedName, &dc)
 	if apierrors.IsNotFound(err) {
-		klog.V(4).InfoS("DecoratorController has been deleted", "name", decoratorControllerName)
+		mc.logger.V(4).Info("DecoratorController has been deleted", "name", decoratorControllerName)
 		// Stop and remove the controller if it exists.
 		if c, ok := mc.decoratorControllers[decoratorControllerName]; ok {
 			c.Stop()
@@ -126,6 +132,7 @@ func (mc *Metacontroller) reconcileDecoratorController(dc *v1alpha1.DecoratorCon
 		mc.eventRecorder,
 		dc,
 		mc.numWorkers,
+		mc.logger,
 	)
 	if err != nil {
 		mc.eventRecorder.Eventf(

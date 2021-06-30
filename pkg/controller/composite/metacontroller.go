@@ -18,6 +18,9 @@ package composite
 
 import (
 	"context"
+	"metacontroller/pkg/logging"
+
+	"github.com/go-logr/logr"
 
 	"metacontroller/pkg/controller/common"
 
@@ -31,7 +34,6 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 
-	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -60,6 +62,7 @@ type Metacontroller struct {
 	parentControllers map[string]*parentController
 
 	numWorkers int
+	logger     logr.Logger
 }
 
 func NewMetacontroller(controllerContext common.ControllerContext, mcClient mcclientset.Interface, numWorkers int) *Metacontroller {
@@ -78,6 +81,7 @@ func NewMetacontroller(controllerContext common.ControllerContext, mcClient mccl
 		parentControllers: make(map[string]*parentController),
 
 		numWorkers: numWorkers,
+		logger:     logging.Logger.WithName("composite"),
 	}
 
 	return mc
@@ -85,12 +89,12 @@ func NewMetacontroller(controllerContext common.ControllerContext, mcClient mccl
 
 func (mc *Metacontroller) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	compositeControllerName := request.Name
-	klog.V(4).InfoS("Sync CompositeController", "name", compositeControllerName)
+	mc.logger.Info("Sync CompositeController", "name", compositeControllerName)
 
 	cc := v1alpha1.CompositeController{}
 	err := mc.k8sClient.Get(ctx, request.NamespacedName, &cc)
 	if apierrors.IsNotFound(err) {
-		klog.V(4).InfoS("CompositeController has been deleted", "name", compositeControllerName)
+		mc.logger.Info("CompositeController has been deleted", "name", compositeControllerName)
 		// Stop and remove the controller if it exists.
 		if pc, ok := mc.parentControllers[compositeControllerName]; ok {
 			pc.Stop()
@@ -105,6 +109,7 @@ func (mc *Metacontroller) Reconcile(ctx context.Context, request reconcile.Reque
 	}
 
 	if err != nil {
+		mc.logger.Error(err, "Sync error")
 		mc.eventRecorder.Eventf(
 			&cc, v1.EventTypeNormal,
 			events.ReasonSyncError,
@@ -123,7 +128,7 @@ func (mc *Metacontroller) Reconcile(ctx context.Context, request reconcile.Reque
 			"[%s] Sync error - ignoring, parent resource %s does not have subresource 'Status' enabled",
 			cc.Name,
 			parentClient.GroupVersionKind())
-		klog.InfoS("Ignoring CompositeController",
+		mc.logger.Info("Ignoring CompositeController",
 			"name", compositeControllerName,
 			"reason", "subresource 'Status' not enabled",
 			"groupVersionKind", parentClient.GroupVersionKind())
@@ -155,7 +160,8 @@ func (mc *Metacontroller) reconcileCompositeController(cc *v1alpha1.CompositeCon
 		mc.mcClient,
 		mc.revisionLister,
 		cc,
-		mc.numWorkers)
+		mc.numWorkers,
+		mc.logger)
 	if err != nil {
 		mc.eventRecorder.Eventf(
 			cc,

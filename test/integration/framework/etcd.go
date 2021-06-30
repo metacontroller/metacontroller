@@ -23,12 +23,11 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"metacontroller/pkg/logging"
 	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
-
-	"k8s.io/klog/v2"
 )
 
 var etcdURL = ""
@@ -76,13 +75,13 @@ func startEtcd() (func(), error) {
 		return nil, fmt.Errorf("could not get a port: %v", err)
 	}
 	etcdURL = fmt.Sprintf("http://127.0.0.1:%d", etcdPort)
-	klog.InfoS("Starting etcd", "url", etcdURL)
+	logging.Logger.Info("Starting etcd", "url", etcdURL)
 
 	etcdDataDir, err := ioutil.TempDir(os.TempDir(), "integration_test_etcd_data")
 	if err != nil {
 		return nil, fmt.Errorf("unable to make temp etcd data dir: %v", err)
 	}
-	klog.InfoS("Storing etcd data", "data_directory", etcdDataDir)
+	logging.Logger.Info("Storing etcd data", "data_directory", etcdDataDir)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cmd := exec.CommandContext(
@@ -102,10 +101,10 @@ func startEtcd() (func(), error) {
 	stop := func() {
 		cancel()
 		err := cmd.Wait()
-		klog.InfoS("Etcd exit status", "exit_status", err)
+		logging.Logger.Info("Etcd exit status", "exit_status", err)
 		err = os.RemoveAll(etcdDataDir)
 		if err != nil {
-			klog.ErrorS(err, "error during etcd cleanup")
+			logging.Logger.Error(err, "error during etcd cleanup")
 		}
 	}
 

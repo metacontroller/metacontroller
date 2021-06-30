@@ -18,22 +18,20 @@ package common
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"metacontroller/pkg/logging"
 	"reflect"
 
-	"github.com/google/go-cmp/cmp"
-
 	"k8s.io/utils/pointer"
-
-	"k8s.io/klog/v2"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 
 	"metacontroller/pkg/apis/metacontroller/v1alpha1"
 	dynamicapply "metacontroller/pkg/dynamic/apply"
 	dynamicclientset "metacontroller/pkg/dynamic/clientset"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 )
 
 func ApplyUpdate(orig, update *unstructured.Unstructured) (*unstructured.Unstructured, error) {
@@ -61,7 +59,7 @@ func ApplyUpdate(orig, update *unstructured.Unstructured) (*unstructured.Unstruc
 		return nil, fmt.Errorf("failed to revert .status: %w", err)
 	}
 	if err = dynamicapply.SetLastApplied(newObj, update.UnstructuredContent()); err != nil {
-		klog.ErrorS(err, "failed to set lastApplied")
+		logging.Logger.Error(err, "failed to set lastApplied")
 	}
 	return newObj, nil
 }
@@ -172,7 +170,7 @@ func deleteChildren(client *dynamicclientset.ResourceClient, parent *unstructure
 		}
 		if desired == nil || desired[name] == nil {
 			// This observed object wasn't listed as desired.
-			klog.InfoS("Deleting child", "parent", klog.KObj(parent), "child", klog.KObj(obj))
+			logging.Logger.Info("Deleting child", "parent", parent, "child", obj)
 			uid := obj.GetUID()
 			// Explicitly request deletion propagation, which is what users expect,
 			// since some objects default to orphaning for backwards compatibility.
@@ -214,13 +212,19 @@ func updateChildren(client *dynamicclientset.ResourceClient, updateStrategy Chil
 				// Nothing changed.
 				continue
 			}
-			if klog.V(5).Enabled() {
-				klog.InfoS("Reflect diff: a=observed, b=desired", "diff", cmp.Diff(oldObj.UnstructuredContent(), newObj.UnstructuredContent()))
+			if logging.Logger.V(5).Enabled() {
+				mergePatch, err := JsonMergePatch(oldObj, newObj)
+				if err != nil {
+					logging.Logger.V(5).Error(err, "Cannot create merge patch to visualize diff")
+				} else {
+					rawMergePatch := json.RawMessage(mergePatch)
+					logging.Logger.V(5).Info("Diff between observed and desired", "mergePatch", rawMergePatch)
+				}
 			}
 
 			// Leave it alone if it's pending deletion.
 			if oldObj.GetDeletionTimestamp() != nil {
-				klog.InfoS("Not updating", "parent", klog.KObj(parent), "child", klog.KObj(obj), "reason", "Pending deletion of child object")
+				logging.Logger.Info("Not updating", "parent", parent, "child", obj, "reason", "Pending deletion of child object")
 				continue
 			}
 
@@ -229,11 +233,11 @@ func updateChildren(client *dynamicclientset.ResourceClient, updateStrategy Chil
 			case v1alpha1.ChildUpdateOnDelete, "":
 				// This means we don't try to update anything unless it gets deleted
 				// by someone else (we won't delete it ourselves).
-				klog.V(5).InfoS("Not updating", "parent", klog.KObj(parent), "child", klog.KObj(obj), "reason", "OnDelete update strategy selected")
+				logging.Logger.V(5).Info("Not updating", "parent", parent, "child", obj, "reason", "OnDelete update strategy selected")
 				continue
 			case v1alpha1.ChildUpdateRecreate, v1alpha1.ChildUpdateRollingRecreate:
 				// Delete the object (now) and recreate it (on the next sync).
-				klog.InfoS("Deleting for update", "parent", klog.KObj(parent), "child", klog.KObj(obj), "reason", "Recreate update strategy selected")
+				logging.Logger.Info("Deleting for update", "parent", parent, "child", obj, "reason", "Recreate update strategy selected")
 				uid := oldObj.GetUID()
 				// Explicitly request deletion propagation, which is what users expect,
 				// since some objects default to orphaning for backwards compatibility.
@@ -252,7 +256,7 @@ func updateChildren(client *dynamicclientset.ResourceClient, updateStrategy Chil
 				}
 			case v1alpha1.ChildUpdateInPlace, v1alpha1.ChildUpdateRollingInPlace:
 				// Update the object in-place.
-				klog.InfoS("Updating", "parent", klog.KObj(parent), "child", klog.KObj(obj), "reason", "Recreate update strategy selected")
+				logging.Logger.Info("Updating", "parent", parent, "child", obj, "reason", "Recreate update strategy selected")
 				if _, err := client.Namespace(ns).Update(context.TODO(), newObj, metav1.UpdateOptions{}); err != nil {
 					errs = append(errs, err)
 					continue
@@ -263,7 +267,7 @@ func updateChildren(client *dynamicclientset.ResourceClient, updateStrategy Chil
 			}
 		} else {
 			// Create
-			klog.InfoS("Creating", "parent", klog.KObj(parent), "child", klog.KObj(obj))
+			logging.Logger.Info("Creating", "parent", parent, "child", obj)
 
 			// The controller should return a partial object containing only the
 			// fields it cares about. We save this partial object so we can do

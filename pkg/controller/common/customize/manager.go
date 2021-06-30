@@ -1,8 +1,25 @@
+/*
+Copyright 2021 Metacontroller authors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package customize
 
 import (
 	"fmt"
 
+	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
@@ -10,7 +27,6 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/tools/cache"
-	"k8s.io/klog/v2"
 
 	"metacontroller/pkg/apis/metacontroller/v1alpha1"
 	"metacontroller/pkg/controller/common"
@@ -42,6 +58,8 @@ type Manager struct {
 	stopCh chan struct{}
 
 	enqueueParent func(interface{})
+
+	logger logr.Logger
 }
 
 func NewCustomizeManager(
@@ -52,7 +70,7 @@ func NewCustomizeManager(
 	dynInformers *dynamicinformer.SharedInformerFactory,
 	parentInformers common.InformerMap,
 	parentKinds common.GroupKindMap,
-) Manager {
+	logger logr.Logger) Manager {
 	return Manager{
 		name:             name,
 		metacontroller:   metacontroller,
@@ -63,6 +81,7 @@ func NewCustomizeManager(
 		parentInformers:  parentInformers,
 		relatedInformers: make(common.InformerMap),
 		enqueueParent:    enqueueParent,
+		logger:           logger,
 	}
 }
 
@@ -114,7 +133,7 @@ func (rm *Manager) getRelatedClient(apiVersion, resource string) (*dynamicclient
 		})
 
 		if !cache.WaitForNamedCacheSync(rm.name, rm.stopCh, informer.Informer().HasSynced) {
-			klog.InfoS("related Manager - cache sync never finished", "name", rm.name)
+			rm.logger.Info("related Manager - cache sync never finished", "name", rm.name)
 		}
 
 		groupVersion, _ := schema.ParseGroupVersion(apiVersion)

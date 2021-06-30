@@ -18,23 +18,21 @@ package main
 
 import (
 	"flag"
+	"metacontroller/pkg/logging"
 	"os"
 	"sync"
 	"time"
+
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 
 	"metacontroller/pkg/options"
 	"metacontroller/pkg/server"
 
-	"k8s.io/client-go/tools/record"
-	"k8s.io/klog/v2/klogr"
-	controllerruntime "sigs.k8s.io/controller-runtime"
-	controllerruntimelog "sigs.k8s.io/controller-runtime/pkg/log"
-
-	"k8s.io/klog/v2"
-
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
+	"k8s.io/client-go/tools/record"
+	controllerruntime "sigs.k8s.io/controller-runtime"
 )
 
 var (
@@ -51,28 +49,28 @@ var (
 )
 
 func main() {
-	klog.InitFlags(nil)
+	opts := zap.Options{}
+	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
+	logging.InitLogging(&opts)
 	// If client-config-path is set, overwrite the kubeconfig value
 	// to maintain backward compatibility.
 	if clientConfigPath != nil {
 		err := flag.Set("kubeconfig", *clientConfigPath)
 		if err != nil {
-			klog.ErrorS(err, "Terminating")
+			logging.Logger.Error(err, "Terminating")
 			os.Exit(1)
 		}
 	}
 
-	klog.InfoS("Discovery cache flush interval", "discovery_interval", *discoveryInterval)
-	klog.InfoS("API server object cache flush interval", "cache_flush_interval", *informerRelist)
-	klog.InfoS("Metrics http server address", "port", *metricsAddr)
-	klog.InfoS("Metacontroller build information", "version", version)
+	logging.Logger.Info("Discovery cache flush interval", "discovery_interval", *discoveryInterval)
+	logging.Logger.Info("API server object cache flush interval", "cache_flush_interval", *informerRelist)
+	logging.Logger.Info("Metrics http server address", "port", *metricsAddr)
+	logging.Logger.Info("Metacontroller build information", "version", version)
 
-	logger := klogr.NewWithOptions(klogr.WithFormat(klogr.FormatKlog))
-	controllerruntimelog.SetLogger(logger)
 	config, err := controllerruntime.GetConfig()
 	if err != nil {
-		klog.ErrorS(err, "Terminating")
+		logging.Logger.Error(err, "Terminating")
 		os.Exit(1)
 	}
 	config.QPS = float32(*clientGoQPS)
@@ -92,9 +90,9 @@ func main() {
 
 	// Create a new manager with a stop function
 	// for resource cleanup
-	mgr, stopManager, err := server.New(configuration)
+	mgr, err := server.New(configuration)
 	if err != nil {
-		klog.ErrorS(err, "Terminating")
+		logging.Logger.Error(err, "Terminating")
 		os.Exit(1)
 	}
 
@@ -107,14 +105,13 @@ func main() {
 	go func() {
 		defer wg.Done()
 		if err := mgr.Start(mgrStopChan); err != nil {
-			klog.ErrorS(err, "Terminating")
+			logging.Logger.Error(err, "Terminating")
 			os.Exit(1)
 		}
-		stopManager()
-		klog.InfoS("Stopped metacontroller")
+		logging.Logger.Info("Stopped metacontroller")
 	}()
 
 	<-mgrStopChan.Done()
-	klog.InfoS("Stopped controller manager")
+	logging.Logger.Info("Stopped controller manager")
 	wg.Wait()
 }

@@ -18,15 +18,16 @@ package hooks
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"metacontroller/pkg/logging"
 	"net/http"
 	"time"
 
 	"metacontroller/pkg/apis/metacontroller/v1alpha1"
 
-	"k8s.io/apimachinery/pkg/util/json"
-	"k8s.io/klog/v2"
+	k8sjson "k8s.io/apimachinery/pkg/util/json"
 )
 
 func callWebhook(webhook *v1alpha1.Webhook, hookType string, request interface{}, response interface{}) error {
@@ -36,20 +37,21 @@ func callWebhook(webhook *v1alpha1.Webhook, hookType string, request interface{}
 	}
 	hookTimeout, err := webhookTimeout(webhook)
 	if err != nil {
-		klog.InfoS(err.Error())
+		logging.Logger.Info(err.Error())
 	}
 	// Encode request.
-	reqBody, err := json.Marshal(request)
+	reqBody, err := k8sjson.Marshal(request)
 	if err != nil {
 		return fmt.Errorf("can't marshal request: %w", err)
 	}
-	if klog.V(6).Enabled() {
-		klog.InfoS("Webhook request", "type", hookType, "url", url, "body", string(reqBody))
+	if logging.Logger.V(6).Enabled() {
+		rawRequest := json.RawMessage(reqBody)
+		logging.Logger.Info("Webhook request", "type", hookType, "url", url, "body", rawRequest)
 	}
 
 	// Send request.
 	client := &http.Client{Timeout: hookTimeout}
-	klog.V(6).InfoS("Webhook timeout", "type", hookType, "url", url, "timeout", hookTimeout)
+	logging.Logger.V(6).Info("Webhook timeout", "type", hookType, "url", url, "timeout", hookTimeout)
 	resp, err := client.Post(url, "application/json", bytes.NewReader(reqBody))
 	if err != nil {
 		return fmt.Errorf("http error: %w", err)
@@ -61,7 +63,10 @@ func callWebhook(webhook *v1alpha1.Webhook, hookType string, request interface{}
 	if err != nil {
 		return fmt.Errorf("can't read response body: %w", err)
 	}
-	klog.V(6).InfoS("Webhook response", "type", hookType, "url", url, "body", string(respBody))
+	if logging.Logger.V(6).Enabled() {
+		rawResponse := json.RawMessage(respBody)
+		logging.Logger.V(6).Info("Webhook response", "type", hookType, "url", url, "body", rawResponse)
+	}
 
 	// Check status code.
 	if resp.StatusCode != http.StatusOK {
@@ -69,7 +74,7 @@ func callWebhook(webhook *v1alpha1.Webhook, hookType string, request interface{}
 	}
 
 	// Decode response.
-	if err := json.Unmarshal(respBody, response); err != nil {
+	if err := k8sjson.Unmarshal(respBody, response); err != nil {
 		return fmt.Errorf("can't unmarshal response: %w", err)
 	}
 	return nil

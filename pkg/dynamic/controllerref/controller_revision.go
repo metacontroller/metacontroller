@@ -18,8 +18,7 @@ package controllerref
 
 import (
 	"fmt"
-
-	"k8s.io/klog/v2"
+	"metacontroller/pkg/logging"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -83,7 +82,7 @@ func (m *ControllerRevisionManager) adoptControllerRevision(obj *v1alpha1.Contro
 	if err := m.CanAdopt(); err != nil {
 		return fmt.Errorf("can't adopt ControllerRevision %v/%v (%v): %w", obj.GetNamespace(), obj.GetName(), obj.GetUID(), err)
 	}
-	klog.InfoS("Adopting ControllerRevision", "kind", m.parentKind.Kind, "controller", klog.KRef(m.Controller.GetNamespace(), m.Controller.GetName()), "object", klog.KObj(obj))
+	logging.Logger.Info("Adopting ControllerRevision", "parent", m.Controller, "child", obj)
 	controllerRef := metav1.OwnerReference{
 		APIVersion:         m.parentKind.GroupVersion().String(),
 		Kind:               m.parentKind.Kind,
@@ -106,7 +105,7 @@ func (m *ControllerRevisionManager) adoptControllerRevision(obj *v1alpha1.Contro
 }
 
 func (m *ControllerRevisionManager) releaseControllerRevision(obj *v1alpha1.ControllerRevision) error {
-	klog.InfoS("Releasing ControllerRevision", "kind", m.parentKind.Kind, "controller", klog.KRef(m.Controller.GetNamespace(), m.Controller.GetName()), "object", klog.KObj(obj))
+	logging.Logger.Info("Releasing ControllerRevision", "parent", m.Controller, "child", obj)
 	_, err := m.client.UpdateWithRetries(obj, func(obj *v1alpha1.ControllerRevision) bool {
 		ownerRefs := removeOwnerReference(obj.GetOwnerReferences(), m.Controller.GetUID())
 		obj.SetOwnerReferences(ownerRefs)

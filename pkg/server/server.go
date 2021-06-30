@@ -40,16 +40,16 @@ import (
 
 // New returns a new controller manager and a function which can be used
 // to release resources after the manager is stopped.
-func New(configuration options.Configuration) (controllerruntime.Manager, func(), error) {
+func New(configuration options.Configuration) (controllerruntime.Manager, error) {
 	// Create informer factory for metacontroller API objects.
 	mcClient, err := mcclientset.NewForConfig(configuration.RestConfig)
 	if err != nil {
-		return nil, nil, fmt.Errorf("can't create client for api %s: %w", v1alpha1.SchemeGroupVersion, err)
+		return nil, fmt.Errorf("can't create client for api %s: %w", v1alpha1.SchemeGroupVersion, err)
 	}
 
 	controllerContext, err := common.NewControllerContext(configuration, mcClient)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	mgr, err := controllerruntime.NewManager(configuration.RestConfig, manager.Options{
@@ -59,12 +59,12 @@ func New(configuration options.Configuration) (controllerruntime.Manager, func()
 		EventBroadcaster:   controllerContext.Broadcaster,
 	})
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	err = v1alpha1.AddToScheme(mgr.GetScheme())
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	// Set the Kubernetes client to the one created by the manager.
@@ -77,11 +77,11 @@ func New(configuration options.Configuration) (controllerruntime.Manager, func()
 		Reconciler: compositeReconciler,
 	})
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	err = compositeCtrl.Watch(&source.Kind{Type: &v1alpha1.CompositeController{}}, &handler.EnqueueRequestForObject{})
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	decoratorReconciler := decorator.NewMetacontroller(*controllerContext, configuration.Workers)
@@ -89,20 +89,16 @@ func New(configuration options.Configuration) (controllerruntime.Manager, func()
 		Reconciler: decoratorReconciler,
 	})
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	err = decoratorCtrl.Watch(&source.Kind{Type: &v1alpha1.DecoratorController{}}, &handler.EnqueueRequestForObject{})
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	// We need to call Start after initializing the controllers
 	// to make sure all the needed informers are already created
 	controllerContext.Start()
 
-	stopFunc := func() {
-		controllerContext.Stop()
-	}
-
-	return mgr, stopFunc, nil
+	return mgr, nil
 }
