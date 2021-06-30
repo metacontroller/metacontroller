@@ -18,9 +18,8 @@ package common
 
 import (
 	"fmt"
+	"metacontroller/pkg/logging"
 	"strings"
-
-	"k8s.io/klog/v2"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -56,7 +55,7 @@ var (
 
 func init() {
 	if err := v1alpha1.AddToScheme(scheme); err != nil {
-		klog.ErrorS(err, "failed adding v1alpha1 to scheme")
+		logging.Logger.Error(err, "failed adding v1alpha1 to scheme")
 	}
 }
 
@@ -117,10 +116,6 @@ func (controllerContext ControllerContext) Start() {
 	// Start all requested informers.
 	// We don't care about stopping this cleanly since it has no external effects.
 	controllerContext.McInformerFactory.Start(nil)
-}
-
-func (controllerContext ControllerContext) Stop() {
-	controllerContext.Broadcaster.Shutdown()
 }
 
 // GroupVersionKind is metacontroller wrapper around schema.GroupVersionKind

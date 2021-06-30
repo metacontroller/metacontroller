@@ -18,10 +18,9 @@ package informer
 
 import (
 	"fmt"
+	"metacontroller/pkg/logging"
 	"sync"
 	"time"
-
-	"k8s.io/klog/v2"
 
 	dynamicclientset "metacontroller/pkg/dynamic/clientset"
 )
@@ -66,7 +65,7 @@ func (f *SharedInformerFactory) Resource(apiVersion, resource string) (*Resource
 	if sharedInformer, ok := f.sharedInformers[key]; ok {
 		count := f.refCount[key] + 1
 		f.refCount[key] = count
-		klog.V(4).InfoS("Subscribed to shared informer", "resource", resource, "api_version", apiVersion, "total_subscribers", count)
+		logging.Logger.V(4).Info("Subscribed to shared informer", "resource", resource, "api_version", apiVersion, "total_subscribers", count)
 		return newResourceInformer(sharedInformer), nil
 	}
 
@@ -86,7 +85,7 @@ func (f *SharedInformerFactory) Resource(apiVersion, resource string) (*Resource
 		defer f.mutex.Unlock()
 
 		count := f.refCount[key] - 1
-		klog.V(4).InfoS("Unsubscribed from shared informer", "resource", resource, "api_version", apiVersion, "total_subscribers", count)
+		logging.Logger.V(4).Info("Unsubscribed from shared informer", "resource", resource, "api_version", apiVersion, "total_subscribers", count)
 
 		if count > 0 {
 			// Others are still using it.
@@ -95,13 +94,13 @@ func (f *SharedInformerFactory) Resource(apiVersion, resource string) (*Resource
 		}
 
 		// We're the last ones using it.
-		klog.V(4).InfoS("Stopping shared informer (no more subscribers)", "resource", resource, "api_version", apiVersion, "total_subscribers", count)
+		logging.Logger.V(4).Info("Stopping shared informer (no more subscribers)", "resource", resource, "api_version", apiVersion, "total_subscribers", count)
 		close(stopCh)
 		delete(f.refCount, key)
 		delete(f.sharedInformers, key)
 	}
 
-	klog.V(4).InfoS("Starting shared informer", "resource", resource, "api_version", apiVersion)
+	logging.Logger.V(4).Info("Starting shared informer", "resource", resource, "api_version", apiVersion)
 	sharedInformer := newSharedResourceInformer(client, f.defaultResync, closeFn)
 	f.sharedInformers[key] = sharedInformer
 	f.refCount[key] = 1

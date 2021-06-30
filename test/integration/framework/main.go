@@ -18,13 +18,15 @@ package framework
 
 import (
 	"errors"
-	"flag"
 	"fmt"
+	"metacontroller/pkg/logging"
 	"os"
 	"os/exec"
 	"path"
 	"strconv"
 	"time"
+
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 
@@ -32,7 +34,6 @@ import (
 
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/tools/record"
-	"k8s.io/klog/v2"
 
 	dynamicdiscovery "metacontroller/pkg/dynamic/discovery"
 	"metacontroller/pkg/server"
@@ -57,10 +58,15 @@ func getKubectlPath() (string, error) {
 	return exec.LookPath("kubectl")
 }
 
+func init() {
+	opts := zap.Options{
+		Development: true,
+	}
+	logging.InitLogging(&opts)
+}
+
 // TestMain starts etcd, kube-apiserver, and metacontroller before running tests.
 func TestMain(tests func() int) {
-	klog.InitFlags(nil)
-	flag.Parse()
 	if err := testMain(tests); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -84,7 +90,7 @@ func testMain(tests func() int) error {
 	}
 	defer stopApiserver()
 
-	klog.Info("Waiting for kube-apiserver to be ready...")
+	logging.Logger.Info("Waiting for kube-apiserver to be ready...")
 	start := time.Now()
 	for {
 		time.Sleep(time.Second)
@@ -92,12 +98,12 @@ func testMain(tests func() int) error {
 		if kubectlErr == nil {
 			break
 		}
-		klog.ErrorS(kubectlErr, "Kubectl error")
+		logging.Logger.Error(kubectlErr, "Kubectl error")
 		if time.Since(start) > time.Minute {
 			return fmt.Errorf("timed out waiting for kube-apiserver to be ready: %v", kubectlErr)
 		}
 	}
-	klog.Info("Kube-apiserver started")
+	logging.Logger.Info("Kube-apiserver started")
 	// Create Metacontroller Namespace.
 	if err := execKubectl("apply", "-f", path.Join(manifestDir, "metacontroller-namespace.yaml")); err != nil {
 		return fmt.Errorf("cannot install metacontroller namespace: %v", err)
@@ -137,15 +143,14 @@ func testMain(tests func() int) error {
 		CorrelatorOptions: record.CorrelatorOptions{},
 		MetricsEndpoint:   ":" + strconv.Itoa(port),
 	}
-	mgr, stopServer, err := server.New(configuration)
+	mgr, err := server.New(configuration)
 	if err != nil {
 		return fmt.Errorf("cannot create a metacontroller server: %v", err)
 	}
 	mgrStopChan := signals.SetupSignalHandler()
-	defer stopServer()
 	go func() {
 		if err := mgr.Start(mgrStopChan); err != nil {
-			klog.ErrorS(err, "Terminating")
+			logging.Logger.Error(err, "Terminating")
 			os.Exit(1)
 		}
 	}()
@@ -169,7 +174,7 @@ func execKubectl(args ...string) error {
 		return fmt.Errorf("cannot exec kubectl: %v", err)
 	}
 	cmdline := append([]string{"--server", ApiserverURL()}, args...)
-	klog.InfoS("Executing command", "command", execPath, "arguments", cmdline)
+	logging.Logger.Info("Executing command", "command", execPath, "arguments", cmdline)
 	cmd := exec.Command(execPath, cmdline...)
 	return cmd.Run()
 }

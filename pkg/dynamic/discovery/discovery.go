@@ -18,11 +18,10 @@ package discovery
 
 import (
 	"fmt"
+	"metacontroller/pkg/logging"
 	"strings"
 	"sync"
 	"time"
-
-	"k8s.io/klog/v2"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -97,10 +96,10 @@ func (rm *ResourceMap) GetKind(apiVersion, kind string) (result *APIResource) {
 func (rm *ResourceMap) refresh() {
 	// Fetch all API Group-Versions and their resources from the server.
 	// We do this before acquiring the lock so we don't block readers.
-	klog.V(7).InfoS("Refreshing API discovery info")
+	logging.Logger.V(7).Info("Refreshing API discovery info")
 	_, groups, err := rm.discoveryClient.ServerGroupsAndResources()
 	if err != nil {
-		klog.ErrorS(err, "Failed to fetch discovery info")
+		logging.Logger.Error(err, "Failed to fetch discovery info")
 		return
 	}
 

@@ -33,7 +33,7 @@ import (
 )
 
 const (
-	lastAppliedAnnotation = "metacontroller.k8s.io/last-applied-configuration"
+	LastAppliedAnnotation = "metacontroller.k8s.io/last-applied-configuration"
 )
 
 func SetLastApplied(obj *unstructured.Unstructured, lastApplied map[string]interface{}) error {
@@ -46,20 +46,20 @@ func SetLastApplied(obj *unstructured.Unstructured, lastApplied map[string]inter
 	if ann == nil {
 		ann = make(map[string]string, 1)
 	}
-	ann[lastAppliedAnnotation] = string(lastAppliedJSON)
+	ann[LastAppliedAnnotation] = string(lastAppliedJSON)
 	obj.SetAnnotations(ann)
 	return nil
 }
 
 func GetLastApplied(obj *unstructured.Unstructured) (map[string]interface{}, error) {
-	lastAppliedJSON := obj.GetAnnotations()[lastAppliedAnnotation]
+	lastAppliedJSON := obj.GetAnnotations()[LastAppliedAnnotation]
 	if lastAppliedJSON == "" {
 		return nil, nil
 	}
 	lastApplied := make(map[string]interface{})
 	err := json.Unmarshal([]byte(lastAppliedJSON), &lastApplied)
 	if err != nil {
-		return nil, fmt.Errorf("can't unmarshal %q annotation: %w", lastAppliedAnnotation, err)
+		return nil, fmt.Errorf("can't unmarshal %q annotation: %w", LastAppliedAnnotation, err)
 	}
 	return lastApplied, nil
 }

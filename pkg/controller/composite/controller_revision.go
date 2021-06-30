@@ -21,6 +21,7 @@ import (
 	"crypto/sha1" // #nosec
 	"encoding/hex"
 	"fmt"
+	"metacontroller/pkg/logging"
 	"reflect"
 	"strings"
 	"sync"
@@ -28,8 +29,6 @@ import (
 	"metacontroller/pkg/controller/common"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
-
-	"k8s.io/klog/v2"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -272,7 +271,7 @@ func (pc *parentController) manageRevisions(parent *unstructured.Unstructured, o
 			opts := metav1.DeleteOptions{
 				Preconditions: &metav1.Preconditions{UID: &revision.UID},
 			}
-			klog.InfoS("Deleting ControllerRevision", "parent_kind", parent.GetKind(), "parent", klog.KObj(parent), "name", revision.GetName())
+			logging.Logger.Info("Deleting ControllerRevision", "parent_kind", parent.GetKind(), "parent", parent, "name", revision.GetName())
 			if err := client.Delete(context.TODO(), revision.Name, opts); err != nil {
 				return fmt.Errorf("can't delete ControllerRevision %v for %v %v/%v: %w", revision.Name, pc.parentResource.Kind, parent.GetNamespace(), parent.GetName(), err)
 			}
@@ -289,16 +288,16 @@ func (pc *parentController) manageRevisions(parent *unstructured.Unstructured, o
 			}
 			if oldObj.GetResourceVersion() != revision.GetResourceVersion() {
 				revision.SetResourceVersion(oldObj.GetResourceVersion())
-				klog.V(5).InfoS("ControllerRevision's resource version updated", "old", oldObj.GetObjectMeta().GetResourceVersion(), "new", revision.GetObjectMeta().GetResourceVersion())
+				logging.Logger.V(6).Info("ControllerRevision's resource version updated", "old", oldObj.GetObjectMeta().GetResourceVersion(), "new", revision.GetObjectMeta().GetResourceVersion())
 			}
 			updated, err := client.Update(context.TODO(), revision, metav1.UpdateOptions{})
 			if err != nil {
 				return fmt.Errorf("can't update ControllerRevision %v for %v %v/%v: %w", revision.Name, pc.parentResource.Kind, parent.GetNamespace(), parent.GetName(), err)
 			}
-			klog.InfoS("ControllerRevision updated", "parent_kind", parent.GetKind(), "parent", klog.KObj(parent), "name", revision.GetName(), "resource_version", updated.GetResourceVersion())
+			logging.Logger.Info("ControllerRevision updated", "parent_kind", parent.GetKind(), "parent", parent, "name", revision.GetName(), "resource_version", updated.GetResourceVersion())
 		} else {
 			// Create
-			klog.InfoS("Creating ControllerRevision", "parent_kind", parent.GetKind(), "parent", klog.KObj(parent), "name", revision.GetName())
+			logging.Logger.Info("Creating ControllerRevision", "parent_kind", parent.GetKind(), "parent", parent, "name", revision.GetName())
 			if _, err := client.Create(context.TODO(), revision, metav1.CreateOptions{}); err != nil {
 				return fmt.Errorf("can't create ControllerRevision %v for %v %v/%v: %w", revision.Name, pc.parentResource.Kind, parent.GetNamespace(), parent.GetName(), err)
 			}

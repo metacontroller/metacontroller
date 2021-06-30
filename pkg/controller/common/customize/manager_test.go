@@ -1,3 +1,19 @@
+/*
+Copyright 2021 Metacontroller authors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package customize
 
 import (
@@ -35,22 +51,26 @@ func (cc *fakeCustomizableController) GetCustomizeHook() *v1alpha1.Hook {
 	return &fakeHook
 }
 
-var customizeManagerWithNilController = NewCustomizeManager("test",
+var customizeManagerWithNilController = NewCustomizeManager(
+	"test",
 	fakeEnqueueParent,
 	&nilCustomizableController{},
 	&dynClient,
 	&dynInformers,
 	make(common.InformerMap),
 	make(common.GroupKindMap),
+	nil,
 )
 
-var customizeManagerWithFakeController = NewCustomizeManager("test",
+var customizeManagerWithFakeController = NewCustomizeManager(
+	"test",
 	fakeEnqueueParent,
 	&fakeCustomizableController{},
 	&dynClient,
 	&dynInformers,
 	make(common.InformerMap),
 	make(common.GroupKindMap),
+	nil,
 )
 
 func TestGetCustomizeHookResponse_returnNilRelatedResourceRulesIfHookNotSet(t *testing.T) {
