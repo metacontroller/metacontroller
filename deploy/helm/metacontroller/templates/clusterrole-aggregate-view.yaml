@@ -1,0 +1,22 @@
+{{- if .Values.rbac.create }}
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: {{ include "metacontroller.fullname" . }}-aggregate-view
+  labels:
+    {{- include "metacontroller.labels" . | nindent 4 }}
+    rbac.authorization.k8s.io/aggregate-to-admin: "true"
+    rbac.authorization.k8s.io/aggregate-to-edit: "true"
+    rbac.authorization.k8s.io/aggregate-to-view: "true"
+rules:
+- apiGroups:
+  - metacontroller.k8s.io
+  resources:
+  - compositecontrollers
+  - controllerrevisions
+  - decoratorcontrollers
+  verbs:
+  - get
+  - list
+  - watch
+{{- end}}
