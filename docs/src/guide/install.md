@@ -28,7 +28,7 @@ kubectl create clusterrolebinding <user>-cluster-admin-binding --clusterrole=clu
 
 Replace `<user>` and `<domain>` above based on the account you use to authenticate to GKE.
 
-## Install Metacontroller
+## Install Metacontroller using Kustomize
 
 ```sh
 # Apply all set of production resources defined in kustomization.yaml in `production` directory .
@@ -39,12 +39,13 @@ kubectl apply -k https://github.com/metacontroller/metacontroller/manifests/prod
 If you prefer to build and host your own images, please see the
 [build instructions](../contrib/build.md) in the contributor guide.
 
-If your `kubectl` version does does not support `-k` flag, please 
+If your `kubectl` version does does not support `-k` flag, please
 install resources mentioned in `manifests/production/kustomization.yaml`
 one by one manually with `kubectl apply -f {{filename}}` command.
 
 **Compatibility note**
 CRD's are shipped in two versions:
+
 * `v1` - supposed to be used when your kubernetes cluster is 1.16+
 * `v1beta1` otherwise
 
@@ -68,9 +69,15 @@ in `manifests/metacontroller.yaml`):
 | `--events-burst` | Number of events allowed to send per object (default 25, e.g. `--client-go-burst=25`) |
 
 ## Migrating from /GoogleCloudPlatform/metacontroller
+
 As current version of metacontroller uses different name of the finalizer than GCP version (GCP - `metacontroller.app`,
 current version - `metacontroller.io`) thus after installing `metacontroller` you might need to clean up old finalizers,
 i.e. by running:
+
 ```shell
 kubectl get <comma separated list of your resource types here> --no-headers --all-namespaces | awk '{print $2 " -n " $1}' | xargs -L1 -P 50 -r kubectl patch -p '{"metadata":{"finalizers": [null]}}' --type=merge
 ```
+
+## Install Metacontroller using Helm
+
+Alternatively, metacontroller can be [installed using an Helm chart](helm-install.md).

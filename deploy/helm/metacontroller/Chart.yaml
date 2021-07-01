@@ -1,0 +1,11 @@
+apiVersion: v2
+version: v1.5.19
+appVersion: v1.5.19
+kubeVersion: '^1.8.0-0'
+name: metacontroller
+description: Writing kubernetes controllers can be simple
+home: https://metacontroller.github.io/metacontroller/
+sources:
+  - https://github.com/metacontroller/metacontroller
+engine: gotpl
+type: application
