@@ -97,12 +97,12 @@ cleanup() {
 trap cleanup EXIT
 
 for test in */test.sh; do
-  if [[ "${ignore_dirs[@]}" =~ ${test} ]]; then
+  if [[ "${ignore_dirs[*]}" =~ ${test} ]]; then
     echo "Skipping ${test}"
     continue
   fi
   echo -n "Running ${test}..."
-  if ! (cd "$(dirname "${test}")" && ./test.sh ${crd_version} > "${logfile}" 2>&1); then
+  if ! (cd "$(dirname "${test}")" && timeout --signal=SIGTERM 5m ./test.sh ${crd_version} > "${logfile}" 2>&1); then
     echo "FAILED"
     cat "${logfile}"
     echo "Test ${test} failed!"
