@@ -21,7 +21,6 @@ import (
 	"metacontroller/pkg/logging"
 	"os"
 	"sync"
-	"time"
 
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
@@ -36,14 +35,14 @@ import (
 )
 
 var (
-	discoveryInterval = flag.Duration("discovery-interval", 30*time.Second, "How often to refresh discovery cache to pick up newly-installed resources")
-	informerRelist    = flag.Duration("cache-flush-interval", 30*time.Minute, "How often to flush local caches and relist objects from the API server")
-	metricsAddr       = flag.String("metrics-address", ":9999", "The address to bind metrics endpoint - /metrics")
-	clientGoQPS       = flag.Float64("client-go-qps", 5, "Number of queries per second client-go is allowed to make (default 5)")
-	clientGoBurst     = flag.Int("client-go-burst", 10, "Allowed burst queries for client-go (default 10)")
-	workers           = flag.Int("workers", 5, "Number of sync workers to run (default 5)")
-	eventsQPS         = flag.Float64("events-qps", 1./300., "Rate of events flowing per object (default - 1 event per 5 minutes)")
-	eventsBurst       = flag.Int("events-burst", 25, "Number of events allowed to send per object (default 25)")
+	discoveryInterval = flag.Duration("discovery-interval", options.DefaultDiscoveryInterval, "How often to refresh discovery cache to pick up newly-installed resources")
+	informerRelist    = flag.Duration("cache-flush-interval", options.DefaultInformerRelistInterval, "How often to flush local caches and relist objects from the API server")
+	metricsAddr       = flag.String("debug-addr", ":9999", "The address to bind metrics endpoint - /metrics")
+	clientGoQPS       = flag.Float64("client-go-qps", options.DefaultGoQPS, "Number of queries per second client-go is allowed to make (default 5)")
+	clientGoBurst     = flag.Int("client-go-burst", options.DefaultGoBurst, "Allowed burst queries for client-go (default 10)")
+	workers           = flag.Int("workers", options.DefaultWorkers, "Number of sync workers to run (default 5)")
+	eventsQPS         = flag.Float64("events-qps", options.DefaultEventsQPS, "Rate of events flowing per object (default - 1 event per 5 minutes)")
+	eventsBurst       = flag.Int("events-burst", options.DefaultEventsBurst, "Number of events allowed to send per object (default 25)")
 	version           = "No version provided"
 )
 

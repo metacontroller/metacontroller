@@ -125,7 +125,7 @@ func (mc *Metacontroller) reconcileDecoratorController(dc *v1alpha1.DecoratorCon
 		delete(mc.decoratorControllers, dc.Name)
 	}
 
-	c, err := newDecoratorController(
+	c, err := NewDecoratorController(
 		mc.resources,
 		mc.dynClient,
 		mc.dynInformers,

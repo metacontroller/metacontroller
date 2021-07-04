@@ -1,0 +1,29 @@
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  labels:
+    app.kubernetes.io/name: metacontroller
+  name: clusteredparent
+  namespace: metacontroller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: metacontroller
+  serviceName: ""
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: metacontroller
+    spec:
+      serviceAccountName: metacontroller
+      containers:
+      - name: metacontroller
+        image: metacontrollerio/metacontroller:clusteredparent
+        command: ["/usr/bin/metacontroller"]
+        args:
+        - --logtostderr
+        - -v=4
+        - --discovery-interval=20s
+  volumeClaimTemplates: []

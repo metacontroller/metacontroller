@@ -1,0 +1,36 @@
+apiVersion: ctl.enisoc.com/v1
+kind: BlueGreenDeployment
+metadata:
+  name: nginx
+  labels:
+    app: nginx
+spec:
+  replicas: 3
+  minReadySeconds: 5
+  selector:
+    matchLabels:
+      app: nginx
+      component: frontend
+  template:
+    metadata:
+      labels:
+        app: nginx
+        component: frontend
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.7.9
+        ports:
+        - containerPort: 80
+  service:
+    metadata:
+      name: nginx-frontend
+      labels:
+        app: nginx
+        component: frontend
+    spec:
+      selector:
+        app: nginx
+        component: frontend
+      ports:
+      - port: 80

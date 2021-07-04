@@ -85,7 +85,7 @@ type parentController struct {
 	logger logr.Logger
 }
 
-func newParentController(
+func NewParentController(
 	resources *dynamicdiscovery.ResourceMap,
 	dynClient *dynamicclientset.Clientset,
 	dynInformers *dynamicinformer.SharedInformerFactory,
@@ -118,7 +118,7 @@ func newParentController(
 	childInformers := make(common.InformerMap)
 	defer func() {
 		if newErr != nil {
-			// If newParentController fails, Close() any informers we created
+			// If NewParentController fails, Close() any informers we created
 			// since Stop() will never be called.
 			for _, childInformer := range childInformers {
 				childInformer.Close()
@@ -188,7 +188,7 @@ func (pc *parentController) Start() {
 
 	// Install event handlers. CompositeControllers can be created at any time,
 	// so we have to assume the shared informers are already running. We can't
-	// add event handlers in newParentController() since pc might be incomplete.
+	// add event handlers in NewParentController() since pc might be incomplete.
 	parentHandlers := cache.ResourceEventHandlerFuncs{
 		AddFunc:    pc.enqueueParentObject,
 		UpdateFunc: pc.updateParentObject,

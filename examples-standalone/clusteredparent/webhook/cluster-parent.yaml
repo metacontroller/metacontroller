@@ -1,0 +1,38 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: clusterparent-controller
+  namespace: metacontroller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cluster-parent-controller
+  template:
+    metadata:
+      labels:
+        app: cluster-parent-controller
+    spec:
+      containers:
+      - name: controller
+        image: python:2.7
+        command: ["python", "/hooks/sync.py"]
+        volumeMounts:
+        - name: hooks
+          mountPath: /hooks
+      volumes:
+      - name: hooks
+        configMap:
+          name: cluster-parent-controller
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cluster-parent-controller
+  namespace: metacontroller
+spec:
+  selector:
+    app: cluster-parent-controller
+  ports:
+  - port: 80
