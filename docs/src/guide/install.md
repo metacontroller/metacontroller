@@ -49,6 +49,10 @@ CRD's are shipped in two versions:
 * `v1` - supposed to be used when your kubernetes cluster is 1.16+
 * `v1beta1` otherwise
 
+## Install Metacontroller using Helm
+
+Alternatively, metacontroller can be [installed using an Helm chart](helm-install.md).
+
 ## Configuration
 
 The Metacontroller server has a few settings that can be configured
@@ -77,7 +81,3 @@ i.e. by running:
 ```shell
 kubectl get <comma separated list of your resource types here> --no-headers --all-namespaces | awk '{print $2 " -n " $1}' | xargs -L1 -P 50 -r kubectl patch -p '{"metadata":{"finalizers": [null]}}' --type=merge
 ```
-
-## Install Metacontroller using Helm
-
-Alternatively, metacontroller can be [installed using an Helm chart](helm-install.md).

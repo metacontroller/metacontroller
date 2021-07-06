@@ -9,6 +9,7 @@
     - [Pronunciation](./pronunciation.md)
 - [User Guide](./guide.md)
     - [Install Metacontroller](./guide/install.md)
+    - [Install Metacontroller via helm](./guide/helm-install.md)
     - [Create a controller](./guide/create.md)
     - [Constraints and best practices](./guide/best-practices.md)
     - [Troubleshooting](./guide/troubleshooting.md)
