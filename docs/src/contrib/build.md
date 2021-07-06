@@ -11,62 +11,13 @@ First, check out the code:
 # place the repo according to the Go import path:
 #   $GOPATH/src/metacontroller.io
 cd $GOPATH/src
-git clone git@github.com:metacontroller/metacontroller.git metacontroller.io
-cd metacontroller.io
+git clone git@github.com:metacontroller/metacontroller.git metacontroller
+cd metacontroller
 ```
 
-## Docker Build
+## Local build and development
 
-The main [Dockerfile](https://www.github.com/metacontroller/metacontroller/blob/master/Dockerfile) can be used to build the
-Metacontroller server without any dependencies on the local build environment
-except for Docker 17.05+ (for multi-stage support):
-
-```console
-src/metacontroller.io$ docker build -t <yourtag> .
-```
-
-## Local Build
-
-```sh
-make vendor
-go install
-```
-
-## Skaffold Build
-
-If you're working on changes to Metacontroller itself, you can use
-[Skaffold][] and [Kustomize][] to make iterating more fluid.
-
-First use `dep` as described in the [Local Build](#local-build) section to
-populate the `vendor` directory.
-Rather than running `dep ensure` on every build, the development version of the
-Dockerfile expects you to have already run `dep ensure` locally.
-
-Next make sure your local Docker client is signed in to push to Docker Hub.
-Then tell Skaffold to push to your own personal image repository:
-
-```sh
-skaffold config set --global default-repo <your-docker-hub-username>
-```
-
-Now you can build and deploy your latest changes with:
-
-```sh
-skaffold run
-```
-
-[skaffold]: https://github.com/GoogleContainerTools/skaffold
-[kustomize]: https://github.com/kubernetes-sigs/kustomize
-
-## Generated Files
-
-If you make changes to the [Metacontroller API types](https://github.com/metacontroller/metacontroller/tree/master/apis/metacontroller/),
-you may need to update generated files before building:
-
-```sh
-go get -u k8s.io/code-generator/cmd/{lister,client,informer,deepcopy}-gen
-make generated_files
-```
+Check [debug section](./debug.md)
 
 ## Documentation build
 
@@ -84,6 +35,8 @@ To generate documentation
 * `cd docs`
 * `mdbook build`
 There will be `book` folder generated with html content.
+
+You can also use `mdbook serve` to expose documentation on `http://localhost:3000`.
 
 ## Tests
 
@@ -174,21 +127,3 @@ Note that currently our continuous integration only runs unit and integration
 tests on PRs, since those don't require a full cluster.
 If you have access to a suitable test cluster, you can help speed up review of
 your PR by running these end-to-end tests yourself to see if they catch anything.
-
-## Debug
-
-There is special `Dockerfile` version targeting build for debugging - `Dockerfile.debug`.
-In order to build debug version of image, please execute
-```sh
-docker build -t metacontrollerio/metacontroller:debug -f Dockerfile.debug . 
-```
-afterward, you can run
-```sh
-kubectl apply -k manifests/debug
-```
-to apply manifests configured for debugging.
-To attach remote debugger, please first forward `metacontroller` port :
-```sh
-kubectl port-forward metacontroller-0 40000:40000
-```
-and attach debugger to `localhost:40000`

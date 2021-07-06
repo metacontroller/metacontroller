@@ -38,3 +38,13 @@ jobs:
       uses: Azure/container-scan@v0
       with:
         image-name: metacontrollerio/metacontroller:lint-${{ github.sha }}
+  documentation-test:
+    runs-on: ubuntu-20.04
+    container:
+      image: "michaelfbryan/mdbook-docker-image:latest"
+    steps:
+      - uses: actions/checkout@v2
+      - name: Build mdbook
+        run: |
+          cd docs
+          mdbook build
