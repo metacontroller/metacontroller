@@ -29,7 +29,7 @@ module.exports = {
           },
           {
             "files": ["deploy/helm/metacontroller/Chart.yaml"],
-            "from": "^(version|appVersion): v.*",
+            "from": "(version|appVersion): v.*",
             "to": "$1: v${nextRelease.version}",
             "results": [
               {
