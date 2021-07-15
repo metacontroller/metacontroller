@@ -11,6 +11,18 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+func TestNewHookExecutor_whenNilWebHook_returnNilWebhookExecutor(t *testing.T) {
+	executor, err := NewWebhookExecutor(nil, "")
+
+	if err != nil {
+		t.Errorf("err should be nil, got: %v", err)
+	}
+
+	if executor != nil {
+		t.Errorf("WebhookExecutor should be nil")
+	}
+}
+
 func TestWebhookTimeout_defaultTimeoutIfNotSpecified(t *testing.T) {
 	tables := []struct {
 		webhook  v1alpha1.Webhook

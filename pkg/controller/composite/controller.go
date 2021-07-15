@@ -19,6 +19,7 @@ package composite
 import (
 	"context"
 	"fmt"
+	"metacontroller/pkg/hooks"
 	"metacontroller/pkg/logging"
 	"reflect"
 	"sync"
@@ -79,8 +80,10 @@ type parentController struct {
 	numWorkers    int
 	eventRecorder record.EventRecorder
 
-	finalizer *finalizer.Manager
-	customize customize.Manager
+	finalizer    *finalizer.Manager
+	customize    *customize.Manager
+	syncHook     hooks.HookExecutor
+	finalizeHook hooks.HookExecutor
 
 	logger logr.Logger
 }
@@ -144,6 +147,17 @@ func newParentController(
 	parentResources.Set(schema.GroupKind{Group: parentGroupVersion.Group, Kind: parentResource.Kind}, parentResource)
 	parentInformers := make(common.InformerMap)
 	parentInformers.Set(parentGroupVersion.WithResource(parentResource.Name), parentInformer)
+	if cc.Spec.Hooks == nil {
+		return nil, fmt.Errorf("no hooks defined")
+	}
+	syncHook, err := hooks.NewHookExecutor(cc.Spec.Hooks.Sync, hooks.SyncHook)
+	if err != nil {
+		return nil, err
+	}
+	finalizeHook, err := hooks.NewHookExecutor(cc.Spec.Hooks.Finalize, hooks.FinalizeHook)
+	if err != nil {
+		return nil, err
+	}
 
 	pc = &parentController{
 		cc:             cc,
@@ -159,14 +173,16 @@ func newParentController(
 		queue:          workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "CompositeController-"+cc.Name),
 		numWorkers:     numWorkers,
 		eventRecorder:  eventRecorder,
-		finalizer: &finalizer.Manager{
-			Name:    "metacontroller.io/compositecontroller-" + cc.Name,
-			Enabled: cc.Spec.Hooks.Finalize != nil,
-		},
-		logger: logger.WithName(cc.Name),
+		finalizer: finalizer.NewManager(
+			"metacontroller.io/compositecontroller-"+cc.Name,
+			cc.Spec.Hooks.Finalize != nil,
+		),
+		syncHook:     syncHook,
+		finalizeHook: finalizeHook,
+		logger:       logger.WithName(cc.Name),
 	}
 
-	pc.customize = customize.NewCustomizeManager(
+	pc.customize, err = customize.NewCustomizeManager(
 		parentResource.Kind,
 		pc.enqueueParentObject,
 		cc,
@@ -176,6 +192,9 @@ func newParentController(
 		parentResources,
 		pc.logger,
 	)
+	if err != nil {
+		return nil, err
+	}
 
 	return pc, nil
 }

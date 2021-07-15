@@ -18,6 +18,7 @@ package customize
 
 import (
 	"fmt"
+	"metacontroller/pkg/hooks"
 
 	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -59,6 +60,8 @@ type Manager struct {
 
 	enqueueParent func(interface{})
 
+	customizeHook hooks.HookExecutor
+
 	logger logr.Logger
 }
 
@@ -70,8 +73,18 @@ func NewCustomizeManager(
 	dynInformers *dynamicinformer.SharedInformerFactory,
 	parentInformers common.InformerMap,
 	parentKinds common.GroupKindMap,
-	logger logr.Logger) Manager {
-	return Manager{
+	logger logr.Logger) (*Manager, error) {
+	var executor hooks.HookExecutor
+	var err error
+	if metacontroller.GetCustomizeHook() != nil {
+		executor, err = hooks.NewHookExecutor(metacontroller.GetCustomizeHook(), hooks.CustomizeHook)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		executor = nil
+	}
+	return &Manager{
 		name:             name,
 		metacontroller:   metacontroller,
 		parentKinds:      parentKinds,
@@ -81,33 +94,39 @@ func NewCustomizeManager(
 		parentInformers:  parentInformers,
 		relatedInformers: make(common.InformerMap),
 		enqueueParent:    enqueueParent,
+		customizeHook:    executor,
 		logger:           logger,
-	}
+	}, nil
+}
+
+func (rm *Manager) IsEnabled() bool {
+	return rm.customizeHook != nil
 }
 
 func (rm *Manager) Start(stopCh chan struct{}) {
 	rm.stopCh = stopCh
 }
 
-func (rm *Manager) GetCachedCustomizeHookResponse(parent *unstructured.Unstructured) *CustomizeHookResponse {
+func (rm *Manager) getCachedCustomizeHookResponse(parent *unstructured.Unstructured) *CustomizeHookResponse {
 	return rm.customizeCache.Get(parent.GetName(), parent.GetGeneration())
 }
 
-func (rm *Manager) GetCustomizeHookResponse(parent *unstructured.Unstructured) (*CustomizeHookResponse, error) {
-	cached := rm.GetCachedCustomizeHookResponse(parent)
+func (rm *Manager) getCustomizeHookResponse(parent *unstructured.Unstructured) (*CustomizeHookResponse, error) {
+	cached := rm.getCachedCustomizeHookResponse(parent)
 	if cached != nil {
 		return cached, nil
 	} else {
-		response, err := CallCustomizeHook(rm.metacontroller, &CustomizeHookRequest{
+		var response CustomizeHookResponse
+		request := &CustomizeHookRequest{
 			Controller: rm.metacontroller,
 			Parent:     parent,
-		})
-		if err != nil {
+		}
+		if err := rm.customizeHook.Execute(request, &response); err != nil {
 			return nil, err
 		}
 
-		rm.customizeCache.Add(parent.GetName(), parent.GetGeneration(), response)
-		return response, nil
+		rm.customizeCache.Add(parent.GetName(), parent.GetGeneration(), &response)
+		return &response, nil
 	}
 }
 
@@ -208,7 +227,7 @@ func (rm *Manager) findRelatedParents(relatedSlice ...*unstructured.Unstructured
 
 	MATCHPARENTS:
 		for _, parent := range parents {
-			customizeHookResponse := rm.GetCachedCustomizeHookResponse(parent)
+			customizeHookResponse := rm.getCachedCustomizeHookResponse(parent)
 
 			if customizeHookResponse == nil {
 				continue
@@ -306,6 +325,10 @@ func listObjects(selector labels.Selector, namespace string, informer *dynamicin
 }
 
 func (rm *Manager) GetRelatedObjects(parent *unstructured.Unstructured) (common.RelativeObjectMap, error) {
+	childMap := make(common.RelativeObjectMap)
+	if !rm.IsEnabled() {
+		return childMap, nil
+	}
 	parentGroup, _ := schema.ParseGroupVersion(parent.GetAPIVersion())
 	parentResource := rm.parentKinds.Get(schema.GroupKind{Group: parentGroup.Group, Kind: parent.GetKind()})
 	if parentResource == nil {
@@ -314,13 +337,12 @@ func (rm *Manager) GetRelatedObjects(parent *unstructured.Unstructured) (common.
 
 	parentNamespace := parent.GetNamespace()
 
-	customizeHookResponse, err := rm.GetCustomizeHookResponse(parent)
+	customizeHookResponse, err := rm.getCustomizeHookResponse(parent)
 
 	if err != nil {
 		return nil, err
 	}
 
-	childMap := make(common.RelativeObjectMap)
 	for _, relatedRule := range customizeHookResponse.RelatedResourceRules {
 		relatedClient, informer, err := rm.getRelatedClient(relatedRule.APIVersion, relatedRule.Resource)
 		if err != nil {

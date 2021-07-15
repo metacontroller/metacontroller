@@ -30,6 +30,14 @@ type Manager struct {
 	Enabled bool
 }
 
+// NewManager return new Manager for dealing with finalizers.
+func NewManager(name string, enabled bool) *Manager {
+	return &Manager{
+		Name:    name,
+		Enabled: enabled,
+	}
+}
+
 // SyncObject adds or removes the finalizer on the given object as necessary.
 func (m *Manager) SyncObject(client *dynamicclientset.ResourceClient, obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
 	// If the cached object passed in is already in the right state,
