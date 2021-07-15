@@ -30,15 +30,35 @@ import (
 	k8sjson "k8s.io/apimachinery/pkg/util/json"
 )
 
-func callWebhook(webhook *v1alpha1.Webhook, hookType string, request interface{}, response interface{}) error {
+// WebhookExecutor executes a call to a webhook
+type WebhookExecutor struct {
+	client   *http.Client
+	url      string
+	hookType string
+}
+
+// NewWebhookExecutor returns a new Manager for given Webhook
+func NewWebhookExecutor(webhook *v1alpha1.Webhook, hookType string) (*WebhookExecutor, error) {
+	if webhook == nil {
+		return nil, nil
+	}
 	url, err := webhookURL(webhook)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	hookTimeout, err := webhookTimeout(webhook)
 	if err != nil {
 		logging.Logger.Info(err.Error())
 	}
+	client := &http.Client{Timeout: hookTimeout}
+	return &WebhookExecutor{
+		client:   client,
+		url:      url,
+		hookType: hookType,
+	}, nil
+}
+
+func (w *WebhookExecutor) Execute(request interface{}, response interface{}) error {
 	// Encode request.
 	reqBody, err := k8sjson.Marshal(request)
 	if err != nil {
@@ -46,13 +66,9 @@ func callWebhook(webhook *v1alpha1.Webhook, hookType string, request interface{}
 	}
 	if logging.Logger.V(6).Enabled() {
 		rawRequest := json.RawMessage(reqBody)
-		logging.Logger.Info("Webhook request", "type", hookType, "url", url, "body", rawRequest)
+		logging.Logger.Info("Webhook request", "type", w.hookType, "url", w.url, "body", rawRequest)
 	}
-
-	// Send request.
-	client := &http.Client{Timeout: hookTimeout}
-	logging.Logger.V(6).Info("Webhook timeout", "type", hookType, "url", url, "timeout", hookTimeout)
-	resp, err := client.Post(url, "application/json", bytes.NewReader(reqBody))
+	resp, err := w.client.Post(w.url, "application/json", bytes.NewReader(reqBody))
 	if err != nil {
 		return fmt.Errorf("http error: %w", err)
 	}
@@ -65,7 +81,7 @@ func callWebhook(webhook *v1alpha1.Webhook, hookType string, request interface{}
 	}
 	if logging.Logger.V(6).Enabled() {
 		rawResponse := json.RawMessage(respBody)
-		logging.Logger.V(6).Info("Webhook response", "type", hookType, "url", url, "body", rawResponse)
+		logging.Logger.V(6).Info("Webhook response", "type", w.hookType, "url", w.url, "body", rawResponse)
 	}
 
 	// Check status code.

@@ -19,6 +19,7 @@ package decorator
 import (
 	"context"
 	"fmt"
+	"metacontroller/pkg/hooks"
 	"reflect"
 	"strings"
 	"sync"
@@ -80,13 +81,27 @@ type decoratorController struct {
 	numWorkers    int
 	eventRecorder record.EventRecorder
 
-	finalizer *finalizer.Manager
-	customize customize.Manager
+	finalizer    *finalizer.Manager
+	customize    *customize.Manager
+	syncHook     hooks.HookExecutor
+	finalizeHook hooks.HookExecutor
 
 	logger logr.Logger
 }
 
 func newDecoratorController(resources *dynamicdiscovery.ResourceMap, dynClient *dynamicclientset.Clientset, dynInformers *dynamicinformer.SharedInformerFactory, eventRecorder record.EventRecorder, dc *v1alpha1.DecoratorController, numWorkers int, logger logr.Logger) (controller *decoratorController, newErr error) {
+	if dc.Spec.Hooks == nil {
+		return nil, fmt.Errorf("no hooks defined")
+	}
+	syncHook, err := hooks.NewHookExecutor(dc.Spec.Hooks.Sync, hooks.SyncHook)
+	if err != nil {
+		return nil, err
+	}
+	finalizeHook, err := hooks.NewHookExecutor(dc.Spec.Hooks.Finalize, hooks.FinalizeHook)
+	if err != nil {
+		return nil, err
+	}
+
 	c := &decoratorController{
 		dc:              dc,
 		resources:       resources,
@@ -98,17 +113,20 @@ func newDecoratorController(resources *dynamicdiscovery.ResourceMap, dynClient *
 		queue:         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "DecoratorController-"+dc.Name),
 		numWorkers:    numWorkers,
 		eventRecorder: eventRecorder,
-		finalizer: &finalizer.Manager{
-			Name:    "metacontroller.io/decoratorcontroller-" + dc.Name,
-			Enabled: dc.Spec.Hooks.Finalize != nil,
-		},
-		logger: logger.WithName(dc.Name),
+		finalizer: finalizer.NewManager(
+			"metacontroller.io/decoratorcontroller-"+dc.Name,
+			dc.Spec.Hooks.Finalize != nil,
+		),
+		syncHook:     syncHook,
+		finalizeHook: finalizeHook,
+		logger:       logger.WithName(dc.Name),
 	}
 
-	customize := customize.NewCustomizeManager(dc.Name, c.enqueueParentObject, dc, dynClient, dynInformers, c.parentInformers, c.parentKinds, nil)
+	customize, err := customize.NewCustomizeManager(dc.Name, c.enqueueParentObject, dc, dynClient, dynInformers, c.parentInformers, c.parentKinds, nil)
+	if err != nil {
+		return nil, err
+	}
 	c.customize = customize
-
-	var err error
 
 	c.parentSelector, err = newDecoratorSelector(resources, dc)
 	if err != nil {
@@ -513,7 +531,7 @@ func (c *decoratorController) syncParentObject(parent *unstructured.Unstructured
 		Attachments: observedChildren,
 		Related:     relatedObjects,
 	}
-	syncResult, err := c.callSyncHook(syncRequest)
+	syncResult, err := c.callHook(syncRequest)
 	if err != nil {
 		return err
 	}

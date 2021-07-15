@@ -23,10 +23,9 @@ import (
 
 	"metacontroller/pkg/apis/metacontroller/v1alpha1"
 	"metacontroller/pkg/controller/common"
-	"metacontroller/pkg/hooks"
 )
 
-// SyncHookRequest is the object sent as JSON to the sync hook.
+// SyncHookRequest is the object sent as JSON to the sync and finalize hooks.
 type SyncHookRequest struct {
 	Controller *v1alpha1.CompositeController `json:"controller"`
 	Parent     *unstructured.Unstructured    `json:"parent"`
@@ -35,7 +34,7 @@ type SyncHookRequest struct {
 	Finalizing bool                          `json:"finalizing"`
 }
 
-// SyncHookResponse is the expected format of the JSON response from the sync hook.
+// SyncHookResponse is the expected format of the JSON response from the sync and finalize hooks.
 type SyncHookResponse struct {
 	Status   map[string]interface{}       `json:"status"`
 	Children []*unstructured.Unstructured `json:"children"`
@@ -46,30 +45,21 @@ type SyncHookResponse struct {
 	Finalized bool `json:"finalized"`
 }
 
-func callSyncHook(cc *v1alpha1.CompositeController, request *SyncHookRequest) (*SyncHookResponse, error) {
-	if cc.Spec.Hooks == nil {
-		return nil, fmt.Errorf("no hooks defined")
-	}
-
+func (pc *parentController) callHook(request *SyncHookRequest) (*SyncHookResponse, error) {
 	var response SyncHookResponse
-
 	// First check if we should instead call the finalize hook,
 	// which has the same API as the sync hook except that it's
 	// called while the object is pending deletion.
-	if request.Parent.GetDeletionTimestamp() != nil && cc.Spec.Hooks.Finalize != nil {
+	if request.Parent.GetDeletionTimestamp() != nil && pc.finalizeHook.IsEnabled() {
 		// Finalize
 		request.Finalizing = true
-		if err := hooks.Call(cc.Spec.Hooks.Finalize, hooks.FinalizeHook, request, &response); err != nil {
+		if err := pc.finalizeHook.Execute(request, &response); err != nil {
 			return nil, fmt.Errorf("finalize hook failed: %w", err)
 		}
 	} else {
 		// Sync
 		request.Finalizing = false
-		if cc.Spec.Hooks.Sync == nil {
-			return nil, fmt.Errorf("sync hook not defined")
-		}
-
-		if err := hooks.Call(cc.Spec.Hooks.Sync, hooks.SyncHook, request, &response); err != nil {
+		if err := pc.syncHook.Execute(request, &response); err != nil {
 			return nil, fmt.Errorf("sync hook failed: %w", err)
 		}
 	}

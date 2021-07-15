@@ -17,8 +17,6 @@ limitations under the License.
 package hooks
 
 import (
-	"fmt"
-
 	"metacontroller/pkg/apis/metacontroller/v1alpha1"
 )
 
@@ -28,9 +26,37 @@ const (
 	SyncHook      string = "sync"
 )
 
-func Call(hook *v1alpha1.Hook, hookType string, request interface{}, response interface{}) error {
-	if hook.Webhook != nil {
-		return callWebhook(hook.Webhook, hookType, request, response)
+// HookExecutor an execute Hook requests
+type HookExecutor interface {
+	IsEnabled() bool
+	Execute(request interface{}, response interface{}) error
+}
+
+// NewHookExecutor return new HookExecutor which implements given v1alpha1.Hook
+func NewHookExecutor(hook *v1alpha1.Hook, hookType string) (HookExecutor, error) {
+	if hook != nil {
+		executor, err := NewWebhookExecutor(hook.Webhook, hookType)
+		if err != nil {
+			return nil, err
+		}
+		return &hookExecutorImpl{
+			webhookExecutor: executor,
+		}, nil
 	}
-	return fmt.Errorf("hook spec not defined")
+	return &hookExecutorImpl{
+		webhookExecutor: nil,
+	}, nil
+}
+
+// hookExecutorImpl is default implementation of HookExecutor
+type hookExecutorImpl struct {
+	webhookExecutor *WebhookExecutor
+}
+
+func (h *hookExecutorImpl) IsEnabled() bool {
+	return h.webhookExecutor != nil
+}
+
+func (h *hookExecutorImpl) Execute(request interface{}, response interface{}) error {
+	return h.webhookExecutor.Execute(request, response)
 }

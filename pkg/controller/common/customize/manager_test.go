@@ -17,7 +17,7 @@ limitations under the License.
 package customize
 
 import (
-	"encoding/json"
+	"metacontroller/pkg/internal/testutils"
 	"reflect"
 	"testing"
 
@@ -41,17 +41,19 @@ func (cc *nilCustomizableController) GetCustomizeHook() *v1alpha1.Hook {
 	return nil
 }
 
-var fakeWebhook = v1alpha1.Webhook{}
-var fakeHook = v1alpha1.Hook{Webhook: &fakeWebhook}
-
 type fakeCustomizableController struct {
 }
 
 func (cc *fakeCustomizableController) GetCustomizeHook() *v1alpha1.Hook {
-	return &fakeHook
+	url := "fake"
+	return &v1alpha1.Hook{
+		Webhook: &v1alpha1.Webhook{
+			URL: &url,
+		},
+	}
 }
 
-var customizeManagerWithNilController = NewCustomizeManager(
+var customizeManagerWithNilController, _ = NewCustomizeManager(
 	"test",
 	fakeEnqueueParent,
 	&nilCustomizableController{},
@@ -62,7 +64,7 @@ var customizeManagerWithNilController = NewCustomizeManager(
 	nil,
 )
 
-var customizeManagerWithFakeController = NewCustomizeManager(
+var customizeManagerWithFakeController, _ = NewCustomizeManager(
 	"test",
 	fakeEnqueueParent,
 	&fakeCustomizableController{},
@@ -73,34 +75,24 @@ var customizeManagerWithFakeController = NewCustomizeManager(
 	nil,
 )
 
-func TestGetCustomizeHookResponse_returnNilRelatedResourceRulesIfHookNotSet(t *testing.T) {
+func TestGetRelatedObjects_whenHookDisabled_returnEmptyMap(t *testing.T) {
 	parent := &unstructured.Unstructured{}
 	parent.SetName("test")
 	parent.SetGeneration(1)
 
-	response, _ := customizeManagerWithNilController.GetCustomizeHookResponse(parent)
+	relatedObjects, err := customizeManagerWithNilController.GetRelatedObjects(parent)
 
-	if response.RelatedResourceRules != nil {
-		t.Errorf("Incorrect response, should be nil, got: %v", response)
+	if err != nil {
+		t.Errorf("Incorrect invocation, err should be nil, got: %v", err)
+	}
+
+	if len(relatedObjects) != 0 {
+		t.Errorf("Expected empty map, got %v", relatedObjects)
 	}
 }
 
-func TestGetCustomizeHookResponse_returnErrWhenHookIsInvalid(t *testing.T) {
-	parent := &unstructured.Unstructured{}
-	parent.SetName("test")
-	parent.SetGeneration(1)
-
-	response, err := customizeManagerWithFakeController.GetCustomizeHookResponse(parent)
-
-	if response != nil && err == nil {
-		t.Errorf("Incorrect invocation, response should be nil, got: %v, error is nil", response)
-	}
-}
-
-func TestGetCustomizeHookResponse_returnResponse(t *testing.T) {
-	originalCallCustomizeHook := callCustomizeHook
-	defer func() { callCustomizeHook = originalCallCustomizeHook }()
-	expectedResponse := CustomizeHookResponse{
+func TestGetRelatedObject_requestResponse(t *testing.T) {
+	expectedResponse := &CustomizeHookResponse{
 		[]*v1alpha1.RelatedResourceRule{{
 			ResourceRule: v1alpha1.ResourceRule{
 				APIVersion: "some",
@@ -111,25 +103,19 @@ func TestGetCustomizeHookResponse_returnResponse(t *testing.T) {
 			Names:         []string{"name"},
 		}},
 	}
-	callCustomizeHook = func(hook *v1alpha1.Hook, hookType string, request, response interface{}) error {
-		byteArray, _ := json.Marshal(expectedResponse)
-		if err := json.Unmarshal(byteArray, response); err != nil {
-			return err
-		}
-		return nil
-	}
 
+	customizeManagerWithFakeController.customizeHook = testutils.NewHookExecutorStub(expectedResponse)
 	parent := &unstructured.Unstructured{}
 	parent.SetName("othertest")
 	parent.SetGeneration(1)
 
-	response, err := customizeManagerWithFakeController.GetCustomizeHookResponse(parent)
+	response, err := customizeManagerWithFakeController.getCustomizeHookResponse(parent)
 
 	if err != nil {
 		t.Errorf("Incorrect invocation, err should be nil, got: %v", err)
 	}
 
-	if !reflect.DeepEqual(*response, expectedResponse) {
+	if !reflect.DeepEqual(*response, *expectedResponse) {
 		t.Errorf("Response should be equal to %v, got %v", expectedResponse, response)
 	}
 
