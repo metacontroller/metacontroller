@@ -275,8 +275,17 @@ func updateChildren(client *dynamicclientset.ResourceClient, updateStrategy Chil
 				continue
 			}
 
-			// We always claim everything we create.
-			controllerRef := MakeControllerRef(parent)
+			// When the children is in another namespace (and the parent is namespaced),
+			// the real parent is the parent's namespace
+			realParent := parent
+			if parent.GetNamespace() != "" && parent.GetNamespace() != ns {
+				err := error(nil)
+				realParent, err = client.Get(context.TODO(), parent.GetNamespace(), metav1.GetOptions{})
+				if err != nil {
+					errs = append(errs, err)
+				}
+			}
+			controllerRef := MakeControllerRef(realParent)
 			ownerRefs := obj.GetOwnerReferences()
 			ownerRefs = append(ownerRefs, *controllerRef)
 			obj.SetOwnerReferences(ownerRefs)
