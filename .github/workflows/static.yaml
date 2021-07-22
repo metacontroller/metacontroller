@@ -12,21 +12,6 @@ jobs:
           # Optional: version of golangci-lint to use in form of v1.2 or v1.2.3 or `latest` to use the latest version
           version: latest
           args: --timeout 10m --enable errorlint,gofmt,goimports,gosec,whitespace,bodyclose,dogsled,durationcheck,errorlint,exhaustive,exportloopref,goconst,gocritic,gosec,ifshort,importas,misspell,nilerr
-  go-logcheck:
-    runs-on: ubuntu-20.04
-    env:
-      GO111MODULE: on
-    steps:
-      - name: checkout
-        uses: actions/checkout@v2
-      - uses: actions/setup-go@v2
-        with:
-          go-version: '1.16.5' # The Go version to download (if necessary) and use.
-      - run: |
-          go get k8s.io/klog/hack/tools/logcheck@latest
-          go get k8s.io/client-go@v0.21.2
-          go install k8s.io/klog/hack/tools/logcheck@latest
-      - run: logcheck ./...
   docker-linters:
     runs-on: ubuntu-20.04
     steps:
