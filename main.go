@@ -39,7 +39,6 @@ var (
 	discoveryInterval = flag.Duration("discovery-interval", 30*time.Second, "How often to refresh discovery cache to pick up newly-installed resources")
 	informerRelist    = flag.Duration("cache-flush-interval", 30*time.Minute, "How often to flush local caches and relist objects from the API server")
 	metricsAddr       = flag.String("metrics-address", ":9999", "The address to bind metrics endpoint - /metrics")
-	clientConfigPath  = flag.String("client-config-path", "", "(Deprecated: switch to `--kubeconfig`) Path to kubeconfig file (same format as used by kubectl); if not specified, use in-cluster config")
 	clientGoQPS       = flag.Float64("client-go-qps", 5, "Number of queries per second client-go is allowed to make (default 5)")
 	clientGoBurst     = flag.Int("client-go-burst", 10, "Allowed burst queries for client-go (default 10)")
 	workers           = flag.Int("workers", 5, "Number of sync workers to run (default 5)")
@@ -53,15 +52,6 @@ func main() {
 	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
 	logging.InitLogging(&opts)
-	// If client-config-path is set, overwrite the kubeconfig value
-	// to maintain backward compatibility.
-	if clientConfigPath != nil {
-		err := flag.Set("kubeconfig", *clientConfigPath)
-		if err != nil {
-			logging.Logger.Error(err, "Terminating")
-			os.Exit(1)
-		}
-	}
 
 	logging.Logger.Info("Discovery cache flush interval", "discovery_interval", *discoveryInterval)
 	logging.Logger.Info("API server object cache flush interval", "cache_flush_interval", *informerRelist)
