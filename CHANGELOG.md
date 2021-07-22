@@ -1,3 +1,39 @@
+# [2.0.0](https://github.com/metacontroller/metacontroller/compare/v1.5.20...v2.0.0) (2021-07-22)
+
+
+### Bug Fixes
+
+* **deps:** Update controller-runtime to 0.9.3 and k8s packages to v0.21.3 ([5d06b06](https://github.com/metacontroller/metacontroller/commit/5d06b0662f4acecac5c65792a3ab2e3a75e0d91e))
+* **deps:** Update k8s.io/klog/v2 to v2.10.0 ([47b107d](https://github.com/metacontroller/metacontroller/commit/47b107da7da3416bd700ca0569813e7e5b5af239))
+
+
+### Features
+
+* Remove deprecated --client-config-path - switched to --kubeconfig ([9cf558a](https://github.com/metacontroller/metacontroller/commit/9cf558ae12f4f65d82d4547d00c3ef2a2a4ab74c))
+* Rename --debug-addr to --metrics-address ([86cda55](https://github.com/metacontroller/metacontroller/commit/86cda55ea5d332fe3539e6d12c2ba9b91bad85aa))
+* **logging:** [#233](https://github.com/metacontroller/metacontroller/issues/233) - Allow logging in json format ([8f11b37](https://github.com/metacontroller/metacontroller/commit/8f11b37aaa4dae991b7f5860d183a204361745ab))
+
+
+### BREAKING CHANGES
+
+* Flag --client-config-path is removed in favour of
+--kubeconfig
+
+Signed-off-by: grzesuav <grzesuav@gmail.com>
+* Flag --debug-addr was renamed to --metrics-address
+
+Signed-off-by: grzesuav <grzesuav@gmail.com>
+* **logging:** Removed klog flags - `-v`, `--logtostderr` etc. Added zap logger flags
+instead:
+- --zap-log-level
+- --zap-devel
+- --zap-encoder
+- --zap-stacktrace-level
+Please read documentation (User Guide/Configuration) and/or check
+manifest changes to check which should be used.
+
+Signed-off-by: grzesuav <grzesuav@gmail.com>
+
 ## [1.5.20](https://github.com/metacontroller/metacontroller/compare/v1.5.19...v1.5.20) (2021-07-13)
 
 
