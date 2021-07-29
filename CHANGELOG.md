@@ -1,3 +1,15 @@
+## [2.0.1](https://github.com/metacontroller/metacontroller/compare/v2.0.0...v2.0.1) (2021-07-29)
+
+
+### Bug Fixes
+
+* **deps:** Update controller-runtime to v0.9.5 and k8s.io/utils ([5bfcb90](https://github.com/metacontroller/metacontroller/commit/5bfcb905f1d100eb71f5ac32c8081879aa5fbbed))
+
+
+### Performance Improvements
+
+* **webhooks:** [#255](https://github.com/metacontroller/metacontroller/issues/255) - Create httpClient per controller instead ad-hoc creation ([a8f5c39](https://github.com/metacontroller/metacontroller/commit/a8f5c3993996ffb90ce275ebf926dbeabf7e82eb))
+
 # [2.0.0](https://github.com/metacontroller/metacontroller/compare/v1.5.20...v2.0.0) (2021-07-22)
 
 
