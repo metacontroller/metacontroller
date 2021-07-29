@@ -28,14 +28,11 @@ jobs:
         flags: integration
         fail_ci_if_error: true # optional (default = false)
   e2etests:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     strategy:
       fail-fast: false
       matrix:
         configuration:
-#         - {version: '1.11', kind: "v0.7.0", image: 'kindest/node:v1.11.10@sha256:e6f3dade95b7cb74081c5b9f3291aaaa6026a90a977e0b990778b6adc9ea6248', crd_version: 'v1beta1' }
-         - {version: '1.12', kind: "v0.8.1", image: 'kindest/node:v1.12.10@sha256:faeb82453af2f9373447bb63f50bae02b8020968e0889c7fa308e19b348916cb', crd_version: 'v1beta1' }
-         - {version: '1.13', kind: "v0.9.0", image: 'kindest/node:v1.13.12@sha256:1c1a48c2bfcbae4d5f4fa4310b5ed10756facad0b7a2ca93c7a4b5bae5db29f5', crd_version: 'v1beta1' }
          - {version: '1.14', kind: "v0.11.1", image: 'kindest/node:v1.14.10@sha256:f8a66ef82822ab4f7569e91a5bccaf27bceee135c1457c512e54de8c6f7219f8', crd_version: 'v1beta1' }
          - {version: '1.15', kind: "v0.11.1", image: 'kindest/node:v1.15.12@sha256:b920920e1eda689d9936dfcf7332701e80be12566999152626b2c9d730397a95', crd_version: 'v1beta1' }
          - {version: '1.16', kind: "v0.11.1", image: 'kindest/node:v1.16.15@sha256:83067ed51bf2a3395b24687094e283a7c7c865ccc12a8b1d7aa673ba0c5e8861', crd_version: 'v1' }
