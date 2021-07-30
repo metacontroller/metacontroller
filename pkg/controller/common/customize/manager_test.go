@@ -62,6 +62,7 @@ var customizeManagerWithNilController, _ = NewCustomizeManager(
 	make(common.InformerMap),
 	make(common.GroupKindMap),
 	nil,
+	common.CompositeController,
 )
 
 var customizeManagerWithFakeController, _ = NewCustomizeManager(
@@ -73,6 +74,7 @@ var customizeManagerWithFakeController, _ = NewCustomizeManager(
 	make(common.InformerMap),
 	make(common.GroupKindMap),
 	nil,
+	common.DecoratorController,
 )
 
 func TestGetRelatedObjects_whenHookDisabled_returnEmptyMap(t *testing.T) {

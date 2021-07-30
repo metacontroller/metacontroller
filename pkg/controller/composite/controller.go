@@ -150,11 +150,11 @@ func newParentController(
 	if cc.Spec.Hooks == nil {
 		return nil, fmt.Errorf("no hooks defined")
 	}
-	syncHook, err := hooks.NewHookExecutor(cc.Spec.Hooks.Sync, hooks.SyncHook)
+	syncHook, err := hooks.NewHookExecutor(cc.Spec.Hooks.Sync, cc.Name, common.CompositeController, common.SyncHook)
 	if err != nil {
 		return nil, err
 	}
-	finalizeHook, err := hooks.NewHookExecutor(cc.Spec.Hooks.Finalize, hooks.FinalizeHook)
+	finalizeHook, err := hooks.NewHookExecutor(cc.Spec.Hooks.Finalize, cc.Name, common.CompositeController, common.FinalizeHook)
 	if err != nil {
 		return nil, err
 	}
@@ -170,7 +170,7 @@ func newParentController(
 		parentResource: parentResource,
 		revisionLister: revisionLister,
 		updateStrategy: updateStrategy,
-		queue:          workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "CompositeController-"+cc.Name),
+		queue:          workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), common.CompositeController.String()+"-"+cc.Name),
 		numWorkers:     numWorkers,
 		eventRecorder:  eventRecorder,
 		finalizer: finalizer.NewManager(
@@ -183,7 +183,7 @@ func newParentController(
 	}
 
 	pc.customize, err = customize.NewCustomizeManager(
-		parentResource.Kind,
+		cc.Name,
 		pc.enqueueParentObject,
 		cc,
 		dynClient,
@@ -191,6 +191,7 @@ func newParentController(
 		parentInformers,
 		parentResources,
 		pc.logger,
+		common.CompositeController,
 	)
 	if err != nil {
 		return nil, err
@@ -279,6 +280,7 @@ func (pc *parentController) Stop() {
 	// Remove event handlers and close informer for the parent resource.
 	pc.parentInformer.Informer().RemoveEventHandlers()
 	pc.parentInformer.Close()
+	pc.customize.Stop()
 }
 
 func (pc *parentController) worker() {

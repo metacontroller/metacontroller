@@ -41,3 +41,5 @@ func (h *hookExecutorStub) Execute(request interface{}, response interface{}) er
 	val.Set(newVal)
 	return nil
 }
+
+func (h hookExecutorStub) Close() {}

@@ -93,11 +93,11 @@ func newDecoratorController(resources *dynamicdiscovery.ResourceMap, dynClient *
 	if dc.Spec.Hooks == nil {
 		return nil, fmt.Errorf("no hooks defined")
 	}
-	syncHook, err := hooks.NewHookExecutor(dc.Spec.Hooks.Sync, hooks.SyncHook)
+	syncHook, err := hooks.NewHookExecutor(dc.Spec.Hooks.Sync, dc.Name, common.DecoratorController, common.SyncHook)
 	if err != nil {
 		return nil, err
 	}
-	finalizeHook, err := hooks.NewHookExecutor(dc.Spec.Hooks.Finalize, hooks.FinalizeHook)
+	finalizeHook, err := hooks.NewHookExecutor(dc.Spec.Hooks.Finalize, dc.Name, common.DecoratorController, common.FinalizeHook)
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +110,7 @@ func newDecoratorController(resources *dynamicdiscovery.ResourceMap, dynClient *
 		parentInformers: make(common.InformerMap),
 		childInformers:  make(common.InformerMap),
 
-		queue:         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "DecoratorController-"+dc.Name),
+		queue:         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), common.DecoratorController.String()+"-"+dc.Name),
 		numWorkers:    numWorkers,
 		eventRecorder: eventRecorder,
 		finalizer: finalizer.NewManager(
@@ -122,7 +122,17 @@ func newDecoratorController(resources *dynamicdiscovery.ResourceMap, dynClient *
 		logger:       logger.WithName(dc.Name),
 	}
 
-	customize, err := customize.NewCustomizeManager(dc.Name, c.enqueueParentObject, dc, dynClient, dynInformers, c.parentInformers, c.parentKinds, nil)
+	customize, err := customize.NewCustomizeManager(
+		dc.Name,
+		c.enqueueParentObject,
+		dc,
+		dynClient,
+		dynInformers,
+		c.parentInformers,
+		c.parentKinds,
+		c.logger,
+		common.CompositeController,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -276,6 +286,7 @@ func (c *decoratorController) Stop() {
 		informer.Informer().RemoveEventHandlers()
 		informer.Close()
 	}
+	c.customize.Stop()
 }
 
 func (c *decoratorController) worker() {

@@ -44,8 +44,8 @@ const (
 )
 
 type Manager struct {
-	name           string
-	metacontroller CustomizableController
+	name       string
+	controller CustomizableController
 
 	parentKinds common.GroupKindMap
 
@@ -68,16 +68,17 @@ type Manager struct {
 func NewCustomizeManager(
 	name string,
 	enqueueParent func(interface{}),
-	metacontroller CustomizableController,
+	controller CustomizableController,
 	dynClient *dynamicclientset.Clientset,
 	dynInformers *dynamicinformer.SharedInformerFactory,
 	parentInformers common.InformerMap,
 	parentKinds common.GroupKindMap,
-	logger logr.Logger) (*Manager, error) {
+	logger logr.Logger,
+	controllerType common.ControllerType) (*Manager, error) {
 	var executor hooks.HookExecutor
 	var err error
-	if metacontroller.GetCustomizeHook() != nil {
-		executor, err = hooks.NewHookExecutor(metacontroller.GetCustomizeHook(), hooks.CustomizeHook)
+	if controller.GetCustomizeHook() != nil {
+		executor, err = hooks.NewHookExecutor(controller.GetCustomizeHook(), name, controllerType, common.CustomizeHook)
 		if err != nil {
 			return nil, err
 		}
@@ -86,7 +87,7 @@ func NewCustomizeManager(
 	}
 	return &Manager{
 		name:             name,
-		metacontroller:   metacontroller,
+		controller:       controller,
 		parentKinds:      parentKinds,
 		customizeCache:   NewResponseCache(),
 		dynClient:        dynClient,
@@ -107,6 +108,13 @@ func (rm *Manager) Start(stopCh chan struct{}) {
 	rm.stopCh = stopCh
 }
 
+func (rm *Manager) Stop() {
+	for _, informer := range rm.relatedInformers {
+		informer.Informer().RemoveEventHandlers()
+		informer.Close()
+	}
+}
+
 func (rm *Manager) getCachedCustomizeHookResponse(parent *unstructured.Unstructured) *CustomizeHookResponse {
 	return rm.customizeCache.Get(parent.GetName(), parent.GetGeneration())
 }
@@ -118,7 +126,7 @@ func (rm *Manager) getCustomizeHookResponse(parent *unstructured.Unstructured) (
 	} else {
 		var response CustomizeHookResponse
 		request := &CustomizeHookRequest{
-			Controller: rm.metacontroller,
+			Controller: rm.controller,
 			Parent:     parent,
 		}
 		if err := rm.customizeHook.Execute(request, &response); err != nil {

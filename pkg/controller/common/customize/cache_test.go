@@ -28,8 +28,8 @@ func TestAdd_ElementFirstTime(t *testing.T) {
 
 	expected := customizeResponseCacheEntry{parentGeneration: 12, cachedResponse: &mockResponse}
 
-	if responseCache.cache["some"] != expected {
-		t.Errorf("Incorrect responseCache entry, got: %v, expected: %v", responseCache.cache["someName"], expected)
+	if cachedElement := responseCache.Get("some", 12); cachedElement != expected.cachedResponse {
+		t.Errorf("Incorrect responseCache entry, got: %v, expected: %v", cachedElement, expected)
 	}
 }
 
@@ -41,8 +41,11 @@ func TestAdd_ElementOverridePreviousOne(t *testing.T) {
 
 	responseCache.Add("some", 14, &mockResponse)
 
-	if responseCache.cache["some"] != expected {
-		t.Errorf("Incorrect cache entry, got: %v, expected: %v", responseCache.cache["someName"], expected)
+	if cachedElement := responseCache.Get("some", 14); cachedElement != expected.cachedResponse {
+		t.Errorf("Incorrect cache entry, got: %v, expected: %v", cachedElement, expected)
+	}
+	if cachedElement := responseCache.Get("some", 12); cachedElement != nil {
+		t.Errorf("Incorrect cache entry, got: %v, expected nil", cachedElement)
 	}
 }
 
