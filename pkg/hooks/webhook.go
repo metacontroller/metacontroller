@@ -21,7 +21,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"metacontroller/pkg/controller/common"
 	"metacontroller/pkg/logging"
+	"metacontroller/pkg/metrics"
 	"net/http"
 	"time"
 
@@ -37,8 +39,12 @@ type WebhookExecutor struct {
 	hookType string
 }
 
-// NewWebhookExecutor returns a new Manager for given Webhook
-func NewWebhookExecutor(webhook *v1alpha1.Webhook, hookType string) (*WebhookExecutor, error) {
+// NewWebhookExecutor returns new WebhookExecutor
+func NewWebhookExecutor(
+	webhook *v1alpha1.Webhook,
+	controllerName string,
+	controllerType common.ControllerType,
+	hookType common.HookType) (*WebhookExecutor, error) {
 	if webhook == nil {
 		return nil, nil
 	}
@@ -51,10 +57,19 @@ func NewWebhookExecutor(webhook *v1alpha1.Webhook, hookType string) (*WebhookExe
 		logging.Logger.Info(err.Error())
 	}
 	client := &http.Client{Timeout: hookTimeout}
+	client, err = metrics.InstrumentClientWithConstLabels(
+		controllerName,
+		controllerType,
+		hookType,
+		client,
+		url)
+	if err != nil {
+		return nil, err
+	}
 	return &WebhookExecutor{
 		client:   client,
 		url:      url,
-		hookType: hookType,
+		hookType: hookType.String(),
 	}, nil
 }
 

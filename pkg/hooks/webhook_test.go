@@ -1,6 +1,7 @@
 package hooks
 
 import (
+	"metacontroller/pkg/controller/common"
 	"testing"
 	"time"
 
@@ -12,7 +13,7 @@ import (
 )
 
 func TestNewHookExecutor_whenNilWebHook_returnNilWebhookExecutor(t *testing.T) {
-	executor, err := NewWebhookExecutor(nil, "")
+	executor, err := NewWebhookExecutor(nil, "", common.CompositeController, "")
 
 	if err != nil {
 		t.Errorf("err should be nil, got: %v", err)

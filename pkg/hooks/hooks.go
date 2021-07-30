@@ -18,12 +18,7 @@ package hooks
 
 import (
 	"metacontroller/pkg/apis/metacontroller/v1alpha1"
-)
-
-const (
-	FinalizeHook  string = "finalize"
-	CustomizeHook string = "customize"
-	SyncHook      string = "sync"
+	"metacontroller/pkg/controller/common"
 )
 
 // HookExecutor an execute Hook requests
@@ -33,9 +28,13 @@ type HookExecutor interface {
 }
 
 // NewHookExecutor return new HookExecutor which implements given v1alpha1.Hook
-func NewHookExecutor(hook *v1alpha1.Hook, hookType string) (HookExecutor, error) {
+func NewHookExecutor(
+	hook *v1alpha1.Hook,
+	controllerName string,
+	controllerType common.ControllerType,
+	hookType common.HookType) (HookExecutor, error) {
 	if hook != nil {
-		executor, err := NewWebhookExecutor(hook.Webhook, hookType)
+		executor, err := NewWebhookExecutor(hook.Webhook, controllerName, controllerType, hookType)
 		if err != nil {
 			return nil, err
 		}

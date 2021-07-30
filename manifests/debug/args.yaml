@@ -11,6 +11,6 @@ spec:
       - name: metacontroller
         command: ["/dlv", "--listen=:40000", "--headless=true", "--api-version=2", "exec", "/usr/bin/metacontroller", "--"]
         args:
-        - --logtostderr
-        - -v=5
+        - --zap-devel
+        - --zap-log-level=5
         - --discovery-interval=5s

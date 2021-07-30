@@ -16,20 +16,23 @@ limitations under the License.
 
 package customize
 
-import "sync"
+import (
+	"time"
+
+	"zgo.at/zcache"
+)
 
 // ResponseCache keeps customize hook responses for particular parent's to avoid unnecessary
 // calls.
 type ResponseCache struct {
-	cache map[string]customizeResponseCacheEntry
-	lock  sync.RWMutex
+	cache *zcache.Cache
 }
 
 // NewResponseCache returns new, empty response cache.
 func NewResponseCache() *ResponseCache {
+	cache := zcache.New(20*time.Minute, 10*time.Minute)
 	return &ResponseCache{
-		cache: make(map[string]customizeResponseCacheEntry),
-		lock:  sync.RWMutex{},
+		cache: cache,
 	}
 }
 
@@ -40,22 +43,22 @@ type customizeResponseCacheEntry struct {
 
 // Add adds a given response for given parent and its generation
 func (responseCache *ResponseCache) Add(name string, parentGeneration int64, response *CustomizeHookResponse) {
-	responseCache.lock.Lock()
-	defer responseCache.lock.Unlock()
-	responseCache.cache[name] = customizeResponseCacheEntry{
+	responseCacheEntry := customizeResponseCacheEntry{
 		parentGeneration: parentGeneration,
 		cachedResponse:   response,
 	}
+	responseCache.cache.Set(name, &responseCacheEntry, zcache.DefaultExpiration)
 }
 
 // Get returns response from cache or nil when not found
 func (responseCache *ResponseCache) Get(name string, parentGeneration int64) *CustomizeHookResponse {
-	responseCache.lock.RLock()
-	defer responseCache.lock.RUnlock()
-	cacheEntry, ok := responseCache.cache[name]
-	if !ok || cacheEntry.parentGeneration != parentGeneration {
+	value, found := responseCache.cache.Get(name)
+	if !found {
 		return nil
 	}
-
-	return cacheEntry.cachedResponse
+	responseCacheEntry := value.(*customizeResponseCacheEntry)
+	if responseCacheEntry.parentGeneration != parentGeneration {
+		return nil
+	}
+	return responseCacheEntry.cachedResponse
 }

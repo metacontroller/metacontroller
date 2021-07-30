@@ -59,6 +59,25 @@ func init() {
 	}
 }
 
+type HookType string
+type ControllerType string
+
+const (
+	FinalizeHook        HookType       = "finalize"
+	CustomizeHook       HookType       = "customize"
+	SyncHook            HookType       = "sync"
+	CompositeController ControllerType = "CompositeController"
+	DecoratorController ControllerType = "DecoratorController"
+)
+
+func (h HookType) String() string {
+	return string(h)
+}
+
+func (c ControllerType) String() string {
+	return string(c)
+}
+
 // ControllerContext holds various object related to interacting with kubernetes cluster
 type ControllerContext struct {
 	// K8sClient is a client used to interact with the Kubernetes API
