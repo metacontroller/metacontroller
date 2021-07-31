@@ -1,3 +1,10 @@
+## [2.0.2](https://github.com/metacontroller/metacontroller/compare/v2.0.1...v2.0.2) (2021-07-31)
+
+
+### Bug Fixes
+
+* **deps:** update alpine:3.14.0 docker digest to adab384 ([cfc6956](https://github.com/metacontroller/metacontroller/commit/cfc69560695bbbf6b28c9402951808138eddb4c8))
+
 ## [2.0.1](https://github.com/metacontroller/metacontroller/compare/v2.0.0...v2.0.1) (2021-07-29)
 
 
