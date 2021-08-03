@@ -1,3 +1,10 @@
+## [2.0.3](https://github.com/metacontroller/metacontroller/compare/v2.0.2...v2.0.3) (2021-08-03)
+
+
+### Bug Fixes
+
+* **metrics:** Add http client metrics ([3d2391d](https://github.com/metacontroller/metacontroller/commit/3d2391d1740418cb313e8dc0eb9c28d69a013461))
+
 ## [2.0.2](https://github.com/metacontroller/metacontroller/compare/v2.0.1...v2.0.2) (2021-07-31)
 
 
