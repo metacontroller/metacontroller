@@ -494,6 +494,12 @@ func (c *decoratorController) sync(key string) error {
 			corev1.EventTypeWarning,
 			events.ReasonSyncError,
 			"Sync error: %s", err.Error())
+	} else {
+		c.eventRecorder.Eventf(
+			parent,
+			v1.EventTypeNormal,
+			events.ReasonSyncOk,
+			"Sync executed successfully")
 	}
 	return err
 }

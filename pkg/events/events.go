@@ -14,6 +14,7 @@ const (
 	ReasonStopped     string = "Stopped"
 	ReasonStopping    string = "Stopping"
 	ReasonSyncError   string = "SyncError"
+	ReasonSyncOk      string = "SyncExecutedSuccessfully"
 	ReasonCreateError string = "CreateError"
 )
 

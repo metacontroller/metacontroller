@@ -524,6 +524,12 @@ func (pc *parentController) sync(key string) error {
 			v1.EventTypeWarning,
 			events.ReasonSyncError,
 			"Sync error: %s", err)
+	} else {
+		pc.eventRecorder.Eventf(
+			parent,
+			v1.EventTypeNormal,
+			events.ReasonSyncOk,
+			"Sync executed successfully")
 	}
 	return err
 }
