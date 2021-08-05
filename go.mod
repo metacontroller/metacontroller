@@ -6,7 +6,7 @@ go 1.16
 
 require (
 	github.com/evanphx/json-patch/v5 v5.5.0
-	github.com/go-logr/logr v0.4.0
+	github.com/go-logr/logr v1.0.0
 	github.com/google/go-cmp v0.5.6
 	github.com/nsf/jsondiff v0.0.0-20210303162244-6ea32392771e // test
 	github.com/prometheus/client_golang v1.11.0
