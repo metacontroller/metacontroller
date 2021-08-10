@@ -1,3 +1,11 @@
+## [2.0.4](https://github.com/metacontroller/metacontroller/compare/v2.0.3...v2.0.4) (2021-08-10)
+
+
+### Bug Fixes
+
+* **deps:** update alpine docker tag to v3.14.1 ([0599592](https://github.com/metacontroller/metacontroller/commit/0599592ae8c8991c3c3a3ccf1314a9a7f77d7252))
+* **deps:** update golang docker tag to v1.16.7 ([26b916a](https://github.com/metacontroller/metacontroller/commit/26b916a4d2e54162b985eeb5cdfc956b9d575c6d))
+
 ## [2.0.3](https://github.com/metacontroller/metacontroller/compare/v2.0.2...v2.0.3) (2021-08-03)
 
 
