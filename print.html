@@ -4,52 +4,30 @@
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
         <title>Metacontroller</title>
-        
         <meta name="robots" content="noindex" />
-        
-        
-
-
         <!-- Custom HTML head -->
-        
-
-
         <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
         <meta name="description" content="Lightweight Kubernetes controllers as a service">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="theme-color" content="#ffffff" />
 
-        
         <link rel="icon" href="favicon.svg">
-        
-        
         <link rel="shortcut icon" href="favicon.png">
-        
         <link rel="stylesheet" href="css/variables.css">
         <link rel="stylesheet" href="css/general.css">
         <link rel="stylesheet" href="css/chrome.css">
-        
         <link rel="stylesheet" href="css/print.css" media="print">
-        
-
         <!-- Fonts -->
         <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
-        
         <link rel="stylesheet" href="fonts/fonts.css">
-        
-
         <!-- Highlight.js Stylesheets -->
         <link rel="stylesheet" href="highlight.css">
         <link rel="stylesheet" href="tomorrow-night.css">
         <link rel="stylesheet" href="ayu-highlight.css">
 
         <!-- Custom theme stylesheets -->
-        
-
-        
         <!-- MathJax -->
         <script async type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-        
     </head>
     <body>
         <!-- Provide site root to javascript -->
@@ -108,7 +86,6 @@
         <div id="page-wrapper" class="page-wrapper">
 
             <div class="page">
-                
                 <div id="menu-bar-hover-placeholder"></div>
                 <div id="menu-bar" class="menu-bar sticky bordered">
                     <div class="left-buttons">
@@ -125,33 +102,26 @@
                             <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
                         </ul>
-                        
                         <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
                             <i class="fa fa-search"></i>
                         </button>
-                        
                     </div>
 
                     <h1 class="menu-title">Metacontroller</h1>
 
                     <div class="right-buttons">
-                        
                         <a href="print.html" title="Print this book" aria-label="Print this book">
                             <i id="print-button" class="fa fa-print"></i>
                         </a>
-                        
-                        
                         <a href="https://github.com/metacontroller/metacontroller" title="Git repository" aria-label="Git repository">
                             <i id="git-repository-button" class="fa fa-github"></i>
                         </a>
-                        
                     </div>
                 </div>
 
-                
                 <div id="search-wrapper" class="hidden">
                     <form id="searchbar-outer" class="searchbar-outer">
-                        <input type="search" name="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
                     </form>
                     <div id="searchresults-outer" class="searchresults-outer hidden">
                         <div id="searchresults-header" class="searchresults-header"></div>
@@ -159,8 +129,6 @@
                         </ul>
                     </div>
                 </div>
-                
-
                 <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
                 <script type="text/javascript">
                     document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
@@ -291,7 +259,7 @@ client libraries.</p>
 <li>Give feedback by filing <a href="https://www.github.com/metacontroller/metacontroller/issues">GitHub issues</a>.</li>
 <li><a href="./contrib.html">Contribute</a>!</li>
 </ul>
-<h1 id="introduction-1"><a class="header" href="#introduction-1">Introduction</a></h1>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="introduction-1"><a class="header" href="#introduction-1">Introduction</a></h1>
 <p>Metacontroller is an add-on for <a href="https://kubernetes.io/">Kubernetes</a>
 that makes it easy to write and deploy <a href="https://kubernetes.io/docs/concepts/api-extension/custom-resources/#custom-controllers">custom controllers</a>.
 Although the <a href="https://www.github.com/metacontroller/metacontroller">open-source project</a> was started at Google,
@@ -410,7 +378,7 @@ client libraries.</p>
 <li>Give feedback by filing <a href="https://www.github.com/metacontroller/metacontroller/issues">GitHub issues</a>.</li>
 <li><a href="./contrib.html">Contribute</a>!</li>
 </ul>
-<h1 id="examples"><a class="header" href="#examples">Examples</a></h1>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="examples"><a class="header" href="#examples">Examples</a></h1>
 <p>This page lists some examples of what you can make with Metacontroller.</p>
 <p>If you'd like to add a link to another example that demonstrates a new
 language or technique, please send a pull request against
@@ -490,7 +458,7 @@ This is also an example how <code>Status</code> subresource should be handled.</
 <p><a href="https://www.github.com/metacontroller/metacontroller/tree/master/examples/secretpropagation">Secret propagation</a> is modyfication of <code>ConfigMapPropagation</code> concept, 
 using label selector on <code>Namespace</code> object to choose where to
 propagate <code>Secret</code>.</p>
-<h1 id="concepts"><a class="header" href="#concepts">Concepts</a></h1>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="concepts"><a class="header" href="#concepts">Concepts</a></h1>
 <p>This page provides some background on terms that are used throughout
 the Metacontroller documentation.</p>
 <ul>
@@ -637,7 +605,7 @@ which it calls to let you implement your business logic.</p>
 <p>Currently, these <a href="./api/hook.html">lambda hooks</a> must be implemented as webhooks,
 but other mechanisms could be added in the future,
 such as gRPC or embedded scripting languages.</p>
-<h1 id="features"><a class="header" href="#features">Features</a></h1>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="features"><a class="header" href="#features">Features</a></h1>
 <p>This is a high-level overview of what Metacontroller provides
 for Kubernetes controller authors.</p>
 <ul>
@@ -747,7 +715,7 @@ looks essentially like this:</p>
 <p>For comparison, the corresponding pull request to
 <a href="https://github.com/kubernetes/kubernetes/pull/46669">add rolling updates to StatefulSet itself</a> involved
 over 9,000 lines of changes to business logic, boilerplate, and generated code.</p>
-<h1 id="faq"><a class="header" href="#faq">FAQ</a></h1>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="faq"><a class="header" href="#faq">FAQ</a></h1>
 <p>This page answers some common questions encountered while
 evaluating, setting up, and using Metacontroller.</p>
 <p>If you have any questions that aren't answered here,
@@ -932,8 +900,11 @@ and generating a client the same way you would without Metacontroller.</p>
 <p>Please see the dedicated <a href="./guide/best-practices.html">best practices guide</a>.</p>
 <h3 id="how-do-i-troubleshoot-problems"><a class="header" href="#how-do-i-troubleshoot-problems">How do I troubleshoot problems?</a></h3>
 <p>Please see the dedicated <a href="./guide/troubleshooting.html">troubleshooting guide</a>.</p>
-<p><em>me-ta-con-trol-ler</em>.</p>
-<p><a href="./api.html">API Reference</a> for details about all the available options.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="how-to-pronounce-metacontroller"><a class="header" href="#how-to-pronounce-metacontroller">How to pronounce Metacontroller</a></h1>
+<p><em>Metacontroller</em> is pronounced as <em>me-ta-con-trol-ler</em>.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="user-guide"><a class="header" href="#user-guide">User Guide</a></h1>
+<p>This section contains general tips and step-by-step tutorials for using Metacontroller.</p>
+<p>See the <a href="./api.html">API Reference</a> for details about all the available options.</p>
 <h2 id="a-hrefguideinstallhtmlinstallationa"><a class="header" href="#a-hrefguideinstallhtmlinstallationa"><a href="./guide/install.html">Installation</a></a></h2>
 <p>This page describes how to install Metacontroller, either to develop your own
 controllers or just to run third-party controllers that depend on it.</p>
@@ -945,7 +916,7 @@ with Metacontroller.</p>
 preserving the fields you don't care about that were set by others.</p>
 <h2 id="a-hrefguidetroubleshootinghtmltroubleshootinga"><a class="header" href="#a-hrefguidetroubleshootinghtmltroubleshootinga"><a href="./guide/troubleshooting.html">Troubleshooting</a></a></h2>
 <p>This is a collection of tips for debugging controllers written with Metacontroller.</p>
-<h1 id="installation"><a class="header" href="#installation">Installation</a></h1>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="installation"><a class="header" href="#installation">Installation</a></h1>
 <p>This page describes how to install Metacontroller, either to develop your own
 controllers or just to run third-party controllers that depend on it.</p>
 <ul>
@@ -999,6 +970,9 @@ current version - <code>metacontroller.io</code>) thus after installing <code>me
 i.e. by running:</p>
 <pre><code class="language-shell">kubectl get &lt;comma separated list of your resource types here&gt; --no-headers --all-namespaces | awk '{print $2 &quot; -n &quot; $1}' | xargs -L1 -P 50 -r kubectl patch -p '{&quot;metadata&quot;:{&quot;finalizers&quot;: [null]}}' --type=merge
 </code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="install-metacontroller-using-helm-1"><a class="header" href="#install-metacontroller-using-helm-1">Install Metacontroller using Helm</a></h1>
+<h2 id="building-the-chart"><a class="header" href="#building-the-chart">Building the chart</a></h2>
+<p>The chart can be built from metacontroller source:</p>
 <pre><code class="language-shell">git clone https://github.com/metacontroller/metacontroller.git
 cd  metacontroller
 helm package deploy/helm/metacontroller --destination deploy/helm
@@ -1027,7 +1001,7 @@ helm package deploy/helm/metacontroller --destination deploy/helm
 <tr><td><code>tolerations</code></td><td>Toleration labels for pod assignment</td><td><code>[]</code></td></tr>
 <tr><td><code>affinity</code></td><td>Affinity settings for pod assignment</td><td><code>{}</code></td></tr>
 </tbody></table>
-<h1 id="configuration-1"><a class="header" href="#configuration-1">Configuration</a></h1>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="configuration-1"><a class="header" href="#configuration-1">Configuration</a></h1>
 <p>This page describes how to configure Metacontroller.</p>
 <ul>
 <li><a href="guide/configuration.html#command-line-flags">Command line flags</a></li>
@@ -1052,7 +1026,7 @@ in <code>manifests/metacontroller.yaml</code>):</p>
 <tr><td><code>--events-burst</code></td><td>Number of events allowed to send per object (default 25, e.g. <code>--client-go-burst=25</code>)</td></tr>
 </tbody></table>
 <p>Logging flags are being set by <code>controller-runtime</code>, more on the meaning of them can be found <a href="https://sdk.operatorframework.io/docs/building-operators/golang/references/logging/#overview">here</a></p>
-<h1 id="create-a-controller"><a class="header" href="#create-a-controller">Create a Controller</a></h1>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="create-a-controller"><a class="header" href="#create-a-controller">Create a Controller</a></h1>
 <p>This tutorial walks through a simple example of creating a controller in Python
 with Metacontroller.</p>
 <ul>
@@ -1357,7 +1331,7 @@ kubectl delete ns hello
 <li>Learn how to <a href="guide/./troubleshooting.html">troubleshoot controllers</a>.</li>
 <li>Dive into the details of all the <a href="guide/../api.html">available Metacontroller APIs</a>.</li>
 </ul>
-<h1 id="constraints-and-best-practices"><a class="header" href="#constraints-and-best-practices">Constraints and best practices</a></h1>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="constraints-and-best-practices"><a class="header" href="#constraints-and-best-practices">Constraints and best practices</a></h1>
 <p>This is a collection of recommendations for writing controllers with Metacontroller.</p>
 <p>If you have something to add to the collection, please send a pull request against
 <a href="https://www.github.com/metacontroller/metacontroller/tree/master/docs/src/guide/best-practices.md">this document</a>.</p>
@@ -1494,7 +1468,7 @@ do not try to set any of the <code>integer</code> fields as <code>string</code>s
 <ul>
 <li>Kubernetes documentation - https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/#status-subresource</li>
 </ul>
-<h1 id="troubleshooting"><a class="header" href="#troubleshooting">Troubleshooting</a></h1>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="troubleshooting"><a class="header" href="#troubleshooting">Troubleshooting</a></h1>
 <p>This is a collection of tips for debugging controllers written with Metacontroller.</p>
 <p>If you have something to add to the collection, please send a pull request against
 <a href="https://github.com/metacontroller/metacontroller/tree/master/docs/src/guide/troubleshooting.md">this document</a>.</p>
@@ -1589,7 +1563,9 @@ the Metacontroller server will log the text of the response body.</p>
 <p>If you need more detail on what's happening inside your hook code, as opposed to
 what Metacontroller does for you, you'll need to add log statements to your own
 code and inspect the logs on your webhook server.</p>
-<p><a href="./guide.html">user guide</a> for introductions and step-by-step walkthroughs.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="api-reference"><a class="header" href="#api-reference">API reference</a></h1>
+<p>This section contains detailed reference information for the APIs offered by Metacontroller.</p>
+<p>See the <a href="./guide.html">user guide</a> for introductions and step-by-step walkthroughs.</p>
 <h2 id="a-hrefapiapplyhtmlapply-semanticsa"><a class="header" href="#a-hrefapiapplyhtmlapply-semanticsa"><a href="./api/apply.html">Apply Semantics</a></a></h2>
 <p>This page describes how Metacontroller emulates kubectl apply.</p>
 <h2 id="a-hrefapicompositecontrollerhtmlcompositecontrollera"><a class="header" href="#a-hrefapicompositecontrollerhtmlcompositecontrollera"><a href="./api/compositecontroller.html">CompositeController</a></a></h2>
@@ -1600,7 +1576,7 @@ code and inspect the logs on your webhook server.</p>
 <p>DecoratorController is an API provided by Metacontroller, designed to facilitate adding new behavior to existing resources. You can define rules for which re...</p>
 <h2 id="a-hrefapihookhtmlhooka"><a class="header" href="#a-hrefapihookhtmlhooka"><a href="./api/hook.html">Hook</a></a></h2>
 <p>This page describes how hook targets are defined in various APIs.</p>
-<h1 id="apply-semantics-1"><a class="header" href="#apply-semantics-1">Apply Semantics</a></h1>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="apply-semantics-1"><a class="header" href="#apply-semantics-1">Apply Semantics</a></h1>
 <p>This page describes how Metacontroller emulates <a href="https://kubernetes.io/docs/concepts/cluster-administration/manage-deployment/#kubectl-apply"><code>kubectl apply</code></a>.</p>
 <p>In most cases, you should be able to think of Metacontroller's apply semantics
 as being the same as <code>kubectl apply</code>, but there are some differences.</p>
@@ -1847,7 +1823,7 @@ scalar values were field names in an object.</li>
 </ul>
 </li>
 </ul>
-<h1 id="compositecontroller-1"><a class="header" href="#compositecontroller-1">CompositeController</a></h1>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="compositecontroller-1"><a class="header" href="#compositecontroller-1">CompositeController</a></h1>
 <p>CompositeController is an API provided by Metacontroller, designed to facilitate
 custom controllers whose primary purpose is to manage a set of child objects
 based on the desired state specified in a parent object.</p>
@@ -2279,7 +2255,7 @@ a chance to recheck the external state without holding up a slot in the work
 queue.</p>
 <h2 id="customize-hook"><a class="header" href="#customize-hook">Customize Hook</a></h2>
 <p>See <a href="api/./customize.html#customize-hook">Customize hook spec</a></p>
-<h1 id="controllerrevision"><a class="header" href="#controllerrevision">ControllerRevision</a></h1>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="controllerrevision"><a class="header" href="#controllerrevision">ControllerRevision</a></h1>
 <p>ControllerRevision is an internal API used by Metacontroller to implement
 declarative rolling updates.</p>
 <p>Users of Metacontroller normally shouldn't need to know about this API,
@@ -2359,7 +2335,7 @@ For each Group-Kind, we store a list of object names.
 Note that parent and children must be in the same namespace,
 and ControllerRevisions for a given parent also live in that
 parent's namespace.</p>
-<h1 id="decoratorcontroller-1"><a class="header" href="#decoratorcontroller-1">DecoratorController</a></h1>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="decoratorcontroller-1"><a class="header" href="#decoratorcontroller-1">DecoratorController</a></h1>
 <p>DecoratorController is an API provided by Metacontroller, designed to facilitate
 adding new behavior to existing resources. You can define rules for which
 resources to watch, as well as filters on labels and annotations.</p>
@@ -2732,7 +2708,7 @@ a chance to recheck the external state without holding up a slot in the work
 queue.</p>
 <h2 id="customize-hook-1"><a class="header" href="#customize-hook-1">Customize Hook</a></h2>
 <p>See <a href="api/./customize.html#customize-hook">Customize hook spec</a></p>
-<h1 id="customize-hook-2"><a class="header" href="#customize-hook-2">Customize Hook</a></h1>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="customize-hook-2"><a class="header" href="#customize-hook-2">Customize Hook</a></h1>
 <p>If the customize hook is defined, Metacontroller will ask for which related objects, or classes of objects that your sync and finalize hooks need to know about.
 This is useful for mapping across many objects. One example would be a controller that lets you specify ConfigMaps to be placed in every Namespace.
 Another use-case is being able to reference other objects, e.g. the env section from a core Pod object.
@@ -2816,7 +2792,7 @@ present in each namespace.</p>
 <p>The first <code>RelatedRule</code> describes that given configmap should be returned (it will be used as souce for our propagation).</p>
 <p>The second <code>RelatedRule</code> describes that we want to recieve also all namespaces in the cluster (<code>'labelSelector': {}</code> means - select all objects).</p>
 <p>With those rules, call to the <code>sync</code> hook will have non empty <code>related</code> field (if resources exists in the cluster), in which all objects matching given criteria will be present.</p>
-<h1 id="hook"><a class="header" href="#hook">Hook</a></h1>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="hook"><a class="header" href="#hook">Hook</a></h1>
 <p>This page describes how hook targets are defined in various APIs.</p>
 <p>Each hook that you define as part of using one of the hook-based APIs
 has the following fields:</p>
@@ -2851,8 +2827,10 @@ has the following fields:</p>
 <tr><td>port</td><td>The port number to connect to on the target Service. Defaults to <code>80</code>.</td></tr>
 <tr><td>protocol</td><td>The protocol to use for the target Service. Defaults to <code>http</code>.</td></tr>
 </tbody></table>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="design-docs"><a class="header" href="#design-docs">Design Docs</a></h1>
+<h2 id="a-hrefdesignmap-controllerhtmlmapcontrollera"><a class="header" href="#a-hrefdesignmap-controllerhtmlmapcontrollera"><a href="./design/map-controller.html">MapController</a></a></h2>
 <p>This is a design proposal for an API called MapController.</p>
-<h1 id="mapcontroller"><a class="header" href="#mapcontroller">MapController</a></h1>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="mapcontroller"><a class="header" href="#mapcontroller">MapController</a></h1>
 <p>This is a design proposal for an API called MapController.</p>
 <ul>
 <li><a href="design/map-controller.html#background">Background</a></li>
@@ -3247,6 +3225,9 @@ as the input object disappears.</p>
 <table><thead><tr><th>Field</th><th>Description</th></tr></thead><tbody>
 <tr><td><code>outputs</code></td><td>A list of output objects to keep, even though the associated input object is gone. All other outputs belonging to this input will be deleted.</td></tr>
 </tbody></table>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="contributor-guide"><a class="header" href="#contributor-guide">Contributor Guide</a></h1>
+<p>This section contains information for people who want to hack on or
+contribute to Metacontroller.</p>
 <p>See the <a href="./guide.html">User Guide</a> if you just want to use Metacontroller.</p>
 <h2 id="github"><a class="header" href="#github">GitHub</a></h2>
 <ul>
@@ -3256,7 +3237,7 @@ as the input object disappears.</p>
 <!---* [Roadmap](https://www.github.com/metacontroller/metacontroller/issues/9)-->
 <h2 id="a-hrefcontribbuildhtmlbuildinga"><a class="header" href="#a-hrefcontribbuildhtmlbuildinga"><a href="./contrib/build.html">Building</a></a></h2>
 <p>The page describes how to build Metacontroller for yourself.</p>
-<h1 id="building"><a class="header" href="#building">Building</a></h1>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="building"><a class="header" href="#building">Building</a></h1>
 <p>The page describes how to build Metacontroller for yourself.</p>
 <ul>
 <li><a href="contrib/build.html#local-build-and-development">Local build and development</a></li>
@@ -3363,7 +3344,7 @@ For example:</p>
 tests on PRs, since those don't require a full cluster.
 If you have access to a suitable test cluster, you can help speed up review of
 your PR by running these end-to-end tests yourself to see if they catch anything.</p>
-<h1 id="local-development-and-debugging"><a class="header" href="#local-development-and-debugging">Local development and debugging</a></h1>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="local-development-and-debugging"><a class="header" href="#local-development-and-debugging">Local development and debugging</a></h1>
 <p>Tips and tricks for contributors</p>
 <ul>
 <li><a href="contrib/debug.html#local-run-of-metacontroller">Local run of metacontroller</a>
@@ -3404,52 +3385,27 @@ In order to use it, please:</p>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                        
-
-                        
-
                         <div style="clear: both"></div>
                     </nav>
                 </div>
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                
-
-                
             </nav>
 
         </div>
 
-        
-
-        
-
-        
-
-        
         <script type="text/javascript">
             window.playground_copyable = true;
         </script>
-        
-
-        
-
-        
         <script src="elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
         <script src="mark.min.js" type="text/javascript" charset="utf-8"></script>
         <script src="searcher.js" type="text/javascript" charset="utf-8"></script>
-        
-
         <script src="clipboard.min.js" type="text/javascript" charset="utf-8"></script>
         <script src="highlight.js" type="text/javascript" charset="utf-8"></script>
         <script src="book.js" type="text/javascript" charset="utf-8"></script>
 
         <!-- Custom JS scripts -->
-        
-
-        
-        
         <script type="text/javascript">
         window.addEventListener('load', function() {
             MathJax.Hub.Register.StartupHook('End', function() {
@@ -3457,8 +3413,5 @@ In order to use it, please:</p>
             });
         });
         </script>
-        
-        
-
     </body>
 </html>
