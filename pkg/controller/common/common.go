@@ -21,6 +21,11 @@ import (
 	"metacontroller/pkg/logging"
 	"strings"
 
+	memory "k8s.io/client-go/discovery/cached"
+	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/informers"
+	"k8s.io/client-go/restmapper"
+
 	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -31,6 +36,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/discovery"
+
+	"k8s.io/client-go/dynamic/dynamicinformer"
 
 	"metacontroller/pkg/events"
 
@@ -46,7 +53,6 @@ import (
 	"k8s.io/client-go/tools/cache"
 
 	dynamicdiscovery "metacontroller/pkg/dynamic/discovery"
-	dynamicinformer "metacontroller/pkg/dynamic/informer"
 )
 
 var (
@@ -81,23 +87,26 @@ func (c ControllerType) String() string {
 
 // ControllerContext holds various object related to interacting with kubernetes cluster
 type ControllerContext struct {
+	Broadcaster   record.EventBroadcaster
+	configuration options.Configuration
+	DynClient     *dynamicclientset.Clientset
+	DynInformers  dynamicinformer.DynamicSharedInformerFactory
+	EventRecorder record.EventRecorder
 	// K8sClient is a client used to interact with the Kubernetes API
 	K8sClient         client.Client
-	Resources         *dynamicdiscovery.ResourceMap
-	DynClient         *dynamicclientset.Clientset
-	DynInformers      *dynamicinformer.SharedInformerFactory
 	McInformerFactory mcinformers.SharedInformerFactory
 	McClient          mcclientset.Interface
-	EventRecorder     record.EventRecorder
-	Broadcaster       record.EventBroadcaster
-	configuration     options.Configuration
+	Resources         *dynamicdiscovery.ResourceMap
+	RESTMapper        *restmapper.DeferredDiscoveryRESTMapper
 }
 
 // NewControllerContext creates a new ControllerContext using given Configuration and metacontroller client
 func NewControllerContext(configuration options.Configuration, mcClient *mcclientset.Clientset) (*ControllerContext, error) {
 	// Periodically refresh discovery to pick up newly-installed resources.
-	dc := discovery.NewDiscoveryClientForConfigOrDie(configuration.RestConfig)
-	resources := dynamicdiscovery.NewResourceMap(dc)
+	discoveryClient := discovery.NewDiscoveryClientForConfigOrDie(configuration.RestConfig)
+	resources := dynamicdiscovery.NewResourceMap(discoveryClient)
+	cacheClient := memory.NewMemCacheClient(discoveryClient)
+	restMapper := restmapper.NewDeferredDiscoveryRESTMapper(cacheClient)
 
 	mcInformerFactory := mcinformers.NewSharedInformerFactory(mcClient, configuration.InformerRelist)
 
@@ -106,8 +115,8 @@ func NewControllerContext(configuration options.Configuration, mcClient *mcclien
 	if err != nil {
 		return nil, err
 	}
-	// Create dynamic informer factory (for sharing dynamic informers).
-	dynInformers := dynamicinformer.NewSharedInformerFactory(dynClient, configuration.InformerRelist)
+	dynamicClient := dynamic.NewForConfigOrDie(configuration.RestConfig)
+	dynamicSharedInformerFactory := dynamicinformer.NewDynamicSharedInformerFactory(dynamicClient, configuration.InformerRelist)
 
 	// Start metacontrollers (controllers that spawn controllers).
 	// Each one requests the informers it needs from the factory.
@@ -118,13 +127,14 @@ func NewControllerContext(configuration options.Configuration, mcClient *mcclien
 	recorder := broadcaster.NewRecorder(scheme, corev1.EventSource{Component: "metacontroller"})
 
 	return &ControllerContext{
-		Resources:         resources,
-		DynClient:         dynClient,
-		DynInformers:      dynInformers,
-		McInformerFactory: mcInformerFactory,
-		EventRecorder:     recorder,
 		Broadcaster:       broadcaster,
 		configuration:     configuration,
+		DynClient:         dynClient,
+		DynInformers:      dynamicSharedInformerFactory,
+		EventRecorder:     recorder,
+		McInformerFactory: mcInformerFactory,
+		Resources:         resources,
+		RESTMapper:        restMapper,
 	}, nil
 }
 
@@ -165,28 +175,28 @@ func (m GroupKindMap) Get(gk schema.GroupKind) *dynamicdiscovery.APIResource {
 	return m[gk]
 }
 
-type InformerMap map[schema.GroupVersionResource]*dynamicinformer.ResourceInformer
+type InformerMap map[schema.GroupVersionResource]informers.GenericInformer
 
-func (m InformerMap) Set(gvr schema.GroupVersionResource, informer *dynamicinformer.ResourceInformer) {
+func (m InformerMap) Set(gvr schema.GroupVersionResource, informer informers.GenericInformer) {
 	m[gvr] = informer
 }
 
-func (m InformerMap) Get(gvr schema.GroupVersionResource) *dynamicinformer.ResourceInformer {
+func (m InformerMap) Get(gvr schema.GroupVersionResource) informers.GenericInformer {
 	return m[gvr]
 }
 
 // GetObject return object via Lister from given informer, namespaced or not.
-func GetObject(informer *dynamicinformer.ResourceInformer, namespace, name string) (*unstructured.Unstructured, error) {
+func GetObject(inf informers.GenericInformer, namespace, name string) (runtime.Object, error) {
 	if namespace == "" {
-		return informer.Lister().Get(name)
+		return inf.Lister().Get(name)
 	}
-	return informer.Lister().Namespace(namespace).Get(name)
+	return inf.Lister().ByNamespace(namespace).Get(name)
 }
 
 func HasStatusSubresource(crd *v1.CustomResourceDefinition, version string) bool {
 	for _, crdVersion := range crd.Spec.Versions {
 		if crdVersion.Name == version {
-			// check subresource for matching version
+			// check subresource for matching verison
 			if crdVersion.Subresources != nil && crdVersion.Subresources.Status != nil {
 				return true
 			}

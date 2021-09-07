@@ -20,6 +20,8 @@ import (
 	"context"
 	"metacontroller/pkg/logging"
 
+	"k8s.io/client-go/dynamic/dynamicinformer"
+
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/go-logr/logr"
@@ -30,7 +32,6 @@ import (
 
 	dynamicclientset "metacontroller/pkg/dynamic/clientset"
 	dynamicdiscovery "metacontroller/pkg/dynamic/discovery"
-	dynamicinformer "metacontroller/pkg/dynamic/informer"
 
 	"metacontroller/pkg/events"
 
@@ -55,7 +56,7 @@ type Metacontroller struct {
 	k8sClient     client.Client
 	resources     *dynamicdiscovery.ResourceMap
 	dynClient     *dynamicclientset.Clientset
-	dynInformers  *dynamicinformer.SharedInformerFactory
+	dynInformers  dynamicinformer.DynamicSharedInformerFactory
 	eventRecorder record.EventRecorder
 
 	mcClient mcclientset.Interface
@@ -87,7 +88,6 @@ func NewMetacontroller(controllerContext common.ControllerContext, mcClient mccl
 		numWorkers: numWorkers,
 		logger:     logging.Logger.WithName("composite"),
 	}
-
 	return mc
 }
 

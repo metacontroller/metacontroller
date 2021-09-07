@@ -28,6 +28,8 @@ import (
 	"k8s.io/client-go/discovery"
 )
 
+// TODO I think it can be refactored/removed in favour of client-go disk.NewCachedDiscoveryClientForConfig
+
 type APIResource struct {
 	metav1.APIResource
 	APIVersion     string

@@ -35,6 +35,9 @@ import (
 
 	"metacontroller/pkg/apis/metacontroller/v1alpha1"
 	mcclientset "metacontroller/pkg/client/generated/clientset/internalclientset"
+
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+
 	"metacontroller/pkg/controller/composite"
 
 	controllerruntime "sigs.k8s.io/controller-runtime"
@@ -82,6 +85,7 @@ func New(configuration options.Configuration) (controllerruntime.Manager, error)
 	}
 
 	err = v1alpha1.AddToScheme(mgr.GetScheme())
+	err = apiextensionsv1.AddToScheme(mgr.GetScheme())
 	if err != nil {
 		return nil, err
 	}

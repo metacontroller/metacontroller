@@ -25,6 +25,9 @@ import (
 	"sync"
 	"time"
 
+	"k8s.io/client-go/dynamic/dynamicinformer"
+	"k8s.io/client-go/informers"
+
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/go-logr/logr"
@@ -56,7 +59,6 @@ import (
 	dynamicclientset "metacontroller/pkg/dynamic/clientset"
 	dynamiccontrollerref "metacontroller/pkg/dynamic/controllerref"
 	dynamicdiscovery "metacontroller/pkg/dynamic/discovery"
-	dynamicinformer "metacontroller/pkg/dynamic/informer"
 	k8s "metacontroller/pkg/third_party/kubernetes"
 )
 
@@ -68,7 +70,7 @@ type parentController struct {
 	mcClient       mcclientset.Interface
 	dynClient      *dynamicclientset.Clientset
 	parentClient   *dynamicclientset.ResourceClient
-	parentInformer *dynamicinformer.ResourceInformer
+	parentInformer informers.GenericInformer
 	parentSelector labels.Selector
 
 	revisionLister mclisters.ControllerRevisionLister
@@ -93,7 +95,7 @@ type parentController struct {
 func newParentController(
 	resources *dynamicdiscovery.ResourceMap,
 	dynClient *dynamicclientset.Clientset,
-	dynInformers *dynamicinformer.SharedInformerFactory,
+	dynInformers dynamicinformer.DynamicSharedInformerFactory,
 	eventRecorder record.EventRecorder,
 	mcClient mcclientset.Interface,
 	revisionLister mclisters.ControllerRevisionLister,
@@ -114,10 +116,12 @@ func newParentController(
 	}
 
 	// Create informer for the parent resource.
-	parentInformer, err := dynInformers.Resource(cc.Spec.ParentResource.APIVersion, cc.Spec.ParentResource.Resource)
+	groupVersion, err := schema.ParseGroupVersion(cc.Spec.ParentResource.APIVersion)
 	if err != nil {
 		return nil, fmt.Errorf("can't create informer for parent resource: %w", err)
 	}
+	gvk := groupVersion.WithResource(cc.Spec.ParentResource.Resource)
+	parentInformer := dynInformers.ForResource(gvk)
 
 	// Create informers for all child resources.
 	childInformers := make(common.InformerMap)
@@ -132,14 +136,12 @@ func newParentController(
 		}
 	}()
 	for _, child := range cc.Spec.ChildResources {
-		childInformer, err := dynInformers.Resource(child.APIVersion, child.Resource)
-		if err != nil {
-			return nil, fmt.Errorf("can't create informer for child resource: %w", err)
-		}
-		groupVersion, err := schema.ParseGroupVersion(child.APIVersion)
+		gv, err := schema.ParseGroupVersion(child.APIVersion)
 		if err != nil {
 			return nil, fmt.Errorf("can't parse child resource groupVersion: %w", err)
 		}
+		gvk := gv.WithResource(child.Resource)
+		childInformer := dynInformers.ForResource(gvk)
 		childInformers.Set(groupVersion.WithResource(child.Resource), childInformer)
 	}
 
