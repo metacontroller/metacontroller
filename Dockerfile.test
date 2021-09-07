@@ -1,4 +1,4 @@
-FROM golang:1.16.7 as tester
+FROM golang:1.17.0 as tester
 
 COPY . /go/src/metacontroller/
 WORKDIR /go/src/metacontroller/
