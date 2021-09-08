@@ -1,3 +1,10 @@
+## [2.0.9](https://github.com/metacontroller/metacontroller/compare/v2.0.8...v2.0.9) (2021-09-08)
+
+
+### Bug Fixes
+
+* **docker:** [#351](https://github.com/metacontroller/metacontroller/issues/351) - Add arm32 image ([9685bd6](https://github.com/metacontroller/metacontroller/commit/9685bd67db5eae54e88c6ac79c689477c241dc22))
+
 ## [2.0.8](https://github.com/metacontroller/metacontroller/compare/v2.0.7...v2.0.8) (2021-09-08)
 
 
