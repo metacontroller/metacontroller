@@ -1,3 +1,10 @@
+## [2.0.7](https://github.com/metacontroller/metacontroller/compare/v2.0.6...v2.0.7) (2021-09-08)
+
+
+### Bug Fixes
+
+* Delete metacontroller-crds-v1beta1.yaml ([ed15539](https://github.com/metacontroller/metacontroller/commit/ed155391e250ac73fef44f32f76ec94788eb417e))
+
 ## [2.0.6](https://github.com/metacontroller/metacontroller/compare/v2.0.5...v2.0.6) (2021-09-07)
 
 
