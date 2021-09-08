@@ -1,3 +1,10 @@
+## [2.0.8](https://github.com/metacontroller/metacontroller/compare/v2.0.7...v2.0.8) (2021-09-08)
+
+
+### Bug Fixes
+
+* **deps:** Update k8s.io to v0.22.1 ([5382cc9](https://github.com/metacontroller/metacontroller/commit/5382cc966d86c4cb578b7a2396007ff942f5f5a3))
+
 ## [2.0.7](https://github.com/metacontroller/metacontroller/compare/v2.0.6...v2.0.7) (2021-09-08)
 
 
