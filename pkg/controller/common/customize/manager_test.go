@@ -24,10 +24,12 @@ import (
 	"metacontroller/pkg/apis/metacontroller/v1alpha1"
 	"metacontroller/pkg/controller/common"
 	dynamicclientset "metacontroller/pkg/dynamic/clientset"
+	"metacontroller/pkg/dynamic/discovery"
 	dynamicinformer "metacontroller/pkg/dynamic/informer"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 var fakeEnqueueParent = func(obj interface{}) {}
@@ -53,6 +55,16 @@ func (cc *fakeCustomizableController) GetCustomizeHook() *v1alpha1.Hook {
 	}
 }
 
+var neGroupKindMap = common.GroupKindMap{
+	schema.GroupKind{
+		Group: "randomGroup",
+		Kind:  "ingress",
+	}: &discovery.APIResource{
+		APIVersion:  "v1alpha1",
+		APIResource: v1.APIResource{Namespaced: true, Group: "randomGroup"},
+	},
+}
+
 var customizeManagerWithNilController, _ = NewCustomizeManager(
 	"test",
 	fakeEnqueueParent,
@@ -73,6 +85,18 @@ var customizeManagerWithFakeController, _ = NewCustomizeManager(
 	&dynInformers,
 	make(common.InformerMap),
 	make(common.GroupKindMap),
+	nil,
+	common.DecoratorController,
+)
+
+var customizeManagerWithFakeControllerAndGroupKindMap, _ = NewCustomizeManager(
+	"test",
+	fakeEnqueueParent,
+	&fakeCustomizableController{},
+	&dynClient,
+	&dynInformers,
+	make(common.InformerMap),
+	neGroupKindMap,
 	nil,
 	common.DecoratorController,
 )
@@ -223,5 +247,95 @@ func TestDetermineSelectionType_returnLabelsWhenNothingIsPresent(t *testing.T) {
 
 	if selectionType != selectByLabels || err != nil {
 		t.Errorf("Expected %v selection type, but got %v", selectByLabels, selectionType)
+	}
+}
+
+func TestMatchesRelatedRule_nonMatchingNamespaceAndRuleShouldThrowError(t *testing.T) {
+
+	parent := new(unstructured.Unstructured)
+	related := new(unstructured.Unstructured)
+	parent.SetAPIVersion("v1alpha1")
+	parent.SetNamespace("istio-system")
+	related.SetNamespace("istio-system")
+	groupVersionKind := schema.GroupVersionKind{
+		Group:   "randomGroup",
+		Version: "v1alpha1",
+		Kind:    "ingress",
+	}
+	parent.SetGroupVersionKind(groupVersionKind)
+
+	relatedRule := v1alpha1.RelatedResourceRule{
+		ResourceRule: v1alpha1.ResourceRule{
+			APIVersion: "some",
+			Resource:   "some",
+		},
+		LabelSelector: nil,
+		Namespace:     "other-namespace",
+		Names:         []string{"some", "test"},
+	}
+
+	isMatching, err := customizeManagerWithFakeControllerAndGroupKindMap.matchesRelatedRule(parent, related, &relatedRule)
+	if isMatching || err == nil {
+		t.Errorf("Expected an error, but got none")
+	}
+}
+
+func TestMatchesRelatedRule_nonMatchingNamespaceAndRuleShouldBeOkCaseWildcard(t *testing.T) {
+
+	parent := new(unstructured.Unstructured)
+	related := new(unstructured.Unstructured)
+	parent.SetAPIVersion("v1alpha1")
+	parent.SetNamespace("istio-system")
+
+	groupVersionKind := schema.GroupVersionKind{
+		Group:   "randomGroup",
+		Version: "v1alpha1",
+		Kind:    "ingress",
+	}
+	parent.SetGroupVersionKind(groupVersionKind)
+
+	resourceRule := v1alpha1.RelatedResourceRule{
+		ResourceRule: v1alpha1.ResourceRule{
+			APIVersion: "some",
+			Resource:   "some",
+		},
+		LabelSelector: nil,
+		Namespace:     "*",
+		Names:         []string{"some", "test"},
+	}
+
+	isMatching, err := customizeManagerWithFakeControllerAndGroupKindMap.matchesRelatedRule(parent, related, &resourceRule)
+	if !isMatching || err != nil {
+		t.Errorf("Expected no error, but got %v", err.Error())
+	}
+}
+
+func TestMatchesRelatedRule_nonMatchingNamespaceAndRuleShouldBeOkCaseNoNamesGiven(t *testing.T) {
+
+	parent := new(unstructured.Unstructured)
+	related := new(unstructured.Unstructured)
+	parent.SetAPIVersion("v1alpha1")
+	parent.SetNamespace("istio-system")
+
+	groupVersionKind := schema.GroupVersionKind{
+		Group:   "randomGroup",
+		Version: "v1alpha1",
+		Kind:    "ingress",
+	}
+	parent.SetGroupVersionKind(groupVersionKind)
+
+	resourceRule := v1alpha1.RelatedResourceRule{
+		ResourceRule: v1alpha1.ResourceRule{
+			APIVersion: "some",
+			Resource:   "some",
+		},
+		LabelSelector: nil,
+		Namespace:     "my-namespace",
+		Names:         []string{},
+	}
+
+	isMatching, err := customizeManagerWithFakeControllerAndGroupKindMap.matchesRelatedRule(parent, related, &resourceRule)
+	if !isMatching || err != nil {
+		t.Errorf("Expected no error, but got %v", err.Error())
 	}
 }

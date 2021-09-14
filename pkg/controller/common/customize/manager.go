@@ -307,11 +307,13 @@ func (rm *Manager) matchesRelatedRule(parent, related *unstructured.Unstructured
 	case selectByNamespaceAndNames:
 		if parentResource.Namespaced {
 			parentNamespace := parent.GetNamespace()
-			if len(relatedRule.Namespace) != 0 && parentNamespace != relatedRule.Namespace {
-				return false, fmt.Errorf("%s: Namespace of parent %s does not match with namespace %s of related rule for %s/%s", parentResource.Kind, parent.GetName(), relatedRule.Namespace, relatedRule.APIVersion, relatedRule.Resource)
-			}
-			if parentNamespace != related.GetNamespace() {
-				return false, nil
+			relatedNamespace := related.GetNamespace()
+			if len(relatedRule.Namespace) == 0 && relatedNamespace == parentNamespace {
+				return true, nil
+			} else if relatedRule.Namespace == "*" || relatedRule.Namespace == relatedNamespace {
+				return true, nil
+			} else {
+				return false, fmt.Errorf("could not create namespace for {relatedRule.namespace: %s, parentNamespace : %s, relatedNamespace : %s } ", relatedRule.Namespace, parentNamespace, relatedNamespace)
 			}
 		}
 		if len(relatedRule.Names) != 0 {
