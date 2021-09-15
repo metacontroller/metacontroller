@@ -225,3 +225,92 @@ func TestDetermineSelectionType_returnLabelsWhenNothingIsPresent(t *testing.T) {
 		t.Errorf("Expected %v selection type, but got %v", selectByLabels, selectionType)
 	}
 }
+
+func TestMatchRelatedRule_returnTrueWhenLabelsMatch(t *testing.T) {
+	resourceRule := v1alpha1.RelatedResourceRule{
+		ResourceRule: v1alpha1.ResourceRule{
+			APIVersion: "some",
+			Resource:   "some",
+		},
+		LabelSelector: &v1.LabelSelector{MatchLabels: map[string]string{"aaa": "bbb"}},
+	}
+
+	relatedCandidate := &unstructured.Unstructured{}
+	relatedCandidate.SetLabels(map[string]string{"aaa": "bbb"})
+
+	matches, err := matchesRelatedRule(relatedCandidate, &resourceRule)
+
+	if !matches {
+		t.Errorf("Expected match: %v, actual match: %v", true, matches)
+	}
+	if err != nil {
+		t.Error(err)
+	}
+}
+
+func TestMatchRelatedRule_returnFalseWhenLabelsDoNotMatch(t *testing.T) {
+	resourceRule := v1alpha1.RelatedResourceRule{
+		ResourceRule: v1alpha1.ResourceRule{
+			APIVersion: "some",
+			Resource:   "some",
+		},
+		LabelSelector: &v1.LabelSelector{MatchLabels: map[string]string{"aaa": "bbb"}},
+	}
+
+	relatedCandidate := &unstructured.Unstructured{}
+	relatedCandidate.SetLabels(map[string]string{"aaa": "cbb"})
+
+	matches, err := matchesRelatedRule(relatedCandidate, &resourceRule)
+
+	if matches {
+		t.Errorf("Expected match: %v, actual match: %v", false, matches)
+	}
+	if err != nil {
+		t.Error(err)
+	}
+}
+
+func TestMatchRelatedRule_returnFalseWhenNoLabels(t *testing.T) {
+	resourceRule := v1alpha1.RelatedResourceRule{
+		ResourceRule: v1alpha1.ResourceRule{
+			APIVersion: "some",
+			Resource:   "some",
+		},
+		LabelSelector: &v1.LabelSelector{MatchLabels: map[string]string{"aaa": "bbb"}},
+	}
+
+	relatedCandidate := &unstructured.Unstructured{}
+
+	matches, err := matchesRelatedRule(relatedCandidate, &resourceRule)
+
+	if matches {
+		t.Errorf("Expected match: %v, actual match: %v", false, matches)
+	}
+	if err != nil {
+		t.Error(err)
+	}
+}
+
+func TestMatchRelatedRule_returnTrueWhenNameAndNamespaceMatches(t *testing.T) {
+	resourceRule := v1alpha1.RelatedResourceRule{
+		ResourceRule: v1alpha1.ResourceRule{
+			APIVersion: "some",
+			Resource:   "some",
+		},
+		LabelSelector: nil,
+		Namespace:     "some",
+		Names:         []string{"name"},
+	}
+
+	relatedCandidate := &unstructured.Unstructured{}
+	relatedCandidate.SetNamespace("some")
+	relatedCandidate.SetName("name")
+	matches, err := matchesRelatedRule(relatedCandidate, &resourceRule)
+
+	if !matches {
+		t.Errorf("Expected match: %v, actual match: %v", true, matches)
+	}
+	if err != nil {
+		t.Error(err)
+	}
+}

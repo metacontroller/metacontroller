@@ -243,7 +243,7 @@ func (rm *Manager) findRelatedParents(relatedSlice ...*unstructured.Unstructured
 
 			for _, relatedRule := range customizeHookResponse.RelatedResourceRules {
 				for _, related := range relatedSlice {
-					matches, err := rm.matchesRelatedRule(parent, related, relatedRule)
+					matches, err := matchesRelatedRule(related, relatedRule)
 					if err != nil {
 						utilruntime.HandleError(err)
 						continue
@@ -288,13 +288,7 @@ func toSelector(labelSelector *metav1.LabelSelector) (labels.Selector, error) {
 	}
 }
 
-func (rm *Manager) matchesRelatedRule(parent, related *unstructured.Unstructured, relatedRule *v1alpha1.RelatedResourceRule) (bool, error) {
-	parentGroup, _ := schema.ParseGroupVersion(parent.GetAPIVersion())
-	parentResource := rm.parentKinds.Get(schema.GroupKind{Group: parentGroup.Group, Kind: parent.GetKind()})
-	if parentResource == nil {
-		return false, fmt.Errorf("unknown parent %v/%v", parentGroup, parent.GetKind())
-	}
-
+func matchesRelatedRule(related *unstructured.Unstructured, relatedRule *v1alpha1.RelatedResourceRule) (bool, error) {
 	selectionType, err := determineSelectionType(relatedRule)
 
 	switch selectionType {
@@ -305,14 +299,8 @@ func (rm *Manager) matchesRelatedRule(parent, related *unstructured.Unstructured
 		}
 		return selector.Matches(labels.Set(related.GetLabels())), nil
 	case selectByNamespaceAndNames:
-		if parentResource.Namespaced {
-			parentNamespace := parent.GetNamespace()
-			if len(relatedRule.Namespace) != 0 && parentNamespace != relatedRule.Namespace {
-				return false, fmt.Errorf("%s: Namespace of parent %s does not match with namespace %s of related rule for %s/%s", parentResource.Kind, parent.GetName(), relatedRule.Namespace, relatedRule.APIVersion, relatedRule.Resource)
-			}
-			if parentNamespace != related.GetNamespace() {
-				return false, nil
-			}
+		if len(relatedRule.Namespace) != 0 && relatedRule.Namespace != related.GetNamespace() {
+			return false, nil // namespace from rule and from object does not match
 		}
 		if len(relatedRule.Names) != 0 {
 			relatedName := related.GetName()
