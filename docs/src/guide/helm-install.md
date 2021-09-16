@@ -38,3 +38,9 @@ helm install metacontroller deploy/helm/metacontroller-v*.tgz
 | `nodeSelector`                            | Node labels for pod assignment                | `{}`                                                    |
 | `tolerations`                             | Toleration labels for pod assignment          | `[]`                                                    |
 | `affinity`                                | Affinity settings for pod assignment          | `{}`                                                    |
+| `zap.logLevel`                            | Zap Level to configure the verbosity of logging | `4`                                                   |
+| `zap.devel`                               | Development Mode or Production Mode           | `"production"`                                          |
+| `zap.encoder`                             | Zap log encoding (‘json’ or ‘console’)        | `"json"`                                                |
+| `zap.stacktraceLevel`                     | Zap Level at and above which stacktraces are captured (one of ‘info’ or ‘error’) | `"info"`             |
+| `discoveryInterval`                       | How often to refresh discovery cache to pick up newly-installed resources | `"20s"`                     |
+| `cacheFlushInterval`                      | How often to flush local caches and relist objects from the API server | `30m`                          |

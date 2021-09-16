@@ -44,3 +44,15 @@ nodeSelector: {}
 tolerations: []
 
 affinity: {}
+
+zap: {}
+  # logLevel: 4
+  # devel: "production"
+  # encoder: "json"
+  # stacktraceLevel: "info"
+
+# How often to refresh discovery cache to pick up newly-installed resources
+discoveryInterval: 20s
+
+# How often to flush local caches and relist objects from the API server
+cacheFlushInterval: 30m
