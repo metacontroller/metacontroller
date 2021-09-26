@@ -1,3 +1,10 @@
+## [2.0.12](https://github.com/metacontroller/metacontroller/compare/v2.0.11...v2.0.12) (2021-09-26)
+
+
+### Bug Fixes
+
+* Add command line arguments parameterization to Helm chart ([2081bcf](https://github.com/metacontroller/metacontroller/commit/2081bcf89fe6310838e47d2186a3a937ff62dfe9))
+
 ## [2.0.11](https://github.com/metacontroller/metacontroller/compare/v2.0.10...v2.0.11) (2021-09-26)
 
 
