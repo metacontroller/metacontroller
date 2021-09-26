@@ -1,3 +1,11 @@
+## [2.0.11](https://github.com/metacontroller/metacontroller/compare/v2.0.10...v2.0.11) (2021-09-26)
+
+
+### Bug Fixes
+
+* **deps:** update github.com/nsf/jsondiff commit hash to 0e9c064 ([b9fe982](https://github.com/metacontroller/metacontroller/commit/b9fe982947fd57d35750da2fce6d4edd90bee76e))
+* **deps:** update github.com/nsf/jsondiff commit hash to 1e845ec ([55983c3](https://github.com/metacontroller/metacontroller/commit/55983c360bee54049a821809a88802c9c2ceca52))
+
 ## [2.0.10](https://github.com/metacontroller/metacontroller/compare/v2.0.9...v2.0.10) (2021-09-15)
 
 
