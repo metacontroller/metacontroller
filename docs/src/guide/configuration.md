@@ -23,7 +23,7 @@ in `manifests/metacontroller.yaml`):
 | `--client-go-qps` | Number of queries per second client-go is allowed to make (default 5, e.g. `--client-go-qps=100`) |
 | `--client-go-burst` | Allowed burst queries for client-go (default 10, e.g. `--client-go-burst=200`) |
 | `--workers` | Number of sync workers to run (default 5, e.g. `--workers=100`) |
-| `--events-qps` | Rate of events flowing per object (default - 1 event per 5 minutes, e.g. `--client-go-qps=0.0033`) |
-| `--events-burst` | Number of events allowed to send per object (default 25, e.g. `--client-go-burst=25`) |
+| `--events-qps` | Rate of events flowing per object (default - 1 event per 5 minutes, e.g. `--events-qps=0.0033`) |
+| `--events-burst` | Number of events allowed to send per object (default 25, e.g. `--events-burst=25`) |
 
 Logging flags are being set by `controller-runtime`, more on the meaning of them can be found [here](https://sdk.operatorframework.io/docs/building-operators/golang/references/logging/#overview)
