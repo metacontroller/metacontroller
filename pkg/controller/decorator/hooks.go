@@ -62,7 +62,7 @@ func (c *decoratorController) callHook(request *SyncHookRequest) (*SyncHookRespo
 	// when the object no longer matches our decorator selector.
 	// This allows the decorator to clean up after itself if the object has been
 	// updated to disable the functionality added by the decorator.
-	if c.finalizeHook.IsEnabled() &&
+	if c.finalizeHook.IsEnabled() && c.finalizer.ShouldFinalize(request.Object) &&
 		(request.Object.GetDeletionTimestamp() != nil || !c.parentSelector.Matches(request.Object)) {
 		// Finalize
 		request.Finalizing = true

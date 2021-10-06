@@ -50,7 +50,7 @@ func (pc *parentController) callHook(request *SyncHookRequest) (*SyncHookRespons
 	// First check if we should instead call the finalize hook,
 	// which has the same API as the sync hook except that it's
 	// called while the object is pending deletion.
-	if request.Parent.GetDeletionTimestamp() != nil && pc.finalizeHook.IsEnabled() {
+	if request.Parent.GetDeletionTimestamp() != nil && pc.finalizeHook.IsEnabled() && pc.finalizer.ShouldFinalize(request.Parent) {
 		// Finalize
 		request.Finalizing = true
 		if err := pc.finalizeHook.Execute(request, &response); err != nil {
