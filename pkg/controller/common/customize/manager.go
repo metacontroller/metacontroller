@@ -19,6 +19,7 @@ package customize
 import (
 	"fmt"
 	"metacontroller/pkg/hooks"
+	"regexp"
 
 	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -271,13 +272,17 @@ func determineSelectionType(relatedRule *v1alpha1.RelatedResourceRule) (relatedO
 	return selectByLabels, nil
 }
 
-func stringInArray(toMatch string, array []string) bool {
+func stringInArray(toMatch string, array []string) (bool, error) {
 	for _, element := range array {
-		if toMatch == element {
-			return true
+		r, err := regexp.Compile(element)
+		if err != nil {
+			return false, err
+		}
+		if r.MatchString(toMatch) {
+			return true, nil
 		}
 	}
-	return false
+	return false, nil
 }
 
 func toSelector(labelSelector *metav1.LabelSelector) (labels.Selector, error) {
@@ -316,7 +321,7 @@ func (rm *Manager) matchesRelatedRule(parent, related *unstructured.Unstructured
 		}
 		if len(relatedRule.Names) != 0 {
 			relatedName := related.GetName()
-			return stringInArray(relatedName, relatedRule.Names), nil
+			return stringInArray(relatedName, relatedRule.Names)
 		}
 		return true, nil
 	case invalid:
@@ -390,7 +395,11 @@ func (rm *Manager) GetRelatedObjects(parent *unstructured.Unstructured) (common.
 				childMap.InsertAll(parent, all)
 			} else {
 				for _, obj := range all {
-					if stringInArray(obj.GetName(), relatedRule.Names) {
+					stringFound, err := stringInArray(obj.GetName(), relatedRule.Names)
+					if err != nil {
+						return nil, fmt.Errorf("can't match string for %v related objects: %w", relatedClient.Kind, err)
+					}
+					if stringFound {
 						childMap.Insert(parent, obj)
 					}
 				}
