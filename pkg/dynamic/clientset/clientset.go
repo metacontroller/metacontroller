@@ -37,16 +37,20 @@ type Clientset struct {
 	dc        dynamic.Interface
 }
 
+func NewClientset(config *rest.Config, resources *dynamicdiscovery.ResourceMap, dc dynamic.Interface) *Clientset {
+	return &Clientset{
+		config:    *config,
+		resources: resources,
+		dc:        dc,
+	}
+}
+
 func New(config *rest.Config, resources *dynamicdiscovery.ResourceMap) (*Clientset, error) {
 	dc, err := dynamic.NewForConfig(config)
 	if err != nil {
 		return nil, fmt.Errorf("can't create dynamic client when creating clientset: %w", err)
 	}
-	return &Clientset{
-		config:    *config,
-		resources: resources,
-		dc:        dc,
-	}, nil
+	return NewClientset(config, resources, dc), nil
 }
 
 func (cs *Clientset) HasSynced() bool {

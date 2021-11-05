@@ -17,7 +17,6 @@ limitations under the License.
 package customize
 
 import (
-	"metacontroller/pkg/internal/testutils"
 	"reflect"
 	"testing"
 
@@ -25,6 +24,8 @@ import (
 	"metacontroller/pkg/controller/common"
 	dynamicclientset "metacontroller/pkg/dynamic/clientset"
 	dynamicinformer "metacontroller/pkg/dynamic/informer"
+
+	. "metacontroller/pkg/internal/testutils/hooks"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -34,29 +35,10 @@ var fakeEnqueueParent = func(obj interface{}) {}
 var dynClient = dynamicclientset.Clientset{}
 var dynInformers = dynamicinformer.SharedInformerFactory{}
 
-type nilCustomizableController struct {
-}
-
-func (cc *nilCustomizableController) GetCustomizeHook() *v1alpha1.Hook {
-	return nil
-}
-
-type fakeCustomizableController struct {
-}
-
-func (cc *fakeCustomizableController) GetCustomizeHook() *v1alpha1.Hook {
-	url := "fake"
-	return &v1alpha1.Hook{
-		Webhook: &v1alpha1.Webhook{
-			URL: &url,
-		},
-	}
-}
-
 var customizeManagerWithNilController, _ = NewCustomizeManager(
 	"test",
 	fakeEnqueueParent,
-	&nilCustomizableController{},
+	&NilCustomizableController{},
 	&dynClient,
 	&dynInformers,
 	make(common.InformerMap),
@@ -68,7 +50,7 @@ var customizeManagerWithNilController, _ = NewCustomizeManager(
 var customizeManagerWithFakeController, _ = NewCustomizeManager(
 	"test",
 	fakeEnqueueParent,
-	&fakeCustomizableController{},
+	&FakeCustomizableController{},
 	&dynClient,
 	&dynInformers,
 	make(common.InformerMap),
@@ -106,7 +88,7 @@ func TestGetRelatedObject_requestResponse(t *testing.T) {
 		}},
 	}
 
-	customizeManagerWithFakeController.customizeHook = testutils.NewHookExecutorStub(expectedResponse)
+	customizeManagerWithFakeController.customizeHook = NewHookExecutorStub(expectedResponse)
 	parent := &unstructured.Unstructured{}
 	parent.SetName("othertest")
 	parent.SetGeneration(1)
