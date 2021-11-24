@@ -1,3 +1,10 @@
+## [2.0.14](https://github.com/metacontroller/metacontroller/compare/v2.0.13...v2.0.14) (2021-11-24)
+
+
+### Bug Fixes
+
+* **deps:** Update json-patch to v5.6.0, k8s.io to v0.22.4 and k8s.io/utils ([889f355](https://github.com/metacontroller/metacontroller/commit/889f355134c36be2b11f0b9a9e4aab33236e237b))
+
 ## [2.0.13](https://github.com/metacontroller/metacontroller/compare/v2.0.12...v2.0.13) (2021-11-24)
 
 
