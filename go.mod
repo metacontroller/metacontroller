@@ -5,7 +5,7 @@ module metacontroller
 go 1.17
 
 require (
-	github.com/evanphx/json-patch/v5 v5.5.0
+	github.com/evanphx/json-patch/v5 v5.6.0
 	github.com/go-logr/logr v0.4.0
 	github.com/google/go-cmp v0.5.6
 	github.com/nsf/jsondiff v0.0.0-20210926074059-1e845ec5d249 // test
