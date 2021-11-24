@@ -1,3 +1,10 @@
+## [2.0.13](https://github.com/metacontroller/metacontroller/compare/v2.0.12...v2.0.13) (2021-11-24)
+
+
+### Bug Fixes
+
+* **deps:** Update alpine to 3.14.3 and golang to 1.17.3 ([44c6595](https://github.com/metacontroller/metacontroller/commit/44c65951026a11b727b49028aa6ebff4981a343e))
+
 ## [2.0.12](https://github.com/metacontroller/metacontroller/compare/v2.0.11...v2.0.12) (2021-09-26)
 
 
