@@ -1,3 +1,10 @@
+## [2.0.15](https://github.com/metacontroller/metacontroller/compare/v2.0.14...v2.0.15) (2021-11-25)
+
+
+### Bug Fixes
+
+* **controller:** Ignore 404/409 error responses ([5c983a4](https://github.com/metacontroller/metacontroller/commit/5c983a4aa3a79cd5255509ad602e6190ecc414f1))
+
 ## [2.0.14](https://github.com/metacontroller/metacontroller/compare/v2.0.13...v2.0.14) (2021-11-24)
 
 
