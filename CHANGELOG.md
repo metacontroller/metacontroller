@@ -1,3 +1,10 @@
+## [2.0.17](https://github.com/metacontroller/metacontroller/compare/v2.0.16...v2.0.17) (2021-11-25)
+
+
+### Bug Fixes
+
+* **deps:** Update rest of k8s.io dependencies to v0.22.4 ([f5a4a1d](https://github.com/metacontroller/metacontroller/commit/f5a4a1dd74bbd7b59165301ba8fd1f8e22dc44a4))
+
 ## [2.0.16](https://github.com/metacontroller/metacontroller/compare/v2.0.15...v2.0.16) (2021-11-25)
 
 
