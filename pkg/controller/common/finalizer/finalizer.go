@@ -19,9 +19,10 @@ package finalizer
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	dynamicclientset "metacontroller/pkg/dynamic/clientset"
-	dynamicobject "metacontroller/pkg/dynamic/object"
 )
 
 // Manager encapsulates controller logic for dealing with finalizers.
@@ -42,7 +43,7 @@ func NewManager(name string, enabled bool) *Manager {
 func (m *Manager) SyncObject(client *dynamicclientset.ResourceClient, obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
 	// If the cached object passed in is already in the right state,
 	// we'll assume we don't need to check the live object.
-	if dynamicobject.HasFinalizer(obj, m.Name) == m.Enabled {
+	if controllerutil.ContainsFinalizer(obj, m.Name) == m.Enabled {
 		return obj, nil
 	}
 	// Otherwise, we may need to update the object.
@@ -60,14 +61,14 @@ func (m *Manager) SyncObject(client *dynamicclientset.ResourceClient, obj *unstr
 
 // ShouldFinalize returns true if the controller should take action to manage
 // children even though the parent is pending deletion (i.e. finalize).
-func (m *Manager) ShouldFinalize(parent metav1.Object) bool {
+func (m *Manager) ShouldFinalize(parent client.Object) bool {
 	// There's no point managing children if the parent has a GC finalizer,
 	// because we'd be fighting the GC.
 	if hasGCFinalizer(parent) {
 		return false
 	}
 	// If we already removed the finalizer, don't try to manage children anymore.
-	if !dynamicobject.HasFinalizer(parent, m.Name) {
+	if !controllerutil.ContainsFinalizer(parent, m.Name) {
 		return false
 	}
 	return m.Enabled

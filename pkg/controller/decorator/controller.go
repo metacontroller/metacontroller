@@ -25,6 +25,8 @@ import (
 	"sync"
 	"time"
 
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
 	"github.com/go-logr/logr"
 
 	dynamicinformer "metacontroller/pkg/dynamic/informer"
@@ -53,7 +55,6 @@ import (
 	"metacontroller/pkg/controller/common/finalizer"
 	dynamicclientset "metacontroller/pkg/dynamic/clientset"
 	dynamicdiscovery "metacontroller/pkg/dynamic/discovery"
-	dynamicobject "metacontroller/pkg/dynamic/object"
 )
 
 const (
@@ -315,7 +316,7 @@ func (c *decoratorController) enqueueParentObject(obj interface{}) {
 	// If the parent doesn't match our selector, and it doesn't have our
 	// finalizer, we don't care about it.
 	if parent, ok := obj.(*unstructured.Unstructured); ok {
-		if !c.parentSelector.Matches(parent) && !dynamicobject.HasFinalizer(parent, c.finalizer.Name) {
+		if !c.parentSelector.Matches(parent) && !controllerutil.ContainsFinalizer(parent, c.finalizer.Name) {
 			return
 		}
 	}
@@ -378,7 +379,7 @@ func (c *decoratorController) resolveControllerRef(childNamespace string, contro
 		// ControllerRef points to.
 		return nil
 	}
-	if !c.parentSelector.Matches(parent) && !dynamicobject.HasFinalizer(parent, c.finalizer.Name) {
+	if !c.parentSelector.Matches(parent) && !controllerutil.ContainsFinalizer(parent, c.finalizer.Name) {
 		// If the parent doesn't match our selector and doesn't have our finalizer,
 		// we don't care about it.
 		return nil
@@ -499,7 +500,7 @@ func (c *decoratorController) sync(key string) error {
 
 func (c *decoratorController) syncParentObject(parent *unstructured.Unstructured) error {
 	// If it doesn't match our selector, and it doesn't have our finalizer, ignore it.
-	if !c.parentSelector.Matches(parent) && !dynamicobject.HasFinalizer(parent, c.finalizer.Name) {
+	if !c.parentSelector.Matches(parent) && !controllerutil.ContainsFinalizer(parent, c.finalizer.Name) {
 		return nil
 	}
 
@@ -520,7 +521,7 @@ func (c *decoratorController) syncParentObject(parent *unstructured.Unstructured
 	parent = updatedParent
 
 	// Check the finalizer again in case we just removed it.
-	if !c.parentSelector.Matches(parent) && !dynamicobject.HasFinalizer(parent, c.finalizer.Name) {
+	if !c.parentSelector.Matches(parent) && !controllerutil.ContainsFinalizer(parent, c.finalizer.Name) {
 		return nil
 	}
 
@@ -581,7 +582,7 @@ func (c *decoratorController) syncParentObject(parent *unstructured.Unstructured
 
 	// Only do the update if something changed.
 	if labelsChanged || annotationsChanged || statusChanged ||
-		(syncResult.Finalized && dynamicobject.HasFinalizer(parent, c.finalizer.Name)) {
+		(syncResult.Finalized && controllerutil.ContainsFinalizer(parent, c.finalizer.Name)) {
 		updatedParent.SetLabels(parentLabels)
 		updatedParent.SetAnnotations(parentAnnotations)
 		if err := unstructured.SetNestedField(updatedParent.Object, syncResult.Status, "status"); err != nil {
@@ -610,7 +611,7 @@ func (c *decoratorController) syncParentObject(parent *unstructured.Unstructured
 		}
 
 		if syncResult.Finalized {
-			dynamicobject.RemoveFinalizer(updatedParent, c.finalizer.Name)
+			controllerutil.RemoveFinalizer(updatedParent, c.finalizer.Name)
 		}
 
 		c.logger.V(4).Info("DecoratorController updating", "controller", c.dc, "parent", parent)
