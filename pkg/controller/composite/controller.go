@@ -61,7 +61,6 @@ import (
 type parentController struct {
 	cc *v1alpha1.CompositeController
 
-	resources      *dynamicdiscovery.ResourceMap
 	parentResource *dynamicdiscovery.APIResource
 
 	mcClient       mcclientset.Interface
@@ -161,7 +160,6 @@ func newParentController(
 
 	pc = &parentController{
 		cc:             cc,
-		resources:      resources,
 		mcClient:       mcClient,
 		dynClient:      dynClient,
 		childInformers: childInformers,

@@ -315,10 +315,9 @@ func Test_parentController_sync(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, resources, dynClient, parentClient, parentInformer := tt.clientsAndInformers()
+			_, _, dynClient, parentClient, parentInformer := tt.clientsAndInformers()
 			pc := &parentController{
 				cc:             tt.fields.cc,
-				resources:      resources,
 				parentResource: tt.fields.parentResource,
 				mcClient:       tt.fields.mcClient,
 				dynClient:      dynClient,
