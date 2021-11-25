@@ -59,13 +59,13 @@ require (
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
 	k8s.io/apiextensions-apiserver v0.21.3 // indirect
 	k8s.io/component-base v0.21.3 // indirect
-	k8s.io/kube-openapi v0.0.0-20210421082810-95288971da7e // indirect
+	k8s.io/kube-openapi v0.0.0-20211109043538-20434351676c // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.1.2 // indirect
 	sigs.k8s.io/yaml v1.2.0 // indirect
 )
 
 replace (
-	k8s.io/apimachinery => k8s.io/apimachinery v0.22.1
-	k8s.io/client-go => k8s.io/client-go v0.22.1
-	k8s.io/component-base => k8s.io/component-base v0.22.1
+	k8s.io/apimachinery => k8s.io/apimachinery v0.22.4
+	k8s.io/client-go => k8s.io/client-go v0.22.4
+	k8s.io/component-base => k8s.io/component-base v0.22.4
 )
