@@ -103,7 +103,7 @@ func (rm *ResourceMap) refresh() {
 			logging.Logger.Error(err, "Failed to fetch discovery info")
 			return
 		}
-		logging.Logger.Error(err, "Failed to fetch all resources, continuing with partial discovery info")
+		logging.Logger.V(4).Info("Failed to fetch all resources, continuing with partial discovery info", "failures", err)
 	}
 
 	// Denormalize resource lists into maps for convenient lookup
