@@ -11,8 +11,8 @@ require (
 	github.com/nsf/jsondiff v0.0.0-20210926074059-1e845ec5d249 // test
 	github.com/prometheus/client_golang v1.11.0
 	go.uber.org/zap v1.19.0
-	k8s.io/api v0.22.4
-	k8s.io/apimachinery v0.22.4
+	k8s.io/api v0.23.0
+	k8s.io/apimachinery v0.23.0
 	k8s.io/client-go v0.22.4
 	k8s.io/klog/v2 v2.10.0
 	k8s.io/utils v0.0.0-20211116205334-6203023598ed
