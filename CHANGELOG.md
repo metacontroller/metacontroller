@@ -1,3 +1,12 @@
+## [2.0.18](https://github.com/metacontroller/metacontroller/compare/v2.0.17...v2.0.18) (2021-12-07)
+
+
+### Bug Fixes
+
+* **deps:** Update controller-runtime to v0.10.3 ([195fde1](https://github.com/metacontroller/metacontroller/commit/195fde15e4c6d3ca2a1b073c12c96abad1060970))
+* **deps:** update golang docker tag to v1.17.4 ([937f91d](https://github.com/metacontroller/metacontroller/commit/937f91dfa084e1ea62551cf68391960e8e82afea))
+* **discovery:** Do not fail if missing a subset of resources during API discover ([6dce893](https://github.com/metacontroller/metacontroller/commit/6dce893657d0e25a0e9183d99247c5a814135e3f))
+
 ## [2.0.17](https://github.com/metacontroller/metacontroller/compare/v2.0.16...v2.0.17) (2021-11-25)
 
 
