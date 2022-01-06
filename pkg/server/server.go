@@ -56,7 +56,7 @@ func New(configuration options.Configuration) (controllerruntime.Manager, error)
 	// If metacontroller is in a service mesh, this serves as a check that the sidecar is healthy
 	err = k8sCommunicationCheck(mcClient.DiscoveryClient)
 	if err != nil {
-		return nil, fmt.Errorf("communication with K8s API server failed.: %w", err)
+		return nil, err
 	}
 
 	controllerContext, err := common.NewControllerContext(configuration, mcClient)
@@ -117,8 +117,10 @@ func New(configuration options.Configuration) (controllerruntime.Manager, error)
 
 func k8sCommunicationCheck(client *discovery.DiscoveryClient) (err error) {
 	// retry 6 times with a delay of 5 seconds each retry
+	// the retry and sleep intervals were observed anecdotally that service mesh sidecars
+	// take up to ~20 seconds to allow requests to successfully communicate with the api server
 	for range [6]int{} {
-		_, err := client.RESTClient().Get().AbsPath("/api").DoRaw(context.TODO())
+		_, err = client.RESTClient().Get().AbsPath("/api").DoRaw(context.TODO())
 		if err == nil {
 			logging.Logger.Info("Communication with K8s API server successful")
 			break
