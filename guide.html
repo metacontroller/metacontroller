@@ -4,7 +4,10 @@
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
         <title>User Guide - Metacontroller</title>
+
+
         <!-- Custom HTML head -->
+        
         <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
         <meta name="description" content="Lightweight Kubernetes controllers as a service">
         <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -16,15 +19,18 @@
         <link rel="stylesheet" href="css/general.css">
         <link rel="stylesheet" href="css/chrome.css">
         <link rel="stylesheet" href="css/print.css" media="print">
+
         <!-- Fonts -->
         <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
         <link rel="stylesheet" href="fonts/fonts.css">
+
         <!-- Highlight.js Stylesheets -->
         <link rel="stylesheet" href="highlight.css">
         <link rel="stylesheet" href="tomorrow-night.css">
         <link rel="stylesheet" href="ayu-highlight.css">
 
         <!-- Custom theme stylesheets -->
+
         <!-- MathJax -->
         <script async type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     </head>
@@ -85,7 +91,7 @@
         <div id="page-wrapper" class="page-wrapper">
 
             <div class="page">
-                <div id="menu-bar-hover-placeholder"></div>
+                                <div id="menu-bar-hover-placeholder"></div>
                 <div id="menu-bar" class="menu-bar sticky bordered">
                     <div class="left-buttons">
                         <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
@@ -115,6 +121,7 @@
                         <a href="https://github.com/metacontroller/metacontroller" title="Git repository" aria-label="Git repository">
                             <i id="git-repository-button" class="fa fa-github"></i>
                         </a>
+
                     </div>
                 </div>
 
@@ -128,6 +135,7 @@
                         </ul>
                     </div>
                 </div>
+
                 <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
                 <script type="text/javascript">
                     document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
@@ -142,16 +150,16 @@
                         <h1 id="user-guide"><a class="header" href="#user-guide">User Guide</a></h1>
 <p>This section contains general tips and step-by-step tutorials for using Metacontroller.</p>
 <p>See the <a href="./api.html">API Reference</a> for details about all the available options.</p>
-<h2 id="a-hrefguideinstallhtmlinstallationa"><a class="header" href="#a-hrefguideinstallhtmlinstallationa"><a href="./guide/install.html">Installation</a></a></h2>
+<h2 id="installation"><a class="header" href="#installation"><a href="./guide/install.html">Installation</a></a></h2>
 <p>This page describes how to install Metacontroller, either to develop your own
 controllers or just to run third-party controllers that depend on it.</p>
-<h2 id="a-hrefguidecreatehtmlcreate-a-controllera"><a class="header" href="#a-hrefguidecreatehtmlcreate-a-controllera"><a href="./guide/create.html">Create a Controller</a></a></h2>
+<h2 id="create-a-controller"><a class="header" href="#create-a-controller"><a href="./guide/create.html">Create a Controller</a></a></h2>
 <p>This tutorial walks through a simple example of creating a controller in Python
 with Metacontroller.</p>
-<h2 id="a-hrefguidebest-practiceshtmlbest-practicesa"><a class="header" href="#a-hrefguidebest-practiceshtmlbest-practicesa"><a href="./guide/best-practices.html">Best Practices</a></a></h2>
+<h2 id="best-practices"><a class="header" href="#best-practices"><a href="./guide/best-practices.html">Best Practices</a></a></h2>
 <p>Metacontroller will take care of merging your change to <code>importantField</code> while
 preserving the fields you don't care about that were set by others.</p>
-<h2 id="a-hrefguidetroubleshootinghtmltroubleshootinga"><a class="header" href="#a-hrefguidetroubleshootinghtmltroubleshootinga"><a href="./guide/troubleshooting.html">Troubleshooting</a></a></h2>
+<h2 id="troubleshooting"><a class="header" href="#troubleshooting"><a href="./guide/troubleshooting.html">Troubleshooting</a></a></h2>
 <p>This is a collection of tips for debugging controllers written with Metacontroller.</p>
 
                     </main>
@@ -161,9 +169,11 @@ preserving the fields you don't care about that were set by others.</p>
                             <a rel="prev" href="pronunciation.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
+
                             <a rel="next" href="guide/install.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
+
                         <div style="clear: both"></div>
                     </nav>
                 </div>
@@ -173,6 +183,7 @@ preserving the fields you don't care about that were set by others.</p>
                     <a rel="prev" href="pronunciation.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
+
                     <a rel="next" href="guide/install.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
@@ -180,16 +191,24 @@ preserving the fields you don't care about that were set by others.</p>
 
         </div>
 
+
+
+
         <script type="text/javascript">
             window.playground_copyable = true;
         </script>
+
+
         <script src="elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
         <script src="mark.min.js" type="text/javascript" charset="utf-8"></script>
         <script src="searcher.js" type="text/javascript" charset="utf-8"></script>
+
         <script src="clipboard.min.js" type="text/javascript" charset="utf-8"></script>
         <script src="highlight.js" type="text/javascript" charset="utf-8"></script>
         <script src="book.js" type="text/javascript" charset="utf-8"></script>
 
         <!-- Custom JS scripts -->
+
+
     </body>
 </html>
