@@ -1,3 +1,15 @@
+# [2.1.0](https://github.com/metacontroller/metacontroller/compare/v2.0.19...v2.1.0) (2022-01-09)
+
+
+### Bug Fixes
+
+* **deps:** update golang docker tag to v1.17.6 ([bf0e583](https://github.com/metacontroller/metacontroller/commit/bf0e5836248e96251ae71ac02fc6a34cf0617840))
+
+
+### Features
+
+* Add K8s API communiction check on startup ([de00e67](https://github.com/metacontroller/metacontroller/commit/de00e672263a71a60e2843a53b1ef2604c18f72a))
+
 ## [2.0.19](https://github.com/metacontroller/metacontroller/compare/v2.0.18...v2.0.19) (2021-12-09)
 
 
