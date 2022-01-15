@@ -50,6 +50,9 @@ spec:
           {{- if .Values.cacheFlushInterval -}}
           - --cache-flush-interval={{.Values.cacheFlushInterval}}
           {{ end -}}
+          {{- range $value := .Values.commandArgs }}
+          - {{ $value | quote }}
+          {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
       {{- with .Values.nodeSelector }}
