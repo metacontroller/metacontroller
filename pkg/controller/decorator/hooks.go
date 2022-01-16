@@ -52,7 +52,7 @@ func (c *decoratorController) callHook(request *SyncHookRequest) (*SyncHookRespo
 		return nil, fmt.Errorf("no hooks defined")
 	}
 
-	var response SyncHookResponse
+	response := SyncHookResponse{Attachments: []*unstructured.Unstructured{}}
 
 	// First check if we should instead call the finalize hook,
 	// which has the same API as the sync hook except that it's
