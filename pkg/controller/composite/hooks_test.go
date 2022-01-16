@@ -3,6 +3,7 @@ package composite
 import (
 	"metacontroller/pkg/apis/metacontroller/v1alpha1"
 	"metacontroller/pkg/controller/common"
+	"metacontroller/pkg/internal/testutils/hooks"
 	"testing"
 
 	v1 "k8s.io/api/core/v1"
@@ -86,5 +87,29 @@ func TestSyncHookRequest_MarshalJSON(t *testing.T) {
 
 	if res != jsondiff.FullMatch {
 		t.Errorf("the expected result is not equal to actual: %s", diff)
+	}
+}
+
+func TestWhenChildrenArrayIsNullThenDeserializeToEmptySlice(t *testing.T) {
+	input := `
+{
+	"children": [null]
+}`
+	parentController := parentController{
+		syncHook: hooks.NewSerializingExecutorStub(input),
+	}
+	parent := &unstructured.Unstructured{}
+	parent.SetDeletionTimestamp(nil)
+	request := SyncHookRequest{Parent: parent}
+
+	response, err := parentController.callHook(&request)
+
+	if err != nil {
+		t.Error(err)
+		t.Fail()
+	}
+
+	if response.Children == nil {
+		t.Errorf("Children should not be nil")
 	}
 }

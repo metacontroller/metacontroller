@@ -21,6 +21,8 @@ import (
 	"metacontroller/pkg/apis/metacontroller/v1alpha1"
 	"metacontroller/pkg/hooks"
 	"reflect"
+
+	k8sjson "k8s.io/apimachinery/pkg/util/json"
 )
 
 // NewHookExecutorStub creates new HookExecutorStub which returns given response
@@ -78,4 +80,25 @@ func (cc *FakeCustomizableController) GetCustomizeHook() *v1alpha1.Hook {
 			URL: &url,
 		},
 	}
+}
+
+func NewSerializingExecutorStub(responseJson string) hooks.HookExecutor {
+	return &serializingHookExecutorStub{response: responseJson}
+}
+
+// serializingHookExecutorStub is HookExecutor stub to deserialize given json as response
+type serializingHookExecutorStub struct {
+	response string
+}
+
+func (s serializingHookExecutorStub) IsEnabled() bool {
+	return true
+}
+
+func (s serializingHookExecutorStub) Execute(request interface{}, response interface{}) error {
+	err := k8sjson.Unmarshal([]byte(s.response), response)
+	if err != nil {
+		panic(err)
+	}
+	return nil
 }
