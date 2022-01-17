@@ -18,6 +18,7 @@ package customize
 
 import (
 	"fmt"
+	"strings"
 	"metacontroller/pkg/hooks"
 
 	"github.com/go-logr/logr"
@@ -116,7 +117,7 @@ func (rm *Manager) Stop() {
 }
 
 func (rm *Manager) getCachedCustomizeHookResponse(parent *unstructured.Unstructured) *CustomizeHookResponse {
-	return rm.customizeCache.Get(parent.GetName(), parent.GetGeneration())
+	return rm.customizeCache.Get(strings.Join([]string{parent.GetNamespace(),parent.GetName()}, "/"), parent.GetGeneration())
 }
 
 func (rm *Manager) getCustomizeHookResponse(parent *unstructured.Unstructured) (*CustomizeHookResponse, error) {
@@ -133,7 +134,7 @@ func (rm *Manager) getCustomizeHookResponse(parent *unstructured.Unstructured) (
 			return nil, err
 		}
 
-		rm.customizeCache.Add(parent.GetName(), parent.GetGeneration(), &response)
+		rm.customizeCache.Add(strings.Join([]string{parent.GetNamespace(),parent.GetName()}, "/"), parent.GetGeneration(), &response)
 		return &response, nil
 	}
 }
