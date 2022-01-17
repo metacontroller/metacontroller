@@ -1,3 +1,10 @@
+## [2.1.1](https://github.com/metacontroller/metacontroller/compare/v2.1.0...v2.1.1) (2022-01-17)
+
+
+### Bug Fixes
+
+* **hooks:** [#383](https://github.com/metacontroller/metacontroller/issues/383) - Correct handling of nil arrays in responses ([2d916fd](https://github.com/metacontroller/metacontroller/commit/2d916fd1f08399f6e170d2d63d982766a85d3301))
+
 # [2.1.0](https://github.com/metacontroller/metacontroller/compare/v2.0.19...v2.1.0) (2022-01-09)
 
 
