@@ -267,7 +267,7 @@ func updateChildren(client *dynamicclientset.ResourceClient, updateStrategy Chil
 				}
 			case v1alpha1.ChildUpdateInPlace, v1alpha1.ChildUpdateRollingInPlace:
 				// Update the object in-place.
-				logging.Logger.Info("Updating", "parent", parent, "child", obj, "reason", "Recreate update strategy selected")
+				logging.Logger.Info("Updating", "parent", parent, "child", obj, "reason", "InPlace update strategy selected")
 				if _, err := client.Namespace(ns).Update(context.TODO(), newObj, metav1.UpdateOptions{}); err != nil {
 					switch {
 					case apierrors.IsNotFound(err):
