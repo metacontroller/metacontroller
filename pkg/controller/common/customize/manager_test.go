@@ -37,11 +37,14 @@ var fakeEnqueueParent = func(obj interface{}) {}
 var dynClient = dynamicclientset.Clientset{}
 var dynInformers = dynamicinformer.SharedInformerFactory{}
 
-type fakeCustomizableController struct {
+type nilCustomizableController struct {
 }
 
-func (cc *fakeCustomizableController) GetCustomizeHook() *v1alpha1.Hook {
+func (cc *nilCustomizableController) GetCustomizeHook() *v1alpha1.Hook {
 	return nil
+}
+
+type fakeCustomizableController struct {
 }
 
 func (cc *fakeCustomizableController) GetCustomizeHook() *v1alpha1.Hook {
@@ -66,7 +69,7 @@ var neGroupKindMap = common.GroupKindMap{
 var customizeManagerWithNilController, _ = NewCustomizeManager(
 	"test",
 	fakeEnqueueParent,
-	&fakeCustomizableController{},
+	&nilCustomizableController{},
 	&dynClient,
 	&dynInformers,
 	make(common.InformerMap),

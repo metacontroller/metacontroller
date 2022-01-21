@@ -52,7 +52,7 @@ jobs:
     - name: build local Image
       run: docker build -t metacontrollerio/metacontroller:dev .
     - name: setup kind
-      uses: helm/kind-action@v1.2.0
+      uses: X4BNet/kind-action@v1.2.0
       with:
         version: ${{ matrix.configuration.kind }}
         node_image: ${{ matrix.configuration.image }}
