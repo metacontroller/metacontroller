@@ -14,14 +14,14 @@ jobs:
       shell: bash
       run: DOCKER_BUILDKIT=1 docker build -o ./tmp -t metacontroller:test -f Dockerfile.test .
     - name: coverage-unit
-      uses: codecov/codecov-action@v1
+      uses: codecov/codecov-action@v2
       with:
         token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
         files: ./tmp/unit-coverage.out
         flags: unit
         fail_ci_if_error: true # optional (default = false)
     - name: coverage-integration
-      uses: codecov/codecov-action@v1
+      uses: codecov/codecov-action@v2
       with:
         token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
         files: ./tmp/integration-coverage.out
@@ -42,6 +42,7 @@ jobs:
          - {version: '1.20', kind: "v0.11.1", image: 'kindest/node:v1.20.7@sha256:cbeaf907fc78ac97ce7b625e4bf0de16e3ea725daf6b04f930bd14c67c671ff9', crd_version: 'v1' }
          - {version: '1.21', kind: "v0.11.1", image: 'kindest/node:v1.21.1@sha256:69860bda5563ac81e3c0057d654b5253219618a22ec3a346306239bba8cfa1a6', crd_version: 'v1' }
          - {version: '1.22', kind: "v0.11.1", image: 'kindest/node:v1.22.0@sha256:b8bda84bb3a190e6e028b1760d277454a72267a5454b57db34437c34a588d047', crd_version: 'v1' }
+         - {version: '1.23', kind: "v0.11.1", image: 'kindest/node:v1.23.0@sha256:49824ab1727c04e56a21a5d8372a402fcd32ea51ac96a2706a12af38934f81ac', crd_version: 'v1' }
     name: k8s ${{ matrix.configuration.version }}
     steps:
     - name: checkout
@@ -86,7 +87,7 @@ jobs:
     - name: Setup Node.js
       uses: actions/setup-node@v2
       with:
-        node-version: '13.8.0'
+        node-version: '14'
     - name: Install dependencies
       run: npm install ci
     - name: Release

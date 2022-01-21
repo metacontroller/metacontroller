@@ -36,8 +36,23 @@ spec:
           command:
           - /usr/bin/metacontroller
           args:
-          - --zap-log-level=4
-          - --discovery-interval=20s
+          - --zap-log-level={{ .Values.zapLogLevel | default 4 }}
+          - --discovery-interval={{ .Values.discoveryInterval | default "20s" }}
+          {{ if .Values.zap.devel -}}
+          - --zap-devel={{.Values.zap.devel}}
+          {{ end }}
+          {{- if .Values.zap.encoder -}}
+          - --zap-encoder={{.Values.zap.encoder}}
+          {{ end }}
+          {{- if .Values.zap.stacktraceLevel -}}
+          - --zap-stacktrace-level={{.Values.zap.stacktraceLevel}}
+          {{ end }}
+          {{- if .Values.cacheFlushInterval -}}
+          - --cache-flush-interval={{.Values.cacheFlushInterval}}
+          {{ end -}}
+          {{- range $value := .Values.commandArgs }}
+          - {{ $value | quote }}
+          {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
       {{- with .Values.nodeSelector }}

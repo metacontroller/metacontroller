@@ -46,7 +46,7 @@ type SyncHookResponse struct {
 }
 
 func (pc *parentController) callHook(request *SyncHookRequest) (*SyncHookResponse, error) {
-	var response SyncHookResponse
+	response := SyncHookResponse{Children: []*unstructured.Unstructured{}}
 	// First check if we should instead call the finalize hook,
 	// which has the same API as the sync hook except that it's
 	// called while the object is pending deletion.

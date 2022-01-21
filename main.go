@@ -53,10 +53,16 @@ func main() {
 	flag.Parse()
 	logging.InitLogging(&opts)
 
-	logging.Logger.Info("Discovery cache flush interval", "discovery_interval", *discoveryInterval)
-	logging.Logger.Info("API server object cache flush interval", "cache_flush_interval", *informerRelist)
-	logging.Logger.Info("Metrics http server address", "port", *metricsAddr)
-	logging.Logger.Info("Metacontroller build information", "version", version)
+	logging.Logger.Info("Configuration information",
+		"discovery-interval", *discoveryInterval,
+		"cache-flush-interval", *informerRelist,
+		"metrics-address", *metricsAddr,
+		"client-go-qps", *clientGoQPS,
+		"client-go-burst", *clientGoBurst,
+		"workers", *workers,
+		"events-qps", *eventsQPS,
+		"events-burst", *eventsBurst,
+		"version", version)
 
 	config, err := controllerruntime.GetConfig()
 	if err != nil {

@@ -2,10 +2,11 @@
   "extends": [
     "config:base"
   ],
-  "semanticCommits": "true",
+  "semanticCommits": "enabled",
   "semanticCommitType": "fix",
   "commitBody": "Signed-off-by: Renovate Bot <bot@renovateapp.com>",
   "rebaseWhen": "behind-base-branch",
+  "allowedPostUpgradeCommands": ["cd test/integration && go mod tidy"],
   "packageRules": [
     {
       "matchPackageNames": [

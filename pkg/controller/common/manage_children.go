@@ -29,6 +29,7 @@ import (
 	dynamicapply "metacontroller/pkg/dynamic/apply"
 	dynamicclientset "metacontroller/pkg/dynamic/clientset"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
@@ -184,7 +185,12 @@ func deleteChildren(client *dynamicclientset.ResourceClient, parent *unstructure
 				},
 			)
 			if err != nil {
-				errs = append(errs, fmt.Errorf("can't delete %v: %w", describeObject(obj), err))
+				if apierrors.IsNotFound(err) {
+					// Swallow the error since there's no point retrying if the child is gone.
+					logging.Logger.Info("Failed to delete child, child object has been deleted", "parent", parent, "child", obj)
+				} else {
+					errs = append(errs, fmt.Errorf("can't delete %v: %w", describeObject(obj), err))
+				}
 				continue
 			}
 		}
@@ -251,14 +257,28 @@ func updateChildren(client *dynamicclientset.ResourceClient, updateStrategy Chil
 					},
 				)
 				if err != nil {
-					errs = append(errs, err)
+					if apierrors.IsNotFound(err) {
+						// Swallow the error since there's no point retrying if the child is gone.
+						logging.Logger.Info("Failed to delete child, child object has been deleted", "parent", parent, "child", obj)
+					} else {
+						errs = append(errs, err)
+					}
 					continue
 				}
 			case v1alpha1.ChildUpdateInPlace, v1alpha1.ChildUpdateRollingInPlace:
 				// Update the object in-place.
 				logging.Logger.Info("Updating", "parent", parent, "child", obj, "reason", "Recreate update strategy selected")
 				if _, err := client.Namespace(ns).Update(context.TODO(), newObj, metav1.UpdateOptions{}); err != nil {
-					errs = append(errs, err)
+					switch {
+					case apierrors.IsNotFound(err):
+						// Swallow the error since there's no point retrying if the child is gone.
+						logging.Logger.Info("Failed to update child, child object has been deleted", "parent", parent, "child", obj)
+					case apierrors.IsConflict(err):
+						// it is possible that the object was modified after this sync was started, ignore conflict since we will reconcile again
+						logging.Logger.Info("Failed to update child due to outdated resourceVersion", "parent", parent, "child", obj)
+					default:
+						errs = append(errs, err)
+					}
 					continue
 				}
 			default:
@@ -286,7 +306,12 @@ func updateChildren(client *dynamicclientset.ResourceClient, updateStrategy Chil
 			obj.SetOwnerReferences(ownerRefs)
 
 			if _, err := client.Namespace(ns).Create(context.TODO(), obj, metav1.CreateOptions{}); err != nil {
-				errs = append(errs, err)
+				if apierrors.IsAlreadyExists(err) {
+					// Swallow the error since there's no point retrying if the child already exists
+					logging.Logger.Info("Failed to create child, child object already exists", "parent", parent, "child", obj)
+				} else {
+					errs = append(errs, err)
+				}
 				continue
 			}
 		}

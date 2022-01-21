@@ -61,7 +61,6 @@ import (
 type parentController struct {
 	cc *v1alpha1.CompositeController
 
-	resources      *dynamicdiscovery.ResourceMap
 	parentResource *dynamicdiscovery.APIResource
 
 	mcClient       mcclientset.Interface
@@ -161,7 +160,6 @@ func newParentController(
 
 	pc = &parentController{
 		cc:             cc,
-		resources:      resources,
 		mcClient:       mcClient,
 		dynClient:      dynClient,
 		childInformers: childInformers,
@@ -484,13 +482,14 @@ func (pc *parentController) sync(key string) error {
 	pc.logger.V(4).Info("Sync", "object", klog.KRef(namespace, name))
 
 	parent, err := common.GetObject(pc.parentInformer, namespace, name)
-	if apierrors.IsNotFound(err) {
-		// Swallow the error since there's no point retrying if the parent is gone.
-		pc.logger.V(4).Info("Parent object has been deleted", "parent_kind", pc.parentResource.Kind, "object", klog.KRef(namespace, name))
-		return nil
-	}
 	if err != nil {
-		return err
+		if apierrors.IsNotFound(err) {
+			// Swallow the error since there's no point retrying if the parent is gone.
+			pc.logger.V(4).Info("Parent object has been deleted", "parent_kind", pc.parentResource.Kind, "object", klog.KRef(namespace, name))
+			return nil
+		} else {
+			return err
+		}
 	}
 	err = pc.syncParentObject(parent)
 	if err != nil {
@@ -596,6 +595,15 @@ func (pc *parentController) syncParentObject(parent *unstructured.Unstructured) 
 	// Update parent status.
 	// We'll want to make sure this happens after manageChildren once we support observedGeneration.
 	if _, err := pc.updateParentStatus(parent, syncResult.Status); err != nil {
+		if apierrors.IsNotFound(err) {
+			// Swallow the error since there's no point retrying if the parent is gone.
+			pc.logger.V(4).Info("Parent object has been deleted", "parent_kind", pc.parentResource.Kind, "object", klog.KRef(parent.GetNamespace(), parent.GetName()))
+			return nil
+		} else if apierrors.IsConflict(err) {
+			// it is possible that the object was modified after this sync was started, ignore conflict since we will reconcile again
+			pc.logger.V(4).Info("Parent ignoring update due to outdated resourceVersion", "parent_kind", pc.parentResource.Kind, "object", klog.KRef(parent.GetNamespace(), parent.GetName()))
+			return nil
+		}
 		return fmt.Errorf("can't update status for %v %v/%v: %w", pc.parentResource.Kind, parent.GetNamespace(), parent.GetName(), err)
 	}
 

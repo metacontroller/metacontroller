@@ -17,7 +17,12 @@ limitations under the License.
 package server
 
 import (
+	"context"
 	"fmt"
+	"metacontroller/pkg/logging"
+	"time"
+
+	"k8s.io/client-go/discovery"
 
 	"metacontroller/pkg/controller/common"
 
@@ -45,6 +50,13 @@ func New(configuration options.Configuration) (controllerruntime.Manager, error)
 	mcClient, err := mcclientset.NewForConfig(configuration.RestConfig)
 	if err != nil {
 		return nil, fmt.Errorf("can't create client for api %s: %w", v1alpha1.SchemeGroupVersion, err)
+	}
+
+	// Check if metacontroller can successfully communicate with the K8s API server
+	// If metacontroller is in a service mesh, this serves as a check that the sidecar is healthy
+	err = k8sCommunicationCheck(mcClient.DiscoveryClient)
+	if err != nil {
+		return nil, err
 	}
 
 	controllerContext, err := common.NewControllerContext(configuration, mcClient)
@@ -101,4 +113,21 @@ func New(configuration options.Configuration) (controllerruntime.Manager, error)
 	controllerContext.Start()
 
 	return mgr, nil
+}
+
+func k8sCommunicationCheck(client *discovery.DiscoveryClient) (err error) {
+	// retry 6 times with a delay of 5 seconds each retry
+	// the retry and sleep intervals were observed anecdotally that service mesh sidecars
+	// take up to ~20 seconds to allow requests to successfully communicate with the api server
+	for range [6]int{} {
+		_, err = client.RESTClient().Get().AbsPath("/api").DoRaw(context.TODO())
+		if err == nil {
+			logging.Logger.Info("Communication with K8s API server successful")
+			break
+		}
+
+		logging.Logger.Info("Communication with K8s API server failed. Retrying...")
+		time.Sleep(5 * time.Second)
+	}
+	return err
 }

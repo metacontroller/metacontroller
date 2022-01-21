@@ -20,6 +20,8 @@ import (
 	"context"
 	"fmt"
 
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -28,7 +30,6 @@ import (
 	"k8s.io/client-go/util/retry"
 
 	dynamicdiscovery "metacontroller/pkg/dynamic/discovery"
-	dynamicobject "metacontroller/pkg/dynamic/object"
 )
 
 type Clientset struct {
@@ -37,16 +38,20 @@ type Clientset struct {
 	dc        dynamic.Interface
 }
 
+func NewClientset(config *rest.Config, resources *dynamicdiscovery.ResourceMap, dc dynamic.Interface) *Clientset {
+	return &Clientset{
+		config:    *config,
+		resources: resources,
+		dc:        dc,
+	}
+}
+
 func New(config *rest.Config, resources *dynamicdiscovery.ResourceMap) (*Clientset, error) {
 	dc, err := dynamic.NewForConfig(config)
 	if err != nil {
 		return nil, fmt.Errorf("can't create dynamic client when creating clientset: %w", err)
 	}
-	return &Clientset{
-		config:    *config,
-		resources: resources,
-		dc:        dc,
-	}, nil
+	return NewClientset(config, resources, dc), nil
 }
 
 func (cs *Clientset) HasSynced() bool {
@@ -156,11 +161,11 @@ func (rc *ResourceClient) AtomicUpdate(orig *unstructured.Unstructured, update f
 // AddFinalizer adds the given finalizer to the list, if it isn't there already.
 func (rc *ResourceClient) AddFinalizer(orig *unstructured.Unstructured, name string) (*unstructured.Unstructured, error) {
 	return rc.AtomicUpdate(orig, func(obj *unstructured.Unstructured) bool {
-		if dynamicobject.HasFinalizer(obj, name) {
+		if controllerutil.ContainsFinalizer(obj, name) {
 			// Nothing to do. Abort update.
 			return false
 		}
-		dynamicobject.AddFinalizer(obj, name)
+		controllerutil.AddFinalizer(obj, name)
 		return true
 	})
 }
@@ -168,11 +173,11 @@ func (rc *ResourceClient) AddFinalizer(orig *unstructured.Unstructured, name str
 // RemoveFinalizer removes the given finalizer from the list, if it's there.
 func (rc *ResourceClient) RemoveFinalizer(orig *unstructured.Unstructured, name string) (*unstructured.Unstructured, error) {
 	return rc.AtomicUpdate(orig, func(obj *unstructured.Unstructured) bool {
-		if !dynamicobject.HasFinalizer(obj, name) {
+		if !controllerutil.ContainsFinalizer(obj, name) {
 			// Nothing to do. Abort update.
 			return false
 		}
-		dynamicobject.RemoveFinalizer(obj, name)
+		controllerutil.RemoveFinalizer(obj, name)
 		return true
 	})
 }

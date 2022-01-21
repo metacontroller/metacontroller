@@ -1,3 +1,95 @@
+## [2.1.1](https://github.com/metacontroller/metacontroller/compare/v2.1.0...v2.1.1) (2022-01-17)
+
+
+### Bug Fixes
+
+* **hooks:** [#383](https://github.com/metacontroller/metacontroller/issues/383) - Correct handling of nil arrays in responses ([2d916fd](https://github.com/metacontroller/metacontroller/commit/2d916fd1f08399f6e170d2d63d982766a85d3301))
+
+# [2.1.0](https://github.com/metacontroller/metacontroller/compare/v2.0.19...v2.1.0) (2022-01-09)
+
+
+### Bug Fixes
+
+* **deps:** update golang docker tag to v1.17.6 ([bf0e583](https://github.com/metacontroller/metacontroller/commit/bf0e5836248e96251ae71ac02fc6a34cf0617840))
+
+
+### Features
+
+* Add K8s API communiction check on startup ([de00e67](https://github.com/metacontroller/metacontroller/commit/de00e672263a71a60e2843a53b1ef2604c18f72a))
+
+## [2.0.19](https://github.com/metacontroller/metacontroller/compare/v2.0.18...v2.0.19) (2021-12-09)
+
+
+### Bug Fixes
+
+* **deps:** update golang docker tag to v1.17.5 ([9f2abd8](https://github.com/metacontroller/metacontroller/commit/9f2abd811debfc7c2267e2c996d417d6854d4cfb))
+
+## [2.0.18](https://github.com/metacontroller/metacontroller/compare/v2.0.17...v2.0.18) (2021-12-07)
+
+
+### Bug Fixes
+
+* **deps:** Update controller-runtime to v0.10.3 ([195fde1](https://github.com/metacontroller/metacontroller/commit/195fde15e4c6d3ca2a1b073c12c96abad1060970))
+* **deps:** update golang docker tag to v1.17.4 ([937f91d](https://github.com/metacontroller/metacontroller/commit/937f91dfa084e1ea62551cf68391960e8e82afea))
+* **discovery:** Do not fail if missing a subset of resources during API discover ([6dce893](https://github.com/metacontroller/metacontroller/commit/6dce893657d0e25a0e9183d99247c5a814135e3f))
+
+## [2.0.17](https://github.com/metacontroller/metacontroller/compare/v2.0.16...v2.0.17) (2021-11-25)
+
+
+### Bug Fixes
+
+* **deps:** Update rest of k8s.io dependencies to v0.22.4 ([f5a4a1d](https://github.com/metacontroller/metacontroller/commit/f5a4a1dd74bbd7b59165301ba8fd1f8e22dc44a4))
+
+## [2.0.16](https://github.com/metacontroller/metacontroller/compare/v2.0.15...v2.0.16) (2021-11-25)
+
+
+### Bug Fixes
+
+* **deps:** update alpine docker tag to v3.15.0 ([dd1e402](https://github.com/metacontroller/metacontroller/commit/dd1e4024764d74e1fda47609c0761a0a32f3ee3f))
+
+## [2.0.15](https://github.com/metacontroller/metacontroller/compare/v2.0.14...v2.0.15) (2021-11-25)
+
+
+### Bug Fixes
+
+* **controller:** Ignore 404/409 error responses ([5c983a4](https://github.com/metacontroller/metacontroller/commit/5c983a4aa3a79cd5255509ad602e6190ecc414f1))
+
+## [2.0.14](https://github.com/metacontroller/metacontroller/compare/v2.0.13...v2.0.14) (2021-11-24)
+
+
+### Bug Fixes
+
+* **deps:** Update json-patch to v5.6.0, k8s.io to v0.22.4 and k8s.io/utils ([889f355](https://github.com/metacontroller/metacontroller/commit/889f355134c36be2b11f0b9a9e4aab33236e237b))
+
+## [2.0.13](https://github.com/metacontroller/metacontroller/compare/v2.0.12...v2.0.13) (2021-11-24)
+
+
+### Bug Fixes
+
+* **deps:** Update alpine to 3.14.3 and golang to 1.17.3 ([44c6595](https://github.com/metacontroller/metacontroller/commit/44c65951026a11b727b49028aa6ebff4981a343e))
+
+## [2.0.12](https://github.com/metacontroller/metacontroller/compare/v2.0.11...v2.0.12) (2021-09-26)
+
+
+### Bug Fixes
+
+* Add command line arguments parameterization to Helm chart ([2081bcf](https://github.com/metacontroller/metacontroller/commit/2081bcf89fe6310838e47d2186a3a937ff62dfe9))
+
+## [2.0.11](https://github.com/metacontroller/metacontroller/compare/v2.0.10...v2.0.11) (2021-09-26)
+
+
+### Bug Fixes
+
+* **deps:** update github.com/nsf/jsondiff commit hash to 0e9c064 ([b9fe982](https://github.com/metacontroller/metacontroller/commit/b9fe982947fd57d35750da2fce6d4edd90bee76e))
+* **deps:** update github.com/nsf/jsondiff commit hash to 1e845ec ([55983c3](https://github.com/metacontroller/metacontroller/commit/55983c360bee54049a821809a88802c9c2ceca52))
+
+## [2.0.10](https://github.com/metacontroller/metacontroller/compare/v2.0.9...v2.0.10) (2021-09-15)
+
+
+### Bug Fixes
+
+* **deps:** update golang docker tag to v1.17.1 ([8214d11](https://github.com/metacontroller/metacontroller/commit/8214d118ef9986fe19b25d09119c37555e40602a))
+
 ## [2.0.9](https://github.com/metacontroller/metacontroller/compare/v2.0.8...v2.0.9) (2021-09-08)
 
 

@@ -25,6 +25,8 @@ import (
 	"sync"
 	"time"
 
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
 	"github.com/go-logr/logr"
 
 	dynamicinformer "metacontroller/pkg/dynamic/informer"
@@ -53,7 +55,6 @@ import (
 	"metacontroller/pkg/controller/common/finalizer"
 	dynamicclientset "metacontroller/pkg/dynamic/clientset"
 	dynamicdiscovery "metacontroller/pkg/dynamic/discovery"
-	dynamicobject "metacontroller/pkg/dynamic/object"
 )
 
 const (
@@ -315,7 +316,7 @@ func (c *decoratorController) enqueueParentObject(obj interface{}) {
 	// If the parent doesn't match our selector, and it doesn't have our
 	// finalizer, we don't care about it.
 	if parent, ok := obj.(*unstructured.Unstructured); ok {
-		if !c.parentSelector.Matches(parent) && !dynamicobject.HasFinalizer(parent, c.finalizer.Name) {
+		if !c.parentSelector.Matches(parent) && !controllerutil.ContainsFinalizer(parent, c.finalizer.Name) {
 			return
 		}
 	}
@@ -378,7 +379,7 @@ func (c *decoratorController) resolveControllerRef(childNamespace string, contro
 		// ControllerRef points to.
 		return nil
 	}
-	if !c.parentSelector.Matches(parent) && !dynamicobject.HasFinalizer(parent, c.finalizer.Name) {
+	if !c.parentSelector.Matches(parent) && !controllerutil.ContainsFinalizer(parent, c.finalizer.Name) {
 		// If the parent doesn't match our selector and doesn't have our finalizer,
 		// we don't care about it.
 		return nil
@@ -477,13 +478,14 @@ func (c *decoratorController) sync(key string) error {
 		return fmt.Errorf("no informer for resource %q in apiVersion %q", resource.Name, apiVersion)
 	}
 	parent, err := common.GetObject(informer, namespace, name)
-	if apierrors.IsNotFound(err) {
-		// Swallow the error since there's no point retrying if the parent is gone.
-		c.logger.V(4).Info("Parent object has been deleted", "kind", kind, "object", klog.KRef(namespace, name))
-		return nil
-	}
 	if err != nil {
-		return err
+		if apierrors.IsNotFound(err) {
+			// Swallow the error since there's no point retrying if the parent is gone.
+			c.logger.V(4).Info("Parent object has been deleted", "kind", kind, "object", klog.KRef(namespace, name))
+			return nil
+		} else {
+			return err
+		}
 	}
 	err = c.syncParentObject(parent)
 	if err != nil {
@@ -498,7 +500,7 @@ func (c *decoratorController) sync(key string) error {
 
 func (c *decoratorController) syncParentObject(parent *unstructured.Unstructured) error {
 	// If it doesn't match our selector, and it doesn't have our finalizer, ignore it.
-	if !c.parentSelector.Matches(parent) && !dynamicobject.HasFinalizer(parent, c.finalizer.Name) {
+	if !c.parentSelector.Matches(parent) && !controllerutil.ContainsFinalizer(parent, c.finalizer.Name) {
 		return nil
 	}
 
@@ -519,7 +521,7 @@ func (c *decoratorController) syncParentObject(parent *unstructured.Unstructured
 	parent = updatedParent
 
 	// Check the finalizer again in case we just removed it.
-	if !c.parentSelector.Matches(parent) && !dynamicobject.HasFinalizer(parent, c.finalizer.Name) {
+	if !c.parentSelector.Matches(parent) && !controllerutil.ContainsFinalizer(parent, c.finalizer.Name) {
 		return nil
 	}
 
@@ -580,7 +582,7 @@ func (c *decoratorController) syncParentObject(parent *unstructured.Unstructured
 
 	// Only do the update if something changed.
 	if labelsChanged || annotationsChanged || statusChanged ||
-		(syncResult.Finalized && dynamicobject.HasFinalizer(parent, c.finalizer.Name)) {
+		(syncResult.Finalized && controllerutil.ContainsFinalizer(parent, c.finalizer.Name)) {
 		updatedParent.SetLabels(parentLabels)
 		updatedParent.SetAnnotations(parentAnnotations)
 		if err := unstructured.SetNestedField(updatedParent.Object, syncResult.Status, "status"); err != nil {
@@ -591,19 +593,39 @@ func (c *decoratorController) syncParentObject(parent *unstructured.Unstructured
 			// The regular Update below will ignore changes to .status so we do it separately.
 			result, err := parentClient.Namespace(parent.GetNamespace()).UpdateStatus(context.TODO(), updatedParent, metav1.UpdateOptions{})
 			if err != nil {
-				return fmt.Errorf("can't update status: %w", err)
+				switch {
+				case apierrors.IsNotFound(err):
+					// Swallow the error since there's no point retrying if the child is gone.
+					c.logger.V(4).Info("DecoratorController Failed to sync status, parent object has been deleted", "controller", c.dc, "parent", parent)
+					return nil
+				case apierrors.IsConflict(err):
+					// it is possible that the object was modified after this sync was started, ignore conflict since we will reconcile again
+					c.logger.V(4).Info("DecoratorController ignoring update status due to outdated resourceVersion", "controller", c.dc, "parent", parent)
+					return nil
+				default:
+					return fmt.Errorf("can't update status: %w", err)
+				}
 			}
 			// The Update below needs to use the latest ResourceVersion.
 			updatedParent.SetResourceVersion(result.GetResourceVersion())
 		}
 
 		if syncResult.Finalized {
-			dynamicobject.RemoveFinalizer(updatedParent, c.finalizer.Name)
+			controllerutil.RemoveFinalizer(updatedParent, c.finalizer.Name)
 		}
 
 		c.logger.V(4).Info("DecoratorController updating", "controller", c.dc, "parent", parent)
 		_, err = parentClient.Namespace(parent.GetNamespace()).Update(context.TODO(), updatedParent, metav1.UpdateOptions{})
 		if err != nil {
+			if apierrors.IsNotFound(err) {
+				// Swallow the error since there's no point retrying if the parent is gone.
+				c.logger.V(4).Info("DecoratorController Failed to sync, parent object has been deleted", "controller", c.dc, "parent", parent)
+				return nil
+			} else if apierrors.IsConflict(err) {
+				// it is possible that the object was modified after this sync was started, ignore conflict since we will reconcile again
+				c.logger.V(4).Info("DecoratorController ignoring update due to outdated resourceVersion", "controller", c.dc, "parent", parent)
+				return nil
+			}
 			return fmt.Errorf("can't update %v %v/%v: %w", parent.GetKind(), parent.GetNamespace(), parent.GetName(), err)
 		}
 	}

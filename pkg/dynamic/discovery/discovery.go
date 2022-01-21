@@ -99,8 +99,11 @@ func (rm *ResourceMap) refresh() {
 	logging.Logger.V(7).Info("Refreshing API discovery info")
 	_, groups, err := rm.discoveryClient.ServerGroupsAndResources()
 	if err != nil {
-		logging.Logger.Error(err, "Failed to fetch discovery info")
-		return
+		if len(groups) == 0 {
+			logging.Logger.Error(err, "Failed to fetch discovery info")
+			return
+		}
+		logging.Logger.V(4).Info("Failed to fetch all resources, continuing with partial discovery info", "failures", err)
 	}
 
 	// Denormalize resource lists into maps for convenient lookup
