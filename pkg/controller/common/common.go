@@ -21,6 +21,8 @@ import (
 	"metacontroller/pkg/logging"
 	"strings"
 
+	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"metacontroller/pkg/apis/metacontroller/v1alpha1"
@@ -179,4 +181,16 @@ func GetObject(informer *dynamicinformer.ResourceInformer, namespace, name strin
 		return informer.Lister().Get(name)
 	}
 	return informer.Lister().Namespace(namespace).Get(name)
+}
+
+func HasStatusSubresource(crd *v1.CustomResourceDefinition, version string) bool {
+	for _, crdVersion := range crd.Spec.Versions {
+		if crdVersion.Name == version {
+			// check subresource for matching version
+			if crdVersion.Subresources != nil && crdVersion.Subresources.Status != nil {
+				return true
+			}
+		}
+	}
+	return false
 }
