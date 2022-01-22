@@ -90,7 +90,7 @@ func TestGetRelatedObject_requestResponse(t *testing.T) {
 
 	customizeManagerWithFakeController.customizeHook = NewHookExecutorStub(expectedResponse)
 	parent := &unstructured.Unstructured{}
-	parent.SetName("othertest")
+	parent.SetUID("some")
 	parent.SetGeneration(1)
 
 	response, err := customizeManagerWithFakeController.getCustomizeHookResponse(parent)
@@ -103,7 +103,7 @@ func TestGetRelatedObject_requestResponse(t *testing.T) {
 		t.Errorf("Response should be equal to %v, got %v", expectedResponse, response)
 	}
 
-	if customizeManagerWithFakeController.customizeCache.Get("othertest", 1) == nil {
+	if customizeManagerWithFakeController.customizeCache.Get("some", 1) == nil {
 		t.Error("Expected not nil here, response should be cached")
 	}
 }
