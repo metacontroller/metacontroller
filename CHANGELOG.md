@@ -1,3 +1,10 @@
+## [2.1.2](https://github.com/metacontroller/metacontroller/compare/v2.1.1...v2.1.2) (2022-01-22)
+
+
+### Bug Fixes
+
+* change invalid log message when InPlace update strategy is used ([1ca006e](https://github.com/metacontroller/metacontroller/commit/1ca006eeb3f4ecaca6776de53079186c161d93f1))
+
 ## [2.1.1](https://github.com/metacontroller/metacontroller/compare/v2.1.0...v2.1.1) (2022-01-17)
 
 
