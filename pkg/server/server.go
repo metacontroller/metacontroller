@@ -40,6 +40,8 @@ import (
 	controllerruntime "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
 )
 
@@ -79,6 +81,10 @@ func New(configuration options.Configuration) (controllerruntime.Manager, error)
 	}
 
 	err = v1alpha1.AddToScheme(mgr.GetScheme())
+	if err != nil {
+		return nil, err
+	}
+	err = apiextensionsv1.AddToScheme(mgr.GetScheme())
 	if err != nil {
 		return nil, err
 	}

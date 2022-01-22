@@ -20,6 +20,8 @@ require (
 	zgo.at/zcache v1.1.0
 )
 
+require k8s.io/apiextensions-apiserver v0.23.0
+
 require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect

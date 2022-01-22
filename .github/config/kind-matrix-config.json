@@ -1,18 +1,6 @@
 {
   "configuration": [
     {
-      "version": "1.14",
-      "kind": "v0.11.1",
-      "image": "kindest/node:v1.14.10@sha256:f8a66ef82822ab4f7569e91a5bccaf27bceee135c1457c512e54de8c6f7219f8",
-      "crd_version": "v1beta1"
-    },
-    {
-      "version": "1.15",
-      "kind": "v0.11.1",
-      "image": "kindest/node:v1.15.12@sha256:b920920e1eda689d9936dfcf7332701e80be12566999152626b2c9d730397a95",
-      "crd_version": "v1beta1"
-    },
-    {
       "version": "1.16",
       "kind": "v0.11.1",
       "image": "kindest/node:v1.16.15@sha256:83067ed51bf2a3395b24687094e283a7c7c865ccc12a8b1d7aa673ba0c5e8861",

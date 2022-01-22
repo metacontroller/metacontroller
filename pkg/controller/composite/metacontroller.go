@@ -20,6 +20,8 @@ import (
 	"context"
 	"metacontroller/pkg/logging"
 
+	"k8s.io/apimachinery/pkg/runtime/schema"
+
 	"github.com/go-logr/logr"
 
 	"metacontroller/pkg/controller/common"
@@ -33,6 +35,8 @@ import (
 	"metacontroller/pkg/events"
 
 	v1 "k8s.io/api/core/v1"
+
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -116,23 +120,32 @@ func (mc *Metacontroller) Reconcile(ctx context.Context, request reconcile.Reque
 			"[%s] Sync error - %s", cc.Name, err)
 		return reconcile.Result{}, err
 	}
-	parentClient, err := mc.dynClient.Resource(cc.Spec.ParentResource.APIVersion, cc.Spec.ParentResource.Resource)
+	groupVersion, err := schema.ParseGroupVersion(cc.Spec.ParentResource.APIVersion)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
-	if found := parentClient.APIResource.HasSubresource("status"); !found {
+	parentCRD := &apiextensionsv1.CustomResourceDefinition{}
+	err = mc.k8sClient.Get(ctx,
+		client.ObjectKey{
+			Name: cc.Spec.ParentResource.Resource + "." + groupVersion.Group,
+		},
+		parentCRD)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+	if !common.HasStatusSubresource(parentCRD, groupVersion.Version) {
 		mc.eventRecorder.Eventf(
 			&cc,
 			v1.EventTypeWarning,
 			events.ReasonSyncError,
-			"[%s] Sync error - ignoring, parent resource %s does not have subresource 'Status' enabled",
+			"[%s] Sync error - ignoring, CRD [%s] does not have subresource 'Status' enabled",
 			cc.Name,
-			parentClient.GroupVersionKind())
+			parentCRD.GroupVersionKind())
 		mc.logger.Info("Ignoring CompositeController",
 			"name", compositeControllerName,
 			"reason", "subresource 'Status' not enabled",
-			"groupVersionKind", parentClient.GroupVersionKind())
-		// returning, as we cannot do anything until 'Status' subresource is added to parent resource
+			"groupVersionKind", parentCRD.GroupVersionKind())
+		// returning, as we cannot do anything until 'Status' subresource is added to parent parentCRD
 		return reconcile.Result{}, nil
 	}
 	reconcileErr := mc.reconcileCompositeController(&cc)
