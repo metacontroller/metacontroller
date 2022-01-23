@@ -19,6 +19,7 @@ package main
 import (
 	"flag"
 	"metacontroller/pkg/logging"
+	"metacontroller/pkg/profile"
 	"os"
 	"sync"
 	"time"
@@ -33,8 +34,6 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
 	"k8s.io/client-go/tools/record"
 	controllerruntime "sigs.k8s.io/controller-runtime"
-
-	"metacontroller/pkg/pprof_enable"
 )
 
 var (
@@ -46,7 +45,7 @@ var (
 	workers           = flag.Int("workers", 5, "Number of sync workers to run (default 5)")
 	eventsQPS         = flag.Float64("events-qps", 1./300., "Rate of events flowing per object (default - 1 event per 5 minutes)")
 	eventsBurst       = flag.Int("events-burst", 25, "Number of events allowed to send per object (default 25)")
-	pprofAddr         = flag.String("pprof-address", "0", "Enable pprof and bind to endpoint - /debug/pprof, set to 0 to disable pprof serviing")
+	pprofAddr         = flag.String("pprof-address", "0", "Enable pprof and bind to endpoint - /debug/pprof, set to 0 to disable pprof serving")
 	version           = "No version provided"
 )
 
@@ -68,7 +67,7 @@ func main() {
 		"pprofAddr", *pprofAddr,
 		"version", version)
 
-	pprof_enable.EnablePprof(*pprofAddr)
+	pprofStopChan := profile.EnablePprof(*pprofAddr)
 
 	config, err := controllerruntime.GetConfig()
 	if err != nil {
@@ -113,7 +112,13 @@ func main() {
 		logging.Logger.Info("Stopped metacontroller")
 	}()
 
+	if pprofStopChan != nil {
+		<-pprofStopChan
+		logging.Logger.Info("Stopped pprof server")
+	}
+
 	<-mgrStopChan.Done()
 	logging.Logger.Info("Stopped controller manager")
+
 	wg.Wait()
 }
