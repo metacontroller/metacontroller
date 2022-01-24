@@ -20,7 +20,7 @@ spec:
       serviceAccountName: metacontroller
       containers:
       - name: metacontroller
-        image: metacontrollerio/metacontroller:v2.1.2
+        image: metacontrollerio/metacontroller:v2.1.3
         command: ["/usr/bin/metacontroller"]
         args:
         - --zap-log-level=4

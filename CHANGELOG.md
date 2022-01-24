@@ -1,3 +1,10 @@
+## [2.1.3](https://github.com/metacontroller/metacontroller/compare/v2.1.2...v2.1.3) (2022-01-24)
+
+
+### Bug Fixes
+
+* **customize:** [#414](https://github.com/metacontroller/metacontroller/issues/414) - Use 'UID' as cache key to avoid collisions between objects in different namespaces ([38126d1](https://github.com/metacontroller/metacontroller/commit/38126d16e211a014b19ae1c2d7c96b753b878d1e))
+
 ## [2.1.2](https://github.com/metacontroller/metacontroller/compare/v2.1.1...v2.1.2) (2022-01-22)
 
 
