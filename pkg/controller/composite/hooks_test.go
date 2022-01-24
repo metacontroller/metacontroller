@@ -3,6 +3,7 @@ package composite
 import (
 	"metacontroller/pkg/apis/metacontroller/v1alpha1"
 	"metacontroller/pkg/controller/common"
+	composite "metacontroller/pkg/controller/composite/api/v1"
 	"metacontroller/pkg/internal/testutils/hooks"
 	"testing"
 
@@ -62,7 +63,7 @@ func TestSyncHookRequest_MarshalJSON(t *testing.T) {
 	child.SetName("aaaaa")
 	children.Insert(&parent, child)
 
-	request := SyncHookRequest{
+	request := composite.SyncHookRequest{
 		Controller: &v1alpha1.CompositeController{
 			TypeMeta:   metav1.TypeMeta{},
 			ObjectMeta: metav1.ObjectMeta{},
@@ -100,7 +101,7 @@ func TestWhenChildrenArrayIsNullThenDeserializeToEmptySlice(t *testing.T) {
 	}
 	parent := &unstructured.Unstructured{}
 	parent.SetDeletionTimestamp(nil)
-	request := SyncHookRequest{Parent: parent}
+	request := composite.SyncHookRequest{Parent: parent}
 
 	response, err := parentController.callHook(&request)
 

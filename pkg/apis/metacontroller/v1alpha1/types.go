@@ -231,3 +231,10 @@ type RelatedResourceRule struct {
 	Namespace             string   `json:"namespace,omitempty"`
 	Names                 []string `json:"names"`
 }
+
+// CustomizableController is an interface representing Controller exposing customize hook
+type CustomizableController interface {
+
+	// GetCustomizeHook return v1alpha1.Hook or nil if not defined
+	GetCustomizeHook() *Hook
+}

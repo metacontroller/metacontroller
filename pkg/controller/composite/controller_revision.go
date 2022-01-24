@@ -21,6 +21,7 @@ import (
 	"crypto/sha1" // #nosec
 	"encoding/hex"
 	"fmt"
+	v1 "metacontroller/pkg/controller/composite/api/v1"
 	"metacontroller/pkg/logging"
 	"reflect"
 	"strings"
@@ -75,14 +76,14 @@ func (pc *parentController) claimRevisions(parent *unstructured.Unstructured) ([
 	return revisions, nil
 }
 
-func (pc *parentController) syncRevisions(parent *unstructured.Unstructured, observedChildren common.RelativeObjectMap, relatedObjects common.RelativeObjectMap) (*SyncHookResponse, error) {
+func (pc *parentController) syncRevisions(parent *unstructured.Unstructured, observedChildren common.RelativeObjectMap, relatedObjects common.RelativeObjectMap) (*v1.SyncHookResponse, error) {
 	// If no child resources use rolling updates, just sync the latest parent.
 	// Also, if the parent object is being deleted and we don't have a finalizer,
 	// just sync the latest parent to get the status since we won't manage
 	// children anyway.
 	if !pc.updateStrategy.anyRolling() ||
 		(parent.GetDeletionTimestamp() != nil && !pc.finalizer.ShouldFinalize(parent)) {
-		syncRequest := &SyncHookRequest{
+		syncRequest := &v1.SyncHookRequest{
 			Controller: pc.cc,
 			Parent:     parent,
 			Children:   observedChildren,
@@ -158,7 +159,7 @@ func (pc *parentController) syncRevisions(parent *unstructured.Unstructured, obs
 		go func(pr *parentRevision) {
 			defer wg.Done()
 
-			syncRequest := &SyncHookRequest{
+			syncRequest := &v1.SyncHookRequest{
 				Controller: pc.cc,
 				Parent:     pr.parent,
 				Children:   observedChildren,
@@ -227,7 +228,7 @@ func (pc *parentController) syncRevisions(parent *unstructured.Unstructured, obs
 
 	// Build a single, aggregated syncResult.
 	// We only take parent status from the latest revision.
-	syncResult := &SyncHookResponse{
+	syncResult := &v1.SyncHookResponse{
 		Status:   latest.syncResult.Status,
 		Children: desiredChildren.List(),
 	}
@@ -416,7 +417,7 @@ type parentRevision struct {
 	parent   *unstructured.Unstructured
 	revision *v1alpha1.ControllerRevision
 
-	syncResult *SyncHookResponse
+	syncResult *v1.SyncHookResponse
 	syncError  error
 
 	desiredChildMap common.RelativeObjectMap

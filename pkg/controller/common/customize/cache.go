@@ -17,6 +17,7 @@ limitations under the License.
 package customize
 
 import (
+	v1 "metacontroller/pkg/controller/common/customize/api/v1"
 	"time"
 
 	"k8s.io/apimachinery/pkg/types"
@@ -40,11 +41,11 @@ func NewResponseCache() *ResponseCache {
 
 type customizeResponseCacheEntry struct {
 	parentGeneration int64
-	cachedResponse   *CustomizeHookResponse
+	cachedResponse   *v1.CustomizeHookResponse
 }
 
 // Add adds a given response for given parent and its generation
-func (responseCache *ResponseCache) Add(uid types.UID, parentGeneration int64, response *CustomizeHookResponse) {
+func (responseCache *ResponseCache) Add(uid types.UID, parentGeneration int64, response *v1.CustomizeHookResponse) {
 	responseCacheEntry := customizeResponseCacheEntry{
 		parentGeneration: parentGeneration,
 		cachedResponse:   response,
@@ -53,7 +54,7 @@ func (responseCache *ResponseCache) Add(uid types.UID, parentGeneration int64, r
 }
 
 // Get returns response from cache or nil when not found
-func (responseCache *ResponseCache) Get(uid types.UID, parentGeneration int64) *CustomizeHookResponse {
+func (responseCache *ResponseCache) Get(uid types.UID, parentGeneration int64) *v1.CustomizeHookResponse {
 	value, found := responseCache.cache.Get(toKey(uid))
 	if !found {
 		return nil

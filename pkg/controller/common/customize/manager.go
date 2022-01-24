@@ -18,6 +18,7 @@ package customize
 
 import (
 	"fmt"
+	v1 "metacontroller/pkg/controller/common/customize/api/v1"
 	"metacontroller/pkg/hooks"
 
 	"github.com/go-logr/logr"
@@ -45,7 +46,7 @@ const (
 
 type Manager struct {
 	name       string
-	controller CustomizableController
+	controller v1alpha1.CustomizableController
 
 	parentKinds common.GroupKindMap
 
@@ -68,7 +69,7 @@ type Manager struct {
 func NewCustomizeManager(
 	name string,
 	enqueueParent func(interface{}),
-	controller CustomizableController,
+	controller v1alpha1.CustomizableController,
 	dynClient *dynamicclientset.Clientset,
 	dynInformers *dynamicinformer.SharedInformerFactory,
 	parentInformers common.InformerMap,
@@ -115,17 +116,17 @@ func (rm *Manager) Stop() {
 	}
 }
 
-func (rm *Manager) getCachedCustomizeHookResponse(parent *unstructured.Unstructured) *CustomizeHookResponse {
+func (rm *Manager) getCachedCustomizeHookResponse(parent *unstructured.Unstructured) *v1.CustomizeHookResponse {
 	return rm.customizeCache.Get(parent.GetUID(), parent.GetGeneration())
 }
 
-func (rm *Manager) getCustomizeHookResponse(parent *unstructured.Unstructured) (*CustomizeHookResponse, error) {
+func (rm *Manager) getCustomizeHookResponse(parent *unstructured.Unstructured) (*v1.CustomizeHookResponse, error) {
 	cached := rm.getCachedCustomizeHookResponse(parent)
 	if cached != nil {
 		return cached, nil
 	} else {
-		var response CustomizeHookResponse
-		request := &CustomizeHookRequest{
+		var response v1.CustomizeHookResponse
+		request := &v1.CustomizeHookRequest{
 			Controller: rm.controller,
 			Parent:     parent,
 		}

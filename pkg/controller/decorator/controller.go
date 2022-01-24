@@ -19,6 +19,7 @@ package decorator
 import (
 	"context"
 	"fmt"
+	v1 "metacontroller/pkg/controller/decorator/api/v1"
 	"metacontroller/pkg/hooks"
 	"reflect"
 	"strings"
@@ -33,7 +34,7 @@ import (
 
 	"metacontroller/pkg/events"
 
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/record"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -241,9 +242,9 @@ func (c *decoratorController) Start() {
 		defer utilruntime.HandleCrash()
 
 		c.logger.Info("Starting DecoratorController", "controller", c.dc)
-		c.eventRecorder.Eventf(c.dc, v1.EventTypeNormal, events.ReasonStarting, "Starting controller: %s", c.dc.Name)
+		c.eventRecorder.Eventf(c.dc, corev1.EventTypeNormal, events.ReasonStarting, "Starting controller: %s", c.dc.Name)
 		defer c.logger.Info("Shutting down DecoratorController", "controller", c.dc)
-		defer c.eventRecorder.Eventf(c.dc, v1.EventTypeNormal, events.ReasonStopping, "Stopping controller: %s", c.dc.Name)
+		defer c.eventRecorder.Eventf(c.dc, corev1.EventTypeNormal, events.ReasonStopping, "Stopping controller: %s", c.dc.Name)
 
 		// Wait for dynamic client and all informers.
 		c.logger.Info("Waiting for DecoratorController caches to sync", "controller", c.dc)
@@ -491,7 +492,7 @@ func (c *decoratorController) sync(key string) error {
 	if err != nil {
 		c.eventRecorder.Eventf(
 			parent,
-			v1.EventTypeWarning,
+			corev1.EventTypeWarning,
 			events.ReasonSyncError,
 			"Sync error: %s", err.Error())
 	}
@@ -538,7 +539,7 @@ func (c *decoratorController) syncParentObject(parent *unstructured.Unstructured
 	}
 
 	// Call the sync hook to get the desired annotations and children.
-	syncRequest := &SyncHookRequest{
+	syncRequest := &v1.SyncHookRequest{
 		Controller:  c.dc,
 		Object:      parent,
 		Attachments: observedChildren,

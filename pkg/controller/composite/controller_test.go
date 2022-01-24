@@ -24,6 +24,7 @@ import (
 	"metacontroller/pkg/controller/common"
 	"metacontroller/pkg/controller/common/customize"
 	"metacontroller/pkg/controller/common/finalizer"
+	composite "metacontroller/pkg/controller/composite/api/v1"
 	dynamicclientset "metacontroller/pkg/dynamic/clientset"
 	dynamicdiscovery "metacontroller/pkg/dynamic/discovery"
 	dynamicinformer "metacontroller/pkg/dynamic/informer"
@@ -65,7 +66,7 @@ func defaultCustomizeManager() *customize.Manager {
 	return customizeManager
 }
 
-var defaultSyncResponse = &SyncHookResponse{
+var defaultSyncResponse = &composite.SyncHookResponse{
 	Status:             nil,
 	Children:           nil,
 	ResyncAfterSeconds: 0,
