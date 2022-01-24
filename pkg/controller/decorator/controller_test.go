@@ -22,6 +22,7 @@ import (
 	"metacontroller/pkg/controller/common"
 	"metacontroller/pkg/controller/common/customize"
 	"metacontroller/pkg/controller/common/finalizer"
+	v1 "metacontroller/pkg/controller/decorator/api/v1"
 	dynamicclientset "metacontroller/pkg/dynamic/clientset"
 	dynamicdiscovery "metacontroller/pkg/dynamic/discovery"
 	dynamicinformer "metacontroller/pkg/dynamic/informer"
@@ -64,13 +65,13 @@ func defaultCustomizeManager() *customize.Manager {
 	return customizeManager
 }
 
-var defaultSyncResponse = &SyncHookResponse{
+var defaultSyncResponse = &v1.SyncHookResponse{
 	Status:             nil,
 	ResyncAfterSeconds: 0,
 	Finalized:          false,
 }
 
-var changedStatusSyncResponse = &SyncHookResponse{
+var changedStatusSyncResponse = &v1.SyncHookResponse{
 	ResyncAfterSeconds: 0,
 	Finalized:          false,
 	Status: map[string]interface{}{

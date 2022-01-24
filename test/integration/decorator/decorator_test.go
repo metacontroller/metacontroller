@@ -18,6 +18,8 @@ package decorator
 
 import (
 	"context"
+	customizev1 "metacontroller/pkg/controller/common/customize/api/v1"
+	v1 "metacontroller/pkg/controller/decorator/api/v1"
 	"testing"
 	"time"
 
@@ -28,8 +30,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/json"
 
 	"metacontroller/pkg/apis/metacontroller/v1alpha1"
-	"metacontroller/pkg/controller/common/customize"
-	"metacontroller/pkg/controller/decorator"
 	"metacontroller/test/integration/framework"
 )
 
@@ -53,7 +53,7 @@ func TestSyncWebhook(t *testing.T) {
 	childCRD, childClient := f.CreateCRD("Child", apiextensions.NamespaceScoped)
 
 	hook := f.ServeWebhook(func(body []byte) ([]byte, error) {
-		req := decorator.SyncHookRequest{}
+		req := v1.SyncHookRequest{}
 		if err := json.Unmarshal(body, &req); err != nil {
 			return nil, err
 		}
@@ -61,7 +61,7 @@ func TestSyncWebhook(t *testing.T) {
 		// just create a child with the same name as the parent.
 		child := framework.UnstructuredCRD(childCRD, req.Object.GetName())
 		child.SetLabels(labels)
-		resp := decorator.SyncHookResponse{
+		resp := v1.SyncHookResponse{
 			Attachments: []*unstructured.Unstructured{child},
 		}
 		return json.Marshal(resp)
@@ -102,11 +102,11 @@ func TestResyncAfter(t *testing.T) {
 	var lastSync time.Time
 	done := false
 	hook := f.ServeWebhook(func(body []byte) ([]byte, error) {
-		req := decorator.SyncHookRequest{}
+		req := v1.SyncHookRequest{}
 		if err := json.Unmarshal(body, &req); err != nil {
 			return nil, err
 		}
-		resp := decorator.SyncHookResponse{}
+		resp := v1.SyncHookResponse{}
 		if req.Object.Object["status"] == nil {
 			// If status hasn't been set yet, set it. This is the "zeroth" sync.
 			// Metacontroller will set our status and then the object should quiesce.
@@ -203,7 +203,7 @@ func TestCustomizeWebhook(t *testing.T) {
 		if err := json.Unmarshal(body, &req); err != nil {
 			return nil, err
 		}
-		resp := customize.CustomizeHookResponse{
+		resp := customizev1.CustomizeHookResponse{
 			RelatedResourceRules: []*v1alpha1.RelatedResourceRule{
 				{
 					ResourceRule: v1alpha1.ResourceRule{
@@ -219,7 +219,7 @@ func TestCustomizeWebhook(t *testing.T) {
 	})
 
 	syncHook := f.ServeWebhook(func(body []byte) ([]byte, error) {
-		req := decorator.SyncHookRequest{}
+		req := v1.SyncHookRequest{}
 		if err := json.Unmarshal(body, &req); err != nil {
 			return nil, err
 		}
@@ -235,7 +235,7 @@ func TestCustomizeWebhook(t *testing.T) {
 			attachments = []*unstructured.Unstructured{child}
 		}
 
-		resp := decorator.SyncHookResponse{
+		resp := v1.SyncHookResponse{
 			Attachments: attachments,
 		}
 		return json.Marshal(resp)

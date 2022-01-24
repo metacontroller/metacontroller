@@ -18,41 +18,17 @@ package decorator
 
 import (
 	"fmt"
+	v1 "metacontroller/pkg/controller/decorator/api/v1"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
-	"metacontroller/pkg/apis/metacontroller/v1alpha1"
-	"metacontroller/pkg/controller/common"
 )
 
-// SyncHookRequest is the object sent as JSON to the sync hook.
-type SyncHookRequest struct {
-	Controller  *v1alpha1.DecoratorController `json:"controller"`
-	Object      *unstructured.Unstructured    `json:"object"`
-	Attachments common.RelativeObjectMap      `json:"attachments"`
-	Related     common.RelativeObjectMap      `json:"related"`
-	Finalizing  bool                          `json:"finalizing"`
-}
-
-// SyncHookResponse is the expected format of the JSON response from the sync hook.
-type SyncHookResponse struct {
-	Labels      map[string]*string           `json:"labels"`
-	Annotations map[string]*string           `json:"annotations"`
-	Status      map[string]interface{}       `json:"status"`
-	Attachments []*unstructured.Unstructured `json:"attachments"`
-
-	ResyncAfterSeconds float64 `json:"resyncAfterSeconds"`
-
-	// Finalized is only used by the finalize hook.
-	Finalized bool `json:"finalized"`
-}
-
-func (c *decoratorController) callHook(request *SyncHookRequest) (*SyncHookResponse, error) {
+func (c *decoratorController) callHook(request *v1.SyncHookRequest) (*v1.SyncHookResponse, error) {
 	if c.dc.Spec.Hooks == nil {
 		return nil, fmt.Errorf("no hooks defined")
 	}
 
-	response := SyncHookResponse{Attachments: []*unstructured.Unstructured{}}
+	response := v1.SyncHookResponse{Attachments: []*unstructured.Unstructured{}}
 
 	// First check if we should instead call the finalize hook,
 	// which has the same API as the sync hook except that it's

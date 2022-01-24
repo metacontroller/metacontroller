@@ -17,12 +17,13 @@ limitations under the License.
 package customize
 
 import (
+	v1 "metacontroller/pkg/controller/common/customize/api/v1"
 	"testing"
 )
 
 func TestAdd_ElementFirstTime(t *testing.T) {
 	responseCache := NewResponseCache()
-	mockResponse := CustomizeHookResponse{}
+	mockResponse := v1.CustomizeHookResponse{}
 
 	responseCache.Add("some", 12, &mockResponse)
 
@@ -35,7 +36,7 @@ func TestAdd_ElementFirstTime(t *testing.T) {
 
 func TestAdd_ElementOverridePreviousOne(t *testing.T) {
 	responseCache := NewResponseCache()
-	mockResponse := CustomizeHookResponse{}
+	mockResponse := v1.CustomizeHookResponse{}
 	expected := customizeResponseCacheEntry{parentGeneration: 14, cachedResponse: &mockResponse}
 	responseCache.Add("some", 12, &mockResponse)
 
@@ -61,7 +62,7 @@ func TestGet_IfNotPresent(t *testing.T) {
 
 func TestGet_IfPresentWithDifferentGeneration(t *testing.T) {
 	responseCache := NewResponseCache()
-	mockResponse := CustomizeHookResponse{}
+	mockResponse := v1.CustomizeHookResponse{}
 	responseCache.Add("some", 12, &mockResponse)
 
 	response := responseCache.Get("some", 13)
@@ -73,7 +74,7 @@ func TestGet_IfPresentWithDifferentGeneration(t *testing.T) {
 
 func TestGet_IfExistsAndGenerationMatches(t *testing.T) {
 	responseCache := NewResponseCache()
-	expectedResponse := CustomizeHookResponse{}
+	expectedResponse := v1.CustomizeHookResponse{}
 	responseCache.Add("some", 12, &expectedResponse)
 
 	response := responseCache.Get("some", 12)
@@ -85,7 +86,7 @@ func TestGet_IfExistsAndGenerationMatches(t *testing.T) {
 
 func Test_ConcurrentMapAccess(t *testing.T) {
 	responseCache := NewResponseCache()
-	someResponse := CustomizeHookResponse{}
+	someResponse := v1.CustomizeHookResponse{}
 
 	go responseCache.Add("some", 1, &someResponse)
 	go responseCache.Add("some_one", 1, &someResponse)

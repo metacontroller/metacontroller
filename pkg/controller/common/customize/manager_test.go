@@ -17,6 +17,7 @@ limitations under the License.
 package customize
 
 import (
+	v1 "metacontroller/pkg/controller/common/customize/api/v1"
 	"reflect"
 	"testing"
 
@@ -27,7 +28,7 @@ import (
 
 	. "metacontroller/pkg/internal/testutils/hooks"
 
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
@@ -76,13 +77,13 @@ func TestGetRelatedObjects_whenHookDisabled_returnEmptyMap(t *testing.T) {
 }
 
 func TestGetRelatedObject_requestResponse(t *testing.T) {
-	expectedResponse := &CustomizeHookResponse{
-		[]*v1alpha1.RelatedResourceRule{{
+	expectedResponse := &v1.CustomizeHookResponse{
+		RelatedResourceRules: []*v1alpha1.RelatedResourceRule{{
 			ResourceRule: v1alpha1.ResourceRule{
 				APIVersion: "some",
 				Resource:   "some",
 			},
-			LabelSelector: &v1.LabelSelector{MatchLabels: map[string]string{"aaa": "bbb"}},
+			LabelSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"aaa": "bbb"}},
 			Namespace:     "Namespace",
 			Names:         []string{"name"},
 		}},
@@ -114,7 +115,7 @@ func TestDetermineSelectionType_returnErrorWhenLabelSelectorAndNamespaceIsPresen
 			APIVersion: "some",
 			Resource:   "some",
 		},
-		LabelSelector: &v1.LabelSelector{MatchLabels: map[string]string{"aaa": "bbb"}},
+		LabelSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"aaa": "bbb"}},
 		Namespace:     "Namespace",
 	}
 
@@ -131,7 +132,7 @@ func TestDetermineSelectionType_returnErrorWhenLabelSelectorAndNameIsPresent(t *
 			APIVersion: "some",
 			Resource:   "some",
 		},
-		LabelSelector: &v1.LabelSelector{MatchLabels: map[string]string{"aaa": "bbb"}},
+		LabelSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"aaa": "bbb"}},
 		Names:         []string{"name"},
 	}
 
@@ -148,7 +149,7 @@ func TestDetermineSelectionType_returnLabelSelectorWhenPresent(t *testing.T) {
 			APIVersion: "some",
 			Resource:   "some",
 		},
-		LabelSelector: &v1.LabelSelector{MatchLabels: map[string]string{"aaa": "bbb"}},
+		LabelSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"aaa": "bbb"}},
 	}
 
 	selectionType, err := determineSelectionType(&resourceRule)

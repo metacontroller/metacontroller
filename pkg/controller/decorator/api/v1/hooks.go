@@ -1,0 +1,30 @@
+package v1
+
+import (
+	"metacontroller/pkg/apis/metacontroller/v1alpha1"
+	"metacontroller/pkg/controller/common"
+
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+)
+
+// SyncHookRequest is the object sent as JSON to the sync hook.
+type SyncHookRequest struct {
+	Controller  *v1alpha1.DecoratorController `json:"controller"`
+	Object      *unstructured.Unstructured    `json:"object"`
+	Attachments common.RelativeObjectMap      `json:"attachments"`
+	Related     common.RelativeObjectMap      `json:"related"`
+	Finalizing  bool                          `json:"finalizing"`
+}
+
+// SyncHookResponse is the expected format of the JSON response from the sync hook.
+type SyncHookResponse struct {
+	Labels      map[string]*string           `json:"labels"`
+	Annotations map[string]*string           `json:"annotations"`
+	Status      map[string]interface{}       `json:"status"`
+	Attachments []*unstructured.Unstructured `json:"attachments"`
+
+	ResyncAfterSeconds float64 `json:"resyncAfterSeconds"`
+
+	// Finalized is only used by the finalize hook.
+	Finalized bool `json:"finalized"`
+}
