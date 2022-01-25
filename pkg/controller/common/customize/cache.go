@@ -19,6 +19,8 @@ package customize
 import (
 	"time"
 
+	"k8s.io/apimachinery/pkg/types"
+
 	"zgo.at/zcache"
 )
 
@@ -42,17 +44,17 @@ type customizeResponseCacheEntry struct {
 }
 
 // Add adds a given response for given parent and its generation
-func (responseCache *ResponseCache) Add(name string, parentGeneration int64, response *CustomizeHookResponse) {
+func (responseCache *ResponseCache) Add(uid types.UID, parentGeneration int64, response *CustomizeHookResponse) {
 	responseCacheEntry := customizeResponseCacheEntry{
 		parentGeneration: parentGeneration,
 		cachedResponse:   response,
 	}
-	responseCache.cache.Set(name, &responseCacheEntry, zcache.DefaultExpiration)
+	responseCache.cache.Set(toKey(uid), &responseCacheEntry, zcache.DefaultExpiration)
 }
 
 // Get returns response from cache or nil when not found
-func (responseCache *ResponseCache) Get(name string, parentGeneration int64) *CustomizeHookResponse {
-	value, found := responseCache.cache.Get(name)
+func (responseCache *ResponseCache) Get(uid types.UID, parentGeneration int64) *CustomizeHookResponse {
+	value, found := responseCache.cache.Get(toKey(uid))
 	if !found {
 		return nil
 	}
@@ -61,4 +63,8 @@ func (responseCache *ResponseCache) Get(name string, parentGeneration int64) *Cu
 		return nil
 	}
 	return responseCacheEntry.cachedResponse
+}
+
+func toKey(uid types.UID) string {
+	return string(uid)
 }

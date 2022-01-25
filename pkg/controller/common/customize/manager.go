@@ -116,7 +116,7 @@ func (rm *Manager) Stop() {
 }
 
 func (rm *Manager) getCachedCustomizeHookResponse(parent *unstructured.Unstructured) *CustomizeHookResponse {
-	return rm.customizeCache.Get(parent.GetName(), parent.GetGeneration())
+	return rm.customizeCache.Get(parent.GetUID(), parent.GetGeneration())
 }
 
 func (rm *Manager) getCustomizeHookResponse(parent *unstructured.Unstructured) (*CustomizeHookResponse, error) {
@@ -133,7 +133,7 @@ func (rm *Manager) getCustomizeHookResponse(parent *unstructured.Unstructured) (
 			return nil, err
 		}
 
-		rm.customizeCache.Add(parent.GetName(), parent.GetGeneration(), &response)
+		rm.customizeCache.Add(parent.GetUID(), parent.GetGeneration(), &response)
 		return &response, nil
 	}
 }
