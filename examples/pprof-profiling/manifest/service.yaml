@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: metacontroller
+  namespace: metacontroller
+  labels:
+    app.kubernetes.io/name: metacontroller
+spec:
+  ports:
+    - port: 6060
+      name: http
+      targetPort: 6060
+  selector:
+    app.kubernetes.io/name: metacontroller

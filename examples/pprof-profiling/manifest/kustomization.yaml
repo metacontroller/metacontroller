@@ -1,0 +1,4 @@
+bases:
+- ../../../manifests/dev
+patches:
+- args.yaml
