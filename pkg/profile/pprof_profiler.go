@@ -25,7 +25,7 @@ func EnablePprof(address string) <-chan struct{} {
 	// temporarily while gathering profiling information to help troubleshoot
 
 	if address == "0" {
-		logging.Logger.V(4).Info("pprof address is set to 0, pprof will not be enabled")
+		logging.Logger.V(5).Info("pprof address is set to 0, pprof will not be enabled")
 		return nil
 	}
 
@@ -43,7 +43,7 @@ func EnablePprof(address string) <-chan struct{} {
 		// We received an interrupt signal, shut down.
 		if err := server.Shutdown(context.Background()); err != nil {
 			// Error from closing listeners, or context timeout:
-			logging.Logger.Error(err, "pprof HTTP server Shutdown")
+			logging.Logger.Error(err, "pprof server shutdown")
 		}
 		close(idleConnsClosed)
 	}()
