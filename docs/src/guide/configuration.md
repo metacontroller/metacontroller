@@ -25,5 +25,6 @@ in `manifests/metacontroller.yaml`):
 | `--workers` | Number of sync workers to run (default 5, e.g. `--workers=100`) |
 | `--events-qps` | Rate of events flowing per object (default - 1 event per 5 minutes, e.g. `--events-qps=0.0033`) |
 | `--events-burst` | Number of events allowed to send per object (default 25, e.g. `--events-burst=25`) |
+| `--pprof-address` | Enable pprof and bind to endpoint /debug/pprof, set to 0 to disable pprof serving (default 0, e.g. `--pprof-address=:6060`) |
 
 Logging flags are being set by `controller-runtime`, more on the meaning of them can be found [here](https://sdk.operatorframework.io/docs/building-operators/golang/references/logging/#overview)
