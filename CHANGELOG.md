@@ -1,3 +1,10 @@
+# [2.2.0](https://github.com/metacontroller/metacontroller/compare/v2.1.3...v2.2.0) (2022-01-28)
+
+
+### Features
+
+* Add pprof to enable profiling ([1dbf3f6](https://github.com/metacontroller/metacontroller/commit/1dbf3f61881181df488870deadec6d6daad9dfb5))
+
 ## [2.1.3](https://github.com/metacontroller/metacontroller/compare/v2.1.2...v2.1.3) (2022-01-24)
 
 

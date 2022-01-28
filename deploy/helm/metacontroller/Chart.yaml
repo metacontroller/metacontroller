@@ -1,6 +1,6 @@
 apiVersion: v2
-version: v2.1.3
-appVersion: v2.1.3
+version: v2.2.0
+appVersion: v2.2.0
 kubeVersion: '^1.8.0-0'
 name: metacontroller
 description: Writing kubernetes controllers can be simple
