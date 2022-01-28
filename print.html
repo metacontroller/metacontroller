@@ -1038,6 +1038,7 @@ in <code>manifests/metacontroller.yaml</code>):</p>
 <tr><td><code>--workers</code></td><td>Number of sync workers to run (default 5, e.g. <code>--workers=100</code>)</td></tr>
 <tr><td><code>--events-qps</code></td><td>Rate of events flowing per object (default - 1 event per 5 minutes, e.g. <code>--events-qps=0.0033</code>)</td></tr>
 <tr><td><code>--events-burst</code></td><td>Number of events allowed to send per object (default 25, e.g. <code>--events-burst=25</code>)</td></tr>
+<tr><td><code>--pprof-address</code></td><td>Enable pprof and bind to endpoint /debug/pprof, set to 0 to disable pprof serving (default 0, e.g. <code>--pprof-address=:6060</code>)</td></tr>
 </tbody></table>
 <p>Logging flags are being set by <code>controller-runtime</code>, more on the meaning of them can be found <a href="https://sdk.operatorframework.io/docs/building-operators/golang/references/logging/#overview">here</a></p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="create-a-controller-1"><a class="header" href="#create-a-controller-1">Create a Controller</a></h1>
