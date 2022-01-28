@@ -33,7 +33,7 @@ func EnablePprof(address string) <-chan struct{} {
 	pprofMux := http.DefaultServeMux
 	http.DefaultServeMux = http.NewServeMux()
 	server := &http.Server{Addr: address, Handler: pprofMux}
-	idleConnsClosed := make(chan struct{})
+	pprofStopChan := make(chan struct{})
 
 	go func() {
 		sigint := make(chan os.Signal, 1)
@@ -45,7 +45,7 @@ func EnablePprof(address string) <-chan struct{} {
 			// Error from closing listeners, or context timeout:
 			logging.Logger.Error(err, "pprof server shutdown")
 		}
-		close(idleConnsClosed)
+		close(pprofStopChan)
 	}()
 
 	go func() {
@@ -55,5 +55,5 @@ func EnablePprof(address string) <-chan struct{} {
 		}
 	}()
 
-	return idleConnsClosed
+	return pprofStopChan
 }
