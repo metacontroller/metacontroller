@@ -2,12 +2,12 @@ package composite
 
 import (
 	"metacontroller/pkg/apis/metacontroller/v1alpha1"
-	"metacontroller/pkg/controller/common"
+	v1 "metacontroller/pkg/controller/common/api/v1"
 	composite "metacontroller/pkg/controller/composite/api/v1"
 	"metacontroller/pkg/internal/testutils/hooks"
 	"testing"
 
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 
 	"github.com/nsf/jsondiff"
 
@@ -47,14 +47,14 @@ func TestSyncHookRequest_MarshalJSON(t *testing.T) {
   "finalizing": false
 }`
 
-	children := make(common.RelativeObjectMap)
-	parent := v1.Pod{
+	children := make(v1.RelativeObjectMap)
+	parent := corev1.Pod{
 		TypeMeta: metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "some",
 		},
-		Spec:   v1.PodSpec{},
-		Status: v1.PodStatus{},
+		Spec:   corev1.PodSpec{},
+		Status: corev1.PodStatus{},
 	}
 
 	child := &unstructured.Unstructured{}
@@ -72,7 +72,7 @@ func TestSyncHookRequest_MarshalJSON(t *testing.T) {
 		},
 		Parent:     &unstructured.Unstructured{},
 		Children:   children,
-		Related:    make(common.RelativeObjectMap),
+		Related:    make(v1.RelativeObjectMap),
 		Finalizing: false,
 	}
 

@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	commonv1 "metacontroller/pkg/controller/common/api/v1"
 	"metacontroller/pkg/logging"
 	"reflect"
 
@@ -128,7 +129,7 @@ type ChildUpdateStrategy interface {
 	GetMethod(apiGroup, kind string) v1alpha1.ChildUpdateMethod
 }
 
-func ManageChildren(dynClient *dynamicclientset.Clientset, updateStrategy ChildUpdateStrategy, parent *unstructured.Unstructured, observedChildren, desiredChildren RelativeObjectMap) error {
+func ManageChildren(dynClient *dynamicclientset.Clientset, updateStrategy ChildUpdateStrategy, parent *unstructured.Unstructured, observedChildren, desiredChildren commonv1.RelativeObjectMap) error {
 	// If some operations fail, keep trying others so, for example,
 	// we don't block recovery (create new Pod) on a failed delete.
 	var errs []error

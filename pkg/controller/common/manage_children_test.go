@@ -18,6 +18,7 @@ package common
 
 import (
 	"metacontroller/pkg/apis/metacontroller/v1alpha1"
+	commonv1 "metacontroller/pkg/controller/common/api/v1"
 	dynamicclientset "metacontroller/pkg/dynamic/clientset"
 	. "metacontroller/pkg/internal/testutils/common"
 	. "metacontroller/pkg/internal/testutils/dynamic/clientset"
@@ -117,8 +118,8 @@ func TestManageChildren(t *testing.T) {
 		dynClient        func() *dynamicclientset.Clientset
 		updateStrategy   ChildUpdateStrategy
 		parent           *unstructured.Unstructured
-		observedChildren RelativeObjectMap
-		desiredChildren  RelativeObjectMap
+		observedChildren commonv1.RelativeObjectMap
+		desiredChildren  commonv1.RelativeObjectMap
 	}
 
 	unstructuredDefault := NewDefaultUnstructured()
@@ -141,7 +142,7 @@ func TestManageChildren(t *testing.T) {
 				},
 				updateStrategy: childUpdateOnDeleteStrategy{},
 				parent:         unstructuredDefault,
-				observedChildren: MakeRelativeObjectMap(
+				observedChildren: commonv1.MakeRelativeObjectMap(
 					unstructuredDefault,
 					unstructuredDefaultList,
 				),
@@ -163,7 +164,7 @@ func TestManageChildren(t *testing.T) {
 				},
 				updateStrategy: childUpdateOnDeleteStrategy{},
 				parent:         unstructuredDefault,
-				observedChildren: MakeRelativeObjectMap(
+				observedChildren: commonv1.MakeRelativeObjectMap(
 					unstructuredDefault,
 					unstructuredDefaultList,
 				),
@@ -185,11 +186,11 @@ func TestManageChildren(t *testing.T) {
 				},
 				updateStrategy: childUpdateRecreateStrategy{},
 				parent:         unstructuredDefault,
-				observedChildren: MakeRelativeObjectMap(
+				observedChildren: commonv1.MakeRelativeObjectMap(
 					unstructuredDefault,
 					unstructuredDefaultList,
 				),
-				desiredChildren: MakeRelativeObjectMap(
+				desiredChildren: commonv1.MakeRelativeObjectMap(
 					unstructuredDefault,
 					unstructuredDefaultList,
 				),
@@ -207,11 +208,11 @@ func TestManageChildren(t *testing.T) {
 				},
 				updateStrategy: childUpdateRecreateStrategy{},
 				parent:         unstructuredDefault,
-				observedChildren: MakeRelativeObjectMap(
+				observedChildren: commonv1.MakeRelativeObjectMap(
 					unstructuredDefault,
 					unstructuredDefaultList,
 				),
-				desiredChildren: MakeRelativeObjectMap(
+				desiredChildren: commonv1.MakeRelativeObjectMap(
 					unstructuredDefault,
 					unstructuredDefaultList,
 				),
@@ -230,7 +231,7 @@ func TestManageChildren(t *testing.T) {
 				},
 				updateStrategy: childUpdateOnDeleteStrategy{},
 				parent:         unstructuredDefault,
-				observedChildren: MakeRelativeObjectMap(
+				observedChildren: commonv1.MakeRelativeObjectMap(
 					unstructuredDefault,
 					unstructuredDefaultList,
 				),
@@ -247,11 +248,11 @@ func TestManageChildren(t *testing.T) {
 				},
 				updateStrategy: childUpdateInPlaceStrategy{},
 				parent:         unstructuredDefault,
-				observedChildren: MakeRelativeObjectMap(
+				observedChildren: commonv1.MakeRelativeObjectMap(
 					unstructuredDefault,
 					unstructuredDefaultList,
 				),
-				desiredChildren: MakeRelativeObjectMap(
+				desiredChildren: commonv1.MakeRelativeObjectMap(
 					unstructuredDefault,
 					unstructuredDefaultList,
 				),
@@ -272,11 +273,11 @@ func TestManageChildren(t *testing.T) {
 				},
 				updateStrategy: childUpdateInPlaceStrategy{},
 				parent:         unstructuredDefault,
-				observedChildren: MakeRelativeObjectMap(
+				observedChildren: commonv1.MakeRelativeObjectMap(
 					unstructuredDefault,
 					unstructuredDefaultList,
 				),
-				desiredChildren: MakeRelativeObjectMap(
+				desiredChildren: commonv1.MakeRelativeObjectMap(
 					unstructuredDefault,
 					unstructuredDefaultList,
 				),
@@ -297,11 +298,11 @@ func TestManageChildren(t *testing.T) {
 				},
 				updateStrategy: childUpdateInPlaceStrategy{},
 				parent:         unstructuredDefault,
-				observedChildren: MakeRelativeObjectMap(
+				observedChildren: commonv1.MakeRelativeObjectMap(
 					unstructuredDefault,
 					unstructuredDefaultList,
 				),
-				desiredChildren: MakeRelativeObjectMap(
+				desiredChildren: commonv1.MakeRelativeObjectMap(
 					unstructuredDefault,
 					unstructuredDefaultList,
 				),
@@ -319,11 +320,11 @@ func TestManageChildren(t *testing.T) {
 				},
 				updateStrategy: childUpdateInPlaceStrategy{},
 				parent:         unstructuredDefault,
-				observedChildren: MakeRelativeObjectMap(
+				observedChildren: commonv1.MakeRelativeObjectMap(
 					unstructuredDefault,
 					unstructuredDefaultList,
 				),
-				desiredChildren: MakeRelativeObjectMap(
+				desiredChildren: commonv1.MakeRelativeObjectMap(
 					unstructuredDefault,
 					unstructuredDefaultList,
 				),
@@ -346,7 +347,7 @@ func TestManageChildren(t *testing.T) {
 				updateStrategy:   childUpdateInPlaceStrategy{},
 				parent:           unstructuredDefault,
 				observedChildren: nil,
-				desiredChildren: MakeRelativeObjectMap(
+				desiredChildren: commonv1.MakeRelativeObjectMap(
 					unstructuredDefault,
 					unstructuredDefaultList,
 				),
@@ -365,7 +366,7 @@ func TestManageChildren(t *testing.T) {
 				updateStrategy:   childUpdateOnDeleteStrategy{},
 				parent:           unstructuredDefault,
 				observedChildren: nil,
-				desiredChildren: MakeRelativeObjectMap(
+				desiredChildren: commonv1.MakeRelativeObjectMap(
 					unstructuredDefault,
 					unstructuredDefaultList,
 				),

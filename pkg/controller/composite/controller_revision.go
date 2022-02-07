@@ -21,6 +21,7 @@ import (
 	"crypto/sha1" // #nosec
 	"encoding/hex"
 	"fmt"
+	v12 "metacontroller/pkg/controller/common/api/v1"
 	v1 "metacontroller/pkg/controller/composite/api/v1"
 	"metacontroller/pkg/logging"
 	"reflect"
@@ -76,7 +77,7 @@ func (pc *parentController) claimRevisions(parent *unstructured.Unstructured) ([
 	return revisions, nil
 }
 
-func (pc *parentController) syncRevisions(parent *unstructured.Unstructured, observedChildren common.RelativeObjectMap, relatedObjects common.RelativeObjectMap) (*v1.SyncHookResponse, error) {
+func (pc *parentController) syncRevisions(parent *unstructured.Unstructured, observedChildren v12.RelativeObjectMap, relatedObjects v12.RelativeObjectMap) (*v1.SyncHookResponse, error) {
 	// If no child resources use rolling updates, just sync the latest parent.
 	// Also, if the parent object is being deleted and we don't have a finalizer,
 	// just sync the latest parent to get the status since we won't manage
@@ -170,7 +171,7 @@ func (pc *parentController) syncRevisions(parent *unstructured.Unstructured, obs
 				return
 			}
 			pr.syncResult = syncResult
-			pr.desiredChildMap = common.MakeRelativeObjectMap(parent, syncResult.Children)
+			pr.desiredChildMap = v12.MakeRelativeObjectMap(parent, syncResult.Children)
 		}(pr)
 	}
 	wg.Wait()
@@ -220,7 +221,7 @@ func (pc *parentController) syncRevisions(parent *unstructured.Unstructured, obs
 						Kind:  ck.Kind},
 					name)
 				if child != nil {
-					desiredChildren.ReplaceObject(parent, child)
+					desiredChildren.ReplaceObjectIfExists(parent, child)
 				}
 			}
 		}
@@ -420,7 +421,7 @@ type parentRevision struct {
 	syncResult *v1.SyncHookResponse
 	syncError  error
 
-	desiredChildMap common.RelativeObjectMap
+	desiredChildMap v12.RelativeObjectMap
 }
 
 func (pr *parentRevision) countChildren() int {
