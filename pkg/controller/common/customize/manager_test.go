@@ -17,9 +17,12 @@ limitations under the License.
 package customize
 
 import (
+	"fmt"
 	v1 "metacontroller/pkg/controller/common/customize/api/v1"
 	"reflect"
 	"testing"
+
+	"github.com/go-logr/logr/funcr"
 
 	"metacontroller/pkg/apis/metacontroller/v1alpha1"
 	"metacontroller/pkg/controller/common"
@@ -36,6 +39,13 @@ var fakeEnqueueParent = func(obj interface{}) {}
 var dynClient = dynamicclientset.Clientset{}
 var dynInformers = dynamicinformer.SharedInformerFactory{}
 
+var fakeLogger = funcr.New(
+	func(pfx, args string) { fmt.Println(pfx, args) },
+	funcr.Options{
+		LogCaller:    funcr.All,
+		LogTimestamp: true,
+	})
+
 var customizeManagerWithNilController, _ = NewCustomizeManager(
 	"test",
 	fakeEnqueueParent,
@@ -44,7 +54,7 @@ var customizeManagerWithNilController, _ = NewCustomizeManager(
 	&dynInformers,
 	make(common.InformerMap),
 	make(common.GroupKindMap),
-	nil,
+	fakeLogger,
 	common.CompositeController,
 )
 
@@ -56,7 +66,7 @@ var customizeManagerWithFakeController, _ = NewCustomizeManager(
 	&dynInformers,
 	make(common.InformerMap),
 	make(common.GroupKindMap),
-	nil,
+	fakeLogger,
 	common.DecoratorController,
 )
 
