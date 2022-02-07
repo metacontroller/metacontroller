@@ -18,6 +18,7 @@ package composite
 
 import (
 	"fmt"
+	v1 "metacontroller/pkg/controller/common/api/v1"
 	"reflect"
 
 	"metacontroller/pkg/controller/common"
@@ -31,7 +32,7 @@ import (
 	dynamicobject "metacontroller/pkg/dynamic/object"
 )
 
-func (pc *parentController) syncRollingUpdate(parentRevisions []*parentRevision, observedChildren common.RelativeObjectMap) error {
+func (pc *parentController) syncRollingUpdate(parentRevisions []*parentRevision, observedChildren v1.RelativeObjectMap) error {
 	// Reconcile the set of existing child claims in ControllerRevisions.
 	claimed := pc.syncRevisionClaims(parentRevisions)
 
@@ -157,7 +158,7 @@ func (pc *parentController) syncRollingUpdate(parentRevisions []*parentRevision,
 	return nil
 }
 
-func (pc *parentController) shouldContinueRolling(latest *parentRevision, observedChildren common.RelativeObjectMap) error {
+func (pc *parentController) shouldContinueRolling(latest *parentRevision, observedChildren v1.RelativeObjectMap) error {
 	// We continue rolling only if all children claimed by the latest revision
 	// are updated and were observed in a "happy" state, according to the
 	// user-supplied, resource-specific status checks.

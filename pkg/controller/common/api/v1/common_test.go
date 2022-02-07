@@ -1,5 +1,5 @@
 /*
-Copyright 2021 Metacontroller authors.
+Copyright 2022 Metacontroller authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,17 +14,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package common
+package v1
 
 import (
 	"reflect"
 	"testing"
 
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
@@ -84,7 +82,7 @@ func TestGroupVersionKind_UnmrshalTextWithException(t *testing.T) {
 	}
 }
 
-func TestChildMap_InitGroup_ShouldInitializeNilGroup(t *testing.T) {
+func TestRelativeObjectMap_InitGroup_ShouldInitializeNilGroup(t *testing.T) {
 	underTest := make(RelativeObjectMap)
 	gvk := schema.GroupVersionKind{Group: "apps", Version: "v1", Kind: "StatefulSet"}
 
@@ -97,7 +95,7 @@ func TestChildMap_InitGroup_ShouldInitializeNilGroup(t *testing.T) {
 	}
 }
 
-func TestChildMap_InitGroup_ShouldNotOverrideNonNilGroup(t *testing.T) {
+func TestRelativeObjectMap_InitGroup_ShouldNotOverrideNonNilGroup(t *testing.T) {
 	underTest := make(RelativeObjectMap)
 	gvk := schema.GroupVersionKind{Group: "apps", Version: "v1", Kind: "StatefulSet"}
 	internalGvk := GroupVersionKind{gvk}
@@ -113,14 +111,14 @@ func TestChildMap_InitGroup_ShouldNotOverrideNonNilGroup(t *testing.T) {
 	}
 }
 
-func TestChildMap_RelativeName_SameNamespace(t *testing.T) {
-	parent := v1.Pod{
+func TestRelativeObjectMap_RelativeName_SameNamespace(t *testing.T) {
+	parent := corev1.Pod{
 		TypeMeta: metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "ss",
 		},
-		Spec:   v1.PodSpec{},
-		Status: v1.PodStatus{},
+		Spec:   corev1.PodSpec{},
+		Status: corev1.PodStatus{},
 	}
 	object := &unstructured.Unstructured{}
 	object.SetNamespace("ss")
@@ -134,14 +132,14 @@ func TestChildMap_RelativeName_SameNamespace(t *testing.T) {
 	}
 }
 
-func TestChildMap_RelativeName_ClusteredParent(t *testing.T) {
-	parent := v1.Pod{
+func TestRelativeObjectMap_RelativeName_ClusteredParent(t *testing.T) {
+	parent := corev1.Pod{
 		TypeMeta: metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "",
 		},
-		Spec:   v1.PodSpec{},
-		Status: v1.PodStatus{},
+		Spec:   corev1.PodSpec{},
+		Status: corev1.PodStatus{},
 	}
 	object := &unstructured.Unstructured{}
 	object.SetNamespace("some")
@@ -155,14 +153,14 @@ func TestChildMap_RelativeName_ClusteredParent(t *testing.T) {
 	}
 }
 
-func TestChildMap_RelativeName_BothClustered(t *testing.T) {
-	parent := v1.Pod{
+func TestRelativeObjectMap_RelativeName_BothClustered(t *testing.T) {
+	parent := corev1.Pod{
 		TypeMeta: metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "",
 		},
-		Spec:   v1.PodSpec{},
-		Status: v1.PodStatus{},
+		Spec:   corev1.PodSpec{},
+		Status: corev1.PodStatus{},
 	}
 	object := &unstructured.Unstructured{}
 	object.SetNamespace("")

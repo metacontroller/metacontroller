@@ -2,7 +2,7 @@ package v1
 
 import (
 	"metacontroller/pkg/apis/metacontroller/v1alpha1"
-	"metacontroller/pkg/controller/common"
+	v1 "metacontroller/pkg/controller/common/api/v1"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
@@ -11,8 +11,8 @@ import (
 type SyncHookRequest struct {
 	Controller  *v1alpha1.DecoratorController `json:"controller"`
 	Object      *unstructured.Unstructured    `json:"object"`
-	Attachments common.RelativeObjectMap      `json:"attachments"`
-	Related     common.RelativeObjectMap      `json:"related"`
+	Attachments v1.RelativeObjectMap          `json:"attachments"`
+	Related     v1.RelativeObjectMap          `json:"related"`
 	Finalizing  bool                          `json:"finalizing"`
 }
 
