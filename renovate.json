@@ -6,7 +6,6 @@
   "semanticCommitType": "fix",
   "commitBody": "Signed-off-by: Renovate Bot <bot@renovateapp.com>",
   "rebaseWhen": "behind-base-branch",
-  "allowedPostUpgradeCommands": ["cd test/integration && go mod tidy"],
   "packageRules": [
     {
       "matchPackageNames": [
@@ -33,12 +32,7 @@
       "postUpdateOptions": [
         "gomodTidy",
         "gomodUpdateImportPaths"
-      ],
-      "postUpgradeTasks": {
-        "commands": ["cd test/integration && go mod tidy"],
-        "fileFilters": ["**/go.mod", "**/go.sum"],
-        "executionMode": "update"
-      }
+      ]
     },
     {
       "matchFiles": [
