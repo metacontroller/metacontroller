@@ -28,6 +28,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/go-logr/logr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"metacontroller/pkg/events"
 
@@ -63,6 +64,9 @@ import (
 type parentController struct {
 	cc *v1alpha1.CompositeController
 
+	// k8sClient is a client used to interact with the Kubernetes API
+	k8sClient client.Client
+
 	parentResource *dynamicdiscovery.APIResource
 
 	mcClient       mcclientset.Interface
@@ -91,6 +95,7 @@ type parentController struct {
 }
 
 func newParentController(
+	k8sclient client.Client,
 	resources *dynamicdiscovery.ResourceMap,
 	dynClient *dynamicclientset.Clientset,
 	dynInformers *dynamicinformer.SharedInformerFactory,
@@ -171,6 +176,7 @@ func newParentController(
 
 	pc = &parentController{
 		cc:             cc,
+		k8sClient:      k8sclient,
 		mcClient:       mcClient,
 		dynClient:      dynClient,
 		childInformers: childInformers,
@@ -184,6 +190,7 @@ func newParentController(
 		numWorkers:     numWorkers,
 		eventRecorder:  eventRecorder,
 		finalizer: finalizer.NewManager(
+			k8sclient,
 			"metacontroller.io/compositecontroller-"+cc.Name,
 			cc.Spec.Hooks.Finalize != nil,
 		),
@@ -577,7 +584,7 @@ func (pc *parentController) syncParentObject(parent *unstructured.Unstructured) 
 	// If all revisions agree that they've finished finalizing,
 	// remove our finalizer.
 	if syncResult.Finalized {
-		updatedParent, err := pc.parentClient.Namespace(parent.GetNamespace()).RemoveFinalizer(parent, pc.finalizer.Name)
+		updatedParent, err := pc.finalizer.RemoveFinalizer(parent, pc.finalizer.Name)
 		if err != nil {
 			return fmt.Errorf("can't remove finalizer for %v %v/%v: %w", parent.GetKind(), parent.GetNamespace(), parent.GetName(), err)
 		}
@@ -733,7 +740,7 @@ func (pc *parentController) claimChildren(parent *unstructured.Unstructured) (co
 		childMap.InitGroup(childClient.GroupVersionKind())
 
 		// Handle orphan/adopt and filter by owner+selector.
-		crm := dynamiccontrollerref.NewUnstructuredManager(childClient, parent, selector, parentGVK, childClient.GroupVersionKind(), canAdoptFunc)
+		crm := dynamiccontrollerref.NewUnstructuredManager(pc.k8sClient, parent, selector, parentGVK, childClient.GroupVersionKind(), canAdoptFunc)
 		children, err := crm.ClaimChildren(all)
 		if err != nil {
 			return nil, fmt.Errorf("can't claim %v children: %w", childClient.Kind, err)
@@ -758,7 +765,7 @@ func (pc *parentController) updateParentStatus(parent *unstructured.Unstructured
 
 	// Overwrite .status field of parent object without touching other parts.
 	// We can't use Patch() because we need to ensure that the UID matches.
-	return pc.parentClient.Namespace(parent.GetNamespace()).AtomicStatusUpdate(parent, func(obj *unstructured.Unstructured) bool {
+	return dynamicclientset.AtomicStatusUpdate(pc.k8sClient, parent, func(obj *unstructured.Unstructured) bool {
 		oldStatus := obj.UnstructuredContent()["status"]
 		if common.DeepEqual(oldStatus, status) {
 			// Nothing to do.

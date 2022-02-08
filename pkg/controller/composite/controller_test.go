@@ -48,6 +48,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
+	fakeCtrlRuntime "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
@@ -282,43 +283,14 @@ func Test_parentController_sync(t *testing.T) {
 			},
 			args: args{key: defaultTestKey},
 		},
-		{
-			name: "error on update parent status with unexpected api error",
-			clientsAndInformers: func() (*fake.FakeDynamicClient, *dynamicdiscovery.ResourceMap, *dynamicclientset.Clientset, *dynamicclientset.ResourceClient, *dynamicinformer.ResourceInformer) {
-				fakeDynamicClientFn := func(fakeDynamicClient *fake.FakeDynamicClient) {
-					fakeDynamicClient.PrependReactor("update", "*", func(action clientgotesting.Action) (handled bool, ret runtime.Object, err error) {
-						return true, nil, apierrors.NewBadRequest("bad request")
-					})
-				}
-				return newDefaultControllerClientsAndInformers(fakeDynamicClientFn, true)
-			},
-			fields: fields{
-				cc:             newDefaultCompositeController(),
-				parentResource: &DefaultApiResource,
-				mcClient:       nil,
-				revisionLister: nil,
-				stopCh:         NewCh(),
-				doneCh:         NewCh(),
-				queue:          NewDefaultWorkQueue(),
-				updateStrategy: nil,
-				childInformers: nil,
-				numWorkers:     1,
-				eventRecorder:  NewFakeRecorder(),
-				finalizer:      DefaultFinalizerManager,
-				customize:      defaultCustomizeManager(),
-				syncHook:       NewHookExecutorStub(defaultSyncResponse),
-				finalizeHook:   NewHookExecutorStub(defaultSyncResponse),
-				logger:         logging.Logger,
-			},
-			args:    args{key: defaultTestKey},
-			wantErr: true,
-		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			_, _, dynClient, parentClient, parentInformer := tt.clientsAndInformers()
+			fakeK8sClient := fakeCtrlRuntime.NewClientBuilder().WithRuntimeObjects(NewDefaultUnstructured()).Build()
 			pc := &parentController{
 				cc:             tt.fields.cc,
+				k8sClient:      fakeK8sClient,
 				parentResource: tt.fields.parentResource,
 				mcClient:       tt.fields.mcClient,
 				dynClient:      dynClient,

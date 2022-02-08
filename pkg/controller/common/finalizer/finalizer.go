@@ -29,13 +29,15 @@ import (
 type Manager struct {
 	Name    string
 	Enabled bool
+	cl      client.Client
 }
 
 // NewManager return new Manager for dealing with finalizers.
-func NewManager(name string, enabled bool) *Manager {
+func NewManager(cl client.Client, name string, enabled bool) *Manager {
 	return &Manager{
 		Name:    name,
 		Enabled: enabled,
+		cl:      cl,
 	}
 }
 
@@ -53,9 +55,9 @@ func (m *Manager) SyncObject(client *dynamicclientset.ResourceClient, obj *unstr
 		if obj.GetDeletionTimestamp() != nil {
 			return obj, nil
 		}
-		return client.Namespace(obj.GetNamespace()).AddFinalizer(obj, m.Name)
+		return m.AddFinalizer(obj, m.Name)
 	} else {
-		return client.Namespace(obj.GetNamespace()).RemoveFinalizer(obj, m.Name)
+		return m.RemoveFinalizer(obj, m.Name)
 	}
 }
 
@@ -85,4 +87,28 @@ func hasGCFinalizer(obj metav1.Object) bool {
 		}
 	}
 	return false
+}
+
+// AddFinalizer adds the given finalizer to the list, if it isn't there already.
+func (m *Manager) AddFinalizer(orig *unstructured.Unstructured, name string) (*unstructured.Unstructured, error) {
+	return dynamicclientset.AtomicUpdate(m.cl, orig, func(obj *unstructured.Unstructured) bool {
+		if controllerutil.ContainsFinalizer(obj, name) {
+			// Nothing to do. Abort update.
+			return false
+		}
+		controllerutil.AddFinalizer(obj, name)
+		return true
+	})
+}
+
+// RemoveFinalizer removes the given finalizer from the list, if it's there.
+func (m *Manager) RemoveFinalizer(orig *unstructured.Unstructured, name string) (*unstructured.Unstructured, error) {
+	return dynamicclientset.AtomicUpdate(m.cl, orig, func(obj *unstructured.Unstructured) bool {
+		if !controllerutil.ContainsFinalizer(obj, name) {
+			// Nothing to do. Abort update.
+			return false
+		}
+		controllerutil.RemoveFinalizer(obj, name)
+		return true
+	})
 }

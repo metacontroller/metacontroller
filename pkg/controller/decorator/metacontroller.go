@@ -126,6 +126,7 @@ func (mc *Metacontroller) reconcileDecoratorController(dc *v1alpha1.DecoratorCon
 	}
 
 	c, err := newDecoratorController(
+		mc.k8sClient,
 		mc.resources,
 		mc.dynClient,
 		mc.dynInformers,

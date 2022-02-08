@@ -166,6 +166,7 @@ func (mc *Metacontroller) reconcileCompositeController(cc *v1alpha1.CompositeCon
 	}
 
 	pc, err := newParentController(
+		mc.k8sClient,
 		mc.resources,
 		mc.dynClient,
 		mc.dynInformers,

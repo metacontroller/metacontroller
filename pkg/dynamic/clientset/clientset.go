@@ -20,10 +20,10 @@ import (
 	"context"
 	"fmt"
 
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
@@ -135,80 +135,64 @@ func (rc *ResourceClient) Namespace(namespace string) *ResourceClient {
 //
 // The update() func should modify the passed object and return true to go ahead
 // with the update, or false if no update is required.
-func (rc *ResourceClient) AtomicUpdate(orig *unstructured.Unstructured, update func(obj *unstructured.Unstructured) bool) (result *unstructured.Unstructured, err error) {
+func AtomicUpdate(cl client.Client, orig *unstructured.Unstructured, update func(obj *unstructured.Unstructured) bool) (result *unstructured.Unstructured, err error) {
 	name := orig.GetName()
 
 	err = retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-		current, err := rc.Get(context.TODO(), name, metav1.GetOptions{})
+		current := &unstructured.Unstructured{}
+		current.SetAPIVersion(orig.GetAPIVersion())
+		current.SetKind(orig.GetKind())
+		err := cl.Get(context.TODO(), client.ObjectKeyFromObject(orig), current)
 		if err != nil {
 			return err
 		}
 		if current.GetUID() != orig.GetUID() {
 			// The original object was deleted and replaced with a new one.
-			return apierrors.NewNotFound(rc.GroupResource(), name)
+			groupVersion, err := schema.ParseGroupVersion(orig.GetAPIVersion())
+			if err != nil {
+				return err
+			}
+			return apierrors.NewNotFound(schema.GroupResource{Group: groupVersion.Group, Resource: orig.GetKind()}, name)
 		}
+		result = current
 		if changed := update(current); !changed {
 			// There's nothing to do.
-			result = current
 			return nil
 		}
-		result, err = rc.Update(context.TODO(), current, metav1.UpdateOptions{})
-		return err
+		return cl.Update(context.TODO(), current)
 	})
 	return result, err
 }
 
-// AddFinalizer adds the given finalizer to the list, if it isn't there already.
-func (rc *ResourceClient) AddFinalizer(orig *unstructured.Unstructured, name string) (*unstructured.Unstructured, error) {
-	return rc.AtomicUpdate(orig, func(obj *unstructured.Unstructured) bool {
-		if controllerutil.ContainsFinalizer(obj, name) {
-			// Nothing to do. Abort update.
-			return false
-		}
-		controllerutil.AddFinalizer(obj, name)
-		return true
-	})
-}
-
-// RemoveFinalizer removes the given finalizer from the list, if it's there.
-func (rc *ResourceClient) RemoveFinalizer(orig *unstructured.Unstructured, name string) (*unstructured.Unstructured, error) {
-	return rc.AtomicUpdate(orig, func(obj *unstructured.Unstructured) bool {
-		if !controllerutil.ContainsFinalizer(obj, name) {
-			// Nothing to do. Abort update.
-			return false
-		}
-		controllerutil.RemoveFinalizer(obj, name)
-		return true
-	})
-}
-
 // AtomicStatusUpdate is similar to AtomicUpdate, except that it updates status.
-func (rc *ResourceClient) AtomicStatusUpdate(orig *unstructured.Unstructured, update func(obj *unstructured.Unstructured) bool) (result *unstructured.Unstructured, err error) {
+func AtomicStatusUpdate(cl client.Client, orig *unstructured.Unstructured, update func(obj *unstructured.Unstructured) bool) (result *unstructured.Unstructured, err error) {
 	name := orig.GetName()
 
 	// We should call GetStatus (if it HasSubresource) to respect subresource
 	// RBAC rules, but the dynamic client does not support this yet.
 	err = retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-		current, err := rc.Get(context.TODO(), name, metav1.GetOptions{})
+		current := &unstructured.Unstructured{}
+		current.SetAPIVersion(orig.GetAPIVersion())
+		current.SetKind(orig.GetKind())
+		err := cl.Get(context.TODO(), client.ObjectKeyFromObject(orig), current)
 		if err != nil {
 			return err
 		}
 		if current.GetUID() != orig.GetUID() {
 			// The original object was deleted and replaced with a new one.
-			return apierrors.NewNotFound(rc.GroupResource(), name)
+			groupVersion, err := schema.ParseGroupVersion(orig.GetAPIVersion())
+			if err != nil {
+				return err
+			}
+			return apierrors.NewNotFound(schema.GroupResource{Group: groupVersion.Group, Resource: orig.GetKind()}, name)
 		}
+		// we operate on pointer and current gets updated
+		result = current
 		if changed := update(current); !changed {
-			// There's nothing to do.
-			result = current
+			// nothing to do
 			return nil
 		}
-
-		if rc.HasSubresource("status") {
-			result, err = rc.UpdateStatus(context.TODO(), current, metav1.UpdateOptions{})
-		} else {
-			result, err = rc.Update(context.TODO(), current, metav1.UpdateOptions{})
-		}
-		return err
+		return cl.Status().Update(context.TODO(), current)
 	})
 	return result, err
 }

@@ -19,6 +19,7 @@ package common
 import (
 	"metacontroller/pkg/controller/common/finalizer"
 	dynamicdiscovery "metacontroller/pkg/dynamic/discovery"
+	fakeCtrlRuntime "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"k8s.io/client-go/dynamic/fake"
 	"k8s.io/client-go/tools/record"
@@ -31,7 +32,7 @@ func NewCh() chan struct{} {
 
 var NoOpFn = func(fakeDynamicClient *fake.FakeDynamicClient) {}
 
-var DefaultFinalizerManager = finalizer.NewManager("testFinalizerManager", false)
+var DefaultFinalizerManager = finalizer.NewManager(fakeCtrlRuntime.NewClientBuilder().Build(), "testFinalizerManager", false)
 
 var DefaultApiResource = dynamicdiscovery.APIResource{
 	APIResource: NewDefaultAPIResource(),

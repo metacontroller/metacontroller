@@ -21,6 +21,7 @@ import (
 	"fmt"
 	commonv1 "metacontroller/pkg/controller/common/api/v1"
 	"metacontroller/pkg/hooks"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strings"
 	"sync"
 	"time"
@@ -64,6 +65,7 @@ const (
 type decoratorController struct {
 	dc *v1alpha1.DecoratorController
 
+	k8sClient client.Client
 	resources *dynamicdiscovery.ResourceMap
 
 	parentKinds    common.GroupKindMap
@@ -90,7 +92,14 @@ type decoratorController struct {
 	logger logr.Logger
 }
 
-func newDecoratorController(resources *dynamicdiscovery.ResourceMap, dynClient *dynamicclientset.Clientset, dynInformers *dynamicinformer.SharedInformerFactory, eventRecorder record.EventRecorder, dc *v1alpha1.DecoratorController, numWorkers int, logger logr.Logger) (controller *decoratorController, newErr error) {
+func newDecoratorController(k8sclient client.Client,
+	resources *dynamicdiscovery.ResourceMap,
+	dynClient *dynamicclientset.Clientset,
+	dynInformers *dynamicinformer.SharedInformerFactory,
+	eventRecorder record.EventRecorder,
+	dc *v1alpha1.DecoratorController,
+	numWorkers int,
+	logger logr.Logger) (controller *decoratorController, newErr error) {
 	if dc.Spec.Hooks == nil {
 		return nil, fmt.Errorf("no hooks defined")
 	}
@@ -105,6 +114,7 @@ func newDecoratorController(resources *dynamicdiscovery.ResourceMap, dynClient *
 
 	c := &decoratorController{
 		dc:              dc,
+		k8sClient:       k8sclient,
 		resources:       resources,
 		dynClient:       dynClient,
 		parentKinds:     make(common.GroupKindMap),
@@ -115,6 +125,7 @@ func newDecoratorController(resources *dynamicdiscovery.ResourceMap, dynClient *
 		numWorkers:    numWorkers,
 		eventRecorder: eventRecorder,
 		finalizer: finalizer.NewManager(
+			k8sclient,
 			"metacontroller.io/decoratorcontroller-"+dc.Name,
 			dc.Spec.Hooks.Finalize != nil,
 		),

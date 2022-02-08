@@ -18,7 +18,9 @@ package controllerref
 
 import (
 	"fmt"
+	"metacontroller/pkg/dynamic/clientset"
 	"metacontroller/pkg/logging"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"k8s.io/utils/pointer"
 
@@ -29,7 +31,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 
-	dynamicclientset "metacontroller/pkg/dynamic/clientset"
 	k8s "metacontroller/pkg/third_party/kubernetes"
 )
 
@@ -37,10 +38,10 @@ type UnstructuredManager struct {
 	k8s.BaseControllerRefManager
 	parentKind schema.GroupVersionKind
 	childKind  schema.GroupVersionKind
-	client     *dynamicclientset.ResourceClient
+	client     client.Client
 }
 
-func NewUnstructuredManager(client *dynamicclientset.ResourceClient, parent metav1.Object, selector labels.Selector, parentKind, childKind schema.GroupVersionKind, canAdopt func() error) *UnstructuredManager {
+func NewUnstructuredManager(client client.Client, parent metav1.Object, selector labels.Selector, parentKind, childKind schema.GroupVersionKind, canAdopt func() error) *UnstructuredManager {
 	return &UnstructuredManager{
 		BaseControllerRefManager: k8s.BaseControllerRefManager{
 			Controller:   parent,
@@ -80,12 +81,12 @@ func (m *UnstructuredManager) ClaimChildren(children []*unstructured.Unstructure
 	return claimed, utilerrors.NewAggregate(errlist)
 }
 
-func atomicUpdate(rc *dynamicclientset.ResourceClient, obj *unstructured.Unstructured, updateFunc func(obj *unstructured.Unstructured) bool) error {
+func atomicUpdate(cl client.Client, obj *unstructured.Unstructured, updateFunc func(obj *unstructured.Unstructured) bool) error {
 	// We can't use strategic merge patch because we want this to work with custom resources.
 	// We can't use merge patch because that would replace the whole list.
 	// We can't use JSON patch ops because that wouldn't be idempotent.
 	// The only option is GET/PUT with ResourceVersion.
-	_, err := rc.Namespace(obj.GetNamespace()).AtomicUpdate(obj, updateFunc)
+	_, err := clientset.AtomicUpdate(cl, obj, updateFunc)
 	return err
 }
 
