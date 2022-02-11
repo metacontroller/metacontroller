@@ -163,7 +163,7 @@ in <code>manifests/metacontroller.yaml</code>):</p>
 <tr><td><code>--zap-stacktrace-level</code></td><td>Zap Level at and above which stacktraces are captured - one of <code>info</code> or <code>error</code> (e.g. <code>--zap-stacktrace-level='info'</code>).</td></tr>
 <tr><td><code>--discovery-interval</code></td><td>How often to refresh discovery cache to pick up newly-installed resources (e.g. <code>--discovery-interval=10s</code>).</td></tr>
 <tr><td><code>--cache-flush-interval</code></td><td>How often to flush local caches and relist objects from the API server (e.g. <code>--cache-flush-interval=30m</code>).</td></tr>
-<tr><td><code>--metrics-address</code></td><td>The address to bind metrics endpoint - /metrics (e.g. <code>--metrics-address=&quot;:9999&quot;</code>). It can be set to &quot;0&quot; to disable the metrics serving.</td></tr>
+<tr><td><code>--metrics-address</code></td><td>The address to bind metrics endpoint - /metrics (e.g. <code>--metrics-address=:9999</code>). It can be set to &quot;0&quot; to disable the metrics serving.</td></tr>
 <tr><td><code>--kubeconfig</code></td><td>Path to kubeconfig file (same format as used by kubectl); if not specified, use in-cluster config (e.g. <code>--kubeconfig=/path/to/kubeconfig</code>).</td></tr>
 <tr><td><code>--client-go-qps</code></td><td>Number of queries per second client-go is allowed to make (default 5, e.g. <code>--client-go-qps=100</code>)</td></tr>
 <tr><td><code>--client-go-burst</code></td><td>Allowed burst queries for client-go (default 10, e.g. <code>--client-go-burst=200</code>)</td></tr>
