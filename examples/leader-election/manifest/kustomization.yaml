@@ -1,0 +1,5 @@
+bases:
+- ../../../manifests/dev
+patches:
+- args.yaml
+- replicas.yaml

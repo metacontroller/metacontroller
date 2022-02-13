@@ -24,6 +24,9 @@ import (
 	"sync"
 	"time"
 
+	"k8s.io/client-go/tools/leaderelection/resourcelock"
+	"sigs.k8s.io/controller-runtime/pkg/leaderelection"
+
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
@@ -37,16 +40,20 @@ import (
 )
 
 var (
-	discoveryInterval = flag.Duration("discovery-interval", 30*time.Second, "How often to refresh discovery cache to pick up newly-installed resources")
-	informerRelist    = flag.Duration("cache-flush-interval", 30*time.Minute, "How often to flush local caches and relist objects from the API server")
-	metricsAddr       = flag.String("metrics-address", ":9999", "The address to bind metrics endpoint - /metrics")
-	clientGoQPS       = flag.Float64("client-go-qps", 5, "Number of queries per second client-go is allowed to make (default 5)")
-	clientGoBurst     = flag.Int("client-go-burst", 10, "Allowed burst queries for client-go (default 10)")
-	workers           = flag.Int("workers", 5, "Number of sync workers to run (default 5)")
-	eventsQPS         = flag.Float64("events-qps", 1./300., "Rate of events flowing per object (default - 1 event per 5 minutes)")
-	eventsBurst       = flag.Int("events-burst", 25, "Number of events allowed to send per object (default 25)")
-	pprofAddr         = flag.String("pprof-address", "0", "Enable pprof and bind to endpoint - /debug/pprof, set to 0 to disable pprof serving")
-	version           = "No version provided"
+	discoveryInterval          = flag.Duration("discovery-interval", 30*time.Second, "How often to refresh discovery cache to pick up newly-installed resources")
+	informerRelist             = flag.Duration("cache-flush-interval", 30*time.Minute, "How often to flush local caches and relist objects from the API server")
+	metricsAddr                = flag.String("metrics-address", ":9999", "The address to bind metrics endpoint - /metrics")
+	clientGoQPS                = flag.Float64("client-go-qps", 5, "Number of queries per second client-go is allowed to make (default 5)")
+	clientGoBurst              = flag.Int("client-go-burst", 10, "Allowed burst queries for client-go (default 10)")
+	workers                    = flag.Int("workers", 5, "Number of sync workers to run (default 5)")
+	eventsQPS                  = flag.Float64("events-qps", 1./300., "Rate of events flowing per object (default - 1 event per 5 minutes)")
+	eventsBurst                = flag.Int("events-burst", 25, "Number of events allowed to send per object (default 25)")
+	pprofAddr                  = flag.String("pprof-address", "0", "Enable pprof and bind to endpoint - /debug/pprof, set to 0 to disable pprof serving")
+	leaderElection             = flag.Bool("leader-election", false, "Determines whether or not to use leader election when starting metacontroller")
+	leaderElectionResourceLock = flag.String("leader-election-resource-lock", resourcelock.LeasesResourceLock, "Determines which resource lock to use for leader election")
+	leaderElectionNamespace    = flag.String("leader-election-namespace", "", "Determines the namespace in which the leader election resource will be created")
+	leaderElectionID           = flag.String("leader-election-id", "metacontroller", "Determines the name of the resource that leader election will use for holding the leader lock")
+	version                    = "No version provided"
 )
 
 func main() {
@@ -65,6 +72,10 @@ func main() {
 		"events-qps", *eventsQPS,
 		"events-burst", *eventsBurst,
 		"pprofAddr", *pprofAddr,
+		"leader-election", *leaderElection,
+		"leader-election-resource-lock", *leaderElectionResourceLock,
+		"leader-election-namespace", *leaderElectionNamespace,
+		"leader-election-id", *leaderElectionID,
 		"version", version)
 
 	pprofStopChan := profile.EnablePprof(*pprofAddr)
@@ -87,6 +98,12 @@ func main() {
 			QPS:       float32(*eventsQPS),
 		},
 		MetricsEndpoint: *metricsAddr,
+		LeaderElectionOptions: leaderelection.Options{
+			LeaderElection:             *leaderElection,
+			LeaderElectionResourceLock: *leaderElectionResourceLock,
+			LeaderElectionNamespace:    *leaderElectionNamespace,
+			LeaderElectionID:           *leaderElectionID,
+		},
 	}
 
 	// Create a new manager with a stop function

@@ -67,8 +67,12 @@ func New(configuration options.Configuration) (controllerruntime.Manager, error)
 	mgr, err := controllerruntime.NewManager(configuration.RestConfig, manager.Options{
 		// Disables serving built-in metrics.
 		// We already start a standalone metrics server in parallel to the manager.
-		MetricsBindAddress: configuration.MetricsEndpoint,
-		EventBroadcaster:   controllerContext.Broadcaster,
+		MetricsBindAddress:         configuration.MetricsEndpoint,
+		EventBroadcaster:           controllerContext.Broadcaster,
+		LeaderElection:             configuration.LeaderElectionOptions.LeaderElection,
+		LeaderElectionResourceLock: configuration.LeaderElectionOptions.LeaderElectionResourceLock,
+		LeaderElectionNamespace:    configuration.LeaderElectionOptions.LeaderElectionNamespace,
+		LeaderElectionID:           configuration.LeaderElectionOptions.LeaderElectionID,
 	})
 	if err != nil {
 		return nil, err
