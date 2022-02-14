@@ -1,3 +1,12 @@
+## [2.2.4](https://github.com/metacontroller/metacontroller/compare/v2.2.3...v2.2.4) (2022-02-14)
+
+
+### Bug Fixes
+
+* **deps:** Update github.com/go-logr/logr to v1.2.2 ([1cf5dc4](https://github.com/metacontroller/metacontroller/commit/1cf5dc41c1b45496543cf3e388e4046dcf36c5bd))
+* **deps:** Update go.uber.org/zap to v1.21.0 ([466bbc3](https://github.com/metacontroller/metacontroller/commit/466bbc3e8f233a15b6ed0c3208885c0678290a3c))
+* **deps:** Update k8s.io/utils to v0.0.0-20220210201930-3a6ce19ff2f9 ([6c12b98](https://github.com/metacontroller/metacontroller/commit/6c12b989dc1630ecbb7526ec84fe8f391d25c070))
+
 ## [2.2.3](https://github.com/metacontroller/metacontroller/compare/v2.2.2...v2.2.3) (2022-02-14)
 
 
