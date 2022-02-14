@@ -1,3 +1,10 @@
+## [2.2.3](https://github.com/metacontroller/metacontroller/compare/v2.2.2...v2.2.3) (2022-02-14)
+
+
+### Bug Fixes
+
+* **release:** Fix latest tag, to point to alpine image ([ce02f32](https://github.com/metacontroller/metacontroller/commit/ce02f32cb9921758bd610d9723616549dd778852))
+
 ## [2.2.2](https://github.com/metacontroller/metacontroller/compare/v2.2.1...v2.2.2) (2022-02-14)
 
 
