@@ -45,7 +45,10 @@ jobs:
       uses: crazy-max/ghaction-docker-meta@v3
       with:
         images: metacontrollerio/metacontroller # list of Docker images to use as base name for tags
-        tag-latest: false
+        flavor: |
+          latest=false
+          prefix=
+          suffix=distroless
     - name: '[distroless] Build and push'
       id: docker_build_distroless
       uses: docker/build-push-action@v2
@@ -54,7 +57,7 @@ jobs:
         file: ./Dockerfile.distroless
         platforms: linux/amd64,linux/arm64,linux/arm
         push: ${{ github.event_name != 'pull_request' }}
-        tags: ${{ steps.docker_meta_distroless.outputs.tags }}-distroless
+        tags: ${{ steps.docker_meta_distroless.outputs.tags }}
         labels: ${{ steps.docker_meta_distroless.outputs.labels }}
         build-args: |
           TAG=${{ env.GITHUB_REF_SLUG }}
@@ -63,7 +66,10 @@ jobs:
       uses: crazy-max/ghaction-docker-meta@v3
       with:
         images: metacontrollerio/metacontroller # list of Docker images to use as base name for tags
-        tag-latest: false
+        flavor: |
+          latest=false
+          prefix=
+          suffix=distroless-debug
     - name: '[distroless-debug] Build and push'
       id: docker_build_distroless_debug
       uses: docker/build-push-action@v2
@@ -72,7 +78,7 @@ jobs:
         file: ./Dockerfile.distroless-debug
         platforms: linux/amd64,linux/arm64,linux/arm
         push: ${{ github.event_name != 'pull_request' }}
-        tags: ${{ steps.docker_meta_distroless_debug.outputs.tags }}-distroless-debug
+        tags: ${{ steps.docker_meta_distroless_debug.outputs.tags }}
         labels: ${{ steps.docker_meta_distroless_debug.outputs.labels }}
         build-args: |
           TAG=${{ env.GITHUB_REF_SLUG }}
