@@ -1,3 +1,12 @@
+## [2.2.1](https://github.com/metacontroller/metacontroller/compare/v2.2.0...v2.2.1) (2022-02-14)
+
+
+### Bug Fixes
+
+* **deps:** Update controller-runtime to v0.11.0 and k8s to v0.23.3 ([937cbf2](https://github.com/metacontroller/metacontroller/commit/937cbf2beda18ace13cff29975fe6bfd527e0f27))
+* **deps:** Update github.com/google/go-cmp to v0.5.7 ([5fa1396](https://github.com/metacontroller/metacontroller/commit/5fa139641fd4c4d011d6f3f2a987be2bbdce2d04))
+* **deps:** Update github.com/prometheus/client_golang to v1.12.1 ([0897f66](https://github.com/metacontroller/metacontroller/commit/0897f663eef9282a64fa03869a81e4235944a734))
+
 # [2.2.0](https://github.com/metacontroller/metacontroller/compare/v2.1.3...v2.2.0) (2022-01-28)
 
 
