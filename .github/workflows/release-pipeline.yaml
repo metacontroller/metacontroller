@@ -48,7 +48,7 @@ jobs:
         flavor: |
           latest=false
           prefix=
-          suffix=distroless
+          suffix=-distroless
     - name: '[distroless] Build and push'
       id: docker_build_distroless
       uses: docker/build-push-action@v2
@@ -69,7 +69,7 @@ jobs:
         flavor: |
           latest=false
           prefix=
-          suffix=distroless-debug
+          suffix=-distroless-debug
     - name: '[distroless-debug] Build and push'
       id: docker_build_distroless_debug
       uses: docker/build-push-action@v2
