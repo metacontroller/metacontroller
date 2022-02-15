@@ -6,9 +6,16 @@ on:
       - 'v[0-9]+.[0-9]+.[0-9]+'
 jobs:
   release-docker:
-    name: Release docker image
     runs-on: ubuntu-20.04
     if: github.repository_owner == 'metacontroller'
+    strategy:
+      fail-fast: false
+      matrix:
+        configuration:
+         - {name: 'alpine', latest: "true", suffix: '', file: './Dockerfile' }
+         - {name: 'distroless', latest: "false", suffix: '-distroless', file: './Dockerfile.distroless' }
+         - {name: 'distroless-debug', latest: "false", suffix: '-distroless-debug', file: './Dockerfile.distroless-debug' }
+    name: [${{ matrix.configuration.name }}] Release docker image
     steps:
     - name: Checkout
       uses: actions/checkout@v2
@@ -23,62 +30,31 @@ jobs:
       with:
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
-    - name: '[alpine] Docker metainformations'
-      id: docker_meta_alpine
-      uses: crazy-max/ghaction-docker-meta@v3
+    - name: Login to github registry
+      if: github.event_name != 'pull_request'
+      uses: docker/login-action@v1
       with:
-        images: metacontrollerio/metacontroller # list of Docker images to use as base name for tags
-    - name: '[alpine] Build and push'
-      id: docker_build_alpine
-      uses: docker/build-push-action@v2
-      with:
-        context: .
-        file: ./Dockerfile
-        platforms: linux/amd64,linux/arm64,linux/arm
-        push: ${{ github.event_name != 'pull_request' }}
-        tags: ${{ steps.docker_meta_alpine.outputs.tags }}
-        labels: ${{ steps.docker_meta_alpine.outputs.labels }}
-        build-args: |
-          TAG=${{ env.GITHUB_REF_SLUG }}
-    - name: '[distroless] Docker metainformations'
+        registry: ghcr.io
+        username: ${{ github.repository_owner }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    - name: [${{ matrix.configuration.name }}] Docker metainformations
       id: docker_meta_distroless
-      uses: crazy-max/ghaction-docker-meta@v3
+      uses: docker/metadata-action@v3
       with:
-        images: metacontrollerio/metacontroller # list of Docker images to use as base name for tags
+        images: metacontrollerio/metacontroller,ghcr.io/metacontroller/metacontroller # list of Docker images to use as base name for tags
         flavor: |
-          latest=false
+          latest=${{ matrix.configuration.latest }}
           prefix=
-          suffix=-distroless
-    - name: '[distroless] Build and push'
+          suffix=${{ matrix.configuration.suffix }}
+    - name: [${{ matrix.configuration.name }}] Build and push
       id: docker_build_distroless
       uses: docker/build-push-action@v2
       with:
         context: .
-        file: ./Dockerfile.distroless
+        file: ${{ matrix.configuration.file }}
         platforms: linux/amd64,linux/arm64,linux/arm
         push: ${{ github.event_name != 'pull_request' }}
         tags: ${{ steps.docker_meta_distroless.outputs.tags }}
         labels: ${{ steps.docker_meta_distroless.outputs.labels }}
-        build-args: |
-          TAG=${{ env.GITHUB_REF_SLUG }}
-    - name: '[distroless-debug] Docker metainformations'
-      id: docker_meta_distroless_debug
-      uses: crazy-max/ghaction-docker-meta@v3
-      with:
-        images: metacontrollerio/metacontroller # list of Docker images to use as base name for tags
-        flavor: |
-          latest=false
-          prefix=
-          suffix=-distroless-debug
-    - name: '[distroless-debug] Build and push'
-      id: docker_build_distroless_debug
-      uses: docker/build-push-action@v2
-      with:
-        context: .
-        file: ./Dockerfile.distroless-debug
-        platforms: linux/amd64,linux/arm64,linux/arm
-        push: ${{ github.event_name != 'pull_request' }}
-        tags: ${{ steps.docker_meta_distroless_debug.outputs.tags }}
-        labels: ${{ steps.docker_meta_distroless_debug.outputs.labels }}
         build-args: |
           TAG=${{ env.GITHUB_REF_SLUG }}
