@@ -376,7 +376,7 @@ Those object are not managed by controller, therefore are unmodificable, but you
 Some existing examples implementing this approach are :
 * ConfigMapPropagation - makes copy of given ConfigMap in several namespaces.
 * GlobalConfigMap - makes copy of given ConfigMap in every namespace.
-* SecretPropagation - makes copy of given Secret in reach namespace satisfying label selector.
+* SecretPropagation - makes copy of given Secret in each namespace satisfying label selector.
 
 Please note, than when related resources is updated, `sync` hook is triggered again (even if `parent` object and `children` does not change) - and you can recalculate
 children state according to fresh view of related objects.
