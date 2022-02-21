@@ -11,16 +11,9 @@
 
 Metacontroller is an add-on for Kubernetes that makes it easy to write and
 deploy [custom controllers](https://kubernetes.io/docs/concepts/api-extension/custom-resources/#custom-controllers)
-in the form of [simple scripts](https://metacontroller.github.io/metacontroller/).
+in the form of [simple scripts](https://metacontroller.github.io/metacontroller/). This is a continuation of great work started by [GKE](https://cloud.google.com/kubernetes-engine/) [here](https://github.com/GoogleCloudPlatform/metacontroller). We are excited to move forward with Metacontroller as a community maintained project. 
+A big thank you to all of the wonderful Metacontroller community members that made this happen!
 
-## A New Home
-This is the new community owned and actively maintained home for Metacontroller. The open-source [project](https://github.com/GoogleCloudPlatform/metacontroller) started by [GKE](https://cloud.google.com/kubernetes-engine/) is no longer maintained. All future updates and releases for Metacontroller will come from this repository. In time, all [issues](https://github.com/GoogleCloudPlatform/metacontroller/issues) from the previous repository will be triaged and moved [here](https://github.com/metacontroller/metacontroller/issues). We are excited to move forward with Metacontroller as a community maintained project. A big thank you to all of the wonderful Metacontroller community members that made this happen!
-
-Following is the immediate plan of actions:
-- [x] Make this repo same as https://github.com/GoogleCloudPlatform/metacontroller
-- [x] Make a release that uploads the image [here](https://hub.docker.com/orgs/metacontrollerio)
-- [x] Fix Docker image vulnerability [issue](https://github.com/GoogleCloudPlatform/metacontroller/issues/202)
-- [ ] Merge changes from [Metac](https://github.com/AmitKumarDas/metac) to this repo
 
 ## Documentation
 
@@ -28,12 +21,7 @@ Please see the [documentation site](https://metacontroller.github.io/metacontrol
 on how to install, use, or contribute to Metacontroller.
 
 ## Migrating from https://github.com/GoogleCloudPlatform/metacontroller
-As current version of metacontroller uses different name of the finalizer than GCP version (GCP - `metacontroller.app`, 
-current version - `metacontroller.io`) thus after installing `metacontroller` you might need to clean up old finalizers, 
-i.e. by running:
-```shell
-kubectl get <comma separated list of your resource types here> --no-headers --all-namespaces | awk '{print $2 " -n " $1}' | xargs -L1 -P 50 -r kubectl patch -p '{"metadata":{"finalizers": [null]}}' --type=merge
-```
+Please follow [this](https://metacontroller.github.io/metacontroller/guide/install.html?highlight=migrat#migrating-from-googlecloudplatformmetacontroller)
 
 ## Contact
 

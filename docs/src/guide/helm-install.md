@@ -1,6 +1,6 @@
 # Install Metacontroller using Helm
 
-## Building the chart
+## Building the chart from source code
 
 The chart can be built from metacontroller source:
 
@@ -10,11 +10,20 @@ cd  metacontroller
 helm package deploy/helm/metacontroller --destination deploy/helm
 ```
 
-## Installing the chart
+## Installing the chart from package
 
 ```shell
 helm install metacontroller deploy/helm/metacontroller-v*.tgz
 ```
+
+## Installing chart from ghcr.io
+
+Charts are published as [packages on ghcr.io](https://github.com/metacontroller/metacontroller/pkgs/container/metacontroller-helm)
+
+You can pull them like:
+* `HELM_EXPERIMENTAL_OCI=1 helm pull oci://ghcr.io/metacontroller/metacontroller-helm --version=v2.2.5`
+
+as OCI is currently (at least for helm 3.8.x) a beta feature.
 
 ## Configuration
 
