@@ -1,3 +1,10 @@
+## [2.2.5](https://github.com/metacontroller/metacontroller/compare/v2.2.4...v2.2.5) (2022-02-21)
+
+
+### Bug Fixes
+
+* **deps:** Update controller-runtime to v0.11.1 ([c4e9058](https://github.com/metacontroller/metacontroller/commit/c4e905852573e897bb1c005519a702bc60a17546))
+
 ## [2.2.4](https://github.com/metacontroller/metacontroller/compare/v2.2.3...v2.2.4) (2022-02-14)
 
 
