@@ -34,9 +34,9 @@ jobs:
       fail-fast: false
       matrix:
         configuration:
-         - {name: 'alpine', latest: "true", suffix: '', file: './Dockerfile' }
-         - {name: 'distroless', latest: "false", suffix: '-distroless', file: './Dockerfile.distroless' }
-         - {name: 'distroless-debug', latest: "false", suffix: '-distroless-debug', file: './Dockerfile.distroless-debug' }
+        - {name: 'alpine', latest: "true", suffix: '', file: './Dockerfile' }
+        - {name: 'distroless', latest: "false", suffix: '-distroless', file: './Dockerfile.distroless' }
+        - {name: 'distroless-debug', latest: "false", suffix: '-distroless-debug', file: './Dockerfile.distroless-debug' }
     name: [${{ matrix.configuration.name }}] Release docker image
     steps:
     - name: Checkout
