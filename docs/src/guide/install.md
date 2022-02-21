@@ -5,9 +5,16 @@ controllers or just to run third-party controllers that depend on it.
 
 [[_TOC_]]
 
+## Docker images
+Images are hosted in two places:
+* [dockerhub](https://hub.docker.com/r/metacontrollerio/metacontroller)
+* [ghcr.io](https://github.com/metacontroller/metacontroller/pkgs/container/metacontroller)
+
+Feel free to use whatever suits your need, they identical. Note - currently in `helm` charts the dockerhub one's are used. 
+
 ## Prerequisites
 
-* Kubernetes v1.11+
+* Kubernetes v1.14+
 * You should have `kubectl` available and configured to talk to the desired cluster.
 
 ### Running on kubernetes older than 1.16
