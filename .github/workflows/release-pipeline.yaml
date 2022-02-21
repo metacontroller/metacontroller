@@ -37,7 +37,7 @@ jobs:
         - {name: "alpine", latest: "true", suffix: "", file: "./Dockerfile" }
         - {name: "distroless", latest: "false", suffix: "-distroless", file: "./Dockerfile.distroless" }
         - {name: "distroless-debug", latest: "false", suffix: "-distroless-debug", file: "./Dockerfile.distroless-debug" }
-    name: [${{ matrix.configuration.name }}] Release docker image
+    name: ${{ matrix.configuration.name }} - release docker image
     steps:
     - name: Checkout
       uses: actions/checkout@v2
@@ -59,7 +59,7 @@ jobs:
         registry: ghcr.io
         username: ${{ github.repository_owner }}
         password: ${{ secrets.GITHUB_TOKEN }}
-    - name: [${{ matrix.configuration.name }}] Docker metainformations
+    - name: ${{ matrix.configuration.name }} - docker metainformations
       id: docker_meta_distroless
       uses: docker/metadata-action@v3
       with:
@@ -68,7 +68,7 @@ jobs:
           latest=${{ matrix.configuration.latest }}
           prefix=
           suffix=${{ matrix.configuration.suffix }}
-    - name: [${{ matrix.configuration.name }}] Build and push
+    - name: ${{ matrix.configuration.name }} - build and push
       id: docker_build_distroless
       uses: docker/build-push-action@v2
       with:
