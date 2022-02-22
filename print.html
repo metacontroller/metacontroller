@@ -928,6 +928,7 @@ preserving the fields you don't care about that were set by others.</p>
 <p>This page describes how to install Metacontroller, either to develop your own
 controllers or just to run third-party controllers that depend on it.</p>
 <ul>
+<li><a href="guide/install.html#docker-images">Docker images</a></li>
 <li><a href="guide/install.html#prerequisites">Prerequisites</a>
 <ul>
 <li><a href="guide/install.html#running-on-kubernetes-older-than-116">Running on kubernetes older than 1.16</a></li>
@@ -938,9 +939,16 @@ controllers or just to run third-party controllers that depend on it.</p>
 <li><a href="guide/install.html#install-metacontroller-using-helm">Install Metacontroller using Helm</a></li>
 <li><a href="guide/install.html#migrating-from-googlecloudplatformmetacontroller">Migrating from /GoogleCloudPlatform/metacontroller</a></li>
 </ul>
+<h2 id="docker-images"><a class="header" href="#docker-images">Docker images</a></h2>
+<p>Images are hosted in two places:</p>
+<ul>
+<li><a href="https://hub.docker.com/r/metacontrollerio/metacontroller">dockerhub</a></li>
+<li><a href="https://github.com/metacontroller/metacontroller/pkgs/container/metacontroller">ghcr.io</a></li>
+</ul>
+<p>Feel free to use whatever suits your need, they identical. Note - currently in <code>helm</code> charts the dockerhub one's are used. </p>
 <h2 id="prerequisites"><a class="header" href="#prerequisites">Prerequisites</a></h2>
 <ul>
-<li>Kubernetes v1.11+</li>
+<li>Kubernetes v1.14+</li>
 <li>You should have <code>kubectl</code> available and configured to talk to the desired cluster.</li>
 </ul>
 <h3 id="running-on-kubernetes-older-than-116"><a class="header" href="#running-on-kubernetes-older-than-116">Running on kubernetes older than 1.16</a></h3>
@@ -979,15 +987,22 @@ i.e. by running:</p>
 <pre><code class="language-shell">kubectl get &lt;comma separated list of your resource types here&gt; --no-headers --all-namespaces | awk '{print $2 &quot; -n &quot; $1}' | xargs -L1 -P 50 -r kubectl patch -p '{&quot;metadata&quot;:{&quot;finalizers&quot;: [null]}}' --type=merge
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="install-metacontroller-using-helm-1"><a class="header" href="#install-metacontroller-using-helm-1">Install Metacontroller using Helm</a></h1>
-<h2 id="building-the-chart"><a class="header" href="#building-the-chart">Building the chart</a></h2>
+<h2 id="building-the-chart-from-source-code"><a class="header" href="#building-the-chart-from-source-code">Building the chart from source code</a></h2>
 <p>The chart can be built from metacontroller source:</p>
 <pre><code class="language-shell">git clone https://github.com/metacontroller/metacontroller.git
 cd  metacontroller
 helm package deploy/helm/metacontroller --destination deploy/helm
 </code></pre>
-<h2 id="installing-the-chart"><a class="header" href="#installing-the-chart">Installing the chart</a></h2>
+<h2 id="installing-the-chart-from-package"><a class="header" href="#installing-the-chart-from-package">Installing the chart from package</a></h2>
 <pre><code class="language-shell">helm install metacontroller deploy/helm/metacontroller-v*.tgz
 </code></pre>
+<h2 id="installing-chart-from-ghcrio"><a class="header" href="#installing-chart-from-ghcrio">Installing chart from ghcr.io</a></h2>
+<p>Charts are published as <a href="https://github.com/metacontroller/metacontroller/pkgs/container/metacontroller-helm">packages on ghcr.io</a></p>
+<p>You can pull them like:</p>
+<ul>
+<li><code>HELM_EXPERIMENTAL_OCI=1 helm pull oci://ghcr.io/metacontroller/metacontroller-helm --version=v2.2.5</code></li>
+</ul>
+<p>as OCI is currently (at least for helm 3.8.x) a beta feature.</p>
 <h2 id="configuration"><a class="header" href="#configuration">Configuration</a></h2>
 <table><thead><tr><th>Parameter</th><th>Description</th><th>Default</th></tr></thead><tbody>
 <tr><td><code>rbac.create</code></td><td>Create and use RBAC resources</td><td><code>true</code></td></tr>

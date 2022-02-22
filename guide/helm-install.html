@@ -148,15 +148,22 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="install-metacontroller-using-helm"><a class="header" href="#install-metacontroller-using-helm">Install Metacontroller using Helm</a></h1>
-<h2 id="building-the-chart"><a class="header" href="#building-the-chart">Building the chart</a></h2>
+<h2 id="building-the-chart-from-source-code"><a class="header" href="#building-the-chart-from-source-code">Building the chart from source code</a></h2>
 <p>The chart can be built from metacontroller source:</p>
 <pre><code class="language-shell">git clone https://github.com/metacontroller/metacontroller.git
 cd  metacontroller
 helm package deploy/helm/metacontroller --destination deploy/helm
 </code></pre>
-<h2 id="installing-the-chart"><a class="header" href="#installing-the-chart">Installing the chart</a></h2>
+<h2 id="installing-the-chart-from-package"><a class="header" href="#installing-the-chart-from-package">Installing the chart from package</a></h2>
 <pre><code class="language-shell">helm install metacontroller deploy/helm/metacontroller-v*.tgz
 </code></pre>
+<h2 id="installing-chart-from-ghcrio"><a class="header" href="#installing-chart-from-ghcrio">Installing chart from ghcr.io</a></h2>
+<p>Charts are published as <a href="https://github.com/metacontroller/metacontroller/pkgs/container/metacontroller-helm">packages on ghcr.io</a></p>
+<p>You can pull them like:</p>
+<ul>
+<li><code>HELM_EXPERIMENTAL_OCI=1 helm pull oci://ghcr.io/metacontroller/metacontroller-helm --version=v2.2.5</code></li>
+</ul>
+<p>as OCI is currently (at least for helm 3.8.x) a beta feature.</p>
 <h2 id="configuration"><a class="header" href="#configuration">Configuration</a></h2>
 <table><thead><tr><th>Parameter</th><th>Description</th><th>Default</th></tr></thead><tbody>
 <tr><td><code>rbac.create</code></td><td>Create and use RBAC resources</td><td><code>true</code></td></tr>

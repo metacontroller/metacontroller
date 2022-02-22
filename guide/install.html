@@ -151,6 +151,7 @@
 <p>This page describes how to install Metacontroller, either to develop your own
 controllers or just to run third-party controllers that depend on it.</p>
 <ul>
+<li><a href="#docker-images">Docker images</a></li>
 <li><a href="#prerequisites">Prerequisites</a>
 <ul>
 <li><a href="#running-on-kubernetes-older-than-116">Running on kubernetes older than 1.16</a></li>
@@ -161,9 +162,16 @@ controllers or just to run third-party controllers that depend on it.</p>
 <li><a href="#install-metacontroller-using-helm">Install Metacontroller using Helm</a></li>
 <li><a href="#migrating-from-googlecloudplatformmetacontroller">Migrating from /GoogleCloudPlatform/metacontroller</a></li>
 </ul>
+<h2 id="docker-images"><a class="header" href="#docker-images">Docker images</a></h2>
+<p>Images are hosted in two places:</p>
+<ul>
+<li><a href="https://hub.docker.com/r/metacontrollerio/metacontroller">dockerhub</a></li>
+<li><a href="https://github.com/metacontroller/metacontroller/pkgs/container/metacontroller">ghcr.io</a></li>
+</ul>
+<p>Feel free to use whatever suits your need, they identical. Note - currently in <code>helm</code> charts the dockerhub one's are used. </p>
 <h2 id="prerequisites"><a class="header" href="#prerequisites">Prerequisites</a></h2>
 <ul>
-<li>Kubernetes v1.11+</li>
+<li>Kubernetes v1.14+</li>
 <li>You should have <code>kubectl</code> available and configured to talk to the desired cluster.</li>
 </ul>
 <h3 id="running-on-kubernetes-older-than-116"><a class="header" href="#running-on-kubernetes-older-than-116">Running on kubernetes older than 1.16</a></h3>
