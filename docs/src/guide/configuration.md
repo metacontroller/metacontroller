@@ -12,7 +12,7 @@ in `manifests/metacontroller.yaml`):
 
 | Flag | Description |
 | ---- | ----------- |
-| `--zap-log-level` | ZapGws Level to configure the verbosity of logging. Can be one of ‘debug’, ‘info’, ‘error’, or any integer value > 0 which corresponds to custom debug levels of increasing verbosity(e.g. `--zap-log-level=5`). Level 4 logs Metacontroller's interaction with the API server. Levels 5 and up additionally log details of Metacontroller's invocation of lambda hooks. See the [troubleshooting guide](./troubleshooting.md) for more. |
+| `--zap-log-level` | Zap log level to configure the verbosity of logging. Can be one of ‘debug’, ‘info’, ‘error’, or any integer value > 0 which corresponds to custom debug levels of increasing verbosity(e.g. `--zap-log-level=5`). Level 4 logs Metacontroller's interaction with the API server. Levels 5 and up additionally log details of Metacontroller's invocation of lambda hooks. See the [troubleshooting guide](./troubleshooting.md) for more. |
 | `--zap-devel` | Development Mode (e.g. `--zap-devel`) defaults(encoder=consoleEncoder,logLevel=Debug,stackTraceLevel=Warn). |
 | `--zap-encoder` | Zap log encoding - `json` or `console` (e.g. `--zap-encoder='json'`) defaults(encoder=consoleEncoder,logLevel=Debug,stackTraceLevel=Warn). |
 | `--zap-stacktrace-level` | Zap Level at and above which stacktraces are captured - one of `info` or `error` (e.g. `--zap-stacktrace-level='info'`). |
