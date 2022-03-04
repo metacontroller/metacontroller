@@ -7,7 +7,7 @@ jobs:
     name: Tests
     steps:
     - name: checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         fetch-depth: '5'
     - name: Run unit & integration tests
@@ -48,7 +48,7 @@ jobs:
     name: k8s ${{ matrix.configuration.version }}
     steps:
     - name: checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         fetch-depth: '5'
     - name: build local Image
@@ -85,7 +85,7 @@ jobs:
     needs: ['tests', 'e2etests']
     steps:
     - name: Checkout
-      uses: actions/checkout@v1
+      uses: actions/checkout@v3
     - name: Setup Node.js
       uses: actions/setup-node@v2
       with:

@@ -5,7 +5,7 @@ jobs:
   golangci-lint:
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v2
         with:
@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
     - name: checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
     - name: Build local image
       run: docker build -t metacontrollerio/metacontroller:lint-${{ github.sha }} .
     - name: Lint docker image
@@ -28,7 +28,7 @@ jobs:
     container:
       image: "michaelfbryan/mdbook-docker-image:latest"
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Build mdbook
         run: |
           cd docs
