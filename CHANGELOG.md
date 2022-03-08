@@ -1,3 +1,10 @@
+# [2.3.0](https://github.com/metacontroller/metacontroller/compare/v2.2.6...v2.3.0) (2022-03-08)
+
+
+### Features
+
+* Add leader election ([29563b2](https://github.com/metacontroller/metacontroller/commit/29563b248979da69fa4722611a14809333c21d87))
+
 ## [2.2.6](https://github.com/metacontroller/metacontroller/compare/v2.2.5...v2.2.6) (2022-03-08)
 
 
