@@ -1,3 +1,10 @@
+## [2.2.6](https://github.com/metacontroller/metacontroller/compare/v2.2.5...v2.2.6) (2022-03-08)
+
+
+### Bug Fixes
+
+* **deps:** update dependency golang to v1.17.8 ([1c9e884](https://github.com/metacontroller/metacontroller/commit/1c9e884eaaf981e131b821f9ac55aa8eb12e3560))
+
 ## [2.2.5](https://github.com/metacontroller/metacontroller/compare/v2.2.4...v2.2.5) (2022-02-21)
 
 
