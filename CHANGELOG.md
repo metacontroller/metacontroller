@@ -1,3 +1,10 @@
+## [2.3.2](https://github.com/metacontroller/metacontroller/compare/v2.3.1...v2.3.2) (2022-03-17)
+
+
+### Bug Fixes
+
+* **deps:** update dependency alpine to v3.15.1 ([3a005ec](https://github.com/metacontroller/metacontroller/commit/3a005ecf6d03a02fe46fef1a4d83c40a5b262a2c))
+
 ## [2.3.1](https://github.com/metacontroller/metacontroller/compare/v2.3.0...v2.3.1) (2022-03-17)
 
 
