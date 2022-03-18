@@ -61,3 +61,6 @@ discoveryInterval: 20s
 
 # How often to flush local caches and relist objects from the API server
 cacheFlushInterval: 30m
+
+# The name of the PriorityClass that will be assigned to metacontroller
+priorityClassName: ""

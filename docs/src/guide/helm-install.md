@@ -51,5 +51,7 @@ as OCI is currently (at least for helm 3.8.x) a beta feature.
 | `zap.devel`                               | Development Mode or Production Mode           | `"production"`                                          |
 | `zap.encoder`                             | Zap log encoding (‘json’ or ‘console’)        | `"json"`                                                |
 | `zap.stacktraceLevel`                     | Zap Level at and above which stacktraces are captured (one of ‘info’ or ‘error’) | `"info"`             |
+| `commandArgs`                             | Custom arguments which are used to start metacontroller | `[]`                                          |
 | `discoveryInterval`                       | How often to refresh discovery cache to pick up newly-installed resources | `"20s"`                     |
 | `cacheFlushInterval`                      | How often to flush local caches and relist objects from the API server | `30m`                          |
+| `priorityClassName`                       | The name of the PriorityClass that will be assigned to metacontroller | `""`                            |
