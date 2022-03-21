@@ -54,4 +54,6 @@ as OCI is currently (at least for helm 3.8.x) a beta feature.
 | `commandArgs`                             | Custom arguments which are used to start metacontroller | `[]`                                          |
 | `discoveryInterval`                       | How often to refresh discovery cache to pick up newly-installed resources | `"20s"`                     |
 | `cacheFlushInterval`                      | How often to flush local caches and relist objects from the API server | `30m`                          |
-| `priorityClassName`                       | The name of the PriorityClass that will be assigned to metacontroller | `""`                            |
+| `priorityClassName`                       | The name of the `PriorityClass` that will be assigned to metacontroller | `""`                          |
+| `clusterRole.aggregationRule`             | The `aggregationRule` applied to metacontroller `ClusterRole` | `{}`                                    |
+| `clusterRole.rules`                       | The `rules` applied to metacontroller `ClusterRole` | ```{ "apiGroups": "*", "resources": "*", "verbs": "*" }``` |
