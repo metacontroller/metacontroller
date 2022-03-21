@@ -1,3 +1,10 @@
+# [2.4.0](https://github.com/metacontroller/metacontroller/compare/v2.3.2...v2.4.0) (2022-03-21)
+
+
+### Features
+
+* Add priorityClassName to helm chart ([a4c5c10](https://github.com/metacontroller/metacontroller/commit/a4c5c106a9a0ada95fda1abb7a393b77b1fff64c))
+
 ## [2.3.2](https://github.com/metacontroller/metacontroller/compare/v2.3.1...v2.3.2) (2022-03-17)
 
 
