@@ -188,8 +188,10 @@ helm package deploy/helm/metacontroller --destination deploy/helm
 <tr><td><code>zap.devel</code></td><td>Development Mode or Production Mode</td><td><code>&quot;production&quot;</code></td></tr>
 <tr><td><code>zap.encoder</code></td><td>Zap log encoding (‘json’ or ‘console’)</td><td><code>&quot;json&quot;</code></td></tr>
 <tr><td><code>zap.stacktraceLevel</code></td><td>Zap Level at and above which stacktraces are captured (one of ‘info’ or ‘error’)</td><td><code>&quot;info&quot;</code></td></tr>
+<tr><td><code>commandArgs</code></td><td>Custom arguments which are used to start metacontroller</td><td><code>[]</code></td></tr>
 <tr><td><code>discoveryInterval</code></td><td>How often to refresh discovery cache to pick up newly-installed resources</td><td><code>&quot;20s&quot;</code></td></tr>
 <tr><td><code>cacheFlushInterval</code></td><td>How often to flush local caches and relist objects from the API server</td><td><code>30m</code></td></tr>
+<tr><td><code>priorityClassName</code></td><td>The name of the PriorityClass that will be assigned to metacontroller</td><td><code>&quot;&quot;</code></td></tr>
 </tbody></table>
 
                     </main>
