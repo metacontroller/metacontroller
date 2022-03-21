@@ -5,11 +5,8 @@ metadata:
   name: {{ include "metacontroller.fullname" . }}
   labels:
     {{- include "metacontroller.labels" . | nindent 4 }}
+aggregationRule:
+  {{- toYaml .Values.clusterRole.aggregationRule | nindent 2 }}
 rules:
-- apiGroups:
-  - "*"
-  resources:
-  - "*"
-  verbs:
-  - "*"
+  {{- toYaml .Values.clusterRole.rules | nindent 2 }}
 {{- end}}

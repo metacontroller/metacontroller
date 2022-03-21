@@ -64,3 +64,13 @@ cacheFlushInterval: 30m
 
 # The name of the PriorityClass that will be assigned to metacontroller
 priorityClassName: ""
+
+clusterRole:
+  aggregationRule: {}
+  rules:
+  - apiGroups:
+      - "*"
+    resources:
+      - "*"
+    verbs:
+      - "*"
