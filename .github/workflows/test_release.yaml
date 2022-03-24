@@ -7,7 +7,11 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
+<<<<<<< HEAD
       latest_matrix: ${{ steps.set-matrix.outputs.latest_matrix }}
+=======
+      v1_matrix: ${{ steps.set-matrix.outputs.v1_matrix }}
+>>>>>>> a4d0515 (ci(helm): Add helm chart testing)
     steps:
       - name: checkout
         uses: actions/checkout@v3
@@ -15,12 +19,20 @@ jobs:
           fetch-depth: '5'
       - id: set-matrix
         name: setconfigmatrix
+<<<<<<< HEAD
         # assume that kind-matrix-config.json is in ascending order and the latest version is the last element
         run: |
           full_json=$(cat ./.github/config/kind-matrix-config.json | jq -rc .)
           latest_json=$(cat ./.github/config/kind-matrix-config.json  | jq -rc '.configuration |= [last]')
           echo "::set-output name=matrix::${full_json}"
           echo "::set-output name=latest_matrix::${latest_json}"
+=======
+        run: |
+          full_json=$(cat ./.github/config/kind-matrix-config.json | jq -rc .)
+          v1_json=$(cat ./.github/config/kind-matrix-config.json  | jq -rc '.configuration |=  map(select(.crd_version == "v1"))')
+          echo "::set-output name=matrix::${full_json}"
+          echo "::set-output name=v1_matrix::${v1_json}"
+>>>>>>> a4d0515 (ci(helm): Add helm chart testing)
   tests:
     runs-on: ubuntu-20.04
     name: Tests
@@ -76,6 +88,15 @@ jobs:
       run: |
         kind load docker-image metacontrollerio/metacontroller:dev
 
+<<<<<<< HEAD
+=======
+    - name: Replace CRD manifests to v1beta1
+      if: ${{ matrix.configuration.crd_version == 'v1beta1' }}
+      run: |
+        sed -i 's/crds-v1/crds-v1beta1/' manifests/production/kustomization.yaml
+        for file in examples/**/*.yaml; do sed -i 's/apiextensions.k8s.io\/v1/apiextensions.k8s.io\/v1beta1/g' $file; done
+
+>>>>>>> a4d0515 (ci(helm): Add helm chart testing)
     - name: Apply metacontroller manifests
       run: |
         kubectl apply -k manifests/dev
@@ -86,14 +107,23 @@ jobs:
       timeout-minutes: 30
       run: |
         cd examples
+<<<<<<< HEAD
         ./test.sh
+=======
+        ./test.sh --crd_version ${{ matrix.configuration.crd_version }}
+>>>>>>> a4d0515 (ci(helm): Add helm chart testing)
 
   helmtests:
     runs-on: ubuntu-20.04
     needs: ['setmatrix']
     strategy:
       fail-fast: false
+<<<<<<< HEAD
       matrix: ${{fromJson(needs.setmatrix.outputs.latest_matrix)}}
+=======
+      # TODO: ask about skipping CRD versions v1beta because it is not in helm chart
+      matrix: ${{fromJson(needs.setmatrix.outputs.v1_matrix)}}
+>>>>>>> a4d0515 (ci(helm): Add helm chart testing)
     name: helm test k8s ${{ matrix.configuration.version }}
     steps:
       - name: Checkout
@@ -113,7 +143,20 @@ jobs:
       - name: Set up chart-testing
         uses: helm/chart-testing-action@v2.2.1
 
+<<<<<<< HEAD
       - name: Setup kind
+=======
+      - name: Run chart-testing (list-changed)
+        id: list-changed
+        run: |
+          changed=$(ct list-changed --chart-dirs deploy/helm --target-branch ${{ github.event.repository.default_branch }})
+          if [[ -n "$changed" ]]; then
+            echo "::set-output name=changed::true"
+          fi
+
+      - name: Setup kind
+        if: steps.list-changed.outputs.changed == 'true'
+>>>>>>> a4d0515 (ci(helm): Add helm chart testing)
         uses: helm/kind-action@v1.2.0
         with:
           version: ${{ matrix.configuration.kind }}
@@ -121,15 +164,31 @@ jobs:
           cluster_name: kind
           wait: 120s
 
+<<<<<<< HEAD
       - name: Run chart-testing (lint-and-install)
         run: |
           ct lint-and-install --chart-dirs deploy/helm \
+=======
+      - name: Run chart-testing (lint)
+        if: steps.list-changed.outputs.changed == 'true'
+        run: |
+          ct lint --chart-dirs deploy/helm \
+>>>>>>> a4d0515 (ci(helm): Add helm chart testing)
           --chart-yaml-schema '.github/config/chart-testing/etc/chart_schema.yaml' \
           --lint-conf '.github/config/chart-testing/etc/lintconf.yaml' \
           --validate-maintainers=false \
           --check-version-increment=false \
           --target-branch ${{ github.event.repository.default_branch }}
 
+<<<<<<< HEAD
+=======
+      - name: Run chart-testing (install)
+        if: steps.list-changed.outputs.changed == 'true'
+        run: |
+          ct install --chart-dirs deploy/helm \
+          --target-branch ${{ github.event.repository.default_branch }}
+
+>>>>>>> a4d0515 (ci(helm): Add helm chart testing)
   release:
     if: (github.ref == 'refs/heads/master') && (github.repository_owner == 'metacontroller')
     name: Release - Create tag
