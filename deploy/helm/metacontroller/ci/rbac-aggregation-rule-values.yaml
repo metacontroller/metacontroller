@@ -1,0 +1,77 @@
+rbac:
+  create: true
+
+image:
+  repository: metacontrollerio/metacontroller
+  pullPolicy: IfNotPresent
+  tag: ""
+
+imagePullSecrets: []
+nameOverride: ""
+namespaceOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+resources: {}
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+zap: {}
+  # logLevel: 4
+  # devel: "production"
+  # encoder: "json"
+  # stacktraceLevel: "info"
+
+# Custom arguments which are used to start metacontroller
+commandArgs: []
+# - --client-go-qps=100
+# - --client-go-burst=200
+
+# How often to refresh discovery cache to pick up newly-installed resources
+discoveryInterval: 20s
+
+# How often to flush local caches and relist objects from the API server
+cacheFlushInterval: 30m
+
+# The name of the PriorityClass that will be assigned to metacontroller
+priorityClassName: ""
+
+clusterRole:
+  aggregationRule:
+    clusterRoleSelectors:
+      - matchLabels:
+          rbac.authorization.k8s.io/aggregate-to-admin: "true"
+      - matchLabels:
+          rbac.authorization.k8s.io/aggregate-to-edit: "true"
+      - matchLabels:
+          rbac.authorization.k8s.io/aggregate-to-view: "true"
+  rules: []

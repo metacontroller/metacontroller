@@ -5,8 +5,10 @@ metadata:
   name: {{ include "metacontroller.fullname" . }}
   labels:
     {{- include "metacontroller.labels" . | nindent 4 }}
+{{- if .Values.clusterRole.aggregationRule }}
 aggregationRule:
   {{- toYaml .Values.clusterRole.aggregationRule | nindent 2 }}
+{{- end}}
 rules:
   {{- toYaml .Values.clusterRole.rules | nindent 2 }}
 {{- end}}
