@@ -1,3 +1,4 @@
+# This file should be identical to deploy/helm/metacontroller/values.yaml to test default helm chart values
 rbac:
   create: true
 
