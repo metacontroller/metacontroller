@@ -2,6 +2,24 @@
 name: Test / Release
 on: [push, pull_request]
 jobs:
+  setmatrix:
+    name: Set Configuration Matrix
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+      v1_matrix: ${{ steps.set-matrix.outputs.v1_matrix }}
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: '5'
+      - id: set-matrix
+        name: setconfigmatrix
+        run: |
+          full_json=$(cat ./.github/config/kind-matrix-config.json | jq -rc .)
+          v1_json=$(cat ./.github/config/kind-matrix-config.json  | jq -rc '.configuration |=  map(select(.crd_version == "v1"))')
+          echo "::set-output name=matrix::${full_json}"
+          echo "::set-output name=v1_matrix::${v1_json}"
   tests:
     runs-on: ubuntu-20.04
     name: Tests
@@ -31,58 +49,102 @@ jobs:
         fail_ci_if_error: true # optional (default = false)
   e2etests:
     runs-on: ubuntu-20.04
+    needs: ['setmatrix']
     strategy:
       fail-fast: false
-      matrix:
-        configuration:
-         - {version: '1.14', kind: "v0.11.1", image: 'kindest/node:v1.14.10@sha256:f8a66ef82822ab4f7569e91a5bccaf27bceee135c1457c512e54de8c6f7219f8', crd_version: 'v1beta1' }
-         - {version: '1.15', kind: "v0.11.1", image: 'kindest/node:v1.15.12@sha256:b920920e1eda689d9936dfcf7332701e80be12566999152626b2c9d730397a95', crd_version: 'v1beta1' }
-         - {version: '1.16', kind: "v0.11.1", image: 'kindest/node:v1.16.15@sha256:83067ed51bf2a3395b24687094e283a7c7c865ccc12a8b1d7aa673ba0c5e8861', crd_version: 'v1' }
-         - {version: '1.17', kind: "v0.11.1", image: 'kindest/node:v1.17.17@sha256:66f1d0d91a88b8a001811e2f1054af60eef3b669a9a74f9b6db871f2f1eeed00', crd_version: 'v1' }
-         - {version: '1.18', kind: "v0.11.1", image: 'kindest/node:v1.18.19@sha256:7af1492e19b3192a79f606e43c35fb741e520d195f96399284515f077b3b622c', crd_version: 'v1' }
-         - {version: '1.19', kind: "v0.11.1", image: 'kindest/node:v1.19.11@sha256:07db187ae84b4b7de440a73886f008cf903fcf5764ba8106a9fd5243d6f32729', crd_version: 'v1' }
-         - {version: '1.20', kind: "v0.11.1", image: 'kindest/node:v1.20.7@sha256:cbeaf907fc78ac97ce7b625e4bf0de16e3ea725daf6b04f930bd14c67c671ff9', crd_version: 'v1' }
-         - {version: '1.21', kind: "v0.11.1", image: 'kindest/node:v1.21.1@sha256:69860bda5563ac81e3c0057d654b5253219618a22ec3a346306239bba8cfa1a6', crd_version: 'v1' }
-         - {version: '1.22', kind: "v0.11.1", image: 'kindest/node:v1.22.0@sha256:b8bda84bb3a190e6e028b1760d277454a72267a5454b57db34437c34a588d047', crd_version: 'v1' }
-         - {version: '1.23', kind: "v0.11.1", image: 'kindest/node:v1.23.0@sha256:49824ab1727c04e56a21a5d8372a402fcd32ea51ac96a2706a12af38934f81ac', crd_version: 'v1' }
-    name: k8s ${{ matrix.configuration.version }}
+      matrix: ${{fromJson(needs.setmatrix.outputs.matrix)}}
+    name: e2e test k8s ${{ matrix.configuration.version }}
     steps:
-    - name: checkout
+    - name: Checkout
       uses: actions/checkout@v3
       with:
         fetch-depth: '5'
-    - name: build local Image
+
+    - name: Build local image
       run: docker build -t metacontrollerio/metacontroller:dev .
-    - name: setup kind
+
+    - name: Setup kind
       uses: helm/kind-action@v1.2.0
       with:
         version: ${{ matrix.configuration.kind }}
         node_image: ${{ matrix.configuration.image }}
         cluster_name: kind
         wait: 120s
+
     - name: Load metacontroller image
       run: |
         kind load docker-image metacontrollerio/metacontroller:dev
-    - name: Replace CRD mnifests to v1beta1
+
+    - name: Replace CRD manifests to v1beta1
       if: ${{ matrix.configuration.crd_version == 'v1beta1' }}
       run: |
         sed -i 's/crds-v1/crds-v1beta1/' manifests/production/kustomization.yaml
         for file in examples/**/*.yaml; do sed -i 's/apiextensions.k8s.io\/v1/apiextensions.k8s.io\/v1beta1/g' $file; done
+
     - name: Apply metacontroller manifests
       run: |
         kubectl apply -k manifests/dev
         sleep 60s
         kubectl get pods -n metacontroller
+
     - name: Run e2e tests
       timeout-minutes: 30
       run: |
         cd examples
         ./test.sh --crd_version ${{ matrix.configuration.crd_version }}
+
+  helmtests:
+    runs-on: ubuntu-20.04
+    needs: ['setmatrix']
+    strategy:
+      fail-fast: false
+      matrix: ${{fromJson(needs.setmatrix.outputs.v1_matrix)}}
+    name: helm test k8s ${{ matrix.configuration.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v1
+        with:
+          version: v3.8.1
+
+      - uses: actions/setup-python@v2
+        with:
+          python-version: 3.7
+
+      - name: Set up chart-testing
+        uses: helm/chart-testing-action@v2.2.1
+
+      - name: Setup kind
+        uses: helm/kind-action@v1.2.0
+        with:
+          version: ${{ matrix.configuration.kind }}
+          node_image: ${{ matrix.configuration.image }}
+          cluster_name: kind
+          wait: 120s
+
+      - name: Run chart-testing (lint)
+        run: |
+          ct lint --chart-dirs deploy/helm \
+          --chart-yaml-schema '.github/config/chart-testing/etc/chart_schema.yaml' \
+          --lint-conf '.github/config/chart-testing/etc/lintconf.yaml' \
+          --validate-maintainers=false \
+          --check-version-increment=false \
+          --target-branch ${{ github.event.repository.default_branch }}
+
+      - name: Run chart-testing (install)
+        run: |
+          ct install --chart-dirs deploy/helm \
+          --target-branch ${{ github.event.repository.default_branch }}
+
   release:
     if: (github.ref == 'refs/heads/master') && (github.repository_owner == 'metacontroller')
     name: Release - Create tag
     runs-on: ubuntu-20.04
-    needs: ['tests', 'e2etests']
+    needs: ['tests', 'e2etests', 'helmtests']
     steps:
     - name: Checkout
       uses: actions/checkout@v1
