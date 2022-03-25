@@ -4,7 +4,7 @@ rbac:
 image:
   repository: metacontrollerio/metacontroller
   pullPolicy: IfNotPresent
-  tag: ""
+  tag: "debug"
 
 imagePullSecrets: []
 nameOverride: ""
@@ -52,12 +52,19 @@ zap: {}
   # stacktraceLevel: "info"
 
 # Command which is used to start metacontroller
-command: "/usr/bin/metacontroller"
+command: "/dlv"
 
 # Custom arguments which are used to start metacontroller
-commandArgs: []
-# - --client-go-qps=100
-# - --client-go-burst=200
+commandArgs:
+  - --listen=:40000
+  - --headless=true
+  - --api-version=2
+  - exec
+  - /usr/bin/metacontroller
+  - --
+  - --zap-log-level=4
+  - --discovery-interval=20s
+  - --zap-devel=true
 
 # How often to refresh discovery cache to pick up newly-installed resources
 discoveryInterval: 20s
@@ -79,8 +86,3 @@ clusterRole:
       - "*"
 
 replicas: 1
-
-# podDisruptionBudget which can be enabled when running more than one replica
-podDisruptionBudget: {}
-  # minAvailable: 1
-  # maxUnavailable: 0
