@@ -52,9 +52,8 @@ zap: {}
   # stacktraceLevel: "info"
 
 # Custom arguments which are used to start metacontroller
-commandArgs: []
-# - --client-go-qps=100
-# - --client-go-burst=200
+commandArgs:
+  - --leader-election
 
 # How often to refresh discovery cache to pick up newly-installed resources
 discoveryInterval: 20s
@@ -75,9 +74,4 @@ clusterRole:
     verbs:
       - "*"
 
-replicas: 1
-
-# podDisruptionBudget which can be enabled when running more then one replica's
-podDisruptionBudget: {}
-  # minAvailable: 1
-  # maxUnavailable: 0
+replicas: 2
