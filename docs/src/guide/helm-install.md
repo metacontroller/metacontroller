@@ -57,3 +57,4 @@ as OCI is currently (at least for helm 3.8.x) a beta feature.
 | `priorityClassName`                       | The name of the `PriorityClass` that will be assigned to metacontroller | `""`                          |
 | `clusterRole.aggregationRule`             | The `aggregationRule` applied to metacontroller `ClusterRole` | `{}`                                    |
 | `clusterRole.rules`                       | The `rules` applied to metacontroller `ClusterRole` | ```{ "apiGroups": "*", "resources": "*", "verbs": "*" }``` |
+| `podDisruptionBudget`                     | The `podDisruptionBudget` applied to metacontroller `pods` |  `{}`                                      |

@@ -76,6 +76,7 @@ clusterRole:
       - "*"
 
 # podDisruptionBudget which can be enabled when running more then one replica's
-podDisruptionBudget: {}
-  # minAvailable: 1
-  # maxUnavailable: 0
+podDisruptionBudget:
+  minAvailable: 1
+
+replicas: 2
