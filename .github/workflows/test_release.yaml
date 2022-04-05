@@ -7,7 +7,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
-      v1_matrix: ${{ steps.set-matrix.outputs.v1_matrix }}
+      latest_matrix: ${{ steps.set-matrix.outputs.latest_matrix }}
     steps:
       - name: checkout
         uses: actions/checkout@v3
@@ -15,11 +15,12 @@ jobs:
           fetch-depth: '5'
       - id: set-matrix
         name: setconfigmatrix
+        # assume that kind-matrix-config.json is in ascending order and the latest version is the last element
         run: |
           full_json=$(cat ./.github/config/kind-matrix-config.json | jq -rc .)
-          v1_json=$(cat ./.github/config/kind-matrix-config.json  | jq -rc '.configuration |=  map(select(.crd_version == "v1"))')
+          latest_json=$(cat ./.github/config/kind-matrix-config.json  | jq -rc '.configuration |= [last]')
           echo "::set-output name=matrix::${full_json}"
-          echo "::set-output name=v1_matrix::${v1_json}"
+          echo "::set-output name=latest_matrix::${latest_json}"
   tests:
     runs-on: ubuntu-20.04
     name: Tests
@@ -98,7 +99,7 @@ jobs:
     needs: ['setmatrix']
     strategy:
       fail-fast: false
-      matrix: ${{fromJson(needs.setmatrix.outputs.v1_matrix)}}
+      matrix: ${{fromJson(needs.setmatrix.outputs.latest_matrix)}}
     name: helm test k8s ${{ matrix.configuration.version }}
     steps:
       - name: Checkout
