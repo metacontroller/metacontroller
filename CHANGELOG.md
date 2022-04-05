@@ -1,3 +1,13 @@
+## [2.5.1](https://github.com/metacontroller/metacontroller/compare/v2.5.0...v2.5.1) (2022-04-05)
+
+
+### Bug Fixes
+
+* **deps:** Update controller-runtime to v0.11.2 ([b243732](https://github.com/metacontroller/metacontroller/commit/b243732bee248da792388d5fb3c57465f7e85763))
+* **deps:** Update k8s.api to v0.23.5 ([e88bce6](https://github.com/metacontroller/metacontroller/commit/e88bce6018961f7d6f540da3b44ab8568f602331))
+* **deps:** Update klog/v2 to v2.60.1 ([d40bc8b](https://github.com/metacontroller/metacontroller/commit/d40bc8bcdb195b4ca312202a7bcfb31bbe11ca57))
+* **deps:** Update zcache to v1.1.0 ([4e89577](https://github.com/metacontroller/metacontroller/commit/4e89577d86b18aa7b8a96c3e714bf64ade4b6845))
+
 # [2.5.0](https://github.com/metacontroller/metacontroller/compare/v2.4.1...v2.5.0) (2022-04-05)
 
 
