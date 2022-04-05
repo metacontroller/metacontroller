@@ -84,6 +84,7 @@ func New(configuration options.Configuration) (controllerruntime.Manager, error)
 	if err != nil {
 		return nil, err
 	}
+	// crds api is in apiextensionsv1 package
 	err = apiextensionsv1.AddToScheme(mgr.GetScheme())
 	if err != nil {
 		return nil, err

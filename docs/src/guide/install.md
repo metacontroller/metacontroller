@@ -14,14 +14,8 @@ Feel free to use whatever suits your need, they identical. Note - currently in `
 
 ## Prerequisites
 
-* Kubernetes v1.14+
+* Kubernetes v1.16+
 * You should have `kubectl` available and configured to talk to the desired cluster.
-
-### Running on kubernetes older than 1.16
-
-As metacontroller does not have direct dependency on kubernetes API
-it have wide range of supported kubernetes versions.
-However, to be able to install it on clusters older than 1.16, CRD with schema in version `v1beta1` must be used then.
 
 ### Grant yourself cluster-admin (GKE only)
 
@@ -50,11 +44,6 @@ If your `kubectl` version does does not support `-k` flag, please
 install resources mentioned in `manifests/production/kustomization.yaml`
 one by one manually with `kubectl apply -f {{filename}}` command.
 
-**Compatibility note**
-CRD's are shipped in two versions:
-
-* `v1` - supposed to be used when your kubernetes cluster is 1.16+
-* `v1beta1` otherwise
 
 ## Install Metacontroller using Helm
 
