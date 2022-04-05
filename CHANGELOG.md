@@ -1,3 +1,15 @@
+# [2.5.0](https://github.com/metacontroller/metacontroller/compare/v2.4.1...v2.5.0) (2022-04-05)
+
+
+### Bug Fixes
+
+* **deps:** update dependency alpine to v3.15.4 ([28beef9](https://github.com/metacontroller/metacontroller/commit/28beef9f1444955503bf63ea3d1dfba079126efe))
+
+
+### Features
+
+* **helm:** [#471](https://github.com/metacontroller/metacontroller/issues/471) - Expose rules and aggregateRule in ClusterRole ([41a462e](https://github.com/metacontroller/metacontroller/commit/41a462eb9f2577a9a3b5e064530d7c9769a6b29f))
+
 ## [2.4.1](https://github.com/metacontroller/metacontroller/compare/v2.4.0...v2.4.1) (2022-03-23)
 
 
