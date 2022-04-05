@@ -25,7 +25,6 @@ begins_with_short_option()
 
 # THE DEFAULTS INITIALIZATION - OPTIONALS
 _arg_ignore=
-_arg_crd_version=v1
 
 
 print_help()
@@ -33,7 +32,6 @@ print_help()
 	printf '%s\n' "The general script's help msg"
 	printf 'Usage: %s [-i|--ignore <arg>] [--crd_version <arg>] [-h|--help]\n' "$0"
 	printf '\t%s\n' "-i, --ignore: Ignore directory (no default)"
-	printf '\t%s\n' "--crd_version: CRD's version to use (default 'v1', possible also 'v1beta1')"
 	printf '\t%s\n' "-h, --help: Prints help"
 }
 
@@ -54,14 +52,6 @@ parse_commandline()
 				;;
 			-i*)
 				_arg_ignore="${_key##-i}"
-				;;
-			--crd_version)
-				test $# -lt 2 && die "Missing value for the optional argument '$_key'." 1
-				_arg_crd_version="$2"
-				shift
-				;;
-			--crd_version=*)
-				_arg_crd_version="${_key##--crd_version=}"
 				;;
 			-h|--help)
 				print_help
@@ -87,7 +77,6 @@ logfile=$(mktemp)
 echo "Logging test output to ${logfile}"
 
 ignore_dirs=( "${_arg_ignore[@]/%/\/test.sh}" )
-crd_version="${_arg_crd_version}"
 
 echo "Ignored directories: ${ignore_dirs}"
 
@@ -102,7 +91,7 @@ for test in */test.sh; do
     continue
   fi
   echo -n "Running ${test}..."
-  if ! (cd "$(dirname "${test}")" && timeout --signal=SIGTERM 5m ./test.sh ${crd_version} > "${logfile}" 2>&1); then
+  if ! (cd "$(dirname "${test}")" && timeout --signal=SIGTERM 5m ./test.sh v1 > "${logfile}" 2>&1); then
     echo "FAILED"
     cat "${logfile}"
     echo "Test ${test} failed!"

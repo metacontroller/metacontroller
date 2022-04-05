@@ -38,20 +38,23 @@ First, let's use the built-in [CustomResourceDefinition][CRD] API to set up a st
 Save the following to a file called `crd.yaml`:
 
 ```yaml
-apiVersion: apiextensions.k8s.io/v1beta1
+apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   name: helloworlds.example.com
 spec:
   group: example.com
-  version: v1
   names:
     kind: HelloWorld
     plural: helloworlds
     singular: helloworld
   scope: Namespaced
-  subresources:
-    status: {}
+  versions:
+  - name: v1
+    served: true
+    storage: true
+    subresources:
+     status: {}
 ```
 
 Then apply it to your cluster:

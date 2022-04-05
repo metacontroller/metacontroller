@@ -76,12 +76,6 @@ jobs:
       run: |
         kind load docker-image metacontrollerio/metacontroller:dev
 
-    - name: Replace CRD manifests to v1beta1
-      if: ${{ matrix.configuration.crd_version == 'v1beta1' }}
-      run: |
-        sed -i 's/crds-v1/crds-v1beta1/' manifests/production/kustomization.yaml
-        for file in examples/**/*.yaml; do sed -i 's/apiextensions.k8s.io\/v1/apiextensions.k8s.io\/v1beta1/g' $file; done
-
     - name: Apply metacontroller manifests
       run: |
         kubectl apply -k manifests/dev
@@ -92,7 +86,7 @@ jobs:
       timeout-minutes: 30
       run: |
         cd examples
-        ./test.sh --crd_version ${{ matrix.configuration.crd_version }}
+        ./test.sh
 
   helmtests:
     runs-on: ubuntu-20.04

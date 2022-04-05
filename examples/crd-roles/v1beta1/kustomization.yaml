@@ -1,4 +1,0 @@
-bases:
-- ../manifest
-resources:
-- controller.yaml
