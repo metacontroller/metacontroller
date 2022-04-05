@@ -33,7 +33,7 @@ jobs:
       run: DOCKER_BUILDKIT=1 docker build -o ./tmp -t metacontroller:test -f Dockerfile.test .
     - name: coverage-unit
       if: (github.repository_owner == 'metacontroller')
-      uses: codecov/codecov-action@v2
+      uses: codecov/codecov-action@v3
       with:
         token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
         files: ./tmp/unit-coverage.out
@@ -41,7 +41,7 @@ jobs:
         fail_ci_if_error: true # optional (default = false)
     - name: coverage-integration
       if: (github.repository_owner == 'metacontroller')
-      uses: codecov/codecov-action@v2
+      uses: codecov/codecov-action@v3
       with:
         token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
         files: ./tmp/integration-coverage.out
