@@ -1,3 +1,11 @@
+## [2.6.1](https://github.com/metacontroller/metacontroller/compare/v2.6.0...v2.6.1) (2022-04-06)
+
+
+### Bug Fixes
+
+* **helm:** Change helm field zapLogLevel to zap.logLevel ([870c8aa](https://github.com/metacontroller/metacontroller/commit/870c8aab776adc76322c8070d1e89932a469f57a)), closes [#482](https://github.com/metacontroller/metacontroller/issues/482)
+* **helm:** Fix indenting for pdb spec ([1bcfb8f](https://github.com/metacontroller/metacontroller/commit/1bcfb8f3a611617db9a67723a22c46a0b643d749))
+
 # [2.6.0](https://github.com/metacontroller/metacontroller/compare/v2.5.1...v2.6.0) (2022-04-06)
 
 
