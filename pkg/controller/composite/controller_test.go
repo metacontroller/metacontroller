@@ -66,7 +66,7 @@ func defaultCustomizeManager() *customize.Manager {
 	return customizeManager
 }
 
-var defaultSyncResponse = &composite.SyncHookResponse{
+var defaultSyncResponse = &composite.CompositeHookResponse{
 	Status:             nil,
 	Children:           nil,
 	ResyncAfterSeconds: 0,
@@ -141,8 +141,8 @@ func Test_parentController_sync(t *testing.T) {
 		eventRecorder  record.EventRecorder
 		finalizer      *finalizer.Manager
 		customize      *customize.Manager
-		syncHook       hooks.HookExecutor
-		finalizeHook   hooks.HookExecutor
+		syncHook       hooks.Hook
+		finalizeHook   hooks.Hook
 		logger         logr.Logger
 	}
 	type args struct {

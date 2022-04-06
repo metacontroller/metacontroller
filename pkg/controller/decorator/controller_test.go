@@ -65,13 +65,13 @@ func defaultCustomizeManager() *customize.Manager {
 	return customizeManager
 }
 
-var defaultSyncResponse = &v1.SyncHookResponse{
+var defaultSyncResponse = &v1.DecoratorHookResponse{
 	Status:             nil,
 	ResyncAfterSeconds: 0,
 	Finalized:          false,
 }
 
-var changedStatusSyncResponse = &v1.SyncHookResponse{
+var changedStatusSyncResponse = &v1.DecoratorHookResponse{
 	ResyncAfterSeconds: 0,
 	Finalized:          false,
 	Status: map[string]interface{}{
@@ -176,8 +176,8 @@ func Test_decoratorController_sync(t *testing.T) {
 		eventRecorder  record.EventRecorder
 		finalizer      *finalizer.Manager
 		customize      *customize.Manager
-		syncHook       hooks.HookExecutor
-		finalizeHook   hooks.HookExecutor
+		syncHook       hooks.Hook
+		finalizeHook   hooks.Hook
 		logger         logr.Logger
 	}
 	type args struct {

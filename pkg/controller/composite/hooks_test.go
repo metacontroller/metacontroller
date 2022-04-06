@@ -2,7 +2,7 @@ package composite
 
 import (
 	"metacontroller/pkg/apis/metacontroller/v1alpha1"
-	v1 "metacontroller/pkg/controller/common/api/v1"
+	commonv1 "metacontroller/pkg/controller/common/api/v1"
 	composite "metacontroller/pkg/controller/composite/api/v1"
 	"metacontroller/pkg/internal/testutils/hooks"
 	"testing"
@@ -47,7 +47,7 @@ func TestSyncHookRequest_MarshalJSON(t *testing.T) {
   "finalizing": false
 }`
 
-	children := make(v1.RelativeObjectMap)
+	children := make(commonv1.RelativeObjectMap)
 	parent := corev1.Pod{
 		TypeMeta: metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{
@@ -63,7 +63,7 @@ func TestSyncHookRequest_MarshalJSON(t *testing.T) {
 	child.SetName("aaaaa")
 	children.Insert(&parent, child)
 
-	request := composite.SyncHookRequest{
+	request := composite.CompositeHookRequest{
 		Controller: &v1alpha1.CompositeController{
 			TypeMeta:   metav1.TypeMeta{},
 			ObjectMeta: metav1.ObjectMeta{},
@@ -72,7 +72,7 @@ func TestSyncHookRequest_MarshalJSON(t *testing.T) {
 		},
 		Parent:     &unstructured.Unstructured{},
 		Children:   children,
-		Related:    make(v1.RelativeObjectMap),
+		Related:    make(commonv1.RelativeObjectMap),
 		Finalizing: false,
 	}
 
@@ -101,9 +101,8 @@ func TestWhenChildrenArrayIsNullThenDeserializeToEmptySlice(t *testing.T) {
 	}
 	parent := &unstructured.Unstructured{}
 	parent.SetDeletionTimestamp(nil)
-	request := composite.SyncHookRequest{Parent: parent}
 
-	response, err := parentController.callHook(&request)
+	response, err := parentController.callHook(parent, make(commonv1.RelativeObjectMap), make(commonv1.RelativeObjectMap))
 
 	if err != nil {
 		t.Error(err)

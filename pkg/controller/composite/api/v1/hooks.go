@@ -7,8 +7,8 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-// SyncHookRequest is the object sent as JSON to the sync and finalize hooks.
-type SyncHookRequest struct {
+// CompositeHookRequest is the object sent as JSON to the sync and finalize hooks.
+type CompositeHookRequest struct {
 	Controller *v1alpha1.CompositeController `json:"controller"`
 	Parent     *unstructured.Unstructured    `json:"parent"`
 	Children   v1.RelativeObjectMap          `json:"children"`
@@ -16,8 +16,8 @@ type SyncHookRequest struct {
 	Finalizing bool                          `json:"finalizing"`
 }
 
-// SyncHookResponse is the expected format of the JSON response from the sync and finalize hooks.
-type SyncHookResponse struct {
+// CompositeHookResponse is the expected format of the JSON response from the sync and finalize hooks.
+type CompositeHookResponse struct {
 	Status   map[string]interface{}       `json:"status"`
 	Children []*unstructured.Unstructured `json:"children"`
 

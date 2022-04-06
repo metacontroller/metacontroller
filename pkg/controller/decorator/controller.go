@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 	commonv1 "metacontroller/pkg/controller/common/api/v1"
-	v1 "metacontroller/pkg/controller/decorator/api/v1"
 	"metacontroller/pkg/hooks"
 	"strings"
 	"sync"
@@ -85,8 +84,8 @@ type decoratorController struct {
 
 	finalizer    *finalizer.Manager
 	customize    *customize.Manager
-	syncHook     hooks.HookExecutor
-	finalizeHook hooks.HookExecutor
+	syncHook     hooks.Hook
+	finalizeHook hooks.Hook
 
 	logger logr.Logger
 }
@@ -95,11 +94,11 @@ func newDecoratorController(resources *dynamicdiscovery.ResourceMap, dynClient *
 	if dc.Spec.Hooks == nil {
 		return nil, fmt.Errorf("no hooks defined")
 	}
-	syncHook, err := hooks.NewHookExecutor(dc.Spec.Hooks.Sync, dc.Name, common.DecoratorController, common.SyncHook)
+	syncHook, err := hooks.NewHook(dc.Spec.Hooks.Sync, dc.Name, common.DecoratorController, common.SyncHook)
 	if err != nil {
 		return nil, err
 	}
-	finalizeHook, err := hooks.NewHookExecutor(dc.Spec.Hooks.Finalize, dc.Name, common.DecoratorController, common.FinalizeHook)
+	finalizeHook, err := hooks.NewHook(dc.Spec.Hooks.Finalize, dc.Name, common.DecoratorController, common.FinalizeHook)
 	if err != nil {
 		return nil, err
 	}
@@ -539,13 +538,7 @@ func (c *decoratorController) syncParentObject(parent *unstructured.Unstructured
 	}
 
 	// Call the sync hook to get the desired annotations and children.
-	syncRequest := &v1.SyncHookRequest{
-		Controller:  c.dc,
-		Object:      parent,
-		Attachments: observedChildren,
-		Related:     relatedObjects,
-	}
-	syncResult, err := c.callHook(syncRequest)
+	syncResult, err := c.callHook(parent, observedChildren, relatedObjects)
 	if err != nil {
 		return err
 	}

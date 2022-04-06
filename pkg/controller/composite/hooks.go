@@ -18,26 +18,37 @@ package composite
 
 import (
 	"fmt"
+	commonv1 "metacontroller/pkg/controller/common/api/v1"
 	v1 "metacontroller/pkg/controller/composite/api/v1"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-func (pc *parentController) callHook(request *v1.SyncHookRequest) (*v1.SyncHookResponse, error) {
-	response := v1.SyncHookResponse{Children: []*unstructured.Unstructured{}}
+func (pc *parentController) callHook(
+	parent *unstructured.Unstructured,
+	observedChildren, related commonv1.RelativeObjectMap,
+) (*v1.CompositeHookResponse, error) {
+	request := &v1.CompositeHookRequest{
+		Controller: pc.cc,
+		Parent:     parent,
+		Children:   observedChildren,
+		Related:    related,
+	}
+
+	response := v1.CompositeHookResponse{Children: []*unstructured.Unstructured{}}
 	// First check if we should instead call the finalize hook,
 	// which has the same API as the sync hook except that it's
 	// called while the object is pending deletion.
 	if request.Parent.GetDeletionTimestamp() != nil && pc.finalizeHook.IsEnabled() {
 		// Finalize
 		request.Finalizing = true
-		if err := pc.finalizeHook.Execute(request, &response); err != nil {
+		if err := pc.finalizeHook.Call(request, &response); err != nil {
 			return nil, fmt.Errorf("finalize hook failed: %w", err)
 		}
 	} else {
 		// Sync
 		request.Finalizing = false
-		if err := pc.syncHook.Execute(request, &response); err != nil {
+		if err := pc.syncHook.Call(request, &response); err != nil {
 			return nil, fmt.Errorf("sync hook failed: %w", err)
 		}
 	}

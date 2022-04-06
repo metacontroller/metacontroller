@@ -21,18 +21,21 @@ import (
 	"metacontroller/pkg/controller/common"
 )
 
-// HookExecutor an execute Hook requests
-type HookExecutor interface {
-	IsEnabled() bool
-	Execute(request interface{}, response interface{}) error
+type Hooks interface {
 }
 
-// NewHookExecutor return new HookExecutor which implements given v1alpha1.Hook
-func NewHookExecutor(
+// Hook an execute Hook requests
+type Hook interface {
+	IsEnabled() bool
+	Call(request interface{}, response interface{}) error
+}
+
+// NewHook return new Hook which implements given v1alpha1.Hook
+func NewHook(
 	hook *v1alpha1.Hook,
 	controllerName string,
 	controllerType common.ControllerType,
-	hookType common.HookType) (HookExecutor, error) {
+	hookType common.HookType) (Hook, error) {
 	if hook != nil {
 		executor, err := NewWebhookExecutor(hook.Webhook, controllerName, controllerType, hookType)
 		if err != nil {
@@ -47,7 +50,7 @@ func NewHookExecutor(
 	}, nil
 }
 
-// hookExecutorImpl is default implementation of HookExecutor
+// hookExecutorImpl is default implementation of Hook
 type hookExecutorImpl struct {
 	webhookExecutor *WebhookExecutor
 }
@@ -56,6 +59,6 @@ func (h *hookExecutorImpl) IsEnabled() bool {
 	return h.webhookExecutor != nil
 }
 
-func (h *hookExecutorImpl) Execute(request interface{}, response interface{}) error {
-	return h.webhookExecutor.Execute(request, response)
+func (h *hookExecutorImpl) Call(request interface{}, response interface{}) error {
+	return h.webhookExecutor.Call(request, response)
 }

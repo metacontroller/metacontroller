@@ -62,7 +62,7 @@ type Manager struct {
 
 	enqueueParent func(interface{})
 
-	customizeHook hooks.HookExecutor
+	customizeHook hooks.Hook
 
 	logger logr.Logger
 }
@@ -77,15 +77,15 @@ func NewCustomizeManager(
 	parentKinds common.GroupKindMap,
 	logger logr.Logger,
 	controllerType common.ControllerType) (*Manager, error) {
-	var executor hooks.HookExecutor
+	var hook hooks.Hook
 	var err error
 	if controller.GetCustomizeHook() != nil {
-		executor, err = hooks.NewHookExecutor(controller.GetCustomizeHook(), name, controllerType, common.CustomizeHook)
+		hook, err = hooks.NewHook(controller.GetCustomizeHook(), name, controllerType, common.CustomizeHook)
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		executor = nil
+		hook = nil
 	}
 	return &Manager{
 		name:             name,
@@ -97,7 +97,7 @@ func NewCustomizeManager(
 		parentInformers:  parentInformers,
 		relatedInformers: make(common.InformerMap),
 		enqueueParent:    enqueueParent,
-		customizeHook:    executor,
+		customizeHook:    hook,
 		logger:           logger,
 	}, nil
 }
@@ -131,7 +131,7 @@ func (rm *Manager) getCustomizeHookResponse(parent *unstructured.Unstructured) (
 			Controller: rm.controller,
 			Parent:     parent,
 		}
-		if err := rm.customizeHook.Execute(request, &response); err != nil {
+		if err := rm.customizeHook.Call(request, &response); err != nil {
 			return nil, err
 		}
 

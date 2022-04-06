@@ -7,8 +7,8 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-// SyncHookRequest is the object sent as JSON to the sync hook.
-type SyncHookRequest struct {
+// DecoratorHookRequest is the object sent as JSON to the sync hook.
+type DecoratorHookRequest struct {
 	Controller  *v1alpha1.DecoratorController `json:"controller"`
 	Object      *unstructured.Unstructured    `json:"object"`
 	Attachments v1.RelativeObjectMap          `json:"attachments"`
@@ -16,8 +16,8 @@ type SyncHookRequest struct {
 	Finalizing  bool                          `json:"finalizing"`
 }
 
-// SyncHookResponse is the expected format of the JSON response from the sync hook.
-type SyncHookResponse struct {
+// DecoratorHookResponse is the expected format of the JSON response from the sync hook.
+type DecoratorHookResponse struct {
 	Labels      map[string]*string           `json:"labels"`
 	Annotations map[string]*string           `json:"annotations"`
 	Status      map[string]interface{}       `json:"status"`

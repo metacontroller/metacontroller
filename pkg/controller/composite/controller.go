@@ -81,8 +81,8 @@ type parentController struct {
 
 	finalizer    *finalizer.Manager
 	customize    *customize.Manager
-	syncHook     hooks.HookExecutor
-	finalizeHook hooks.HookExecutor
+	syncHook     hooks.Hook
+	finalizeHook hooks.Hook
 
 	logger logr.Logger
 }
@@ -149,11 +149,11 @@ func newParentController(
 	if cc.Spec.Hooks == nil {
 		return nil, fmt.Errorf("no hooks defined")
 	}
-	syncHook, err := hooks.NewHookExecutor(cc.Spec.Hooks.Sync, cc.Name, common.CompositeController, common.SyncHook)
+	syncHook, err := hooks.NewHook(cc.Spec.Hooks.Sync, cc.Name, common.CompositeController, common.SyncHook)
 	if err != nil {
 		return nil, err
 	}
-	finalizeHook, err := hooks.NewHookExecutor(cc.Spec.Hooks.Finalize, cc.Name, common.CompositeController, common.FinalizeHook)
+	finalizeHook, err := hooks.NewHook(cc.Spec.Hooks.Finalize, cc.Name, common.CompositeController, common.FinalizeHook)
 	if err != nil {
 		return nil, err
 	}

@@ -53,7 +53,7 @@ func TestSyncWebhook(t *testing.T) {
 	childCRD, childClient := f.CreateCRD("Child", apiextensions.NamespaceScoped)
 
 	hook := f.ServeWebhook(func(body []byte) ([]byte, error) {
-		req := v1.SyncHookRequest{}
+		req := v1.DecoratorHookRequest{}
 		if err := json.Unmarshal(body, &req); err != nil {
 			return nil, err
 		}
@@ -61,7 +61,7 @@ func TestSyncWebhook(t *testing.T) {
 		// just create a child with the same name as the parent.
 		child := framework.UnstructuredCRD(childCRD, req.Object.GetName())
 		child.SetLabels(labels)
-		resp := v1.SyncHookResponse{
+		resp := v1.DecoratorHookResponse{
 			Attachments: []*unstructured.Unstructured{child},
 		}
 		return json.Marshal(resp)
@@ -102,11 +102,11 @@ func TestResyncAfter(t *testing.T) {
 	var lastSync time.Time
 	done := false
 	hook := f.ServeWebhook(func(body []byte) ([]byte, error) {
-		req := v1.SyncHookRequest{}
+		req := v1.DecoratorHookRequest{}
 		if err := json.Unmarshal(body, &req); err != nil {
 			return nil, err
 		}
-		resp := v1.SyncHookResponse{}
+		resp := v1.DecoratorHookResponse{}
 		if req.Object.Object["status"] == nil {
 			// If status hasn't been set yet, set it. This is the "zeroth" sync.
 			// Metacontroller will set our status and then the object should quiesce.
@@ -219,7 +219,7 @@ func TestCustomizeWebhook(t *testing.T) {
 	})
 
 	syncHook := f.ServeWebhook(func(body []byte) ([]byte, error) {
-		req := v1.SyncHookRequest{}
+		req := v1.DecoratorHookRequest{}
 		if err := json.Unmarshal(body, &req); err != nil {
 			return nil, err
 		}
@@ -235,7 +235,7 @@ func TestCustomizeWebhook(t *testing.T) {
 			attachments = []*unstructured.Unstructured{child}
 		}
 
-		resp := v1.SyncHookResponse{
+		resp := v1.DecoratorHookResponse{
 			Attachments: attachments,
 		}
 		return json.Marshal(resp)

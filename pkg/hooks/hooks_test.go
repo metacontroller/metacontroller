@@ -7,19 +7,19 @@ import (
 )
 
 func TestNewHookExecutor_whenNilHook_returnDisabledHookExecutor(t *testing.T) {
-	executor, err := NewHookExecutor(nil, "", common.CompositeController, "")
+	executor, err := NewHook(nil, "", common.CompositeController, "")
 
 	if err != nil {
 		t.Errorf("err should be nil, got: %v", err)
 	}
 
 	if executor.IsEnabled() {
-		t.Errorf("HookExecutor should be disabled")
+		t.Errorf("Hook should be disabled")
 	}
 }
 
 func TestNewHookExecutor_whenHookWithNilWebhook_returnDisabledHookExecutor(t *testing.T) {
-	executor, err := NewHookExecutor(&v1alpha1.Hook{
+	executor, err := NewHook(&v1alpha1.Hook{
 		Webhook: nil},
 		"", common.CompositeController, "")
 
@@ -28,6 +28,6 @@ func TestNewHookExecutor_whenHookWithNilWebhook_returnDisabledHookExecutor(t *te
 	}
 
 	if executor.IsEnabled() {
-		t.Errorf("HookExecutor should be disabled")
+		t.Errorf("Hook should be disabled")
 	}
 }

@@ -21,7 +21,7 @@ import (
 	"crypto/sha1" // #nosec
 	"encoding/hex"
 	"fmt"
-	v12 "metacontroller/pkg/controller/common/api/v1"
+	commonv1 "metacontroller/pkg/controller/common/api/v1"
 	v1 "metacontroller/pkg/controller/composite/api/v1"
 	"metacontroller/pkg/logging"
 	"strings"
@@ -76,20 +76,14 @@ func (pc *parentController) claimRevisions(parent *unstructured.Unstructured) ([
 	return revisions, nil
 }
 
-func (pc *parentController) syncRevisions(parent *unstructured.Unstructured, observedChildren v12.RelativeObjectMap, relatedObjects v12.RelativeObjectMap) (*v1.SyncHookResponse, error) {
+func (pc *parentController) syncRevisions(parent *unstructured.Unstructured, observedChildren commonv1.RelativeObjectMap, relatedObjects commonv1.RelativeObjectMap) (*v1.CompositeHookResponse, error) {
 	// If no child resources use rolling updates, just sync the latest parent.
 	// Also, if the parent object is being deleted and we don't have a finalizer,
 	// just sync the latest parent to get the status since we won't manage
 	// children anyway.
 	if !pc.updateStrategy.anyRolling() ||
 		(parent.GetDeletionTimestamp() != nil && !pc.finalizer.ShouldFinalize(parent)) {
-		syncRequest := &v1.SyncHookRequest{
-			Controller: pc.cc,
-			Parent:     parent,
-			Children:   observedChildren,
-			Related:    relatedObjects,
-		}
-		syncResult, err := pc.callHook(syncRequest)
+		syncResult, err := pc.callHook(parent, observedChildren, relatedObjects)
 		if err != nil {
 			return nil, fmt.Errorf("sync hook failed for %v %v/%v: %w", pc.parentResource.Kind, parent.GetNamespace(), parent.GetName(), err)
 		}
@@ -158,19 +152,17 @@ func (pc *parentController) syncRevisions(parent *unstructured.Unstructured, obs
 		wg.Add(1)
 		go func(pr *parentRevision) {
 			defer wg.Done()
-
-			syncRequest := &v1.SyncHookRequest{
-				Controller: pc.cc,
-				Parent:     pr.parent,
-				Children:   observedChildren,
+			related, err := pc.customize.GetRelatedObjects(pr.parent)
+			if err != nil {
+				related = make(commonv1.RelativeObjectMap)
 			}
-			syncResult, err := pc.callHook(syncRequest)
+			syncResult, err := pc.callHook(pr.parent, observedChildren, related)
 			if err != nil {
 				pr.syncError = err
 				return
 			}
 			pr.syncResult = syncResult
-			pr.desiredChildMap = v12.MakeRelativeObjectMap(parent, syncResult.Children)
+			pr.desiredChildMap = commonv1.MakeRelativeObjectMap(parent, syncResult.Children)
 		}(pr)
 	}
 	wg.Wait()
@@ -228,7 +220,7 @@ func (pc *parentController) syncRevisions(parent *unstructured.Unstructured, obs
 
 	// Build a single, aggregated syncResult.
 	// We only take parent status from the latest revision.
-	syncResult := &v1.SyncHookResponse{
+	syncResult := &v1.CompositeHookResponse{
 		Status:   latest.syncResult.Status,
 		Children: desiredChildren.List(),
 	}
@@ -417,10 +409,10 @@ type parentRevision struct {
 	parent   *unstructured.Unstructured
 	revision *v1alpha1.ControllerRevision
 
-	syncResult *v1.SyncHookResponse
+	syncResult *v1.CompositeHookResponse
 	syncError  error
 
-	desiredChildMap v12.RelativeObjectMap
+	desiredChildMap commonv1.RelativeObjectMap
 }
 
 func (pr *parentRevision) countChildren() int {
