@@ -36,7 +36,7 @@ spec:
           command:
           - /usr/bin/metacontroller
           args:
-          - --zap-log-level={{ .Values.zapLogLevel | default 4 }}
+          - --zap-log-level={{ .Values.zap.logLevel | default 4 }}
           - --discovery-interval={{ .Values.discoveryInterval | default "20s" }}
           {{ if .Values.zap.devel -}}
           - --zap-devel={{.Values.zap.devel}}
