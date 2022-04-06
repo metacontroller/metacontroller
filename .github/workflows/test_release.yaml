@@ -127,18 +127,13 @@ jobs:
           cluster_name: kind
           wait: 120s
 
-      - name: Run chart-testing (lint)
+      - name: Run chart-testing (lint-and-install)
         run: |
-          ct lint --chart-dirs deploy/helm \
+          ct lint-and-install --chart-dirs deploy/helm \
           --chart-yaml-schema '.github/config/chart-testing/etc/chart_schema.yaml' \
           --lint-conf '.github/config/chart-testing/etc/lintconf.yaml' \
           --validate-maintainers=false \
           --check-version-increment=false \
-          --target-branch ${{ github.event.repository.default_branch }}
-
-      - name: Run chart-testing (install)
-        run: |
-          ct install --chart-dirs deploy/helm \
           --target-branch ${{ github.event.repository.default_branch }}
 
   release:
