@@ -26,14 +26,14 @@ import (
 )
 
 // NewHookExecutorStub creates new HookExecutorStub which returns given response
-func NewHookExecutorStub(response interface{}) hooks.HookExecutor {
+func NewHookExecutorStub(response interface{}) hooks.Hook {
 	return &hookExecutorStub{
 		enabled:  true,
 		response: response,
 	}
 }
 
-// HookExecutorStub is HookExecutor stub to return any given response
+// HookExecutorStub is Hook stub to return any given response
 type hookExecutorStub struct {
 	enabled  bool
 	response interface{}
@@ -43,7 +43,7 @@ func (h *hookExecutorStub) IsEnabled() bool {
 	return true
 }
 
-func (h *hookExecutorStub) Execute(request interface{}, response interface{}) error {
+func (h *hookExecutorStub) Call(request interface{}, response interface{}) error {
 	val := reflect.ValueOf(response)
 	if val.Kind() != reflect.Ptr {
 		return fmt.Errorf(`panic("not a pointer")`)
@@ -82,11 +82,11 @@ func (cc *FakeCustomizableController) GetCustomizeHook() *v1alpha1.Hook {
 	}
 }
 
-func NewSerializingExecutorStub(responseJson string) hooks.HookExecutor {
+func NewSerializingExecutorStub(responseJson string) hooks.Hook {
 	return &serializingHookExecutorStub{response: responseJson}
 }
 
-// serializingHookExecutorStub is HookExecutor stub to deserialize given json as response
+// serializingHookExecutorStub is Hook stub to deserialize given json as response
 type serializingHookExecutorStub struct {
 	response string
 }
@@ -95,7 +95,7 @@ func (s serializingHookExecutorStub) IsEnabled() bool {
 	return true
 }
 
-func (s serializingHookExecutorStub) Execute(request interface{}, response interface{}) error {
+func (s serializingHookExecutorStub) Call(request interface{}, response interface{}) error {
 	err := k8sjson.Unmarshal([]byte(s.response), response)
 	if err != nil {
 		panic(err)

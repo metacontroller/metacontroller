@@ -56,7 +56,7 @@ func TestSyncWebhook(t *testing.T) {
 	childCRD, childClient := f.CreateCRD("TestSyncWebhookChild", apiextensions.NamespaceScoped)
 
 	hook := f.ServeWebhook(func(body []byte) ([]byte, error) {
-		req := v1.SyncHookRequest{}
+		req := v1.CompositeHookRequest{}
 		if err := json.Unmarshal(body, &req); err != nil {
 			return nil, err
 		}
@@ -64,7 +64,7 @@ func TestSyncWebhook(t *testing.T) {
 		// just create a child with the same name as the parent.
 		child := framework.UnstructuredCRD(childCRD, req.Parent.GetName())
 		child.SetLabels(labels)
-		resp := v1.SyncHookResponse{
+		resp := v1.CompositeHookResponse{
 			Children: []*unstructured.Unstructured{child},
 		}
 		return json.Marshal(resp)
@@ -105,11 +105,11 @@ func TestCascadingDelete(t *testing.T) {
 	childClient := f.Clientset().BatchV1().Jobs(ns)
 
 	hook := f.ServeWebhook(func(body []byte) ([]byte, error) {
-		req := v1.SyncHookRequest{}
+		req := v1.CompositeHookRequest{}
 		if err := json.Unmarshal(body, &req); err != nil {
 			return nil, err
 		}
-		resp := v1.SyncHookResponse{}
+		resp := v1.CompositeHookResponse{}
 		if replicas, _, _ := unstructured.NestedInt64(req.Parent.Object, "spec", "replicas"); replicas > 0 {
 			// Create a child batch/v1 Job if requested.
 			// For backward compatibility, the server-side default on that API is
@@ -199,11 +199,11 @@ func TestResyncAfter(t *testing.T) {
 	var lastSync time.Time
 	done := false
 	hook := f.ServeWebhook(func(body []byte) ([]byte, error) {
-		req := v1.SyncHookRequest{}
+		req := v1.CompositeHookRequest{}
 		if err := json.Unmarshal(body, &req); err != nil {
 			return nil, err
 		}
-		resp := v1.SyncHookResponse{}
+		resp := v1.CompositeHookResponse{}
 		if req.Parent.Object["status"] == nil {
 			// If status hasn't been set yet, set it. This is the "zeroth" sync.
 			// Metacontroller will set our status and then the object should quiesce.
@@ -316,7 +316,7 @@ func TestCustomizeWebhook(t *testing.T) {
 	})
 
 	syncHook := f.ServeWebhook(func(body []byte) ([]byte, error) {
-		req := v1.SyncHookRequest{}
+		req := v1.CompositeHookRequest{}
 		if err := json.Unmarshal(body, &req); err != nil {
 			return nil, err
 		}
@@ -331,7 +331,7 @@ func TestCustomizeWebhook(t *testing.T) {
 			child.SetLabels(labels)
 			children = []*unstructured.Unstructured{child}
 		}
-		resp := v1.SyncHookResponse{
+		resp := v1.CompositeHookResponse{
 			Children: children,
 		}
 		return json.Marshal(resp)
@@ -371,7 +371,7 @@ func TestFailIfNoStatusSubresourceInParentCRD(t *testing.T) {
 	eventsClient := f.Clientset().CoreV1().Events("default")
 	hook := f.ServeWebhook(func(body []byte) ([]byte, error) {
 
-		resp := v1.SyncHookResponse{}
+		resp := v1.CompositeHookResponse{}
 		return json.Marshal(resp)
 	})
 

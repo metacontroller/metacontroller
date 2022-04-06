@@ -18,17 +18,28 @@ package decorator
 
 import (
 	"fmt"
+	commonv1 "metacontroller/pkg/controller/common/api/v1"
 	v1 "metacontroller/pkg/controller/decorator/api/v1"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-func (c *decoratorController) callHook(request *v1.SyncHookRequest) (*v1.SyncHookResponse, error) {
+func (c *decoratorController) callHook(
+	parent *unstructured.Unstructured,
+	observedChildren, related commonv1.RelativeObjectMap,
+) (*v1.DecoratorHookResponse, error) {
 	if c.dc.Spec.Hooks == nil {
 		return nil, fmt.Errorf("no hooks defined")
 	}
 
-	response := v1.SyncHookResponse{Attachments: []*unstructured.Unstructured{}}
+	request := &v1.DecoratorHookRequest{
+		Controller:  c.dc,
+		Object:      parent,
+		Attachments: observedChildren,
+		Related:     related,
+	}
+
+	response := v1.DecoratorHookResponse{Attachments: []*unstructured.Unstructured{}}
 
 	// First check if we should instead call the finalize hook,
 	// which has the same API as the sync hook except that it's
@@ -42,13 +53,13 @@ func (c *decoratorController) callHook(request *v1.SyncHookRequest) (*v1.SyncHoo
 		(request.Object.GetDeletionTimestamp() != nil || !c.parentSelector.Matches(request.Object)) {
 		// Finalize
 		request.Finalizing = true
-		if err := c.finalizeHook.Execute(request, &response); err != nil {
+		if err := c.finalizeHook.Call(request, &response); err != nil {
 			return nil, fmt.Errorf("finalize hook failed: %w", err)
 		}
 	} else {
 		// Sync
 		request.Finalizing = false
-		if err := c.syncHook.Execute(request, &response); err != nil {
+		if err := c.syncHook.Call(request, &response); err != nil {
 			return nil, fmt.Errorf("sync hook failed: %w", err)
 		}
 	}

@@ -73,7 +73,7 @@ func NewWebhookExecutor(
 	}, nil
 }
 
-func (w *WebhookExecutor) Execute(request interface{}, response interface{}) error {
+func (w *WebhookExecutor) Call(request interface{}, response interface{}) error {
 	// Encode request.
 	reqBody, err := k8sjson.Marshal(request)
 	if err != nil {
