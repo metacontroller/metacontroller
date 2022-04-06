@@ -1,3 +1,10 @@
+# [2.6.0](https://github.com/metacontroller/metacontroller/compare/v2.5.1...v2.6.0) (2022-04-06)
+
+
+### Features
+
+* **helm:** implement pod disruption budget ([d467934](https://github.com/metacontroller/metacontroller/commit/d46793449ed1ad5c68ac58240e15df1c2eb1146a))
+
 ## [2.5.1](https://github.com/metacontroller/metacontroller/compare/v2.5.0...v2.5.1) (2022-04-05)
 
 
