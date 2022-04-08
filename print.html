@@ -931,7 +931,6 @@ controllers or just to run third-party controllers that depend on it.</p>
 <li><a href="guide/install.html#docker-images">Docker images</a></li>
 <li><a href="guide/install.html#prerequisites">Prerequisites</a>
 <ul>
-<li><a href="guide/install.html#running-on-kubernetes-older-than-116">Running on kubernetes older than 1.16</a></li>
 <li><a href="guide/install.html#grant-yourself-cluster-admin-gke-only">Grant yourself cluster-admin (GKE only)</a></li>
 </ul>
 </li>
@@ -948,13 +947,9 @@ controllers or just to run third-party controllers that depend on it.</p>
 <p>Feel free to use whatever suits your need, they identical. Note - currently in <code>helm</code> charts the dockerhub one's are used. </p>
 <h2 id="prerequisites"><a class="header" href="#prerequisites">Prerequisites</a></h2>
 <ul>
-<li>Kubernetes v1.14+</li>
+<li>Kubernetes v1.16+</li>
 <li>You should have <code>kubectl</code> available and configured to talk to the desired cluster.</li>
 </ul>
-<h3 id="running-on-kubernetes-older-than-116"><a class="header" href="#running-on-kubernetes-older-than-116">Running on kubernetes older than 1.16</a></h3>
-<p>As metacontroller does not have direct dependency on kubernetes API
-it have wide range of supported kubernetes versions.
-However, to be able to install it on clusters older than 1.16, CRD with schema in version <code>v1beta1</code> must be used then.</p>
 <h3 id="grant-yourself-cluster-admin-gke-only"><a class="header" href="#grant-yourself-cluster-admin-gke-only">Grant yourself cluster-admin (GKE only)</a></h3>
 <p>Due to a <a href="https://cloud.google.com/container-engine/docs/role-based-access-control#defining_permissions_in_a_role">known issue</a>
 in GKE, you'll need to first grant yourself <code>cluster-admin</code> privileges before
@@ -972,12 +967,6 @@ kubectl apply -k https://github.com/metacontroller/metacontroller/manifests/prod
 <p>If your <code>kubectl</code> version does does not support <code>-k</code> flag, please
 install resources mentioned in <code>manifests/production/kustomization.yaml</code>
 one by one manually with <code>kubectl apply -f {{filename}}</code> command.</p>
-<p><strong>Compatibility note</strong>
-CRD's are shipped in two versions:</p>
-<ul>
-<li><code>v1</code> - supposed to be used when your kubernetes cluster is 1.16+</li>
-<li><code>v1beta1</code> otherwise</li>
-</ul>
 <h2 id="install-metacontroller-using-helm"><a class="header" href="#install-metacontroller-using-helm">Install Metacontroller using Helm</a></h2>
 <p>Alternatively, metacontroller can be <a href="guide/helm-install.html">installed using an Helm chart</a>.</p>
 <h2 id="migrating-from-googlecloudplatformmetacontroller"><a class="header" href="#migrating-from-googlecloudplatformmetacontroller">Migrating from /GoogleCloudPlatform/metacontroller</a></h2>
@@ -1105,20 +1094,23 @@ as a <a href="guide/../concepts.html#custom-resource">custom resource</a>.</p>
 <p>First, let's use the built-in <a href="https://kubernetes.io/docs/concepts/api-extension/custom-resources/#customresourcedefinitions">CustomResourceDefinition</a> API to set up a storage location
 (a <em>helloworlds</em> <a href="guide/../concepts.html#resource">resource</a>) for objects of our custom type (HelloWorld).</p>
 <p>Save the following to a file called <code>crd.yaml</code>:</p>
-<pre><code class="language-yaml">apiVersion: apiextensions.k8s.io/v1beta1
+<pre><code class="language-yaml">apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   name: helloworlds.example.com
 spec:
   group: example.com
-  version: v1
   names:
     kind: HelloWorld
     plural: helloworlds
     singular: helloworld
   scope: Namespaced
-  subresources:
-    status: {}
+  versions:
+  - name: v1
+    served: true
+    storage: true
+    subresources:
+     status: {}
 </code></pre>
 <p>Then apply it to your cluster:</p>
 <pre><code class="language-sh">kubectl apply -f crd.yaml
