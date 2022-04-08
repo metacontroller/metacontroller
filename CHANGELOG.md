@@ -1,3 +1,15 @@
+# [3.0.0](https://github.com/metacontroller/metacontroller/compare/v2.6.1...v3.0.0) (2022-04-08)
+
+
+### Code Refactoring
+
+* Use controller-runtime to read crd's ([f0b0c98](https://github.com/metacontroller/metacontroller/commit/f0b0c98978fc8d527ab911ad1c1783fe4629cc40))
+
+
+### BREAKING CHANGES
+
+* Dropping support for kubernetes older than 1.16
+
 ## [2.6.1](https://github.com/metacontroller/metacontroller/compare/v2.6.0...v2.6.1) (2022-04-06)
 
 
