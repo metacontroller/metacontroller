@@ -212,6 +212,7 @@ var knownMergeKeys = []string{
 	"name",
 	"uid",
 	"ip",
+	"path",
 }
 
 // detectListMapKey tries to guess whether a field is a k8s-style "list map".

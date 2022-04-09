@@ -26,6 +26,13 @@ spec:
         app: nginx
         component: backend
     spec:
+      volumes:
+      - name: "pod-info"
+        downwardAPI:
+          items:
+          - path: "pod_name"
+            fieldRef:
+              fieldPath: metadata.name
       terminationGracePeriodSeconds: 1
       containers:
       - name: nginx
