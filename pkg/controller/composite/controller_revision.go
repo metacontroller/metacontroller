@@ -24,7 +24,6 @@ import (
 	v12 "metacontroller/pkg/controller/common/api/v1"
 	v1 "metacontroller/pkg/controller/composite/api/v1"
 	"metacontroller/pkg/logging"
-	"reflect"
 	"strings"
 	"sync"
 
@@ -131,7 +130,7 @@ func (pc *parentController) syncRevisions(parent *unstructured.Unstructured, obs
 		if err := json.Unmarshal(revision.ParentPatch.Raw, &patch); err != nil {
 			return nil, fmt.Errorf("can't unmarshal ControllerRevision parentPatch: %w", err)
 		}
-		if reflect.DeepEqual(patch, latestPatch) {
+		if common.DeepEqual(patch, latestPatch) {
 			// This ControllerRevision matches the latest parent state.
 			latest.revision = revision.DeepCopy()
 			continue
@@ -284,7 +283,7 @@ func (pc *parentController) manageRevisions(parent *unstructured.Unstructured, o
 	for _, revision := range desiredRevisions {
 		if oldObj := observedMap[revision.Name]; oldObj != nil {
 			// Update
-			if reflect.DeepEqual(oldObj, revision) {
+			if common.DeepEqual(oldObj, revision) {
 				// We didn't change anything.
 				continue
 			}

@@ -22,7 +22,6 @@ import (
 	commonv1 "metacontroller/pkg/controller/common/api/v1"
 	"metacontroller/pkg/hooks"
 	"metacontroller/pkg/logging"
-	"reflect"
 	"sync"
 	"time"
 
@@ -724,7 +723,7 @@ func (pc *parentController) updateParentStatus(parent *unstructured.Unstructured
 	// We can't use Patch() because we need to ensure that the UID matches.
 	return pc.parentClient.Namespace(parent.GetNamespace()).AtomicStatusUpdate(parent, func(obj *unstructured.Unstructured) bool {
 		oldStatus := obj.UnstructuredContent()["status"]
-		if reflect.DeepEqual(oldStatus, status) {
+		if common.DeepEqual(oldStatus, status) {
 			// Nothing to do.
 			return false
 		}

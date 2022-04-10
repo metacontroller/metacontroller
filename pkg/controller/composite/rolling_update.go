@@ -18,10 +18,8 @@ package composite
 
 import (
 	"fmt"
-	v1 "metacontroller/pkg/controller/common/api/v1"
-	"reflect"
-
 	"metacontroller/pkg/controller/common"
+	v1 "metacontroller/pkg/controller/common/api/v1"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
@@ -73,7 +71,7 @@ func (pc *parentController) syncRollingUpdate(parentRevisions []*parentRevision,
 				// We can't prove it'll be a no-op, so don't move it to latest.
 				continue
 			}
-			if reflect.DeepEqual(child, updated) {
+			if common.DeepEqual(child, updated) {
 				// This will be a no-op update, so move it immediately instead of
 				// waiting until the next sync. In addition to reducing unnecessary
 				// ControllerRevision updates, this helps ensure that the overall sync
@@ -185,7 +183,7 @@ func (pc *parentController) shouldContinueRolling(latest *parentRevision, observ
 			if err != nil {
 				return fmt.Errorf("can't check if child %v %v is updated: %w", ck.Kind, name, err)
 			}
-			if !reflect.DeepEqual(child, updated) {
+			if !common.DeepEqual(child, updated) {
 				return fmt.Errorf("child %v %v is not updated yet", ck.Kind, name)
 			}
 			// For RollingInPlace, we should check ObservedGeneration (if possible)

@@ -22,7 +22,6 @@ import (
 	"fmt"
 	commonv1 "metacontroller/pkg/controller/common/api/v1"
 	"metacontroller/pkg/logging"
-	"reflect"
 
 	"k8s.io/utils/pointer"
 
@@ -215,7 +214,7 @@ func updateChildren(client *dynamicclientset.ResourceClient, updateStrategy Chil
 			}
 
 			// Attempt an update, if the 3-way merge resulted in any changes.
-			if reflect.DeepEqual(newObj.UnstructuredContent(), oldObj.UnstructuredContent()) {
+			if DeepEqual(newObj.UnstructuredContent(), oldObj.UnstructuredContent()) {
 				// Nothing changed.
 				continue
 			}
