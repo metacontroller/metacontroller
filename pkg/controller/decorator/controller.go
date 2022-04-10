@@ -22,7 +22,6 @@ import (
 	commonv1 "metacontroller/pkg/controller/common/api/v1"
 	v1 "metacontroller/pkg/controller/decorator/api/v1"
 	"metacontroller/pkg/hooks"
-	"reflect"
 	"strings"
 	"sync"
 	"time"
@@ -580,7 +579,7 @@ func (c *decoratorController) syncParentObject(parent *unstructured.Unstructured
 
 	labelsChanged := updateStringMap(parentLabels, syncResult.Labels)
 	annotationsChanged := updateStringMap(parentAnnotations, syncResult.Annotations)
-	statusChanged := !reflect.DeepEqual(parentStatus, syncResult.Status)
+	statusChanged := !common.DeepEqual(parentStatus, syncResult.Status)
 
 	// Only do the update if something changed.
 	if labelsChanged || annotationsChanged || statusChanged ||
