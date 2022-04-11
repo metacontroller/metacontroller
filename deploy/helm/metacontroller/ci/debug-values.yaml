@@ -45,16 +45,10 @@ tolerations: []
 
 affinity: {}
 
-zap: {}
-  # logLevel: 4
-  # devel: "production"
-  # encoder: "json"
-  # stacktraceLevel: "info"
-
 # Command which is used to start metacontroller
 command: "/dlv"
 
-# Custom arguments which are used to start metacontroller
+# Command arguments which are used to start metacontroller
 commandArgs:
   - --listen=:40000
   - --headless=true
@@ -65,12 +59,6 @@ commandArgs:
   - --zap-log-level=4
   - --discovery-interval=20s
   - --zap-devel=true
-
-# How often to refresh discovery cache to pick up newly-installed resources
-discoveryInterval: 20s
-
-# How often to flush local caches and relist objects from the API server
-cacheFlushInterval: 30m
 
 # The name of the PriorityClass that will be assigned to metacontroller
 priorityClassName: ""
@@ -86,3 +74,8 @@ clusterRole:
       - "*"
 
 replicas: 1
+
+# podDisruptionBudget which can be enabled when running more than one replica
+podDisruptionBudget: {}
+  # minAvailable: 1
+  # maxUnavailable: 0

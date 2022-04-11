@@ -45,22 +45,14 @@ tolerations: []
 
 affinity: {}
 
-zap: {}
-  # logLevel: 4
-  # devel: "production"
-  # encoder: "json"
-  # stacktraceLevel: "info"
+# Command which is used to start metacontroller
+command: "/usr/bin/metacontroller"
 
-# Custom arguments which are used to start metacontroller
-commandArgs: []
-# - --client-go-qps=100
-# - --client-go-burst=200
-
-# How often to refresh discovery cache to pick up newly-installed resources
-discoveryInterval: 20s
-
-# How often to flush local caches and relist objects from the API server
-cacheFlushInterval: 30m
+# Command arguments which are used to start metacontroller
+commandArgs:
+  - --zap-log-level=4
+  - --discovery-interval=20s
+  - --cache-flush-interval=30m
 
 # The name of the PriorityClass that will be assigned to metacontroller
 priorityClassName: ""
@@ -75,3 +67,10 @@ clusterRole:
       - matchLabels:
           rbac.authorization.k8s.io/aggregate-to-view: "true"
   rules: []
+
+replicas: 1
+
+# podDisruptionBudget which can be enabled when running more than one replica
+podDisruptionBudget: {}
+  # minAvailable: 1
+  # maxUnavailable: 0

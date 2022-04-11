@@ -2,6 +2,28 @@
 name: Test / Release
 on: [push, pull_request]
 jobs:
+  dockerbuild:
+    name: Build local metacontroller images
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: '5'
+      - name: Build metacontroller:dev
+        run: |
+          docker build -t metacontrollerio/metacontroller:dev .
+          docker save --output metacontroller-dev.tar metacontrollerio/metacontroller:dev
+      - name: Build metacontroller:debug
+        run: |
+          docker build -t metacontrollerio/metacontroller:debug -f Dockerfile.debug .
+          docker save --output metacontroller-debug.tar metacontrollerio/metacontroller:debug
+      - uses: actions/upload-artifact@v2
+        name: Upload metacontroller images
+        with:
+          name: metacontroller-image
+          path: metacontroller-*.tar
+          retention-days: 1
   setmatrix:
     name: Set Configuration Matrix
     runs-on: ubuntu-latest
@@ -50,7 +72,9 @@ jobs:
         fail_ci_if_error: true # optional (default = false)
   e2etests:
     runs-on: ubuntu-20.04
-    needs: ['setmatrix']
+    needs:
+      - setmatrix
+      - dockerbuild
     strategy:
       fail-fast: false
       matrix: ${{fromJson(needs.setmatrix.outputs.matrix)}}
@@ -61,9 +85,6 @@ jobs:
       with:
         fetch-depth: '5'
 
-    - name: Build local image
-      run: docker build -t metacontrollerio/metacontroller:dev .
-
     - name: Setup kind
       uses: helm/kind-action@v1.2.0
       with:
@@ -72,8 +93,14 @@ jobs:
         cluster_name: kind
         wait: 120s
 
+    - name: Download metacontroller image
+      uses: actions/download-artifact@v2
+      with:
+        name: metacontroller-image
+
     - name: Load metacontroller image
       run: |
+        docker load --input metacontroller-dev.tar
         kind load docker-image metacontrollerio/metacontroller:dev
 
     - name: Apply metacontroller manifests
@@ -90,7 +117,9 @@ jobs:
 
   helmtests:
     runs-on: ubuntu-20.04
-    needs: ['setmatrix']
+    needs:
+      - setmatrix
+      - dockerbuild
     strategy:
       fail-fast: false
       matrix: ${{fromJson(needs.setmatrix.outputs.latest_matrix)}}
@@ -120,6 +149,16 @@ jobs:
           node_image: ${{ matrix.configuration.image }}
           cluster_name: kind
           wait: 120s
+
+      - name: Download metacontroller debug image
+        uses: actions/download-artifact@v2
+        with:
+          name: metacontroller-image
+
+      - name: Load metacontroller debug image
+        run: |
+          docker load --input metacontroller-debug.tar
+          kind load docker-image metacontrollerio/metacontroller:debug
 
       - name: Run chart-testing (lint-and-install)
         run: |
