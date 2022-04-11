@@ -36,26 +36,7 @@ spec:
           command:
           - {{ .Values.command | default "/usr/bin/metacontroller" }}
           args:
-          # TODO: discuss, these args will always be passed causing dlv to fail.
-          # I believe we should simpy use commandArgs and remove all these flags but this is a breaking change (leaning toward this option to simplify)
-          # or update the values such that they are optionally applied
-#          - --zap-log-level={{ .Values.zapLogLevel | default 4 }}
-#          - --discovery-interval={{ .Values.discoveryInterval | default "20s" }}
-#          {{ if .Values.zap.devel -}}
-#          - --zap-devel={{.Values.zap.devel}}
-#          {{ end }}
-#          {{- if .Values.zap.encoder -}}
-#          - --zap-encoder={{.Values.zap.encoder}}
-#          {{ end }}
-#          {{- if .Values.zap.stacktraceLevel -}}
-#          - --zap-stacktrace-level={{.Values.zap.stacktraceLevel}}
-#          {{ end }}
-#          {{- if .Values.cacheFlushInterval -}}
-#          - --cache-flush-interval={{.Values.cacheFlushInterval}}
-#          {{ end -}}
-          {{- range $value := .Values.commandArgs }}
-          - {{ $value | quote }}
-          {{- end }}
+            {{- toYaml .Values.commandArgs | nindent 12 }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
       {{- with .Values.nodeSelector }}

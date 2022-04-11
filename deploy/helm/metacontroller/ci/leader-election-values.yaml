@@ -45,21 +45,12 @@ tolerations: []
 
 affinity: {}
 
-zap: {}
-  # logLevel: 4
-  # devel: "production"
-  # encoder: "json"
-  # stacktraceLevel: "info"
+# Command which is used to start metacontroller
+command: "/usr/bin/metacontroller"
 
-# Custom arguments which are used to start metacontroller
+# Command arguments which are used to start metacontroller
 commandArgs:
   - --leader-election
-
-# How often to refresh discovery cache to pick up newly-installed resources
-discoveryInterval: 20s
-
-# How often to flush local caches and relist objects from the API server
-cacheFlushInterval: 30m
 
 # The name of the PriorityClass that will be assigned to metacontroller
 priorityClassName: ""
