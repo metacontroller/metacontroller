@@ -1,3 +1,10 @@
+## [3.0.1](https://github.com/metacontroller/metacontroller/compare/v3.0.0...v3.0.1) (2022-04-11)
+
+
+### Bug Fixes
+
+* **dynamic apply:** Add `path` key as candidate to list merging ([a1de874](https://github.com/metacontroller/metacontroller/commit/a1de874c9421a3d95d96a31e8b9a328b4421f09e)), closes [#443](https://github.com/metacontroller/metacontroller/issues/443)
+
 # [3.0.0](https://github.com/metacontroller/metacontroller/compare/v2.6.1...v3.0.0) (2022-04-08)
 
 
