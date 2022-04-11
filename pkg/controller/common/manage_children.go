@@ -214,7 +214,7 @@ func updateChildren(client *dynamicclientset.ResourceClient, updateStrategy Chil
 			}
 
 			// Attempt an update, if the 3-way merge resulted in any changes.
-			if DeepEqual(newObj.UnstructuredContent(), oldObj.UnstructuredContent()) {
+			if DeepEqual(newObj, oldObj) {
 				// Nothing changed.
 				continue
 			}

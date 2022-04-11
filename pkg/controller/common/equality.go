@@ -17,10 +17,10 @@ limitations under the License.
 package common
 
 import (
-	"reflect"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 )
 
 // DeepEqual compares two objects for equality
 func DeepEqual(left, right interface{}) bool {
-	return reflect.DeepEqual(left, right)
+	return apiequality.Semantic.DeepEqual(left, right)
 }
