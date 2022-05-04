@@ -1,3 +1,31 @@
+# [4.0.0](https://github.com/metacontroller/metacontroller/compare/v3.0.2...v4.0.0) (2022-05-04)
+
+
+### Bug Fixes
+
+* Add dlv to debug dockerfile and expose command in helm chart ([1e2b611](https://github.com/metacontroller/metacontroller/commit/1e2b611f6f2e52200adee462295895631f6beea2))
+
+
+### chore
+
+* **helm:** Use commandArgs for all command arguments ([b78476e](https://github.com/metacontroller/metacontroller/commit/b78476ec91624c1f97fa5acb48b755949ab02f9f))
+
+
+### BREAKING CHANGES
+
+* **helm:** The following helm values are removed.
+The equivalent command arguments can now be passed directly to the
+`commandArgs` value.
+
+- discoveryInterval
+- cacheFlushInterval
+- zap.logLevel
+- zap.devel
+- zap.encoder
+- zap.stacktraceLevel
+
+Signed-off-by: Mike Smith <10135646+mjsmith1028@users.noreply.github.com>
+
 ## [3.0.2](https://github.com/metacontroller/metacontroller/compare/v3.0.1...v3.0.2) (2022-04-28)
 
 
