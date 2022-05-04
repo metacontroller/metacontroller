@@ -166,6 +166,8 @@ helm package deploy/helm/metacontroller --destination deploy/helm
 <p>as OCI is currently (at least for helm 3.8.x) a beta feature.</p>
 <h2 id="configuration"><a class="header" href="#configuration">Configuration</a></h2>
 <table><thead><tr><th>Parameter</th><th>Description</th><th>Default</th></tr></thead><tbody>
+<tr><td><code>command</code></td><td>Command which is used to start metacontroller</td><td><code>/usr/bin/metacontroller</code></td></tr>
+<tr><td><code>commandArgs</code></td><td>Command arguments which are used to start metacontroller. See <a href="configuration.html">configuration.md</a> for additional details.</td><td><code>[ &quot;--zap-log-level=4&quot;, &quot;--discovery-interval=20s&quot;, &quot;--cache-flush-interval=30m&quot; ]</code></td></tr>
 <tr><td><code>rbac.create</code></td><td>Create and use RBAC resources</td><td><code>true</code></td></tr>
 <tr><td><code>image.repository</code></td><td>Image repository</td><td><code>metacontrollerio/metacontroller</code></td></tr>
 <tr><td><code>image.pullPolicy</code></td><td>Image pull policy</td><td><code>IfNotPresent</code></td></tr>
