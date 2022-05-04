@@ -18,7 +18,7 @@ jobs:
         run: |
           docker build -t metacontrollerio/metacontroller:debug -f Dockerfile.debug .
           docker save --output metacontroller-debug.tar metacontrollerio/metacontroller:debug
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         name: Upload metacontroller images
         with:
           name: metacontroller-image
