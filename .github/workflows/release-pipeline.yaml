@@ -61,7 +61,7 @@ jobs:
         password: ${{ secrets.GITHUB_TOKEN }}
     - name: ${{ matrix.configuration.name }} - docker metainformations
       id: docker_meta_distroless
-      uses: docker/metadata-action@v3
+      uses: docker/metadata-action@v4
       with:
         images: metacontrollerio/metacontroller,ghcr.io/metacontroller/metacontroller # list of Docker images to use as base name for tags
         flavor: |
