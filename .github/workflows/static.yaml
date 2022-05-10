@@ -36,3 +36,16 @@ jobs:
         run: |
           cd docs
           mdbook build
+  nancy-dependency-scan:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check out code into the Go module directory
+      uses: actions/checkout@v2
+    - name: Set up Go 1.x in order to write go.list file
+      uses: actions/setup-go@v2
+      with:
+        go-version: ^1.18
+    - name: WriteGoList
+      run: go list -deps -json ./... > go.list
+    - name: Nancy
+      uses: sonatype-nexus-community/nancy-github-action@main
