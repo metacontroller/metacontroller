@@ -1,3 +1,12 @@
+## [4.0.1](https://github.com/metacontroller/metacontroller/compare/v4.0.0...v4.0.1) (2022-05-10)
+
+
+### Bug Fixes
+
+* **deps:** Update github.com/google/go-cmp to v0.5.8 ([8f81c66](https://github.com/metacontroller/metacontroller/commit/8f81c66f9927efb2cc47eed0b64e9f8e71f058df))
+* **deps:** Update go-logr/logr to 1.2.3 ([89dff29](https://github.com/metacontroller/metacontroller/commit/89dff2983277935077efcf7c12830b36c39016bb))
+* **deps:** Update k8s.io packages to v0.24.0 ([8ac00eb](https://github.com/metacontroller/metacontroller/commit/8ac00eb232ec861403056d621b9fe126d07b89c1))
+
 # [4.0.0](https://github.com/metacontroller/metacontroller/compare/v3.0.2...v4.0.0) (2022-05-04)
 
 
