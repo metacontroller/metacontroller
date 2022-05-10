@@ -2,11 +2,11 @@ module metacontroller
 
 // This denotes the minimum supported language version and
 // should not include the patch version.
-go 1.17
+go 1.18
 
 require (
 	github.com/evanphx/json-patch/v5 v5.6.0
-	github.com/go-logr/logr v1.2.2
+	github.com/go-logr/logr v1.2.3
 	github.com/google/go-cmp v0.5.7
 	github.com/nsf/jsondiff v0.0.0-20210926074059-1e845ec5d249 // test
 	github.com/prometheus/client_golang v1.12.1
