@@ -20,16 +20,16 @@ serviceAccount:
 
 podAnnotations: {}
 
-podSecurityContext: {}
-  # fsGroup: 65532
+podSecurityContext:
+  fsGroup: 65532
 
-securityContext: {}
-  # capabilities:
-  #   drop:
-  #   - ALL
-  # readOnlyRootFilesystem: true
-  # runAsNonRoot: true
-  # runAsUser: 65532
+securityContext:
+  capabilities:
+    drop:
+    - ALL
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 65532
 
 resources: {}
   # limits:
@@ -61,38 +61,11 @@ clusterRole:
   aggregationRule: {}
   rules:
   - apiGroups:
-      - "apps"
-    resources:
-      - "statefulsets"
-    verbs:
-      - "get"
-      - "watch"
-      - "list"
-  - apiGroups:
-      - ""
-    resources:
-      - "services"
-    verbs:
-      - "get"
-      - "watch"
-      - "list"
-      - "create"
-      - "delete"
-  - apiGroups:
-      - ""
-    resources:
-      - "events"
-    verbs:
-      - "create"
-      - "patch"
-  - apiGroups:
-      - "metacontroller.k8s.io"
+      - "*"
     resources:
       - "*"
     verbs:
-      - "get"
-      - "watch"
-      - "list"
+      - "*"
 
 replicas: 1
 
