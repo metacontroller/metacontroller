@@ -9,7 +9,7 @@ require (
 	github.com/go-logr/logr v1.2.3
 	github.com/google/go-cmp v0.5.8
 	github.com/nsf/jsondiff v0.0.0-20210926074059-1e845ec5d249 // test
-	github.com/prometheus/client_golang v1.12.1
+	github.com/prometheus/client_golang v1.12.2
 	go.uber.org/zap v1.21.0
 	k8s.io/api v0.24.0
 	k8s.io/apiextensions-apiserver v0.24.0
