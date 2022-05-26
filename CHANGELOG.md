@@ -1,3 +1,16 @@
+# [4.1.0](https://github.com/metacontroller/metacontroller/compare/v4.0.3...v4.1.0) (2022-05-26)
+
+
+### Bug Fixes
+
+* **deps:** Update prometheus/client_golang to v1.12.2 ([85affb4](https://github.com/metacontroller/metacontroller/commit/85affb4f50cd428c21598e1eb2667b7e8eb5d3d7))
+* **update:** Update controller-runtime to v0.12.1 ([dbd4fd9](https://github.com/metacontroller/metacontroller/commit/dbd4fd9aabfdf3cad51947b23044be9b6c1019ef))
+
+
+### Features
+
+* **Dockerfile:** Run apline images as nonroot user ([6e633bd](https://github.com/metacontroller/metacontroller/commit/6e633bd2036273d06b15c43d6a0882918843f18e))
+
 ## [4.0.3](https://github.com/metacontroller/metacontroller/compare/v4.0.2...v4.0.3) (2022-05-25)
 
 
