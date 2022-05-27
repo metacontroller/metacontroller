@@ -1,3 +1,10 @@
+# [4.2.0](https://github.com/metacontroller/metacontroller/compare/v4.1.0...v4.2.0) (2022-05-27)
+
+
+### Features
+
+* **helm:** Add service to chart and prometheus examples ([60916a9](https://github.com/metacontroller/metacontroller/commit/60916a93fb883f973a08a925e370380327aa3ff9))
+
 # [4.1.0](https://github.com/metacontroller/metacontroller/compare/v4.0.3...v4.1.0) (2022-05-26)
 
 
