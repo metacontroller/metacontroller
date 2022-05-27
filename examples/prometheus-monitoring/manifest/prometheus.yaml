@@ -61,36 +61,3 @@ spec:
     runAsUser: 1000
   serviceAccountName: prometheus
   serviceMonitorSelector: {}
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: metacontroller
-  namespace: metacontroller
-  labels:
-    app.kubernetes.io/name: metacontroller
-spec:
-  ports:
-    - port: 9999
-      name: http
-      targetPort: 9999
-  selector:
-    app.kubernetes.io/name: metacontroller
----
-apiVersion: monitoring.coreos.com/v1
-kind: ServiceMonitor
-metadata:
-  name: metacontroller
-  namespace: default
-  labels:
-    app.kubernetes.io/name: metacontroller
-spec:
-  endpoints:
-    - interval: 5s
-      port: http
-  selector:
-    matchLabels:
-      app.kubernetes.io/name: metacontroller
-  namespaceSelector:
-    matchNames:
-      - metacontroller

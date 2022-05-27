@@ -7,7 +7,7 @@ image:
   tag: ""
 
 imagePullSecrets: []
-nameOverride: ""
+nameOverride: "metacontroller"
 namespaceOverride: ""
 fullnameOverride: ""
 
@@ -21,7 +21,7 @@ serviceAccount:
 podAnnotations: {}
 
 podSecurityContext: {}
-  # fsGroup: 65532
+  # fsGroup: 2000
 
 securityContext: {}
   # capabilities:
@@ -29,7 +29,7 @@ securityContext: {}
   #   - ALL
   # readOnlyRootFilesystem: true
   # runAsNonRoot: true
-  # runAsUser: 65532
+  # runAsUser: 1000
 
 resources: {}
   # limits:
@@ -74,11 +74,10 @@ podDisruptionBudget: {}
   # minAvailable: 1
   # maxUnavailable: 0
 
-
 service:
-  enabled: false
-  ports: []
-#    - name: "metrics"
-#      port: 9999
-#      protocol: "TCP"
-#      targetPort: "metrics"
+  enabled: true
+  ports:
+    - name: "metrics"
+      port: 9999
+      protocol: "TCP"
+      targetPort: 9999
