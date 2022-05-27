@@ -106,7 +106,7 @@ jobs:
     - name: Apply metacontroller manifests
       run: |
         kubectl apply -k manifests/dev
-        sleep 60s
+        kubectl rollout status --watch --timeout=180s statefulset/metacontroller -n metacontroller
         kubectl get pods -n metacontroller
 
     - name: Run e2e tests

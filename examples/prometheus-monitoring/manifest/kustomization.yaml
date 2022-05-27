@@ -1,0 +1,7 @@
+bases:
+- ../../../manifests/dev
+resources:
+- service.yaml
+- serviceMonitor.yaml
+patches:
+- ports.yaml
