@@ -186,18 +186,13 @@ helm package deploy/helm/metacontroller --destination deploy/helm
 <tr><td><code>nodeSelector</code></td><td>Node labels for pod assignment</td><td><code>{}</code></td></tr>
 <tr><td><code>tolerations</code></td><td>Toleration labels for pod assignment</td><td><code>[]</code></td></tr>
 <tr><td><code>affinity</code></td><td>Affinity settings for pod assignment</td><td><code>{}</code></td></tr>
-<tr><td><code>zap.logLevel</code></td><td>Zap Level to configure the verbosity of logging</td><td><code>4</code></td></tr>
-<tr><td><code>zap.devel</code></td><td>Development Mode or Production Mode</td><td><code>&quot;production&quot;</code></td></tr>
-<tr><td><code>zap.encoder</code></td><td>Zap log encoding (‘json’ or ‘console’)</td><td><code>&quot;json&quot;</code></td></tr>
-<tr><td><code>zap.stacktraceLevel</code></td><td>Zap Level at and above which stacktraces are captured (one of ‘info’ or ‘error’)</td><td><code>&quot;info&quot;</code></td></tr>
-<tr><td><code>commandArgs</code></td><td>Custom arguments which are used to start metacontroller</td><td><code>[]</code></td></tr>
-<tr><td><code>discoveryInterval</code></td><td>How often to refresh discovery cache to pick up newly-installed resources</td><td><code>&quot;20s&quot;</code></td></tr>
-<tr><td><code>cacheFlushInterval</code></td><td>How often to flush local caches and relist objects from the API server</td><td><code>30m</code></td></tr>
 <tr><td><code>priorityClassName</code></td><td>The name of the <code>PriorityClass</code> that will be assigned to metacontroller</td><td><code>&quot;&quot;</code></td></tr>
 <tr><td><code>clusterRole.aggregationRule</code></td><td>The <code>aggregationRule</code> applied to metacontroller <code>ClusterRole</code></td><td><code>{}</code></td></tr>
 <tr><td><code>clusterRole.rules</code></td><td>The <code>rules</code> applied to metacontroller <code>ClusterRole</code></td><td><code>{ &quot;apiGroups&quot;: &quot;*&quot;, &quot;resources&quot;: &quot;*&quot;, &quot;verbs&quot;: &quot;*&quot; }</code></td></tr>
 <tr><td><code>replicas</code></td><td>Specifies the number of metacontroller pods that will be deployed</td><td><code>1</code></td></tr>
 <tr><td><code>podDisruptionBudget</code></td><td>The <code>podDisruptionBudget</code> applied to metacontroller <code>pods</code></td><td><code>{}</code></td></tr>
+<tr><td><code>service.enabled</code></td><td>If <code>true</code>, then create a <code>Service</code> to expose ports</td><td><code>false</code></td></tr>
+<tr><td><code>service.ports</code></td><td>List of ports that are exposed on the <code>Service</code></td><td><code>[]</code></td></tr>
 </tbody></table>
 
                     </main>
