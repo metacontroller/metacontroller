@@ -1,0 +1,10 @@
+bases:
+  - ../../../manifests/dev
+patches:
+  - args.yaml
+  - env.yaml
+  - volumemounts.yaml
+  - volumes.yaml
+  - replicas.yaml
+resources:
+  - configmap.yaml

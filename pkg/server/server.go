@@ -19,6 +19,8 @@ package server
 import (
 	"context"
 	"fmt"
+	"metacontroller/pkg/controller/composite"
+	"metacontroller/pkg/controller/decorator"
 	"metacontroller/pkg/logging"
 	"time"
 
@@ -26,7 +28,6 @@ import (
 
 	"metacontroller/pkg/controller/common"
 
-	"metacontroller/pkg/controller/decorator"
 	"metacontroller/pkg/options"
 
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -35,7 +36,6 @@ import (
 
 	"metacontroller/pkg/apis/metacontroller/v1alpha1"
 	mcclientset "metacontroller/pkg/client/generated/clientset/internalclientset"
-	"metacontroller/pkg/controller/composite"
 
 	controllerruntime "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/manager"

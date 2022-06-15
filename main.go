@@ -34,6 +34,7 @@ import (
 	"metacontroller/pkg/options"
 	"metacontroller/pkg/server"
 
+	_ "k8s.io/client-go/plugin/pkg/client/auth/azure" // TODO: remove
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
 	"k8s.io/client-go/tools/record"
 	controllerruntime "sigs.k8s.io/controller-runtime"
@@ -53,6 +54,7 @@ var (
 	leaderElectionResourceLock = flag.String("leader-election-resource-lock", resourcelock.LeasesResourceLock, "Determines which resource lock to use for leader election")
 	leaderElectionNamespace    = flag.String("leader-election-namespace", "", "Determines the namespace in which the leader election resource will be created")
 	leaderElectionID           = flag.String("leader-election-id", "metacontroller", "Determines the name of the resource that leader election will use for holding the leader lock")
+	listOptionsConfigFilePath  = flag.String("list-options-config-file-path", "", "File path of the list options configuration which filters K8s resources observed by metacontroller")
 	version                    = "No version provided"
 )
 
@@ -76,6 +78,7 @@ func main() {
 		"leader-election-resource-lock", *leaderElectionResourceLock,
 		"leader-election-namespace", *leaderElectionNamespace,
 		"leader-election-id", *leaderElectionID,
+		"list-options-config-file-path", *listOptionsConfigFilePath,
 		"version", version)
 
 	pprofStopChan := profile.EnablePprof(*pprofAddr)
@@ -104,6 +107,7 @@ func main() {
 			LeaderElectionNamespace:    *leaderElectionNamespace,
 			LeaderElectionID:           *leaderElectionID,
 		},
+		ListOptionsConfigFilePath: *listOptionsConfigFilePath,
 	}
 
 	// Create a new manager with a stop function

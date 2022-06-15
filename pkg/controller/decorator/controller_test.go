@@ -99,7 +99,7 @@ func newDefaultControllerClientsAndInformers(fakeDynamicClientFn func(client *fa
 	restConfig := NewDefaultRestConfig()
 	testClientset := NewClientset(restConfig, resourceMap, simpleDynClient)
 	parentResourceClient, _ := testClientset.Resource(TestAPIVersion, TestResource)
-	informerFactory := dynamicinformer.NewSharedInformerFactory(testClientset, 5*time.Minute)
+	informerFactory := dynamicinformer.NewSharedInformerFactory(testClientset, 5*time.Minute, nil)
 	resourceInformer, _ := informerFactory.Resource(TestAPIVersion, TestResource)
 	if syncCache && !cache.WaitForNamedCacheSync("controllerName", NewCh(), resourceInformer.Informer().HasSynced) {
 		panic("could not sync resource informer cache")

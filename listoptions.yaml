@@ -1,0 +1,13 @@
+namespaces:
+  - metacontroller
+labelSelectors:
+  - resources:
+      - deployments
+    selectors:
+      - metacontrollerEnabled=true
+      - color=blue
+fieldSelectors:
+  - resources:
+      - events
+    selectors:
+      - type=Warning

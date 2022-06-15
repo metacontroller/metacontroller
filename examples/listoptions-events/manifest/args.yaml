@@ -1,0 +1,18 @@
+# Override args for listoptions mode.
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: metacontroller
+  namespace: metacontroller
+spec:
+  template:
+    spec:
+      containers:
+      - name: metacontroller
+        args:
+        - --zap-devel
+        - --zap-log-level=info
+        - --discovery-interval=5s
+        - --client-go-qps=25
+        - --client-go-burst=50
+        - --list-options-config-file-path=/etc/metacontroller/list-options-config/$(HOSTNAME).yaml

@@ -1,0 +1,13 @@
+# Override volumes for listoptions mode.
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: metacontroller
+  namespace: metacontroller
+spec:
+  template:
+    spec:
+      volumes:
+          - name: metacontroller-configmap
+            configMap:
+              name: metacontroller-configmap

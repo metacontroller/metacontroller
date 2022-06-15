@@ -1,0 +1,8 @@
+resources:
+  - ew-controller.yaml
+  - crdv1.yaml
+configMapGenerator:
+  - name: ew-controller
+    namespace: metacontroller
+    files:
+      - sync.py

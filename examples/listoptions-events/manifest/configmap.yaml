@@ -1,0 +1,44 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: metacontroller-configmap
+  namespace: metacontroller
+data:
+  metacontroller-0.yaml: |
+    namespaces:
+      - default
+      - metacontroller
+    labelSelectors:
+      - resources:
+        - events
+        selectors:
+        - owner=ew
+  metacontroller-1.yaml: |
+    namespaces: []
+  metacontroller-2.yaml: |
+    namespaces:
+      - ew-ns1
+    labelSelectors:
+      - resources:
+        - events
+        selectors:
+        - owner=ew
+    fieldSelectors:
+      - resources:
+        - events
+        selectors:
+        - type=Normal
+  metacontroller-3.yaml: |
+    namespaces:
+      - ew-ns2
+    labelSelectors:
+      - resources:
+        - events
+        selectors:
+        - owner=ew
+    fieldSelectors:
+      - resources:
+        - events
+        selectors:
+        - type=Warning

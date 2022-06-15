@@ -1,0 +1,10 @@
+{{- if .Values.listOptionsConfigMap }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "metacontroller.fullname" . }}-list-options
+  labels:
+    {{- include "metacontroller.labels" . | nindent 4 }}
+data:
+  {{- toYaml .Values.listOptionsConfigMap | nindent 2 }}
+{{- end }}

@@ -111,16 +111,30 @@ type sharedResourceInformer struct {
 	close func()
 }
 
-func newSharedResourceInformer(client *dynamicclientset.ResourceClient, defaultResyncPeriod time.Duration, close func()) *sharedResourceInformer {
-	informer := cache.NewSharedIndexInformer(
-		&cache.ListWatch{
-			ListFunc: func(opts metav1.ListOptions) (runtime.Object, error) {
-				return client.List(context.TODO(), opts)
-			},
-			WatchFunc: func(opts metav1.ListOptions) (watch.Interface, error) {
-				return client.Watch(context.TODO(), opts)
-			},
+func newListWatchWithTweakListOptions(client *dynamicclientset.ResourceClient, tweakListOptions ResourceTweakListOptionsFunc) *cache.ListWatch {
+	return &cache.ListWatch{
+		ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
+			if tweakListOptions != nil {
+				tweakListOptions(client, &options)
+			}
+			return client.List(context.TODO(), options)
 		},
+		WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
+			if tweakListOptions != nil {
+				tweakListOptions(client, &options)
+			}
+			return client.Watch(context.TODO(), options)
+		},
+	}
+}
+
+func newSharedResourceInformer(client *dynamicclientset.ResourceClient,
+	defaultResyncPeriod time.Duration,
+	close func(),
+	tweakListOptions ResourceTweakListOptionsFunc,
+) *sharedResourceInformer {
+	informer := cache.NewSharedIndexInformer(
+		newListWatchWithTweakListOptions(client, tweakListOptions),
 		&unstructured.Unstructured{},
 		defaultResyncPeriod,
 		cache.Indexers{

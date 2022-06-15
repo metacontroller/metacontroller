@@ -39,6 +39,17 @@ spec:
             {{- toYaml .Values.commandArgs | nindent 12 }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+          {{- if and .Values.listOptionsConfigMap .Values.listOptionsConfigMountPath }}
+          volumeMounts:
+            - name: {{ include "metacontroller.fullname" . }}-list-options
+              mountPath: "{{ .Values.listOptionsConfigMountPath }}"
+          {{- end }}
+      {{- if and .Values.listOptionsConfigMap .Values.listOptionsConfigMountPath }}
+      volumes:
+        - name: {{ include "metacontroller.fullname" . }}-list-options
+          configMap:
+            name: {{ include "metacontroller.fullname" . }}-list-options
+      {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

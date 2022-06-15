@@ -1,0 +1,8 @@
+# Override replicas for listoptions mode.
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: metacontroller
+  namespace: metacontroller
+spec:
+  replicas: 4

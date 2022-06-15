@@ -82,3 +82,20 @@ service:
 #      port: 9999
 #      protocol: "TCP"
 #      targetPort: "metrics"
+
+listOptionsConfigMap: {}
+#  namespaces:
+#    - metacontroller
+#  labelSelectors:
+#    - resources:
+#        - deployments
+#      selectors:
+#        - metacontrollerEnabled=true
+#        - color=blue
+#  fieldSelectors:
+#    - resources:
+#        - events
+#      selectors:
+#        - type=Warning
+listOptionsConfigMountPath: ""
+# /etc/metacontroller/list-options-config

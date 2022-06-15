@@ -106,8 +106,14 @@ func NewControllerContext(configuration options.Configuration, mcClient *mcclien
 	if err != nil {
 		return nil, err
 	}
+
+	resourceTweakListOptionsFunc, err := dynamicinformer.GetResourceTweakListOptionsFunc(configuration)
+	if err != nil {
+		return nil, err
+	}
+
 	// Create dynamic informer factory (for sharing dynamic informers).
-	dynInformers := dynamicinformer.NewSharedInformerFactory(dynClient, configuration.InformerRelist)
+	dynInformers := dynamicinformer.NewSharedInformerFactory(dynClient, configuration.InformerRelist, resourceTweakListOptionsFunc)
 
 	// Start metacontrollers (controllers that spawn controllers).
 	// Each one requests the informers it needs from the factory.

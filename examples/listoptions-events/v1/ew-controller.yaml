@@ -1,0 +1,58 @@
+---
+apiVersion: metacontroller.k8s.io/v1alpha1
+kind: CompositeController
+metadata:
+  name: ew-controller
+  namespace: metacontroller
+spec:
+  generateSelector: true
+  parentResource:
+    apiVersion: ctl.enisoc.com/v1
+    resource: eventwrappers
+  childResources:
+  - apiVersion: v1
+    resource: events
+    updateStrategy:
+      method: InPlace
+  hooks:
+    sync:
+      webhook:
+        url: http://ew-controller.metacontroller/sync
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ew-controller
+  namespace: metacontroller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ew-controller
+  template:
+    metadata:
+      labels:
+        app: ew-controller
+    spec:
+      containers:
+        - name: controller
+          image: python:3.9
+          command: ["python", "/hooks/sync.py"]
+          volumeMounts:
+            - name: hooks
+              mountPath: /hooks
+      volumes:
+        - name: hooks
+          configMap:
+            name: ew-controller
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ew-controller
+  namespace: metacontroller
+spec:
+  selector:
+    app: ew-controller
+  ports:
+    - port: 80

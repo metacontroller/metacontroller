@@ -29,22 +29,23 @@ import (
 // shared pool. It's analogous to the static SharedInformerFactory generated for
 // static types.
 type SharedInformerFactory struct {
-	clientset     *dynamicclientset.Clientset
-	defaultResync time.Duration
-
-	mutex           sync.Mutex
-	refCount        map[string]int
-	sharedInformers map[string]*sharedResourceInformer
+	clientset        *dynamicclientset.Clientset
+	defaultResync    time.Duration
+	mutex            sync.Mutex
+	refCount         map[string]int
+	sharedInformers  map[string]*sharedResourceInformer
+	tweakListOptions ResourceTweakListOptionsFunc
 }
 
 // NewSharedInformerFactory creates a new factory for shared, dynamic informers.
 // Usually there is only one of these for the whole process, created in main().
-func NewSharedInformerFactory(clientset *dynamicclientset.Clientset, defaultResync time.Duration) *SharedInformerFactory {
+func NewSharedInformerFactory(clientset *dynamicclientset.Clientset, defaultResync time.Duration, tweakListOptions ResourceTweakListOptionsFunc) *SharedInformerFactory {
 	return &SharedInformerFactory{
-		clientset:       clientset,
-		defaultResync:   defaultResync,
-		refCount:        make(map[string]int),
-		sharedInformers: make(map[string]*sharedResourceInformer),
+		clientset:        clientset,
+		defaultResync:    defaultResync,
+		refCount:         make(map[string]int),
+		sharedInformers:  make(map[string]*sharedResourceInformer),
+		tweakListOptions: tweakListOptions,
 	}
 }
 
@@ -101,7 +102,7 @@ func (f *SharedInformerFactory) Resource(apiVersion, resource string) (*Resource
 	}
 
 	logging.Logger.V(4).Info("Starting shared informer", "resource", resource, "api_version", apiVersion)
-	sharedInformer := newSharedResourceInformer(client, f.defaultResync, closeFn)
+	sharedInformer := newSharedResourceInformer(client, f.defaultResync, closeFn, f.tweakListOptions)
 	f.sharedInformers[key] = sharedInformer
 	f.refCount[key] = 1
 

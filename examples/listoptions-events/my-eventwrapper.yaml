@@ -1,0 +1,55 @@
+apiVersion: ctl.enisoc.com/v1
+kind: EventWrapper
+metadata:
+  name: event-wrapper
+  namespace: ew-ns1
+spec:
+  events:
+    - name: ew.1
+      type: Warning
+      reason: Ew1
+    - name: ew.2
+      type: Normal
+      reason: Ew2
+---
+apiVersion: ctl.enisoc.com/v1
+kind: EventWrapper
+metadata:
+  name: event-wrapper
+  namespace: ew-ns2
+spec:
+  events:
+    - name: ew.3
+      type: Warning
+      reason: Ew3
+    - name: ew.4
+      type: Warning
+      reason: Ew4
+    - name: ew.5
+      type: Normal
+      reason: Ew5
+    - name: ew.6
+      type: Normal
+      reason: Ew6
+---
+apiVersion: ctl.enisoc.com/v1
+kind: EventWrapper
+metadata:
+  name: event-wrapper
+  namespace: default
+spec:
+  events:
+    - name: ew.7
+      type: Warning
+      reason: Ew7
+---
+apiVersion: ctl.enisoc.com/v1
+kind: EventWrapper
+metadata:
+  name: event-wrapper
+  namespace: metacontroller
+spec:
+  events:
+    - name: ew.8
+      type: Warning
+      reason: Ew8
