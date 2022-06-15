@@ -46,7 +46,7 @@ echo "Create event wrapper CRs..."
 kubectl apply -f my-eventwrapper.yaml
 
 # wait for events to be created
-until [[ "$(kubectl get events --all-namespaces | grep -E  'Ew(\d)' | wc -l)" -eq "8" ]]; do sleep 1; done
+until [[ "$(kubectl get events --all-namespaces | grep -E  'Ew[0-9]' | wc -l)" -eq "8" ]]; do sleep 1; done
 
 
 # logs of metacontroller-0 should only contain Ew7 and Ew8 events
