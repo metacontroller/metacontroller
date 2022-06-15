@@ -19,8 +19,13 @@ set -ex
 
 echo "Install prometheus..."
 kubectl apply -k github.com/prometheus-operator/prometheus-operator?ref=v0.49.0
-kubectl apply -f ./manifest/prometheus.yaml
 kubectl rollout status --watch --timeout=180s deployment/prometheus-operator
+
+echo "Wait until prometheus CRD is available..."
+until kubectl get prometheus; do sleep 1; done
+
+echo "Set up prometheus..."
+kubectl apply -f ./manifest/prometheus.yaml
 until kubectl get statefulset prometheus-prometheus; do sleep 1; done  # prometheus operator creates the statefulset, wait until it is created before monitoring status of rollout
 kubectl rollout status --watch --timeout=180s statefulset/prometheus-prometheus
 
