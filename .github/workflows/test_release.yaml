@@ -93,12 +93,12 @@ jobs:
         cluster_name: kind
         wait: 120s
 
-    - name: Download metacontroller image
+    - name: Download metacontroller images
       uses: actions/download-artifact@v3
       with:
         name: metacontroller-image
 
-    - name: Load metacontroller image
+    - name: Load metacontroller images
       run: |
         docker load --input metacontroller-dev.tar
         kind load docker-image metacontrollerio/metacontroller:dev
@@ -150,15 +150,21 @@ jobs:
           cluster_name: kind
           wait: 120s
 
-      - name: Download metacontroller debug image
+      - name: Download metacontroller images
         uses: actions/download-artifact@v3
         with:
           name: metacontroller-image
 
-      - name: Load metacontroller debug image
+      - name: Load metacontroller images
         run: |
+          docker load --input metacontroller-dev.tar
+          kind load docker-image metacontrollerio/metacontroller:dev
           docker load --input metacontroller-debug.tar
           kind load docker-image metacontrollerio/metacontroller:debug
+
+      - name: Copy default values.yaml to ci directory with dev image
+        run : |
+          sed 's/tag: ""/tag: "dev"/g' deploy/helm/metacontroller/values.yaml > deploy/helm/metacontroller/ci/default-values.yaml
 
       - name: Run chart-testing (lint-and-install)
         run: |
