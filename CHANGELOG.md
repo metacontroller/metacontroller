@@ -1,3 +1,12 @@
+## [4.2.1](https://github.com/metacontroller/metacontroller/compare/v4.2.0...v4.2.1) (2022-06-16)
+
+
+### Bug Fixes
+
+* **deps:** update dependency golang to v1.18.3 ([676078e](https://github.com/metacontroller/metacontroller/commit/676078e2b7e25ed0e72a929204437aa662b27e74))
+* **deps:** Update k8s.io packages to v0.24.1 ([44b5406](https://github.com/metacontroller/metacontroller/commit/44b5406510c7740e2d4ddc75310985396de82dbb))
+* **deps:** Update zgo.at/zcache to v1.2.0 ([4bc4c94](https://github.com/metacontroller/metacontroller/commit/4bc4c94f1e7aa87fb33b69b0532c9e5b4ffc6abd))
+
 # [4.2.0](https://github.com/metacontroller/metacontroller/compare/v4.1.0...v4.2.0) (2022-05-27)
 
 
