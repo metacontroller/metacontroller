@@ -43,7 +43,7 @@ func (h *hookExecutorStub) IsEnabled() bool {
 	return true
 }
 
-func (h *hookExecutorStub) Call(request interface{}, response interface{}) error {
+func (h *hookExecutorStub) Call(request hooks.WebhookRequest, response interface{}) error {
 	val := reflect.ValueOf(response)
 	if val.Kind() != reflect.Ptr {
 		return fmt.Errorf(`panic("not a pointer")`)
@@ -95,7 +95,7 @@ func (s serializingHookExecutorStub) IsEnabled() bool {
 	return true
 }
 
-func (s serializingHookExecutorStub) Call(request interface{}, response interface{}) error {
+func (s serializingHookExecutorStub) Call(request hooks.WebhookRequest, response interface{}) error {
 	err := k8sjson.Unmarshal([]byte(s.response), response)
 	if err != nil {
 		panic(err)

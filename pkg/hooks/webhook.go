@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"metacontroller/pkg/controller/common"
+	"metacontroller/pkg/etag_cache"
 	"metacontroller/pkg/logging"
 	"metacontroller/pkg/metrics"
 	"net/http"
@@ -32,11 +33,20 @@ import (
 	k8sjson "k8s.io/apimachinery/pkg/util/json"
 )
 
+type WebhookRequest interface {
+	GetCacheKey() string
+}
+
+type HttpClientInterface interface {
+	Do(req *http.Request) (*http.Response, error)
+}
+
 // WebhookExecutor executes a call to a webhook
 type WebhookExecutor struct {
-	client   *http.Client
-	url      string
-	hookType string
+	client    HttpClientInterface
+	url       string
+	hookType  string
+	etagCache *etag_cache.Cache
 }
 
 // NewWebhookExecutor returns new WebhookExecutor
@@ -66,24 +76,54 @@ func NewWebhookExecutor(
 	if err != nil {
 		return nil, err
 	}
+	return newWebhookExecutorWithCustomHttpClient(webhook, hookType, client, url)
+}
+
+func newWebhookExecutorWithCustomHttpClient(
+	webhook *v1alpha1.Webhook,
+	hookType common.HookType,
+	httpClient HttpClientInterface,
+	url string,
+) (*WebhookExecutor, error) {
+	var eTagCache *etag_cache.Cache = nil
+	if webhook.Etag != nil && webhook.Etag.Enabled != nil && *webhook.Etag.Enabled {
+		eTagCache = etag_cache.NewCache(webhook.Etag.CacheTimeoutSeconds, webhook.Etag.CacheTimeoutSeconds)
+	}
+
 	return &WebhookExecutor{
-		client:   client,
-		url:      url,
-		hookType: hookType.String(),
+		client:    httpClient,
+		url:       url,
+		hookType:  hookType.String(),
+		etagCache: eTagCache,
 	}, nil
 }
 
-func (w *WebhookExecutor) Call(request interface{}, response interface{}) error {
+func (w *WebhookExecutor) Call(request WebhookRequest, response interface{}) error {
 	// Encode request.
 	reqBody, err := k8sjson.Marshal(request)
 	if err != nil {
 		return fmt.Errorf("can't marshal request: %w", err)
 	}
+
+	cacheKey := request.GetCacheKey()
+	cacheEnabled := w.etagCache != nil
+	cacheEntry, cacheEntryExists := w.etagCache.Get(cacheKey)
+	eTagValue := ""
+
+	req, err := http.NewRequest("POST", w.url, bytes.NewReader(reqBody))
+	if err != nil {
+		return err
+	}
+	if cacheEnabled && cacheEntryExists {
+		req.Header.Set("If-None-Match", cacheEntry.Etag)
+		eTagValue = cacheEntry.Etag
+	}
 	if logging.Logger.V(6).Enabled() {
 		rawRequest := json.RawMessage(reqBody)
-		logging.Logger.Info("Webhook request", "type", w.hookType, "url", w.url, "body", rawRequest)
+		logging.Logger.V(6).Info("Webhook request", "type", w.hookType, "url", w.url, "etag", eTagValue, "body", rawRequest)
 	}
-	resp, err := w.client.Post(w.url, "application/json", bytes.NewReader(reqBody))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := w.client.Do(req)
 	if err != nil {
 		return fmt.Errorf("http error: %w", err)
 	}
@@ -96,17 +136,37 @@ func (w *WebhookExecutor) Call(request interface{}, response interface{}) error 
 	}
 	if logging.Logger.V(6).Enabled() {
 		rawResponse := json.RawMessage(respBody)
-		logging.Logger.V(6).Info("Webhook response", "type", w.hookType, "url", w.url, "body", rawResponse)
+		logging.Logger.V(6).Info("Webhook response", "type", w.hookType, "url", w.url, "etag", eTagValue, "body", rawResponse)
 	}
 
-	// Check status code.
-	if resp.StatusCode != http.StatusOK {
+	if cacheEnabled && cacheEntryExists {
+		// According to https://datatracker.ietf.org/doc/html/rfc7232
+		// When 'If-None-Match' is present and backend responded with 304 it means that object has not changed
+		if resp.StatusCode == 304 {
+			// TODO: Find a way to deep copy from cacheEntry.Response to response and switch cacheEntry.Response to store decoded response
+			if logging.Logger.V(6).Enabled() {
+				rawResponse := json.RawMessage(cacheEntry.Response)
+				logging.Logger.V(6).Info("Webhook 304 response, reusing cached response", "type", w.hookType, "url", w.url, "etag", eTagValue, "body", rawResponse)
+			}
+			if err := k8sjson.Unmarshal(cacheEntry.Response, response); err != nil {
+				return fmt.Errorf("can't unmarshal response: %w", err)
+			}
+			return nil
+		}
+	} else if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("remote error: %s", respBody)
 	}
 
 	// Decode response.
 	if err := k8sjson.Unmarshal(respBody, response); err != nil {
 		return fmt.Errorf("can't unmarshal response: %w", err)
+	}
+
+	if cacheEnabled {
+		eTag := resp.Header.Get("ETag")
+		if eTag != "" {
+			w.etagCache.Set(cacheKey, &etag_cache.CacheEntry{Response: respBody, Etag: eTag})
+		}
 	}
 	return nil
 }
