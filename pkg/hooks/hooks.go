@@ -27,7 +27,7 @@ type Hooks interface {
 // Hook an execute Hook requests
 type Hook interface {
 	IsEnabled() bool
-	Call(request interface{}, response interface{}) error
+	Call(request WebhookRequest, response interface{}) error
 }
 
 // NewHook return new Hook which implements given v1alpha1.Hook
@@ -59,6 +59,6 @@ func (h *hookExecutorImpl) IsEnabled() bool {
 	return h.webhookExecutor != nil
 }
 
-func (h *hookExecutorImpl) Call(request interface{}, response interface{}) error {
+func (h *hookExecutorImpl) Call(request WebhookRequest, response interface{}) error {
 	return h.webhookExecutor.Call(request, response)
 }

@@ -115,12 +115,19 @@ type Hook struct {
 	Webhook *Webhook `json:"webhook,omitempty"`
 }
 
+type WebhookEtagConfig struct {
+	Enabled             *bool  `json:"enabled,omitempty"`
+	CacheTimeoutSeconds *int32 `json:"cacheTimeoutSeconds,omitempty"`
+	CacheCleanupSeconds *int32 `json:"cacheCleanupSeconds,omitempty"`
+}
+
 type Webhook struct {
 	URL     *string          `json:"url,omitempty"`
 	Timeout *metav1.Duration `json:"timeout,omitempty"`
 
-	Path    *string           `json:"path,omitempty"`
-	Service *ServiceReference `json:"service,omitempty"`
+	Etag    *WebhookEtagConfig `json:"etag,omitempty"`
+	Path    *string            `json:"path,omitempty"`
+	Service *ServiceReference  `json:"service,omitempty"`
 }
 
 type CompositeControllerStatus struct{}

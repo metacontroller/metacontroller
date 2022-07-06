@@ -176,5 +176,9 @@ func execKubectl(args ...string) error {
 	cmdline := append([]string{"--server", ApiserverURL()}, args...)
 	logging.Logger.Info("Executing command", "command", execPath, "arguments", cmdline)
 	cmd := exec.Command(execPath, cmdline...)
-	return cmd.Run()
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		logging.Logger.Info("Executing command", "command", execPath, "arguments", cmdline, "failed with", string(out[:]))
+	}
+	return err
 }
