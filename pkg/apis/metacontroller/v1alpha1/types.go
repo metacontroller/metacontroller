@@ -112,8 +112,18 @@ type CompositeControllerHooks struct {
 }
 
 type Hook struct {
-	Webhook *Webhook `json:"webhook,omitempty"`
+	// +kubebuilder:default:="v1"
+	Version *HookVersion `json:"version,omitempty"`
+	Webhook *Webhook     `json:"webhook,omitempty"`
 }
+
+// +kubebuilder:validation:Enum={"v1","v2"}
+type HookVersion string
+
+const (
+	HookVersionV1 HookVersion = "v1"
+	HookVersionV2 HookVersion = "v2"
+)
 
 type WebhookEtagConfig struct {
 	Enabled             *bool  `json:"enabled,omitempty"`
