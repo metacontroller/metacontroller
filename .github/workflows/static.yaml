@@ -21,11 +21,14 @@ jobs:
     - name: checkout
       uses: actions/checkout@v3
     - name: Build local image
-      run: docker build -t metacontrollerio/metacontroller:lint-${{ github.sha }} .
+      run: docker build -t localhost/metacontroller:lint-${{ github.sha }} .
     - name: Lint docker image
       uses: Azure/container-scan@v0
+      env:
+        # See https://github.com/Azure/container-scan/issues/146
+        DOCKLE_HOST: "unix:///var/run/docker.sock"
       with:
-        image-name: metacontrollerio/metacontroller:lint-${{ github.sha }}
+        image-name: localhost/metacontroller:lint-${{ github.sha }}
   documentation-test:
     runs-on: ubuntu-20.04
     container:
