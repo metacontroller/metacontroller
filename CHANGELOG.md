@@ -1,3 +1,14 @@
+## [4.2.2](https://github.com/metacontroller/metacontroller/compare/v4.2.1...v4.2.2) (2022-07-14)
+
+
+### Bug Fixes
+
+* **deps:** Update controller-runtime to v0.12.3 ([2f7e062](https://github.com/metacontroller/metacontroller/commit/2f7e062d3dc7a4ee16246d248cc8eaa3d65e820c))
+* **deps:** Update k8s dependencies to v0.24.3 ([c911040](https://github.com/metacontroller/metacontroller/commit/c911040e516603925ac0bbb786edb5f8ff097197))
+* **deps:** Update k8s.io/klog/v2 to v2.70.1 ([63f1388](https://github.com/metacontroller/metacontroller/commit/63f13880c14bd435c4d762517c44dd68d3d20dc6))
+* **deps:** Update k8s.io/utils to v0.0.0-20220713171938-56c0de1e6f5e ([63f6d0b](https://github.com/metacontroller/metacontroller/commit/63f6d0b87566c5723be998a81ad4cca47c3a36de))
+* **security:** Fix CVE-2022-1996 by updating k8s.io/kube-openapi to v0.0.0-20220627174259-011e075b9cb8 ([42eabbc](https://github.com/metacontroller/metacontroller/commit/42eabbc0c74657a8ad95517689c1043e6c6cc6a3))
+
 ## [4.2.1](https://github.com/metacontroller/metacontroller/compare/v4.2.0...v4.2.1) (2022-06-16)
 
 
