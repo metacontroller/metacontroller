@@ -3,6 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
+    controller-gen.kubebuilder.io/version: v0.9.2
     "api-approved.kubernetes.io": "unapproved, request not yet submitted"
   name: compositecontrollers.metacontroller.k8s.io
 spec:
@@ -75,6 +76,12 @@ spec:
                 properties:
                   customize:
                     properties:
+                      version:
+                        default: v1
+                        enum:
+                        - v1
+                        - v2
+                        type: string
                       webhook:
                         properties:
                           etag:
@@ -113,6 +120,12 @@ spec:
                     type: object
                   finalize:
                     properties:
+                      version:
+                        default: v1
+                        enum:
+                        - v1
+                        - v2
+                        type: string
                       webhook:
                         properties:
                           etag:
@@ -151,6 +164,12 @@ spec:
                     type: object
                   postUpdateChild:
                     properties:
+                      version:
+                        default: v1
+                        enum:
+                        - v1
+                        - v2
+                        type: string
                       webhook:
                         properties:
                           etag:
@@ -189,6 +208,12 @@ spec:
                     type: object
                   preUpdateChild:
                     properties:
+                      version:
+                        default: v1
+                        enum:
+                        - v1
+                        - v2
+                        type: string
                       webhook:
                         properties:
                           etag:
@@ -227,6 +252,12 @@ spec:
                     type: object
                   sync:
                     properties:
+                      version:
+                        default: v1
+                        enum:
+                        - v1
+                        - v2
+                        type: string
                       webhook:
                         properties:
                           etag:
@@ -302,6 +333,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
+    controller-gen.kubebuilder.io/version: v0.9.2
     "api-approved.kubernetes.io": "unapproved, request not yet submitted"
   name: controllerrevisions.metacontroller.k8s.io
 spec:
@@ -362,6 +394,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
+    controller-gen.kubebuilder.io/version: v0.9.2
     "api-approved.kubernetes.io": "unapproved, request not yet submitted"
   name: decoratorcontrollers.metacontroller.k8s.io
 spec:
@@ -416,6 +449,12 @@ spec:
                 properties:
                   customize:
                     properties:
+                      version:
+                        default: v1
+                        enum:
+                        - v1
+                        - v2
+                        type: string
                       webhook:
                         properties:
                           etag:
@@ -454,6 +493,12 @@ spec:
                     type: object
                   finalize:
                     properties:
+                      version:
+                        default: v1
+                        enum:
+                        - v1
+                        - v2
+                        type: string
                       webhook:
                         properties:
                           etag:
@@ -492,6 +537,12 @@ spec:
                     type: object
                   sync:
                     properties:
+                      version:
+                        default: v1
+                        enum:
+                        - v1
+                        - v2
+                        type: string
                       webhook:
                         properties:
                           etag:
