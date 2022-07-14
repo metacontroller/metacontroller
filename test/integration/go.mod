@@ -9,7 +9,7 @@ require (
 	k8s.io/client-go v0.24.3
 	k8s.io/utils v0.0.0-20220713171938-56c0de1e6f5e
 	metacontroller v0.0.0-00010101000000-000000000000
-	sigs.k8s.io/controller-runtime v0.12.1
+	sigs.k8s.io/controller-runtime v0.12.3
 )
 
 require (
