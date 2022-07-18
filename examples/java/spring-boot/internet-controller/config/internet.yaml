@@ -1,0 +1,6 @@
+apiVersion: metacontroller.github.com/v1
+kind: Internet
+metadata:
+  name: my-metacontroller-internet
+spec:
+  production-test-enabled: true

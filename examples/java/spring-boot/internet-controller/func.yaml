@@ -1,0 +1,30 @@
+version: 0.19.0
+name: func-internet-controller
+namespace: ""
+runtime: springboot
+registry: ""
+image: docker.io/salaboy/func-internet-controller:latest
+imageDigest: sha256:9dac197b79a3ec90a9ed62a14e803f510571ef78dcdce5a6efe9743710820192
+build: local
+git:
+  url: null
+  revision: null
+  contextdir: null
+builder: gcr.io/paketo-buildpacks/builder:base
+builders:
+  default: gcr.io/paketo-buildpacks/builder:base
+buildpacks: []
+volumes: []
+buildEnvs:
+- name: BP_NATIVE_IMAGE
+  value: "false"
+envs: []
+annotations: {}
+options: {}
+labels: []
+healthEndpoints:
+  liveness: /actuator/health
+  readiness: /actuator/health
+created: 2022-07-12T13:22:43.293366+01:00
+invocation:
+  format: http

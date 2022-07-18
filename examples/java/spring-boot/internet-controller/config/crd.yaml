@@ -1,0 +1,76 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: internets.metacontroller.github.com
+spec:
+  group: metacontroller.github.com
+  names:
+    kind: Internet
+    listKind: InternetList
+    plural: internets
+    singular: internet
+  scope: Namespaced
+  versions:
+    - additionalPrinterColumns:
+        - jsonPath: .status.google-ok
+          name: GOOGLE
+          type: string
+        - jsonPath: .status.ebay-ok
+          name: EBAY
+          type: string
+        - jsonPath: .status.amazon-ok
+          name: AMAZON
+          type: string
+        - jsonPath: .status.prod-tests
+          name: PROD TESTS
+          type: string
+        - jsonPath: .status.ready
+          name: READY
+          type: boolean
+      name: v1
+      schema:
+        openAPIV3Schema:
+          description: Internet is the Schema for the internet API
+          properties:
+            apiVersion:
+              description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+              type: string
+            kind:
+              description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+              type: string
+            metadata:
+              type: object
+            spec:
+              description: InternetSpec defines the desired state of the internet
+              properties:
+                production-test-enabled:
+                  description: production tests enabled will create a new deployment which runs production test against the internet
+                  type: boolean
+              type: object
+            status:
+              description: InternetStatus defines the observed state of the internet
+              properties:
+                google-ok:
+                  type: boolean
+                amazon-ok:
+                  type: boolean
+                ebay-ok:
+                  type: boolean
+                prod-tests:
+                  type: boolean
+                ready:
+                  type: boolean
+              required:
+                - prod-tests
+                - ready
+              type: object
+          type: object
+      served: true
+      storage: true
+      subresources:
+        status: {}

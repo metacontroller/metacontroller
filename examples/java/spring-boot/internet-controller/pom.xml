@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>2.7.1</version>
+    <relativePath/>
+  </parent>
+
+  <groupId>com.github.metacontroller</groupId>
+  <artifactId>internet-controller</artifactId>
+  <version>0.0.1-SNAPSHOT</version>
+  <name>Spring Cloud Function::MetaController Internet Controller</name>
+  <description>A Spring Cloud Function implementing Kubernetes Controller</description>
+
+  <properties>
+    <java.version>11</java.version>
+    <spring-cloud.version>2021.0.3</spring-cloud.version>
+    <spring-cloud-function.version>3.2.3</spring-cloud-function.version>
+    <spring-native.version>0.12.1</spring-native.version>
+    <compiler-plugin.version>3.8.1</compiler-plugin.version>
+    <maven.compiler.parameters>true</maven.compiler.parameters>
+    <maven.compiler.source>11</maven.compiler.source>
+    <maven.compiler.target>11</maven.compiler.target>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+  </properties>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>org.springframework.cloud</groupId>
+        <artifactId>spring-cloud-dependencies</artifactId>
+        <version>${spring-cloud.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-actuator</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-webflux</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.cloud</groupId>
+      <artifactId>spring-cloud-starter-function-web</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.cloud</groupId>
+      <artifactId>spring-cloud-function-context</artifactId>
+      <version>${spring-cloud-function.version}</version>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.experimental</groupId>
+      <artifactId>spring-native</artifactId>
+      <version>${spring-native.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+        <configuration>
+          <classifier>${repackage.classifier}</classifier>
+          <image>
+            <builder>paketobuildpacks/builder:tiny</builder>
+            <env>
+              <BP_NATIVE_IMAGE>true</BP_NATIVE_IMAGE>
+            </env>
+          </image>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.springframework.experimental</groupId>
+        <artifactId>spring-aot-maven-plugin</artifactId>
+        <version>${spring-native.version}</version>
+        <executions>
+          <execution>
+            <id>test-generate</id>
+            <goals>
+              <goal>test-generate</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>generate</id>
+            <goals>
+              <goal>generate</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+
+  <repositories>
+    <repository>
+      <id>spring-releases</id>
+      <name>Spring Releases</name>
+      <url>https://repo.spring.io/release</url>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+    </repository>
+  </repositories>
+  <pluginRepositories>
+    <pluginRepository>
+      <id>spring-releases</id>
+      <name>Spring Releases</name>
+      <url>https://repo.spring.io/release</url>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+    </pluginRepository>
+  </pluginRepositories>
+
+  <profiles>
+    <profile>
+      <id>native</id>
+      <properties>
+        <repackage.classifier>exec</repackage.classifier>
+        <native-buildtools.version>0.9.10</native-buildtools.version>
+      </properties>
+      <dependencies>
+        <dependency>
+          <groupId>org.junit.platform</groupId>
+          <artifactId>junit-platform-launcher</artifactId>
+          <scope>test</scope>
+        </dependency>
+      </dependencies>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.graalvm.buildtools</groupId>
+            <artifactId>native-maven-plugin</artifactId>
+            <version>${native-buildtools.version}</version>
+            <extensions>true</extensions>
+            <executions>
+              <execution>
+                <id>test-native</id>
+                <phase>test</phase>
+                <goals>
+                  <goal>test</goal>
+                </goals>
+              </execution>
+              <execution>
+                <id>build-native</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>build</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+</project>

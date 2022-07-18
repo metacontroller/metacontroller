@@ -1,0 +1,17 @@
+apiVersion: metacontroller.k8s.io/v1alpha1
+kind: CompositeController
+metadata:
+  name: metacontroller-internet-controller
+spec:
+  generateSelector: true
+  parentResource:
+    apiVersion: metacontroller.github.com/v1
+    resource: internets
+  childResources:
+  - apiVersion: apps/v1
+    resource: deployments
+  #resyncPeriodSeconds: 5  
+  hooks:
+    sync:
+      webhook:
+        url: http://func-internet-controller.default.svc.cluster.local/
