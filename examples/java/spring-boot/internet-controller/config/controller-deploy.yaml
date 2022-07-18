@@ -1,0 +1,40 @@
+apiVersion: v1
+kind: namespace
+metadata:
+  name: metacontroller
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: metacontroller-internet-controller
+  namespace: metacontroller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: metacontroller-internet-controller
+  template:
+    metadata:
+      labels:
+        app: metacontroller-internet-controller
+    spec:
+      containers:
+        - name: controller
+          image: salaboy/metacontroller-internet-controller:0.1.0
+          imagePullPolicy: Always
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: metacontroller-internet-controller
+  namespace: metacontroller
+spec:
+  selector:
+    app: metacontroller-internet-controller
+  ports:
+    - port: 80
+      targetPort: 8080

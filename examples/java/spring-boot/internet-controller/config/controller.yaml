@@ -14,4 +14,4 @@ spec:
   hooks:
     sync:
       webhook:
-        url: http://func-internet-controller.default.svc.cluster.local/
+        url: http://internet-controller.default.svc.cluster.local/

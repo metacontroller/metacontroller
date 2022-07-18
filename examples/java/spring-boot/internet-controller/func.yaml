@@ -1,9 +1,9 @@
 version: 0.19.0
-name: func-internet-controller
+name: internet-controller
 namespace: ""
 runtime: springboot
 registry: ""
-image: docker.io/salaboy/func-internet-controller:latest
+image: docker.io/salaboy/internet-controller:latest
 imageDigest: sha256:9dac197b79a3ec90a9ed62a14e803f510571ef78dcdce5a6efe9743710820192
 build: local
 git:
