@@ -8,7 +8,7 @@ WORKDIR /go/src/metacontroller/
 ENV CGO_ENABLED=0
 RUN make install
 
-FROM alpine:3.16.0@sha256:686d8c9dfa6f3ccfc8230bc3178d23f84eeaf7e457f36f271ab1acc53015037c
+FROM alpine:3.16.1@sha256:9b2a28eb47540823042a2ba401386845089bb7b62a9637d55816132c4c3c36eb
 COPY --from=build /go/bin/metacontroller /usr/bin/metacontroller
 RUN apk update && apk add --no-cache ca-certificates
 
