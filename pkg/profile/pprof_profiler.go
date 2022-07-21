@@ -7,6 +7,7 @@ import (
 	_ "net/http/pprof"
 	"os"
 	"os/signal"
+	"time"
 )
 
 func EnablePprof(address string) <-chan struct{} {
@@ -32,7 +33,11 @@ func EnablePprof(address string) <-chan struct{} {
 	logging.Logger.V(4).Info("enabling pprof", "address", address)
 	pprofMux := http.DefaultServeMux
 	http.DefaultServeMux = http.NewServeMux()
-	server := &http.Server{Addr: address, Handler: pprofMux}
+	server := &http.Server{
+		Addr:              address,
+		Handler:           pprofMux,
+		ReadHeaderTimeout: 30 * time.Second,
+	}
 	pprofStopChan := make(chan struct{})
 
 	go func() {
