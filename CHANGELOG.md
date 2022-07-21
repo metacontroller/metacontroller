@@ -1,3 +1,10 @@
+## [4.2.5](https://github.com/metacontroller/metacontroller/compare/v4.2.4...v4.2.5) (2022-07-21)
+
+
+### Bug Fixes
+
+* **security:** Add ReadHeaderTimeout to pprof server to mitigate G112 ([a11059f](https://github.com/metacontroller/metacontroller/commit/a11059fb48f3f896839739d13ea97a54b5ca4c01))
+
 ## [4.2.4](https://github.com/metacontroller/metacontroller/compare/v4.2.3...v4.2.4) (2022-07-21)
 
 
