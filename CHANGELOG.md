@@ -1,3 +1,10 @@
+# [4.3.0](https://github.com/metacontroller/metacontroller/compare/v4.2.5...v4.3.0) (2022-07-21)
+
+
+### Features
+
+* **webhooks:** add etag support ([4c06eb6](https://github.com/metacontroller/metacontroller/commit/4c06eb6264ffa48c54f6fabb71100ecee43565ac))
+
 ## [4.2.5](https://github.com/metacontroller/metacontroller/compare/v4.2.4...v4.2.5) (2022-07-21)
 
 
