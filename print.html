@@ -2833,6 +2833,7 @@ has the following fields:</p>
 <li><a href="api/hook.html#webhook">Webhook</a>
 <ul>
 <li><a href="api/hook.html#service-reference">Service Reference</a></li>
+<li><a href="api/hook.html#etag-reference">Etag Reference</a></li>
 </ul>
 </li>
 </ul>
@@ -2843,8 +2844,9 @@ has the following fields:</p>
 <h2 id="webhook"><a class="header" href="#webhook">Webhook</a></h2>
 <p>Each Webhook has the following fields:</p>
 <table><thead><tr><th>Field</th><th>Description</th></tr></thead><tbody>
+<tr><td><a href="api/hook.html#etag-reference">etag</a></td><td>A configuration for etag logic</td></tr>
 <tr><td>url</td><td>A full URL for the webhook (e.g. <code>http://my-controller-svc/hook</code>). If present, this overrides any values provided for <code>path</code> and <code>service</code>.</td></tr>
-<tr><td>timeout</td><td>A duration (in the format of Go's time.Duration) indicating the time that Metacontroller should wait for a response. If the webhook takes longer than this time, the webhook call is aborted and retried later. Defaults to 10s.</td></tr>
+<tr><td>timeout</td><td>A duration (in the format of Go's time.Duration) indicating the time that Metacontroller should wait for a resserviceponse. If the webhook takes longer than this time, the webhook call is aborted and retried later. Defaults to 10s.</td></tr>
 <tr><td>path</td><td>A path to be appended to the accompanying <code>service</code> to reach this hook (e.g. <code>/hook</code>). Ignored if full <code>url</code> is specified.</td></tr>
 <tr><td><a href="api/hook.html#service-reference">service</a></td><td>A reference to a Kubernetes Service through which this hook can be reached.</td></tr>
 </tbody></table>
@@ -2855,6 +2857,22 @@ has the following fields:</p>
 <tr><td>namespace</td><td>The <code>metadata.namespace</code> of the target Service.</td></tr>
 <tr><td>port</td><td>The port number to connect to on the target Service. Defaults to <code>80</code>.</td></tr>
 <tr><td>protocol</td><td>The protocol to use for the target Service. Defaults to <code>http</code>.</td></tr>
+</tbody></table>
+<h3 id="etag-reference"><a class="header" href="#etag-reference">Etag Reference</a></h3>
+<p>More details in <a href="https://datatracker.ietf.org/doc/html/rfc2616">rfc2616</a>.</p>
+<p>Etag is a hash of response content, controller that supports etag notion should add &quot;ETag&quot; header to each 200 response.
+Metacontroller that supports &quot;ETag&quot; should send &quot;If-None-Match&quot; tag with value of ETag of cached content.
+If content have not changed controller replies with &quot;304 Not modified&quot;, otherwise it sends 200 with &quot;ETag&quot; header.</p>
+<p>This logic helps save traffic and CPU time on webhook processing.</p>
+<p>Within a <code>webhook</code>, the <code>eTag</code> field has the following subfields:</p>
+<pre><code>Enabled             *bool  `json:&quot;enabled,omitempty&quot;`
+CacheTimeoutSeconds *int32 `json:&quot;cacheTimeoutSeconds,omitempty&quot;`
+CacheCleanupSeconds *int32 `json:&quot;cacheCleanupSeconds,omitempty&quot;`
+</code></pre>
+<table><thead><tr><th>Field</th><th>Description</th></tr></thead><tbody>
+<tr><td>Enabled</td><td>true or false. Default is false</td></tr>
+<tr><td>CacheTimeoutSeconds</td><td>Time in seconds after which ETag cache record is forgotten</td></tr>
+<tr><td>CacheCleanupSeconds</td><td>How often ETag is running garbage collector to cleanup forgotten records</td></tr>
 </tbody></table>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="design-docs"><a class="header" href="#design-docs">Design Docs</a></h1>
 <h2 id="mapcontroller"><a class="header" href="#mapcontroller"><a href="./design/map-controller.html">MapController</a></a></h2>
