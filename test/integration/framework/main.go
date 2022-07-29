@@ -94,7 +94,7 @@ func testMain(tests func() int) error {
 	start := time.Now()
 	for {
 		time.Sleep(time.Second)
-		kubectlErr := execKubectl("get", "namespaces")
+		kubectlErr := execKubectl("create", "namespace", "test")
 		if kubectlErr == nil {
 			break
 		}
