@@ -114,7 +114,7 @@ func TestGetRelatedObject_requestResponse(t *testing.T) {
 		t.Errorf("Response should be equal to %v, got %v", expectedResponse, response)
 	}
 
-	if customizeManagerWithFakeController.customizeCache.Get("some", 1) == nil {
+	if _, found := customizeManagerWithFakeController.customizeCache.Get(customizeKey{"some", 1}); !found {
 		t.Error("Expected not nil here, response should be cached")
 	}
 }

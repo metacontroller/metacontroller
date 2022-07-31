@@ -69,7 +69,7 @@ require (
 	sigs.k8s.io/json v0.0.0-20211208200746-9f7c6b3444d2 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.1 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect
-	zgo.at/zcache v1.2.0 // indirect
+	zgo.at/zcache/v2 v2.1.0 // indirect
 )
 
 replace (

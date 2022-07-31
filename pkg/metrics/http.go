@@ -32,7 +32,7 @@ import (
 
 	controllerruntimemetrics "sigs.k8s.io/controller-runtime/pkg/metrics"
 
-	"zgo.at/zcache"
+	"metacontroller/pkg/cache"
 
 	"github.com/prometheus/client_golang/prometheus"
 	pph "github.com/prometheus/client_golang/prometheus/promhttp"
@@ -40,8 +40,21 @@ import (
 
 const metacontrollerPrefix = "metacontroller"
 
-var cache = zcache.New(20*time.Minute, 10*time.Minute)
+var metricsCache = cache.New[string, *cachedInstrumentation](20*time.Minute, 10*time.Minute)
 var registerer = controllerruntimemetrics.Registry
+
+type cachedInstrumentation struct {
+	Collector *instrumentation
+	Trace     *pph.InstrumentTrace
+}
+
+type instrumentation struct {
+	duration    *prometheus.HistogramVec
+	requests    *prometheus.CounterVec
+	dnsDuration *prometheus.HistogramVec
+	tlsDuration *prometheus.HistogramVec
+	inflight    prometheus.Gauge
+}
 
 // InstrumentClientWithConstLabels instruments given http.Client with metrics registered in given prometheus.Registerer
 func InstrumentClientWithConstLabels(
@@ -81,22 +94,18 @@ func InstrumentClientWithConstLabels(
 }
 
 func getOrCreateMetrics(key string, hookType common.HookType, constLabels map[string]string) (*cachedInstrumentation, error) {
-	instrumentationCacheEntry, found := cache.Get(key)
-	var instrumentation *cachedInstrumentation
+	instrumentation, found := metricsCache.Get(key)
 	if !found {
 		collector, trace := createNewMetrics(hookType, constLabels)
-		newCacheEntry := &cachedInstrumentation{
+		instrumentation = &cachedInstrumentation{
 			Collector: collector,
 			Trace:     trace,
 		}
-		cache.Set(key, newCacheEntry, zcache.NoExpiration)
-		instrumentation = newCacheEntry
+		metricsCache.SetNoExpiration(key, instrumentation)
 		err := registerer.Register(instrumentation.Collector)
 		if err != nil {
 			return nil, err
 		}
-	} else {
-		instrumentation = instrumentationCacheEntry.(*cachedInstrumentation)
 	}
 	return instrumentation, nil
 }
@@ -170,19 +179,6 @@ func createNewMetrics(hookType common.HookType, constLabels map[string]string) (
 		},
 	}
 	return outgoingInstrumentation, trace
-}
-
-type cachedInstrumentation struct {
-	Collector *instrumentation
-	Trace     *pph.InstrumentTrace
-}
-
-type instrumentation struct {
-	duration    *prometheus.HistogramVec
-	requests    *prometheus.CounterVec
-	dnsDuration *prometheus.HistogramVec
-	tlsDuration *prometheus.HistogramVec
-	inflight    prometheus.Gauge
 }
 
 // Describe implements prometheus.Collector interface.

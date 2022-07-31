@@ -2,7 +2,6 @@ package v1
 
 import (
 	"metacontroller/pkg/apis/metacontroller/v1alpha1"
-	"metacontroller/pkg/etag_cache"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
@@ -13,8 +12,8 @@ type CustomizeHookRequest struct {
 	Parent     *unstructured.Unstructured      `json:"parent"`
 }
 
-func (r *CustomizeHookRequest) GetCacheKey() string {
-	return etag_cache.GetKeyFromObject(r.Parent)
+func (r *CustomizeHookRequest) GetRootObject() *unstructured.Unstructured {
+	return r.Parent
 }
 
 // CustomizeHookResponse is a response from customize hook

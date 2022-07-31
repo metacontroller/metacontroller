@@ -21,6 +21,10 @@ import (
 	commonv1 "metacontroller/pkg/controller/common/api/v1"
 	v1 "metacontroller/pkg/controller/common/customize/api/v1"
 	"metacontroller/pkg/hooks"
+	"time"
+
+	"k8s.io/apimachinery/pkg/types"
+	clientgo_cache "k8s.io/client-go/tools/cache"
 
 	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -29,9 +33,9 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/client-go/tools/cache"
 
 	"metacontroller/pkg/apis/metacontroller/v1alpha1"
+	"metacontroller/pkg/cache"
 	"metacontroller/pkg/controller/common"
 	dynamicclientset "metacontroller/pkg/dynamic/clientset"
 	dynamicinformer "metacontroller/pkg/dynamic/informer"
@@ -56,7 +60,7 @@ type Manager struct {
 	parentInformers common.InformerMap
 
 	relatedInformers common.InformerMap
-	customizeCache   *ResponseCache
+	customizeCache   *cache.Cache[customizeKey, *v1.CustomizeHookResponse]
 
 	stopCh chan struct{}
 
@@ -65,6 +69,16 @@ type Manager struct {
 	customizeHook hooks.Hook
 
 	logger logr.Logger
+}
+
+type customizeKey struct {
+	uid              types.UID
+	parentGeneration int64
+}
+
+// newResponseCache returns new, empty response cache.
+func newResponseCache() *cache.Cache[customizeKey, *v1.CustomizeHookResponse] {
+	return cache.New[customizeKey, *v1.CustomizeHookResponse](20*time.Minute, 10*time.Minute)
 }
 
 func NewCustomizeManager(
@@ -91,7 +105,7 @@ func NewCustomizeManager(
 		name:             name,
 		controller:       controller,
 		parentKinds:      parentKinds,
-		customizeCache:   NewResponseCache(),
+		customizeCache:   newResponseCache(),
 		dynClient:        dynClient,
 		dynInformers:     dynInformers,
 		parentInformers:  parentInformers,
@@ -117,13 +131,13 @@ func (rm *Manager) Stop() {
 	}
 }
 
-func (rm *Manager) getCachedCustomizeHookResponse(parent *unstructured.Unstructured) *v1.CustomizeHookResponse {
-	return rm.customizeCache.Get(parent.GetUID(), parent.GetGeneration())
+func (rm *Manager) getCachedCustomizeHookResponse(parent *unstructured.Unstructured) (*v1.CustomizeHookResponse, bool) {
+	return rm.customizeCache.Get(customizeKey{parent.GetUID(), parent.GetGeneration()})
 }
 
 func (rm *Manager) getCustomizeHookResponse(parent *unstructured.Unstructured) (*v1.CustomizeHookResponse, error) {
-	cached := rm.getCachedCustomizeHookResponse(parent)
-	if cached != nil {
+	cached, found := rm.getCachedCustomizeHookResponse(parent)
+	if found {
 		return cached, nil
 	} else {
 		var response v1.CustomizeHookResponse
@@ -135,7 +149,7 @@ func (rm *Manager) getCustomizeHookResponse(parent *unstructured.Unstructured) (
 			return nil, err
 		}
 
-		rm.customizeCache.Add(parent.GetUID(), parent.GetGeneration(), &response)
+		rm.customizeCache.Set(customizeKey{parent.GetUID(), parent.GetGeneration()}, &response)
 		return &response, nil
 	}
 }
@@ -155,13 +169,13 @@ func (rm *Manager) getRelatedClient(apiVersion, resource string) (*dynamicclient
 			return nil, nil, fmt.Errorf("can't create informer for related resource: %w", err)
 		}
 
-		informer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		informer.Informer().AddEventHandler(clientgo_cache.ResourceEventHandlerFuncs{
 			AddFunc:    rm.onRelatedAdd,
 			UpdateFunc: rm.onRelatedUpdate,
 			DeleteFunc: rm.onRelatedDelete,
 		})
 
-		if !cache.WaitForNamedCacheSync(rm.name, rm.stopCh, informer.Informer().HasSynced) {
+		if !clientgo_cache.WaitForNamedCacheSync(rm.name, rm.stopCh, informer.Informer().HasSynced) {
 			rm.logger.Info("related Manager - cache sync never finished", "name", rm.name)
 		}
 
@@ -201,7 +215,7 @@ func (rm *Manager) onRelatedDelete(obj interface{}) {
 	related, ok := obj.(*unstructured.Unstructured)
 
 	if !ok {
-		tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
+		tombstone, ok := obj.(clientgo_cache.DeletedFinalStateUnknown)
 		if !ok {
 			utilruntime.HandleError(fmt.Errorf("couldn't get object from tombstone %+v", obj))
 			return
@@ -237,9 +251,9 @@ func (rm *Manager) findRelatedParents(relatedSlice ...*unstructured.Unstructured
 
 	MATCHPARENTS:
 		for _, parent := range parents {
-			customizeHookResponse := rm.getCachedCustomizeHookResponse(parent)
+			customizeHookResponse, found := rm.getCachedCustomizeHookResponse(parent)
 
-			if customizeHookResponse == nil {
+			if !found {
 				continue
 			}
 

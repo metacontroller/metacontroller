@@ -3,7 +3,6 @@ package v1
 import (
 	"metacontroller/pkg/apis/metacontroller/v1alpha1"
 	v1 "metacontroller/pkg/controller/common/api/v1"
-	"metacontroller/pkg/etag_cache"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
@@ -17,8 +16,8 @@ type DecoratorHookRequest struct {
 	Finalizing  bool                          `json:"finalizing"`
 }
 
-func (r *DecoratorHookRequest) GetCacheKey() string {
-	return etag_cache.GetKeyFromObject(r.Object)
+func (r *DecoratorHookRequest) GetRootObject() *unstructured.Unstructured {
+	return r.Object
 }
 
 // DecoratorHookResponse is the expected format of the JSON response from the sync hook.
