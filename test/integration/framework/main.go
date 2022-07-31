@@ -23,6 +23,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"strconv"
 	"time"
 
@@ -49,13 +50,15 @@ See hack/get-kube-binaries.sh
 
 `
 
+const binariesPath = "./../hack/bin/"
+
 // manifestDir is the path from the integration test binary working dir to the
 // directory containing manifests to install Metacontroller.
 const manifestDir = "../../../manifests/production"
 
 // getKubectlPath returns a path to a kube-apiserver executable.
 func getKubectlPath() (string, error) {
-	return exec.LookPath("kubectl")
+	return exec.LookPath(filepath.Join(binariesPath, "kubectl"))
 }
 
 func init() {

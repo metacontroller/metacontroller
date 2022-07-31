@@ -89,6 +89,8 @@ jobs:
         flags: ${{ matrix.target }}
         fail_ci_if_error: true # optional (default = false)
   e2etests:
+    env:
+      CI_MODE: true
     needs:
       - setmatrix
       - dockerbuild
@@ -132,6 +134,13 @@ jobs:
       run: |
         cd examples
         ./test.sh
+    - name: Archive production artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: logs
+        path: |
+          /tmp/metacontroller.*
+        retention-days: 5
 
   helmtests:
     runs-on: ubuntu-22.04

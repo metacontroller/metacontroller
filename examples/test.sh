@@ -73,16 +73,22 @@ parse_commandline "$@"
 
 set -e
 
-logfile=$(mktemp)
-echo "Logging test output to ${logfile}"
+logdir=$(mktemp -d -t metacontroller.XXX)
+echo "Logging test output to ${logdir}"
 
 ignore_dirs=( "${_arg_ignore[@]/%/\/test.sh}" )
 
 echo "Ignored directories: ${ignore_dirs}"
 
 cleanup() {
-  rm "${logfile}"
+  if [ -z ${CI_MODE+x} ];
+  then
+    rm -rf "${logdir}"
+  else
+    echo "Not removing logs in CI mode"
+  fi
 }
+
 trap cleanup EXIT
 
 for test in */test.sh; do
@@ -91,11 +97,21 @@ for test in */test.sh; do
     continue
   fi
   echo -n "Running ${test}..."
-  if ! (cd "$(dirname "${test}")" && timeout --signal=SIGTERM 5m ./test.sh v1 > "${logfile}" 2>&1); then
+  testDirectory="$(dirname "${test}")"
+  mkdir "${logdir}/${testDirectory}"
+  metacontrollerLogFile="${logdir}/${test}-metacontroller.txt"
+  kubectl logs metacontroller-0 --follow -n metacontroller > "${metacontrollerLogFile}" &
+  serverPID=$!
+  testLogFile="${logdir}/${test}.txt"
+  if ! (cd "$(dirname "${test}")" && timeout --signal=SIGTERM 5m ./test.sh v1 > "${testLogFile}" 2>&1); then
     echo "FAILED"
-    cat "${logfile}"
+    cat "${testLogFile}"
     echo "Test ${test} failed!"
+    cat "${metacontrollerLogFile}"
     exit 1
   fi
+  kill "${serverPID}" || true
+  rm "${metacontrollerLogFile}" || true
+  rm "${testLogFile}" || true
   echo "PASSED"
 done

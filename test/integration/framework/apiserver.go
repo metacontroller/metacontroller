@@ -32,6 +32,7 @@ import (
 	"metacontroller/pkg/logging"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 
 	"k8s.io/client-go/rest"
@@ -49,7 +50,7 @@ See hack/get-kube-binaries.sh
 
 // getApiserverPath returns a path to a kube-apiserver executable.
 func getApiserverPath() (string, error) {
-	return exec.LookPath("kube-apiserver")
+	return exec.LookPath(filepath.Join(binariesPath, "kube-apiserver"))
 }
 
 // startApiserver executes a kube-apiserver instance.

@@ -42,12 +42,7 @@ See hack/get-kube-binaries.sh
 
 // getEtcdPath returns a path to an etcd executable.
 func getEtcdPath() (string, error) {
-	bazelPath := filepath.Join(os.Getenv("RUNFILES_DIR"), "com_coreos_etcd/etcd")
-	p, err := exec.LookPath(bazelPath)
-	if err == nil {
-		return p, nil
-	}
-	return exec.LookPath("etcd")
+	return exec.LookPath(filepath.Join(binariesPath, "etcd"))
 }
 
 // getAvailablePort returns a TCP port that is available for binding.

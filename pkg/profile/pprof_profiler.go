@@ -4,7 +4,7 @@ import (
 	"context"
 	"metacontroller/pkg/logging"
 	"net/http"
-	_ "net/http/pprof"
+	_ "net/http/pprof" //nolint:gosec
 	"os"
 	"os/signal"
 	"time"

@@ -21,9 +21,6 @@ import (
 	"metacontroller/pkg/controller/common"
 )
 
-type Hooks interface {
-}
-
 // Hook an execute Hook requests
 type Hook interface {
 	IsEnabled() bool
@@ -52,7 +49,7 @@ func NewHook(
 
 // hookExecutorImpl is default implementation of Hook
 type hookExecutorImpl struct {
-	webhookExecutor *WebhookExecutor
+	webhookExecutor WebhookExecutor
 }
 
 func (h *hookExecutorImpl) IsEnabled() bool {
