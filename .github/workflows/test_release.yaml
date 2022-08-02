@@ -6,24 +6,29 @@ jobs:
     name: Build local metacontroller images
     runs-on: ubuntu-latest
     steps:
-      - name: checkout
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: '5'
-      - name: Build metacontroller:dev
-        run: |
-          docker build -t metacontrollerio/metacontroller:dev .
-          docker save --output metacontroller-dev.tar metacontrollerio/metacontroller:dev
-      - name: Build metacontroller:debug
-        run: |
-          docker build -t metacontrollerio/metacontroller:debug -f Dockerfile.debug .
-          docker save --output metacontroller-debug.tar metacontrollerio/metacontroller:debug
-      - uses: actions/upload-artifact@v3
-        name: Upload metacontroller images
-        with:
-          name: metacontroller-image
-          path: metacontroller-*.tar
-          retention-days: 1
+    - name: checkout
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: '5'
+    - uses: actions/setup-go@v3
+      with:
+        go-version: '1.18.0'
+    - name: build binary
+      run: CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo
+    - name: Build metacontroller:dev
+      run: |
+        docker build -t metacontrollerio/metacontroller:dev .
+        docker save --output metacontroller-dev.tar metacontrollerio/metacontroller:dev
+    - name: Build metacontroller:debug
+      run: |
+        docker build -t metacontrollerio/metacontroller:debug -f Dockerfile.debug .
+        docker save --output metacontroller-debug.tar metacontrollerio/metacontroller:debug
+    - uses: actions/upload-artifact@v3
+      name: Upload metacontroller images
+      with:
+        name: metacontroller-image
+        path: metacontroller-*.tar
+        retention-days: 1
   setmatrix:
     name: Set Configuration Matrix
     runs-on: ubuntu-latest
@@ -106,7 +111,7 @@ jobs:
     - name: Apply metacontroller manifests
       run: |
         kubectl apply -k manifests/dev
-        kubectl rollout status --watch --timeout=180s statefulset/metacontroller -n metacontroller
+        kubectl rollout status --watch --timeout=180s statefulset/metacontroller -n metacontroller || kubectl describe pod metacontroller-0 -n metacontroller
         kubectl get pods -n metacontroller
 
     - name: Run e2e tests
@@ -182,16 +187,44 @@ jobs:
     needs: ['tests', 'e2etests', 'helmtests']
     steps:
     - name: Checkout
-      uses: actions/checkout@v1
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
     - name: Setup Node.js
       uses: actions/setup-node@v3
       with:
         node-version: '14'
     - name: Install dependencies
       run: npm install ci
+    - uses: rlespinasse/github-slug-action@v4
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v2
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+    - name: Login to DockerHub
+      if: github.event_name != 'pull_request'
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+    - name: Login to github registry
+      if: github.event_name != 'pull_request'
+      uses: docker/login-action@v2
+      with:
+        registry: ghcr.io
+        username: ${{ github.repository_owner }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    - name: Install GoReleaser
+      uses: goreleaser/goreleaser-action@v3
+      with:
+        distribution: goreleaser
+        version: latest
+        install-only: true
     - name: Release
       env:
         GH_TOKEN: ${{ secrets.PAT }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        REPOSITORY_OWNER: ${{github.repository_owner}}
       run: |
-        npm install @semantic-release/git @semantic-release/changelog @google/semantic-release-replace-plugin -D
+        npm install @semantic-release/git @semantic-release/changelog @google/semantic-release-replace-plugin @semantic-release/exec -D
         npx semantic-release
