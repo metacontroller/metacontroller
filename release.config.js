@@ -51,10 +51,9 @@ module.exports = {
         "message": "chore(release): ${nextRelease.version}\n\n${nextRelease.notes}"
       }
     ],
-    [
-      '@semantic-release/github',
+    ["@semantic-release/exec",
       {
-        "assets": ["manifests/production/*"]
+        "publishCmd": "echo \"${nextRelease.notes}\" > /tmp/release-notes.md && goreleaser release --release-notes /tmp/release-notes.md --rm-dist"
       }
     ],
   ]

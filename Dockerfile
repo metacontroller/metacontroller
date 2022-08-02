@@ -1,15 +1,5 @@
-FROM golang:1.18.4 AS build
-
-ARG TAG
-ENV TAG=${TAG:-dev}
-
-COPY . /go/src/metacontroller/
-WORKDIR /go/src/metacontroller/
-ENV CGO_ENABLED=0
-RUN make install
-
 FROM alpine:3.16.2@sha256:bc41182d7ef5ffc53a40b044e725193bc10142a1243f395ee852a8d9730fc2ad
-COPY --from=build /go/bin/metacontroller /usr/bin/metacontroller
+COPY metacontroller /usr/bin/metacontroller
 RUN apk update && apk add --no-cache ca-certificates
 
 # Run container as nonroot, use the same uid and naming convention as distroless images

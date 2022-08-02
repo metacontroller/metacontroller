@@ -12,9 +12,11 @@ import (
 // RelativeObjectMap holds object related to given parent object.
 // The structure is [GroupVersionKind] -> [common.relativeName] -> *unstructured.Unstructured
 // where:
-//   GroupVersionKind - identifies type stored in entry
-//   relativeName() - return path to object in relation to parent
-//   *unstructured.Unstructured - object to store
+//
+//	GroupVersionKind - identifies type stored in entry
+//	relativeName() - return path to object in relation to parent
+//	*unstructured.Unstructured - object to store
+//
 // i.e. :
 // "v1/Pod -> 'prometheus/Prometheus'" (for namespaced child resource if the parent is cluster scope)
 // "v1/Pod -> 'Prometheus'" (for namespaced child resource if parent is namespaced)
