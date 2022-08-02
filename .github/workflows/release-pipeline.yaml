@@ -1,78 +1,43 @@
 ---
-name: Release docker image
+name: Release docker image and helm chart
 on:
   push:
     tags:
       - 'v[0-9]+.[0-9]+.[0-9]+'
 jobs:
   release-docker:
-    name: Release docker image
     runs-on: ubuntu-20.04
-    if: github.repository_owner == 'metacontroller'
+    if: github.repository_owner == 'grzesuav'
+    env:
+      DOCKER_CLI_EXPERIMENTAL: "enabled"
+    name: Gorelease
     steps:
     - name: Checkout
-      uses: actions/checkout@v2
-    - uses: rlespinasse/github-slug-action@v3.x
+      uses: actions/checkout@v3
+    - uses: rlespinasse/github-slug-action@v4
     - name: Set up QEMU
-      uses: docker/setup-qemu-action@v1
+      uses: docker/setup-qemu-action@v2
     - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v1
+      uses: docker/setup-buildx-action@v2
     - name: Login to DockerHub
       if: github.event_name != 'pull_request'
-      uses: docker/login-action@v1
+      uses: docker/login-action@v2
       with:
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
-    - name: '[alpine] Docker metainformations'
-      id: docker_meta_alpine
-      uses: crazy-max/ghaction-docker-meta@v1
+    - name: Login to github registry
+      if: github.event_name != 'pull_request'
+      uses: docker/login-action@v2
       with:
-        images: metacontrollerio/metacontroller # list of Docker images to use as base name for tags
-    - name: '[alpine] Build and push'
-      id: docker_build_alpine
-      uses: docker/build-push-action@v2
+        registry: ghcr.io
+        username: ${{ github.repository_owner }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    - name: Run GoReleaser
+      uses: goreleaser/goreleaser-action@v3
       with:
-        context: .
-        file: ./Dockerfile
-        platforms: linux/amd64,linux/arm64,linux/arm
-        push: ${{ github.event_name != 'pull_request' }}
-        tags: ${{ steps.docker_meta_alpine.outputs.tags }}
-        labels: ${{ steps.docker_meta_alpine.outputs.labels }}
-        build-args: |
-          TAG=${{ env.GITHUB_REF_SLUG }}
-    - name: '[distroless] Docker metainformations'
-      id: docker_meta_distroless
-      uses: crazy-max/ghaction-docker-meta@v1
-      with:
-        images: metacontrollerio/metacontroller # list of Docker images to use as base name for tags
-        tag-latest: false
-    - name: '[distroless] Build and push'
-      id: docker_build_distroless
-      uses: docker/build-push-action@v2
-      with:
-        context: .
-        file: ./Dockerfile.distroless
-        platforms: linux/amd64,linux/arm64,linux/arm
-        push: ${{ github.event_name != 'pull_request' }}
-        tags: ${{ steps.docker_meta_distroless.outputs.tags }}-distroless
-        labels: ${{ steps.docker_meta_distroless.outputs.labels }}
-        build-args: |
-          TAG=${{ env.GITHUB_REF_SLUG }}
-    - name: '[distroless-debug] Docker metainformations'
-      id: docker_meta_distroless_debug
-      uses: crazy-max/ghaction-docker-meta@v1
-      with:
-        images: metacontrollerio/metacontroller # list of Docker images to use as base name for tags
-        tag-latest: false
-    - name: '[distroless-debug] Build and push'
-      id: docker_build_distroless_debug
-      uses: docker/build-push-action@v2
-      with:
-        context: .
-        file: ./Dockerfile.distroless-debug
-        platforms: linux/amd64,linux/arm64,linux/arm
-        push: ${{ github.event_name != 'pull_request' }}
-        tags: ${{ steps.docker_meta_distroless_debug.outputs.tags }}-distroless-debug
-        labels: ${{ steps.docker_meta_distroless_debug.outputs.labels }}
-        build-args: |
-          TAG=${{ env.GITHUB_REF_SLUG }}
+        distribution: goreleaser
+        version: latest
+        args: release --rm-dist
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        REPOSITORY_OWNER: github.repository_owner

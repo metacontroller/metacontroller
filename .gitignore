@@ -9,3 +9,5 @@
 docs/book
 **/tmp
 
+
+dist/
