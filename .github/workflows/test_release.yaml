@@ -2,79 +2,79 @@
 name: Test / Release
 on: [push, pull_request]
 jobs:
-  tests:
-    runs-on: ubuntu-20.04
-    name: Tests
-    steps:
-    - name: checkout
-      uses: actions/checkout@v2
-      with:
-        fetch-depth: '5'
-    - name: Run unit & integration tests
-      shell: bash
-      run: DOCKER_BUILDKIT=1 docker build -o ./tmp -t metacontroller:test -f Dockerfile.test .
-    - name: coverage-unit
-      uses: codecov/codecov-action@v1
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
-        files: ./tmp/unit-coverage.out
-        flags: unit
-        fail_ci_if_error: true # optional (default = false)
-    - name: coverage-integration
-      uses: codecov/codecov-action@v1
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
-        files: ./tmp/integration-coverage.out
-        flags: integration
-        fail_ci_if_error: true # optional (default = false)
-  e2etests:
-    runs-on: ubuntu-20.04
-    strategy:
-      fail-fast: false
-      matrix:
-        configuration:
-         - {version: '1.14', kind: "v0.11.1", image: 'kindest/node:v1.14.10@sha256:f8a66ef82822ab4f7569e91a5bccaf27bceee135c1457c512e54de8c6f7219f8', crd_version: 'v1beta1' }
-         - {version: '1.15', kind: "v0.11.1", image: 'kindest/node:v1.15.12@sha256:b920920e1eda689d9936dfcf7332701e80be12566999152626b2c9d730397a95', crd_version: 'v1beta1' }
-         - {version: '1.16', kind: "v0.11.1", image: 'kindest/node:v1.16.15@sha256:83067ed51bf2a3395b24687094e283a7c7c865ccc12a8b1d7aa673ba0c5e8861', crd_version: 'v1' }
-         - {version: '1.17', kind: "v0.11.1", image: 'kindest/node:v1.17.17@sha256:66f1d0d91a88b8a001811e2f1054af60eef3b669a9a74f9b6db871f2f1eeed00', crd_version: 'v1' }
-         - {version: '1.18', kind: "v0.11.1", image: 'kindest/node:v1.18.19@sha256:7af1492e19b3192a79f606e43c35fb741e520d195f96399284515f077b3b622c', crd_version: 'v1' }
-         - {version: '1.19', kind: "v0.11.1", image: 'kindest/node:v1.19.11@sha256:07db187ae84b4b7de440a73886f008cf903fcf5764ba8106a9fd5243d6f32729', crd_version: 'v1' }
-         - {version: '1.20', kind: "v0.11.1", image: 'kindest/node:v1.20.7@sha256:cbeaf907fc78ac97ce7b625e4bf0de16e3ea725daf6b04f930bd14c67c671ff9', crd_version: 'v1' }
-         - {version: '1.21', kind: "v0.11.1", image: 'kindest/node:v1.21.1@sha256:69860bda5563ac81e3c0057d654b5253219618a22ec3a346306239bba8cfa1a6', crd_version: 'v1' }
-         - {version: '1.22', kind: "v0.11.1", image: 'kindest/node:v1.22.0@sha256:b8bda84bb3a190e6e028b1760d277454a72267a5454b57db34437c34a588d047', crd_version: 'v1' }
-    name: k8s ${{ matrix.configuration.version }}
-    steps:
-    - name: checkout
-      uses: actions/checkout@v2
-      with:
-        fetch-depth: '5'
-    - name: build local Image
-      run: docker build -t metacontrollerio/metacontroller:dev .
-    - name: setup kind
-      uses: helm/kind-action@v1.2.0
-      with:
-        version: ${{ matrix.configuration.kind }}
-        node_image: ${{ matrix.configuration.image }}
-        cluster_name: kind
-        wait: 120s
-    - name: Load metacontroller image
-      run: |
-        kind load docker-image metacontrollerio/metacontroller:dev
-    - name: Replace CRD mnifests to v1beta1
-      if: ${{ matrix.configuration.crd_version == 'v1beta1' }}
-      run: |
-        sed -i 's/crds-v1/crds-v1beta1/' manifests/production/kustomization.yaml
-        for file in examples/**/*.yaml; do sed -i 's/apiextensions.k8s.io\/v1/apiextensions.k8s.io\/v1beta1/g' $file; done
-    - name: Apply metacontroller manifests
-      run: |
-        kubectl apply -k manifests/dev
-        sleep 60s
-        kubectl get pods -n metacontroller
-    - name: Run e2e tests
-      timeout-minutes: 30
-      run: |
-        cd examples
-        ./test.sh --crd_version ${{ matrix.configuration.crd_version }}
+#  tests:
+#    runs-on: ubuntu-20.04
+#    name: Tests
+#    steps:
+#    - name: checkout
+#      uses: actions/checkout@v2
+#      with:
+#        fetch-depth: '5'
+#    - name: Run unit & integration tests
+#      shell: bash
+#      run: DOCKER_BUILDKIT=1 docker build -o ./tmp -t metacontroller:test -f Dockerfile.test .
+#    - name: coverage-unit
+#      uses: codecov/codecov-action@v1
+#      with:
+#        token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
+#        files: ./tmp/unit-coverage.out
+#        flags: unit
+#        fail_ci_if_error: true # optional (default = false)
+#    - name: coverage-integration
+#      uses: codecov/codecov-action@v1
+#      with:
+#        token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
+#        files: ./tmp/integration-coverage.out
+#        flags: integration
+#        fail_ci_if_error: true # optional (default = false)
+#  e2etests:
+#    runs-on: ubuntu-20.04
+#    strategy:
+#      fail-fast: false
+#      matrix:
+#        configuration:
+#         - {version: '1.14', kind: "v0.11.1", image: 'kindest/node:v1.14.10@sha256:f8a66ef82822ab4f7569e91a5bccaf27bceee135c1457c512e54de8c6f7219f8', crd_version: 'v1beta1' }
+#         - {version: '1.15', kind: "v0.11.1", image: 'kindest/node:v1.15.12@sha256:b920920e1eda689d9936dfcf7332701e80be12566999152626b2c9d730397a95', crd_version: 'v1beta1' }
+#         - {version: '1.16', kind: "v0.11.1", image: 'kindest/node:v1.16.15@sha256:83067ed51bf2a3395b24687094e283a7c7c865ccc12a8b1d7aa673ba0c5e8861', crd_version: 'v1' }
+#         - {version: '1.17', kind: "v0.11.1", image: 'kindest/node:v1.17.17@sha256:66f1d0d91a88b8a001811e2f1054af60eef3b669a9a74f9b6db871f2f1eeed00', crd_version: 'v1' }
+#         - {version: '1.18', kind: "v0.11.1", image: 'kindest/node:v1.18.19@sha256:7af1492e19b3192a79f606e43c35fb741e520d195f96399284515f077b3b622c', crd_version: 'v1' }
+#         - {version: '1.19', kind: "v0.11.1", image: 'kindest/node:v1.19.11@sha256:07db187ae84b4b7de440a73886f008cf903fcf5764ba8106a9fd5243d6f32729', crd_version: 'v1' }
+#         - {version: '1.20', kind: "v0.11.1", image: 'kindest/node:v1.20.7@sha256:cbeaf907fc78ac97ce7b625e4bf0de16e3ea725daf6b04f930bd14c67c671ff9', crd_version: 'v1' }
+#         - {version: '1.21', kind: "v0.11.1", image: 'kindest/node:v1.21.1@sha256:69860bda5563ac81e3c0057d654b5253219618a22ec3a346306239bba8cfa1a6', crd_version: 'v1' }
+#         - {version: '1.22', kind: "v0.11.1", image: 'kindest/node:v1.22.0@sha256:b8bda84bb3a190e6e028b1760d277454a72267a5454b57db34437c34a588d047', crd_version: 'v1' }
+#    name: k8s ${{ matrix.configuration.version }}
+#    steps:
+#    - name: checkout
+#      uses: actions/checkout@v2
+#      with:
+#        fetch-depth: '5'
+#    - name: build local Image
+#      run: docker build -t metacontrollerio/metacontroller:dev .
+#    - name: setup kind
+#      uses: helm/kind-action@v1.2.0
+#      with:
+#        version: ${{ matrix.configuration.kind }}
+#        node_image: ${{ matrix.configuration.image }}
+#        cluster_name: kind
+#        wait: 120s
+#    - name: Load metacontroller image
+#      run: |
+#        kind load docker-image metacontrollerio/metacontroller:dev
+#    - name: Replace CRD mnifests to v1beta1
+#      if: ${{ matrix.configuration.crd_version == 'v1beta1' }}
+#      run: |
+#        sed -i 's/crds-v1/crds-v1beta1/' manifests/production/kustomization.yaml
+#        for file in examples/**/*.yaml; do sed -i 's/apiextensions.k8s.io\/v1/apiextensions.k8s.io\/v1beta1/g' $file; done
+#    - name: Apply metacontroller manifests
+#      run: |
+#        kubectl apply -k manifests/dev
+#        sleep 60s
+#        kubectl get pods -n metacontroller
+#    - name: Run e2e tests
+#      timeout-minutes: 30
+#      run: |
+#        cd examples
+#        ./test.sh --crd_version ${{ matrix.configuration.crd_version }}
   release:
     if: (github.ref == 'refs/heads/master') && (github.repository_owner == 'metacontroller')
     name: Release - Create tag

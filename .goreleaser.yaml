@@ -1,0 +1,235 @@
+env:
+  - REPOSITORY_OWNER={{ if index .Env "REPOSITORY_OWNER"  }}{{ .Env.REPOSITORY_OWNER }}{{ else }}local{{ end }}
+before:
+  hooks:
+#    - make generated_files
+builds:
+  - env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+#      - windows
+#      - darwin
+    goarch:
+    - amd64
+    - arm
+    - arm64
+    - 386
+    goarm:
+    - 6
+    - 7
+    ldflags:
+      - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}} -X main.builtBy=goreleaser
+# probably won't be used
+archives:
+  - replacements:
+      darwin: Darwin
+      linux: Linux
+      windows: Windows
+      386: i386
+      amd64: x86_64
+dockers:
+- image_templates:
+  - "{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-amd64"
+  - "ghcr.io/{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-amd64"
+  dockerfile: Dockerfile
+  use: buildx
+  build_flag_templates:
+    - --platform=linux/amd64
+    - --label=org.opencontainers.image.title={{ .ProjectName }}
+    - --label=org.opencontainers.image.description={{ .ProjectName }}
+    - --label=org.opencontainers.image.url=https://github.com/metacontroller/{{ .ProjectName }}
+    - --label=org.opencontainers.image.source=https://github.com/metacontroller/{{ .ProjectName }}
+    - --label=org.opencontainers.image.version={{ .Version }}
+    - --label=org.opencontainers.image.created={{ .Date }}
+    - --label=org.opencontainers.image.revision={{ .FullCommit }}
+    - --label=org.opencontainers.image.licenses=Apache-2.0
+- image_templates:
+  - "{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-arm64v8"
+  - "ghcr.io/{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-arm64v8"
+  goarch: arm64
+  dockerfile: Dockerfile
+  use: buildx
+  build_flag_templates:
+    - --platform=linux/arm64/v8
+    - --label=org.opencontainers.image.title={{ .ProjectName }}
+    - --label=org.opencontainers.image.description={{ .ProjectName }}
+    - --label=org.opencontainers.image.url=https://github.com/metacontroller/{{ .ProjectName }}
+    - --label=org.opencontainers.image.source=https://github.com/metacontroller/{{ .ProjectName }}
+    - --label=org.opencontainers.image.version={{ .Version }}
+    - --label=org.opencontainers.image.created={{ .Date }}
+    - --label=org.opencontainers.image.revision={{ .FullCommit }}
+    - --label=org.opencontainers.image.licenses=Apache-2.0
+- image_templates:
+  - "{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-armv7"
+  - "ghcr.io/{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-armv7"
+  goarch: arm64
+  dockerfile: Dockerfile
+  use: buildx
+  build_flag_templates:
+    - --platform=linux/arm/v7
+    - --label=org.opencontainers.image.title={{ .ProjectName }}
+    - --label=org.opencontainers.image.description={{ .ProjectName }}
+    - --label=org.opencontainers.image.url=https://github.com/metacontroller/{{ .ProjectName }}
+    - --label=org.opencontainers.image.source=https://github.com/metacontroller/{{ .ProjectName }}
+    - --label=org.opencontainers.image.version={{ .Version }}
+    - --label=org.opencontainers.image.created={{ .Date }}
+    - --label=org.opencontainers.image.revision={{ .FullCommit }}
+    - --label=org.opencontainers.image.licenses=Apache-2.0
+- image_templates:
+  - "{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-distroless-amd64"
+  - "ghcr.io/{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-distroless-amd64"
+  dockerfile: Dockerfile.distroless
+  use: buildx
+  build_flag_templates:
+    - --platform=linux/amd64
+    - --label=org.opencontainers.image.title={{ .ProjectName }}
+    - --label=org.opencontainers.image.description={{ .ProjectName }}
+    - --label=org.opencontainers.image.url=https://github.com/metacontroller/{{ .ProjectName }}
+    - --label=org.opencontainers.image.source=https://github.com/metacontroller/{{ .ProjectName }}
+    - --label=org.opencontainers.image.version={{ .Version }}
+    - --label=org.opencontainers.image.created={{ .Date }}
+    - --label=org.opencontainers.image.revision={{ .FullCommit }}
+    - --label=org.opencontainers.image.licenses=Apache-2.0
+- image_templates:
+  - "{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-distroless-arm64v8"
+  - "ghcr.io/{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-distroless-arm64v8"
+  goarch: arm64
+  dockerfile: Dockerfile.distroless
+  use: buildx
+  build_flag_templates:
+    - --platform=linux/arm64/v8
+    - --label=org.opencontainers.image.title={{ .ProjectName }}
+    - --label=org.opencontainers.image.description={{ .ProjectName }}
+    - --label=org.opencontainers.image.url=https://github.com/metacontroller/{{ .ProjectName }}
+    - --label=org.opencontainers.image.source=https://github.com/metacontroller/{{ .ProjectName }}
+    - --label=org.opencontainers.image.version={{ .Version }}
+    - --label=org.opencontainers.image.created={{ .Date }}
+    - --label=org.opencontainers.image.revision={{ .FullCommit }}
+    - --label=org.opencontainers.image.licenses=Apache-2.0
+- image_templates:
+  - "{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-distroless-armv7"
+  - "ghcr.io/{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-distroless-armv7"
+  goarch: arm64
+  dockerfile: Dockerfile.distroless
+  use: buildx
+  build_flag_templates:
+    - --platform=linux/arm/v7
+    - --label=org.opencontainers.image.title={{ .ProjectName }}
+    - --label=org.opencontainers.image.description={{ .ProjectName }}
+    - --label=org.opencontainers.image.url=https://github.com/metacontroller/{{ .ProjectName }}
+    - --label=org.opencontainers.image.source=https://github.com/metacontroller/{{ .ProjectName }}
+    - --label=org.opencontainers.image.version={{ .Version }}
+    - --label=org.opencontainers.image.created={{ .Date }}
+    - --label=org.opencontainers.image.revision={{ .FullCommit }}
+    - --label=org.opencontainers.image.licenses=Apache-2.0
+- image_templates:
+  - "{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-distroless-debug-amd64"
+  - "ghcr.io/{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-distroless-debug-amd64"
+  dockerfile: Dockerfile.distroless-debug
+  use: buildx
+  build_flag_templates:
+    - --platform=linux/amd64
+    - --label=org.opencontainers.image.title={{ .ProjectName }}
+    - --label=org.opencontainers.image.description={{ .ProjectName }}
+    - --label=org.opencontainers.image.url=https://github.com/metacontroller/{{ .ProjectName }}
+    - --label=org.opencontainers.image.source=https://github.com/metacontroller/{{ .ProjectName }}
+    - --label=org.opencontainers.image.version={{ .Version }}
+    - --label=org.opencontainers.image.created={{ .Date }}
+    - --label=org.opencontainers.image.revision={{ .FullCommit }}
+    - --label=org.opencontainers.image.licenses=Apache-2.0
+- image_templates:
+  - "{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-distroless-debug-arm64v8"
+  - "ghcr.io/{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-distroless-debug-arm64v8"
+  goarch: arm64
+  dockerfile: Dockerfile.distroless-debug
+  use: buildx
+  build_flag_templates:
+    - --platform=linux/arm64/v8
+    - --label=org.opencontainers.image.title={{ .ProjectName }}
+    - --label=org.opencontainers.image.description={{ .ProjectName }}
+    - --label=org.opencontainers.image.url=https://github.com/metacontroller/{{ .ProjectName }}
+    - --label=org.opencontainers.image.source=https://github.com/metacontroller/{{ .ProjectName }}
+    - --label=org.opencontainers.image.version={{ .Version }}
+    - --label=org.opencontainers.image.created={{ .Date }}
+    - --label=org.opencontainers.image.revision={{ .FullCommit }}
+    - --label=org.opencontainers.image.licenses=Apache-2.0
+- image_templates:
+  - "{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-distroless-debug-armv7"
+  - "ghcr.io/{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-distroless-debug-armv7"
+  goarch: arm64
+  dockerfile: Dockerfile.distroless-debug
+  use: buildx
+  build_flag_templates:
+    - --platform=linux/arm/v7
+    - --label=org.opencontainers.image.title={{ .ProjectName }}
+    - --label=org.opencontainers.image.description={{ .ProjectName }}
+    - --label=org.opencontainers.image.url=https://github.com/metacontroller/{{ .ProjectName }}
+    - --label=org.opencontainers.image.source=https://github.com/metacontroller/{{ .ProjectName }}
+    - --label=org.opencontainers.image.version={{ .Version }}
+    - --label=org.opencontainers.image.created={{ .Date }}
+    - --label=org.opencontainers.image.revision={{ .FullCommit }}
+    - --label=org.opencontainers.image.licenses=Apache-2.0
+docker_manifests:
+- name_template: "{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}"
+  image_templates:
+    - "{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-amd64"
+    - "{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-arm64v8"
+    - "{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-armv7"
+- name_template: "{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:latest"
+  image_templates:
+    - "{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-amd64"
+    - "{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-arm64v8"
+    - "{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-armv7"
+- name_template: "{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-distroless"
+  image_templates:
+    - "{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-distroless-amd64"
+    - "{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-distroless-arm64v8"
+    - "{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-distroless-armv7"
+- name_template: "{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-distroless-debug"
+  image_templates:
+    - "{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-distroless-debug-amd64"
+    - "{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-distroless-debug-arm64v8"
+    - "{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-distroless-debug-armv7"
+- name_template: "ghcr.io/{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}"
+  image_templates:
+    - "ghcr.io/{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-amd64"
+    - "ghcr.io/{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-arm64v8"
+    - "ghcr.io/{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-armv7"
+- name_template: ghcr.io/{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:latest
+  image_templates:
+    - ghcr.io/{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-amd64
+    - ghcr.io/{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-arm64v8
+    - ghcr.io/{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-armv7
+- name_template: ghcr.io/grzesuav/{{ .ProjectName }}:{{ .Version }}-distroless
+  image_templates:
+    - ghcr.io/{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-distroless-amd64
+    - ghcr.io/{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-distroless-arm64v8
+    - ghcr.io/{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-distroless-armv7
+- name_template: ghcr.io/{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-distroless-debug
+  image_templates:
+    - ghcr.io/{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-distroless-debug-amd64
+    - ghcr.io/{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-distroless-debug-arm64v8
+    - ghcr.io/{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-distroless-debug-armv7
+checksum:
+  name_template: 'checksums.txt'
+snapshot:
+  name_template: "{{ incpatch .Version }}-next"
+changelog:
+  sort: asc
+  use: github
+  groups:
+    - title: Features
+      regexp: "^.*feat[(\\w)]*:+.*$"
+      order: 0
+    - title: 'Bug fixes'
+      regexp: "^.*fix[(\\w)]*:+.*$"
+      order: 1
+    - title: Others
+      order: 999
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^examples:'
+      - '^hack:'
