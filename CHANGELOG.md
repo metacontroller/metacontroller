@@ -1,3 +1,10 @@
+## [4.3.1](https://github.com/metacontroller/metacontroller/compare/v4.3.0...v4.3.1) (2022-08-10)
+
+
+### Bug Fixes
+
+* **deps:** update dependency alpine to v3.16.2 ([80e11a3](https://github.com/metacontroller/metacontroller/commit/80e11a37663b05806d0a92dcd6c09c33501f78e7))
+
 # [4.3.0](https://github.com/metacontroller/metacontroller/compare/v4.2.5...v4.3.0) (2022-07-21)
 
 
