@@ -4,7 +4,7 @@ on: [push, pull_request]
 jobs:
   dockerbuild:
     name: Build local metacontroller images
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
     - name: checkout
       uses: actions/checkout@v3
@@ -31,7 +31,7 @@ jobs:
         retention-days: 1
   setmatrix:
     name: Set Configuration Matrix
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
       latest_matrix: ${{ steps.set-matrix.outputs.latest_matrix }}
@@ -49,7 +49,7 @@ jobs:
           echo "::set-output name=matrix::${full_json}"
           echo "::set-output name=latest_matrix::${latest_json}"
   tests:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     name: Tests
     steps:
     - name: checkout
@@ -76,10 +76,10 @@ jobs:
         flags: integration
         fail_ci_if_error: true # optional (default = false)
   e2etests:
-    runs-on: ubuntu-20.04
     needs:
       - setmatrix
       - dockerbuild
+    runs-on: ${{ matrix.configuration.runner }}
     strategy:
       fail-fast: false
       matrix: ${{fromJson(needs.setmatrix.outputs.matrix)}}
@@ -121,7 +121,7 @@ jobs:
         ./test.sh
 
   helmtests:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     needs:
       - setmatrix
       - dockerbuild
@@ -183,7 +183,7 @@ jobs:
   release:
     if: (github.ref == 'refs/heads/master') && (github.repository_owner == 'metacontroller')
     name: Release - Create tag
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     needs: ['tests', 'e2etests', 'helmtests']
     steps:
     - name: Checkout
