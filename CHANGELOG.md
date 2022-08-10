@@ -1,3 +1,10 @@
+## [4.3.4](https://github.com/metacontroller/metacontroller/compare/v4.3.3...v4.3.4) (2022-08-10)
+
+
+### Bug Fixes
+
+* **release:** Fix dockehub repository url ([de7e293](https://github.com/metacontroller/metacontroller/commit/de7e293312dcdef58e4530e3666b33d1fb454c8e))
+
 ## [4.3.3](https://github.com/metacontroller/metacontroller/compare/v4.3.2...v4.3.3) (2022-08-10)
 
 
