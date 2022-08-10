@@ -10,7 +10,7 @@ require (
 	github.com/google/go-cmp v0.5.8
 	github.com/nsf/jsondiff v0.0.0-20210926074059-1e845ec5d249 // test
 	github.com/prometheus/client_golang v1.12.2
-	go.uber.org/zap v1.21.0
+	go.uber.org/zap v1.22.0
 	k8s.io/api v0.24.3
 	k8s.io/apiextensions-apiserver v0.24.3
 	k8s.io/apimachinery v0.24.3
@@ -69,7 +69,7 @@ require (
 	google.golang.org/protobuf v1.27.1 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
-	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/component-base v0.24.3 // indirect
 	k8s.io/kube-openapi v0.0.0-20220328201542-3ee0da9b0b42 // indirect
 	sigs.k8s.io/json v0.0.0-20211208200746-9f7c6b3444d2 // indirect
