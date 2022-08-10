@@ -7,7 +7,7 @@ require (
 	k8s.io/apiextensions-apiserver v0.24.3
 	k8s.io/apimachinery v0.24.3
 	k8s.io/client-go v0.24.3
-	k8s.io/utils v0.0.0-20220713171938-56c0de1e6f5e
+	k8s.io/utils v0.0.0-20220810061631-2e139fc3ae1e
 	metacontroller v0.0.0-00010101000000-000000000000
 	sigs.k8s.io/controller-runtime v0.12.3
 )
