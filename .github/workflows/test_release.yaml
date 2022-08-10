@@ -223,7 +223,7 @@ jobs:
     - name: Release
       env:
         GH_TOKEN: ${{ secrets.PAT }}
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.PAT }}
         REPOSITORY_OWNER: ${{github.repository_owner}}
       run: |
         npm install @semantic-release/git @semantic-release/changelog @google/semantic-release-replace-plugin @semantic-release/exec -D
