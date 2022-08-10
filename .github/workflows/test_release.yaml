@@ -12,7 +12,8 @@ jobs:
         fetch-depth: '5'
     - uses: actions/setup-go@v3
       with:
-        go-version: '1.19.0'
+        go-version-file: 'go.mod'
+        cache: true
     - name: build binary
       run: CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo
     - name: Build metacontroller:dev
@@ -63,7 +64,8 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v3
       with:
-        go-version: '1.19.0'
+        go-version-file: 'go.mod'
+        cache: true
     - name: Prepare integration test environment
       shell: bash
       if: ${{ matrix.target }}==integration-test
