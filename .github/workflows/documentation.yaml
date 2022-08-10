@@ -7,7 +7,7 @@ on:
 
 jobs:
   gh-pages:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     container:
       image: "michaelfbryan/mdbook-docker-image:latest"
     if: github.repository_owner == 'metacontroller'
@@ -28,7 +28,7 @@ jobs:
         publish_dir: ./docs/book/html
         publish_branch: gh-pages
   dockerhub-readme:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     if: github.repository_owner == 'metacontroller'
     steps:
     - uses: actions/checkout@v3
