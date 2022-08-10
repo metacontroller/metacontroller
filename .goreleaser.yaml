@@ -30,7 +30,7 @@ archives:
       amd64: x86_64
 dockers:
 - image_templates:
-  - "{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-amd64"
+  - "{{ .Env.REPOSITORY_OWNER }}io/{{ .ProjectName }}:{{ .Version }}-amd64"
   - "ghcr.io/{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-amd64"
   dockerfile: Dockerfile
   use: buildx
@@ -45,7 +45,7 @@ dockers:
     - --label=org.opencontainers.image.revision={{ .FullCommit }}
     - --label=org.opencontainers.image.licenses=Apache-2.0
 - image_templates:
-  - "{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-arm64v8"
+  - "{{ .Env.REPOSITORY_OWNER }}io/{{ .ProjectName }}:{{ .Version }}-arm64v8"
   - "ghcr.io/{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-arm64v8"
   goarch: arm64
   dockerfile: Dockerfile
@@ -61,7 +61,7 @@ dockers:
     - --label=org.opencontainers.image.revision={{ .FullCommit }}
     - --label=org.opencontainers.image.licenses=Apache-2.0
 - image_templates:
-  - "{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-armv7"
+  - "{{ .Env.REPOSITORY_OWNER }}io/{{ .ProjectName }}:{{ .Version }}-armv7"
   - "ghcr.io/{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-armv7"
   goarch: arm64
   dockerfile: Dockerfile
@@ -77,7 +77,7 @@ dockers:
     - --label=org.opencontainers.image.revision={{ .FullCommit }}
     - --label=org.opencontainers.image.licenses=Apache-2.0
 - image_templates:
-  - "{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-distroless-amd64"
+  - "{{ .Env.REPOSITORY_OWNER }}io/{{ .ProjectName }}:{{ .Version }}-distroless-amd64"
   - "ghcr.io/{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-distroless-amd64"
   dockerfile: Dockerfile.distroless
   use: buildx
@@ -92,7 +92,7 @@ dockers:
     - --label=org.opencontainers.image.revision={{ .FullCommit }}
     - --label=org.opencontainers.image.licenses=Apache-2.0
 - image_templates:
-  - "{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-distroless-arm64v8"
+  - "{{ .Env.REPOSITORY_OWNER }}io/{{ .ProjectName }}:{{ .Version }}-distroless-arm64v8"
   - "ghcr.io/{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-distroless-arm64v8"
   goarch: arm64
   dockerfile: Dockerfile.distroless
@@ -108,7 +108,7 @@ dockers:
     - --label=org.opencontainers.image.revision={{ .FullCommit }}
     - --label=org.opencontainers.image.licenses=Apache-2.0
 - image_templates:
-  - "{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-distroless-armv7"
+  - "{{ .Env.REPOSITORY_OWNER }}io/{{ .ProjectName }}:{{ .Version }}-distroless-armv7"
   - "ghcr.io/{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-distroless-armv7"
   goarch: arm64
   dockerfile: Dockerfile.distroless
@@ -124,7 +124,7 @@ dockers:
     - --label=org.opencontainers.image.revision={{ .FullCommit }}
     - --label=org.opencontainers.image.licenses=Apache-2.0
 - image_templates:
-  - "{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-distroless-debug-amd64"
+  - "{{ .Env.REPOSITORY_OWNER }}io/{{ .ProjectName }}:{{ .Version }}-distroless-debug-amd64"
   - "ghcr.io/{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-distroless-debug-amd64"
   dockerfile: Dockerfile.distroless-debug
   use: buildx
@@ -139,7 +139,7 @@ dockers:
     - --label=org.opencontainers.image.revision={{ .FullCommit }}
     - --label=org.opencontainers.image.licenses=Apache-2.0
 - image_templates:
-  - "{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-distroless-debug-arm64v8"
+  - "{{ .Env.REPOSITORY_OWNER }}io/{{ .ProjectName }}:{{ .Version }}-distroless-debug-arm64v8"
   - "ghcr.io/{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-distroless-debug-arm64v8"
   goarch: arm64
   dockerfile: Dockerfile.distroless-debug
@@ -155,7 +155,7 @@ dockers:
     - --label=org.opencontainers.image.revision={{ .FullCommit }}
     - --label=org.opencontainers.image.licenses=Apache-2.0
 - image_templates:
-  - "{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-distroless-debug-armv7"
+  - "{{ .Env.REPOSITORY_OWNER }}io/{{ .ProjectName }}:{{ .Version }}-distroless-debug-armv7"
   - "ghcr.io/{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-distroless-debug-armv7"
   goarch: arm64
   dockerfile: Dockerfile.distroless-debug
@@ -171,26 +171,26 @@ dockers:
     - --label=org.opencontainers.image.revision={{ .FullCommit }}
     - --label=org.opencontainers.image.licenses=Apache-2.0
 docker_manifests:
-- name_template: "{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}"
+- name_template: "{{ .Env.REPOSITORY_OWNER }}io/{{ .ProjectName }}:{{ .Version }}"
   image_templates:
-    - "{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-amd64"
-    - "{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-arm64v8"
-    - "{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-armv7"
-- name_template: "{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:latest"
+    - "{{ .Env.REPOSITORY_OWNER }}io/{{ .ProjectName }}:{{ .Version }}-amd64"
+    - "{{ .Env.REPOSITORY_OWNER }}io/{{ .ProjectName }}:{{ .Version }}-arm64v8"
+    - "{{ .Env.REPOSITORY_OWNER }}io/{{ .ProjectName }}:{{ .Version }}-armv7"
+- name_template: "{{ .Env.REPOSITORY_OWNER }}io/{{ .ProjectName }}:latest"
   image_templates:
-    - "{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-amd64"
-    - "{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-arm64v8"
-    - "{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-armv7"
-- name_template: "{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-distroless"
+    - "{{ .Env.REPOSITORY_OWNER }}io/{{ .ProjectName }}:{{ .Version }}-amd64"
+    - "{{ .Env.REPOSITORY_OWNER }}io/{{ .ProjectName }}:{{ .Version }}-arm64v8"
+    - "{{ .Env.REPOSITORY_OWNER }}io/{{ .ProjectName }}:{{ .Version }}-armv7"
+- name_template: "{{ .Env.REPOSITORY_OWNER }}io/{{ .ProjectName }}:{{ .Version }}-distroless"
   image_templates:
-    - "{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-distroless-amd64"
-    - "{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-distroless-arm64v8"
-    - "{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-distroless-armv7"
-- name_template: "{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-distroless-debug"
+    - "{{ .Env.REPOSITORY_OWNER }}io/{{ .ProjectName }}:{{ .Version }}-distroless-amd64"
+    - "{{ .Env.REPOSITORY_OWNER }}io/{{ .ProjectName }}:{{ .Version }}-distroless-arm64v8"
+    - "{{ .Env.REPOSITORY_OWNER }}io/{{ .ProjectName }}:{{ .Version }}-distroless-armv7"
+- name_template: "{{ .Env.REPOSITORY_OWNER }}io/{{ .ProjectName }}:{{ .Version }}-distroless-debug"
   image_templates:
-    - "{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-distroless-debug-amd64"
-    - "{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-distroless-debug-arm64v8"
-    - "{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-distroless-debug-armv7"
+    - "{{ .Env.REPOSITORY_OWNER }}io/{{ .ProjectName }}:{{ .Version }}-distroless-debug-amd64"
+    - "{{ .Env.REPOSITORY_OWNER }}io/{{ .ProjectName }}:{{ .Version }}-distroless-debug-arm64v8"
+    - "{{ .Env.REPOSITORY_OWNER }}io/{{ .ProjectName }}:{{ .Version }}-distroless-debug-armv7"
 - name_template: ghcr.io/{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}
   image_templates:
     - "ghcr.io/{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-amd64"
@@ -238,9 +238,9 @@ release:
   footer: |
     ## Docker Images
     ### Dockerhub
-    - `{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}`
-    - `{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-distroless`
-    - `{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-distroless-debug`
+    - `{{ .Env.REPOSITORY_OWNER }}io/{{ .ProjectName }}:{{ .Version }}`
+    - `{{ .Env.REPOSITORY_OWNER }}io/{{ .ProjectName }}:{{ .Version }}-distroless`
+    - `{{ .Env.REPOSITORY_OWNER }}io/{{ .ProjectName }}:{{ .Version }}-distroless-debug`
     ### Github container registry
     - `ghcr.io/{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}`
     - `ghcr.io/{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}-distroless`
