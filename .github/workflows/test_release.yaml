@@ -50,30 +50,34 @@ jobs:
           echo "::set-output name=latest_matrix::${latest_json}"
   tests:
     runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        target: ["unit-test", "integration-test"]
     name: Tests
     steps:
     - name: checkout
       uses: actions/checkout@v3
       with:
         fetch-depth: '5'
-    - name: Run unit & integration tests
+    - name: Set up Go
+      uses: actions/setup-go@v3
+      with:
+        go-version: '1.19.0'
+    - name: Prepare integration test environment
       shell: bash
-      run: DOCKER_BUILDKIT=1 docker build -o ./tmp -t metacontroller:test -f Dockerfile.test .
+      if: ${{ matrix.target }}==integration-test
+      run: test/integration/hack/get-kube-binaries.sh
+    - name: Run ${{ matrix.target }}
+      shell: bash
+      run: make ${{ matrix.target }}
     - name: coverage-unit
       if: (github.repository_owner == 'metacontroller')
       uses: codecov/codecov-action@v3
       with:
         token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
-        files: ./tmp/unit-coverage.out
-        flags: unit
-        fail_ci_if_error: true # optional (default = false)
-    - name: coverage-integration
-      if: (github.repository_owner == 'metacontroller')
-      uses: codecov/codecov-action@v3
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
-        files: ./tmp/integration-coverage.out
-        flags: integration
+        files: test/integration/hack/tmp/${{ matrix.target }}-coverage.out
+        flags: ${{ matrix.target }}
         fail_ci_if_error: true # optional (default = false)
   e2etests:
     needs:
