@@ -183,6 +183,8 @@ jobs:
   release:
     if: (github.ref == 'refs/heads/master') && (github.repository_owner == 'metacontroller')
     name: Release - Create tag
+    concurrency:
+      group: ${{ github.ref }}
     runs-on: ubuntu-22.04
     needs: ['tests', 'e2etests', 'helmtests']
     steps:
