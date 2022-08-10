@@ -2,7 +2,7 @@ module metacontroller
 
 // This denotes the minimum supported language version and
 // should not include the patch version.
-go 1.18
+go 1.19
 
 require (
 	github.com/evanphx/json-patch/v5 v5.6.0

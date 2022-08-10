@@ -20,7 +20,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+
+	"io"
 	"metacontroller/pkg/controller/common"
 	"metacontroller/pkg/etag_cache"
 	"metacontroller/pkg/logging"
@@ -130,7 +131,7 @@ func (w *WebhookExecutor) Call(request WebhookRequest, response interface{}) err
 	defer resp.Body.Close()
 
 	// Read response.
-	respBody, err := ioutil.ReadAll(resp.Body)
+	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return fmt.Errorf("can't read response body: %w", err)
 	}

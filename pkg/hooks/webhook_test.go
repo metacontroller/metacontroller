@@ -3,7 +3,7 @@ package hooks
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"metacontroller/pkg/controller/common"
 	compositev1 "metacontroller/pkg/controller/composite/api/v1"
 	"metacontroller/pkg/logging"
@@ -159,7 +159,7 @@ func httpResponse304NotModified() *MockResponse {
 			Status:     "304 Not modified",
 			StatusCode: 304,
 			Header:     map[string][]string{},
-			Body:       ioutil.NopCloser(bytes.NewBufferString("")),
+			Body:       io.NopCloser(bytes.NewBufferString("")),
 		},
 		nil,
 	}
@@ -170,7 +170,7 @@ func httpResponse200(body string, etag string) *MockResponse {
 		Status:     "200 OK",
 		StatusCode: 200,
 		Header:     map[string][]string{},
-		Body:       ioutil.NopCloser(bytes.NewBufferString(body)),
+		Body:       io.NopCloser(bytes.NewBufferString(body)),
 	}
 
 	switch etag {
