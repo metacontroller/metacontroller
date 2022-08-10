@@ -1,3 +1,10 @@
+## [4.3.2](https://github.com/metacontroller/metacontroller/compare/v4.3.1...v4.3.2) (2022-08-10)
+
+
+### Bug Fixes
+
+* **deps:** Update golang to 1.19 ([b53b5de](https://github.com/metacontroller/metacontroller/commit/b53b5de0595a0219301b4e0babe146f8eabd33c7))
+
 ## [4.3.1](https://github.com/metacontroller/metacontroller/compare/v4.3.0...v4.3.1) (2022-08-10)
 
 
