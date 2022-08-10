@@ -5,16 +5,16 @@ jobs:
   golangci-lint:
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/setup-go@v3
-        with:
-          go-version: '1.18.0'
-      - uses: actions/checkout@v3
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@v3
-        with:
-          # Optional: version of golangci-lint to use in form of v1.2 or v1.2.3 or `latest` to use the latest version
-          version: latest
-          args: --timeout 10m --enable errorlint,gofmt,goimports,gosec,whitespace,bodyclose,dogsled,durationcheck,errorlint,exhaustive,exportloopref,goconst,gocritic,gosec,ifshort,importas,misspell,nilerr --exclude=G108
+    - uses: actions/setup-go@v3
+      with:
+        go-version: '1.19.0'
+    - uses: actions/checkout@v3
+    - name: golangci-lint
+      uses: golangci/golangci-lint-action@v3
+      with:
+        # Optional: version of golangci-lint to use in form of v1.2 or v1.2.3 or `latest` to use the latest version
+        version: latest
+        args: --timeout 10m --enable errorlint,gofmt,goimports,gosec,whitespace,bodyclose,dogsled,durationcheck,errorlint,exhaustive,exportloopref,goconst,gocritic,gosec,ifshort,importas,misspell,nilerr --exclude=G108
   docker-linters:
     runs-on: ubuntu-20.04
     steps:
@@ -22,7 +22,7 @@ jobs:
       uses: actions/checkout@v3
     - uses: actions/setup-go@v3
       with:
-        go-version: '1.18.0'
+        go-version: '1.19.0'
     - name: build binary
       run: CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo
     - name: Build local image
@@ -52,7 +52,7 @@ jobs:
     - name: Set up Go 1.x in order to write go.list file
       uses: actions/setup-go@v3
       with:
-        go-version: ^1.18
+        go-version: '1.19.0'
     - name: WriteGoList
       run: go list -deps -json ./... > go.list
     - name: Nancy
