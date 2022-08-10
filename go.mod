@@ -10,6 +10,7 @@ require (
 	github.com/google/go-cmp v0.5.8
 	github.com/nsf/jsondiff v0.0.0-20210926074059-1e845ec5d249 // test
 	github.com/prometheus/client_golang v1.13.0
+	github.com/stretchr/testify v1.8.0 //test
 	go.uber.org/zap v1.22.0
 	k8s.io/api v0.24.3
 	k8s.io/apiextensions-apiserver v0.24.3
@@ -20,8 +21,6 @@ require (
 	sigs.k8s.io/controller-runtime v0.12.3
 	zgo.at/zcache v1.2.0
 )
-
-require github.com/stretchr/testify v1.7.0
 
 require (
 	github.com/PuerkitoBio/purell v1.1.1 // indirect
