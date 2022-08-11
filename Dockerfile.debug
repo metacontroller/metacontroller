@@ -1,18 +1,8 @@
 FROM golang:1.19 AS build
-
-ARG TAG
-ENV TAG=${TAG:-dev}
-
-ENV CGO_ENABLED=0
-COPY . /go/src/metacontroller/
-WORKDIR /go/src/metacontroller/
-ENV ADDITIONAL_BUILD_ARGUMENTS='-gcflags="all=-N -l"'
-RUN make install
 RUN go install github.com/go-delve/delve/cmd/dlv@latest
 
 FROM alpine:3.16.2@sha256:bc41182d7ef5ffc53a40b044e725193bc10142a1243f395ee852a8d9730fc2ad
 RUN apk update && apk add --no-cache ca-certificates
-COPY --from=build /go/bin/metacontroller /usr/bin/metacontroller
 COPY --from=build /go/bin/dlv /
 
 # Run container as nonroot, use the same uid and naming convention as distroless images
