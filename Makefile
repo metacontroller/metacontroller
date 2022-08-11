@@ -20,6 +20,10 @@ all: install
 install: generated_files
 	go install -ldflags  "-X main.version=$(TAG)" $(ADDITIONAL_BUILD_ARGUMENTS)
 
+.PHONY: build
+build: generated_files
+	go build -ldflags  "-X main.version=$(TAG)" $(ADDITIONAL_BUILD_ARGUMENTS)
+
 .PHONY: vendor
 vendor: 
 	@go mod download
@@ -41,7 +45,7 @@ test-setup: vendor
 	mkdir -p ./test/integration/hack/tmp; \
 
 .PHONY: image
-image: generated_files
+image: build
 	docker build -t metacontrollerio/metacontroller:$(TAG) .
 
 
@@ -68,6 +72,7 @@ deepcopy:
 	@echo "+ Generating deepcopy funcs for $(API_GROUPS)"
 	@deepcopy-gen \
 		--input-dirs $(PKG)/pkg/apis/$(API_GROUPS) \
+		--output-base $(PWD)/.. \
 		--go-header-file ./hack/boilerplate.go.txt \
 		--output-file-base zz_generated.deepcopy
 
@@ -81,6 +86,7 @@ clientset:
 		--go-header-file ./hack/boilerplate.go.txt \
 		--input $(API_GROUPS) \
 		--input-base $(PKG)/pkg/apis \
+		--output-base $(PWD)/.. \
 		--clientset-path $(PKG)/pkg/client/generated/clientset
 
 # also builds vendored version of lister-gen tool
@@ -91,6 +97,7 @@ lister:
 	@lister-gen \
 		--input-dirs $(PKG)/pkg/apis/$(API_GROUPS) \
 		--go-header-file ./hack/boilerplate.go.txt \
+		--output-base $(PWD)/.. \
 		--output-package $(PKG)/pkg/client/generated/lister
 
 # also builds vendored version of informer-gen tool
@@ -101,6 +108,7 @@ informer:
 	@informer-gen \
 		--input-dirs $(PKG)/pkg/apis/$(API_GROUPS) \
 		--go-header-file ./hack/boilerplate.go.txt \
+		--output-base $(PWD)/.. \
 		--output-package $(PKG)/pkg/client/generated/informer \
 		--versioned-clientset-package $(PKG)/pkg/client/generated/clientset/internalclientset \
 		--listers-package $(PKG)/pkg/client/generated/lister

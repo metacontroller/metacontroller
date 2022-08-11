@@ -5,6 +5,12 @@ jobs:
   dockerbuild:
     name: Build local metacontroller images
     runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - {name: 'dev', args: "-a -installsuffix cgo"}
+          - {name: 'debug', args: '-gcflags="all=-N -l"'}
     steps:
     - name: checkout
       uses: actions/checkout@v3
@@ -12,18 +18,19 @@ jobs:
         fetch-depth: '5'
     - uses: actions/setup-go@v3
       with:
-        go-version-file: 'go.mod'
+        go-version-file: "go.mod"
         cache: true
     - name: build binary
-      run: CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo
-    - name: Build metacontroller:dev
+      env:
+        ADDITIONAL_BUILD_ARGUMENTS: ${{ matrix.target.args }}
+        CGO_ENABLED: "0"
+        GOOS: "linux"
       run: |
-        docker build -t metacontrollerio/metacontroller:dev .
-        docker save --output metacontroller-dev.tar metacontrollerio/metacontroller:dev
-    - name: Build metacontroller:debug
+        make build
+    - name: Build metacontroller:${{ matrix.target.name }}
       run: |
-        docker build -t metacontrollerio/metacontroller:debug -f Dockerfile.debug .
-        docker save --output metacontroller-debug.tar metacontrollerio/metacontroller:debug
+        docker build -t metacontrollerio/metacontroller:${{ matrix.target.name }} .
+        docker save --output metacontroller-${{ matrix.target.name }}.tar metacontrollerio/metacontroller:${{ matrix.target.name }}
     - uses: actions/upload-artifact@v3
       name: Upload metacontroller images
       with:
