@@ -72,7 +72,7 @@ require (
 	k8s.io/component-base v0.24.3 // indirect
 	k8s.io/kube-openapi v0.0.0-20220328201542-3ee0da9b0b42 // indirect
 	sigs.k8s.io/json v0.0.0-20211208200746-9f7c6b3444d2 // indirect
-	sigs.k8s.io/structured-merge-diff/v4 v4.2.1 // indirect
+	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
 
@@ -81,5 +81,5 @@ replace (
 	k8s.io/apimachinery => k8s.io/apimachinery v0.24.3
 	k8s.io/client-go => k8s.io/client-go v0.24.3
 	k8s.io/component-base => k8s.io/component-base v0.24.3
-	k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20220627174259-011e075b9cb8 // to address CVE-2022-1996
+	k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20220803164354-a70c9af30aea // to address CVE-2022-1996
 )
