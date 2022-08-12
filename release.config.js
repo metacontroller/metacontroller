@@ -48,7 +48,7 @@ module.exports = {
       "@semantic-release/git",
       {
         "assets": ["CHANGELOG.md", "manifests/production/metacontroller.yaml", "deploy/helm/metacontroller/Chart.yaml"],
-        "message": "chore(release): ${nextRelease.version}\n\n${nextRelease.notes}"
+        "message": "chore(release): [skip ci] ${nextRelease.version}\n\n${nextRelease.notes}"
       }
     ],
     ["@semantic-release/exec",
