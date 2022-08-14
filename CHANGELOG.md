@@ -1,10 +1,3 @@
-## [4.3.5](https://github.com/metacontroller/metacontroller/compare/v4.3.4...v4.3.5) (2022-08-14)
-
-
-### Bug Fixes
-
-* **deps:** Update k8s.io/utils to v0.0.0-20220812165043-ad590609e2e5 ([a2e7af5](https://github.com/metacontroller/metacontroller/commit/a2e7af5931adec2af8f1270e43dbe4b9c54e0655))
-
 ## [4.3.4](https://github.com/metacontroller/metacontroller/compare/v4.3.3...v4.3.4) (2022-08-10)
 
 
