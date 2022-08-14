@@ -21,8 +21,6 @@ import (
 	commonv1 "metacontroller/pkg/controller/common/api/v1"
 	v1 "metacontroller/pkg/controller/composite/api/v1"
 
-	"github.com/pkg/errors"
-
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
@@ -51,7 +49,7 @@ func (pc *parentController) callHook(
 		// Sync
 		request.Finalizing = false
 		if err := pc.syncHook.Call(request, &response); err != nil {
-			return nil, errors.Wrap(err, "sync hook failed")
+			return nil, fmt.Errorf("sync hook failed: %w", err)
 		}
 	}
 
