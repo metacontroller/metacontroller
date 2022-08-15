@@ -1,3 +1,16 @@
+## [4.3.5](https://github.com/metacontroller/metacontroller/compare/v4.3.4...v4.3.5) (2022-08-15)
+
+
+### Bug Fixes
+
+* **deps:** Update k8s.io/utils to v0.0.0-20220812165043-ad590609e2e5 ([a2e7af5](https://github.com/metacontroller/metacontroller/commit/a2e7af5931adec2af8f1270e43dbe4b9c54e0655))
+* **release:** Use version with `v` prefix in docker push ([a53b064](https://github.com/metacontroller/metacontroller/commit/a53b06440ab3efcd8c3042b80983f6a0e7858482)), closes [#611](https://github.com/metacontroller/metacontroller/issues/611)
+
+
+### Reverts
+
+* Revert "chore(release): [skip ci] 4.3.5" ([64aac8e](https://github.com/metacontroller/metacontroller/commit/64aac8e022277b93e37a6f3dd93f51ed92140a14))
+
 ## [4.3.4](https://github.com/metacontroller/metacontroller/compare/v4.3.3...v4.3.4) (2022-08-10)
 
 
