@@ -205,6 +205,8 @@ jobs:
   release:
     if: (github.ref == 'refs/heads/master') && (github.repository_owner == 'metacontroller')
     name: Release - Create tag
+    env:
+      DOCKER_CLI_EXPERIMENTAL: "enabled"
     concurrency:
       group: ${{ github.ref }}
     runs-on: ubuntu-22.04
