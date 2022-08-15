@@ -1,15 +1,3 @@
-## [4.3.6](https://github.com/metacontroller/metacontroller/compare/v4.3.5...v4.3.6) (2022-08-15)
-
-
-### Bug Fixes
-
-* **release:** Use version with `v` prefix in docker push ([a53b064](https://github.com/metacontroller/metacontroller/commit/a53b06440ab3efcd8c3042b80983f6a0e7858482)), closes [#611](https://github.com/metacontroller/metacontroller/issues/611)
-
-
-### Reverts
-
-* Revert "chore(release): [skip ci] 4.3.5" ([64aac8e](https://github.com/metacontroller/metacontroller/commit/64aac8e022277b93e37a6f3dd93f51ed92140a14))
-
 ## [4.3.4](https://github.com/metacontroller/metacontroller/compare/v4.3.3...v4.3.4) (2022-08-10)
 
 
