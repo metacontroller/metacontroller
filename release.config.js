@@ -53,7 +53,7 @@ module.exports = {
     ],
     ["@semantic-release/exec",
       {
-        "publishCmd": "./.release.sh \"${nextRelease.notes}\""
+        "publishCmd": "./.release.sh '${nextRelease.notes}'"
       }
     ],
   ]
