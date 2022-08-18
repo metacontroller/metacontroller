@@ -1,3 +1,10 @@
+## [4.3.7](https://github.com/metacontroller/metacontroller/compare/v4.3.6...v4.3.7) (2022-08-18)
+
+
+### Bug Fixes
+
+* **deps:** Update kubernetes packages to v0.24.4 ([76787c2](https://github.com/metacontroller/metacontroller/commit/76787c2b11c9d7937c9577dfc4b4d4598443d331))
+
 ## [4.3.6](https://github.com/metacontroller/metacontroller/compare/v4.3.5...v4.3.6) (2022-08-18)
 
 
