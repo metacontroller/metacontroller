@@ -2,6 +2,7 @@ PWD := ${CURDIR}
 PATH := $(PWD)/test/integration/hack/bin:$(PATH)
 TAG?= dev
 ADDITIONAL_BUILD_ARGUMENTS?=""
+DOCKERFILE?="Dockerfile"
 
 PKG		:= metacontroller
 API_GROUPS := metacontroller/v1alpha1
@@ -16,18 +17,13 @@ COVER_PKGS = $(shell echo ${PKGS} | tr " " ",")
 
 all: install
 
-.PHONY: install
-install: generated_files
-	go install -ldflags  "-X main.version=$(TAG)" $(ADDITIONAL_BUILD_ARGUMENTS)
-
 .PHONY: build
 build: generated_files
-	go build -ldflags  "-X main.version=$(TAG)" $(ADDITIONAL_BUILD_ARGUMENTS)
+	DEBUG=$(DEBUG) goreleaser build --single-target --rm-dist --snapshot --output $(PWD)/metacontroller
 
-.PHONY: vendor
-vendor: 
-	@go mod download
-	@go mod tidy
+.PHONY: build_debug
+build_debug: DEBUG='all=-N -l'
+build_debug: build
 
 .PHONY: unit-test
 unit-test: test-setup
@@ -40,13 +36,19 @@ integration-test: test-setup
  	gotestsum -- -coverpkg="${COVER_PKGS}" -coverprofile=hack/tmp/integration-test-coverage.out ./... -timeout 5m -parallel 1
 
 .PHONY: test-setup
-test-setup: vendor
+test-setup:
 	./test/integration/hack/setup.sh; \
 	mkdir -p ./test/integration/hack/tmp; \
 
 .PHONY: image
 image: build
-	docker build -t metacontrollerio/metacontroller:$(TAG) .
+	docker build -t metacontrollerio/metacontroller:$(TAG) -f $(DOCKERFILE) .
+
+.PHONY: image_debug
+image_debug: TAG=debug
+image_debug: DOCKERFILE=Dockerfile.debug
+image_debug: build_debug
+image_debug: image
 
 
 # CRD generation

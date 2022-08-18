@@ -25,8 +25,14 @@ jobs:
       with:
         go-version-file: 'go.mod'
         cache: true
+    - name: Install GoReleaser
+      uses: goreleaser/goreleaser-action@v3
+      with:
+        distribution: goreleaser
+        version: latest
+        install-only: true
     - name: build binary
-      run: CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo
+      run: make build
     - name: Build local image
       run: docker build -t localhost/metacontroller:lint-${{ github.sha }} .
     - name: Lint docker image
