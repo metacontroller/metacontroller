@@ -9,8 +9,8 @@ jobs:
       fail-fast: false
       matrix:
         target:
-          - { name: 'dev', args: "-a -installsuffix cgo" }
-          - { name: 'debug', args: '-gcflags="all=-N -l"' }
+          - { name: 'dev', command: "image" }
+          - { name: 'debug', command: 'image_debug' }
     steps:
       - name: checkout
         uses: actions/checkout@v3
@@ -20,16 +20,17 @@ jobs:
         with:
           go-version-file: "go.mod"
           cache: true
-      - name: build binary
-        env:
-          ADDITIONAL_BUILD_ARGUMENTS: ${{ matrix.target.args }}
-          CGO_ENABLED: "0"
-          GOOS: "linux"
+      - name: Install GoReleaser
+        uses: goreleaser/goreleaser-action@v3
+        with:
+          distribution: goreleaser
+          version: latest
+          install-only: true
+      - name: build image
         run: |
-          make build
+          make ${{ matrix.target.command }}
       - name: Build metacontroller:${{ matrix.target.name }}
         run: |
-          docker build -t metacontrollerio/metacontroller:${{ matrix.target.name }} .
           docker save --output metacontroller-${{ matrix.target.name }}.tar metacontrollerio/metacontroller:${{ matrix.target.name }}
       - uses: actions/upload-artifact@v3
         name: Upload metacontroller images
@@ -75,7 +76,7 @@ jobs:
           cache: true
       - name: Prepare integration test environment
         shell: bash
-        if: ${{ matrix.target }}==integration-test
+        if: (${{ matrix.target }}=='integration-test')
         run: test/integration/hack/get-kube-binaries.sh
       - name: Run ${{ matrix.target }}
         shell: bash
@@ -104,7 +105,6 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: '5'
-
       - name: Setup kind
         uses: helm/kind-action@v1.3.0
         with:
@@ -139,7 +139,7 @@ jobs:
         with:
           name: logs
           path: |
-            /tmp/metacontroller.*
+            /tmp/metacontroller*/**
           retention-days: 5
 
   helmtests:
@@ -241,6 +241,11 @@ jobs:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version-file: 'go.mod'
+          cache: true
       - name: Install GoReleaser
         uses: goreleaser/goreleaser-action@v3
         with:
