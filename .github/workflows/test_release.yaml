@@ -1,6 +1,6 @@
 ---
 name: Test / Release
-on: [push, pull_request]
+on: [ push, pull_request ]
 jobs:
   dockerbuild:
     name: Build local metacontroller images
@@ -9,34 +9,34 @@ jobs:
       fail-fast: false
       matrix:
         target:
-          - {name: 'dev', args: "-a -installsuffix cgo"}
-          - {name: 'debug', args: '-gcflags="all=-N -l"'}
+          - { name: 'dev', args: "-a -installsuffix cgo" }
+          - { name: 'debug', args: '-gcflags="all=-N -l"' }
     steps:
-    - name: checkout
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: '5'
-    - uses: actions/setup-go@v3
-      with:
-        go-version-file: "go.mod"
-        cache: true
-    - name: build binary
-      env:
-        ADDITIONAL_BUILD_ARGUMENTS: ${{ matrix.target.args }}
-        CGO_ENABLED: "0"
-        GOOS: "linux"
-      run: |
-        make build
-    - name: Build metacontroller:${{ matrix.target.name }}
-      run: |
-        docker build -t metacontrollerio/metacontroller:${{ matrix.target.name }} .
-        docker save --output metacontroller-${{ matrix.target.name }}.tar metacontrollerio/metacontroller:${{ matrix.target.name }}
-    - uses: actions/upload-artifact@v3
-      name: Upload metacontroller images
-      with:
-        name: metacontroller-image
-        path: metacontroller-*.tar
-        retention-days: 1
+      - name: checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: '5'
+      - uses: actions/setup-go@v3
+        with:
+          go-version-file: "go.mod"
+          cache: true
+      - name: build binary
+        env:
+          ADDITIONAL_BUILD_ARGUMENTS: ${{ matrix.target.args }}
+          CGO_ENABLED: "0"
+          GOOS: "linux"
+        run: |
+          make build
+      - name: Build metacontroller:${{ matrix.target.name }}
+        run: |
+          docker build -t metacontrollerio/metacontroller:${{ matrix.target.name }} .
+          docker save --output metacontroller-${{ matrix.target.name }}.tar metacontrollerio/metacontroller:${{ matrix.target.name }}
+      - uses: actions/upload-artifact@v3
+        name: Upload metacontroller images
+        with:
+          name: metacontroller-image
+          path: metacontroller-*.tar
+          retention-days: 1
   setmatrix:
     name: Set Configuration Matrix
     runs-on: ubuntu-22.04
@@ -61,33 +61,33 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: ["unit-test", "integration-test"]
+        target: [ "unit-test", "integration-test" ]
     name: Tests
     steps:
-    - name: checkout
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: '5'
-    - name: Set up Go
-      uses: actions/setup-go@v3
-      with:
-        go-version-file: 'go.mod'
-        cache: true
-    - name: Prepare integration test environment
-      shell: bash
-      if: ${{ matrix.target }}==integration-test
-      run: test/integration/hack/get-kube-binaries.sh
-    - name: Run ${{ matrix.target }}
-      shell: bash
-      run: make ${{ matrix.target }}
-    - name: coverage-unit
-      if: (github.repository_owner == 'metacontroller')
-      uses: codecov/codecov-action@v3
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
-        files: test/integration/hack/tmp/${{ matrix.target }}-coverage.out
-        flags: ${{ matrix.target }}
-        fail_ci_if_error: true # optional (default = false)
+      - name: checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: '5'
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version-file: 'go.mod'
+          cache: true
+      - name: Prepare integration test environment
+        shell: bash
+        if: ${{ matrix.target }}==integration-test
+        run: test/integration/hack/get-kube-binaries.sh
+      - name: Run ${{ matrix.target }}
+        shell: bash
+        run: make ${{ matrix.target }}
+      - name: coverage-unit
+        if: (github.repository_owner == 'metacontroller')
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
+          files: test/integration/hack/tmp/${{ matrix.target }}-coverage.out
+          flags: ${{ matrix.target }}
+          fail_ci_if_error: true # optional (default = false)
   e2etests:
     env:
       CI_MODE: true
@@ -100,47 +100,47 @@ jobs:
       matrix: ${{fromJson(needs.setmatrix.outputs.matrix)}}
     name: e2e test k8s ${{ matrix.configuration.version }}
     steps:
-    - name: Checkout
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: '5'
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: '5'
 
-    - name: Setup kind
-      uses: helm/kind-action@v1.3.0
-      with:
-        version: ${{ matrix.configuration.kind }}
-        node_image: ${{ matrix.configuration.image }}
-        cluster_name: kind
-        wait: 120s
+      - name: Setup kind
+        uses: helm/kind-action@v1.3.0
+        with:
+          version: ${{ matrix.configuration.kind }}
+          node_image: ${{ matrix.configuration.image }}
+          cluster_name: kind
+          wait: 120s
 
-    - name: Download metacontroller images
-      uses: actions/download-artifact@v3
-      with:
-        name: metacontroller-image
+      - name: Download metacontroller images
+        uses: actions/download-artifact@v3
+        with:
+          name: metacontroller-image
 
-    - name: Load metacontroller images
-      run: |
-        docker load --input metacontroller-dev.tar
-        kind load docker-image metacontrollerio/metacontroller:dev
+      - name: Load metacontroller images
+        run: |
+          docker load --input metacontroller-dev.tar
+          kind load docker-image metacontrollerio/metacontroller:dev
 
-    - name: Apply metacontroller manifests
-      run: |
-        kubectl apply -k manifests/dev
-        kubectl rollout status --watch --timeout=180s statefulset/metacontroller -n metacontroller || kubectl describe pod metacontroller-0 -n metacontroller
-        kubectl get pods -n metacontroller
+      - name: Apply metacontroller manifests
+        run: |
+          kubectl apply -k manifests/dev
+          kubectl rollout status --watch --timeout=180s statefulset/metacontroller -n metacontroller || kubectl describe pod metacontroller-0 -n metacontroller
+          kubectl get pods -n metacontroller
 
-    - name: Run e2e tests
-      timeout-minutes: 30
-      run: |
-        cd examples
-        ./test.sh
-    - name: Archive production artifacts
-      uses: actions/upload-artifact@v3
-      with:
-        name: logs
-        path: |
-          /tmp/metacontroller.*
-        retention-days: 5
+      - name: Run e2e tests
+        timeout-minutes: 30
+        run: |
+          cd examples
+          ./test.sh
+      - name: Archive production artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: logs
+          path: |
+            /tmp/metacontroller.*
+          retention-days: 5
 
   helmtests:
     runs-on: ubuntu-22.04
@@ -190,7 +190,7 @@ jobs:
           kind load docker-image metacontrollerio/metacontroller:debug
 
       - name: Copy default values.yaml to ci directory with dev image
-        run : |
+        run: |
           sed 's/tag: ""/tag: "dev"/g' deploy/helm/metacontroller/values.yaml > deploy/helm/metacontroller/ci/default-values.yaml
 
       - name: Run chart-testing (lint-and-install)
@@ -210,77 +210,48 @@ jobs:
     concurrency:
       group: ${{ github.ref }}
     runs-on: ubuntu-22.04
-    needs: ['tests', 'e2etests', 'helmtests']
+    needs: [ 'tests', 'e2etests', 'helmtests' ]
     steps:
-    - name: Checkout
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
-        persist-credentials: false
-    - name: Setup Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: '14'
-    - name: Install dependencies
-      run: npm install ci
-    - uses: rlespinasse/github-slug-action@v4
-    - name: Set up QEMU
-      uses: docker/setup-qemu-action@v2
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v2
-    - name: Login to DockerHub
-      if: github.event_name != 'pull_request'
-      uses: docker/login-action@v2
-      with:
-        username: ${{ secrets.DOCKER_USERNAME }}
-        password: ${{ secrets.DOCKER_PASSWORD }}
-    - name: Login to github registry
-      if: github.event_name != 'pull_request'
-      uses: docker/login-action@v2
-      with:
-        registry: ghcr.io
-        username: ${{ github.repository_owner }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-    - name: Install GoReleaser
-      uses: goreleaser/goreleaser-action@v3
-      with:
-        distribution: goreleaser
-        version: latest
-        install-only: true
-    - name: Release
-      env:
-        GH_TOKEN: ${{ secrets.PAT }}
-        GITHUB_TOKEN: ${{ secrets.PAT }}
-        REPOSITORY_OWNER: ${{github.repository_owner}}
-      run: |
-        npm install @semantic-release/git @semantic-release/changelog @google/semantic-release-replace-plugin @semantic-release/exec -D
-        npx semantic-release
----
-name: Release helm chart
-on:
-  push:
-    tags:
-      - 'v[0-9]+.[0-9]+.[0-9]+'
-jobs:
-  release-helm:
-    name: Release helm chart
-    env:
-      HELM_EXPERIMENTAL_OCI: 1
-    runs-on: ubuntu-22.04
-    if: github.repository_owner == 'metacontroller'
-    steps:
-      - uses: actions/checkout@v3
-        name: Checkout
-      - name: install helm
-        uses: Azure/setup-helm@v3
+      - name: Checkout
+        uses: actions/checkout@v3
         with:
-          version: 3.8.0
-      - name: login to ghcr.io using helm
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '14'
+      - name: Install dependencies
+        run: npm install ci
+      - uses: rlespinasse/github-slug-action@v4
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      - name: Login to DockerHub
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      - name: Login to github registry
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install GoReleaser
+        uses: goreleaser/goreleaser-action@v3
+        with:
+          distribution: goreleaser
+          version: latest
+          install-only: true
+      - name: Release
+        env:
+          GH_TOKEN: ${{ secrets.PAT }}
+          GITHUB_TOKEN: ${{ secrets.PAT }}
+          REPOSITORY_OWNER: ${{github.repository_owner}}
         run: |
-          echo ${{ secrets.GITHUB_TOKEN }} | helm registry login ghcr.io/metacontroller/metacontroller-helm --username ${{ github.repository_owner }} --password-stdin
-      - name: save helm chart to local registry
-        run: |
-          helm package ${{ github.workspace }}/deploy/helm/metacontroller/
-      - name: publish chart to ghcr.io
-        run: |
-          helm push metacontroller-helm-${{ github.ref_name }}.tgz oci://ghcr.io/metacontroller
+          npm install @semantic-release/git @semantic-release/changelog @google/semantic-release-replace-plugin @semantic-release/exec -D
+          npx semantic-release
