@@ -1,3 +1,10 @@
+## [4.3.6](https://github.com/metacontroller/metacontroller/compare/v4.3.5...v4.3.6) (2022-08-18)
+
+
+### Bug Fixes
+
+* **helm:** Publish helm chart on release ([7695d50](https://github.com/metacontroller/metacontroller/commit/7695d504750eb2648acfe4afe9a4838fede699a1)), closes [#621](https://github.com/metacontroller/metacontroller/issues/621)
+
 ## [4.3.5](https://github.com/metacontroller/metacontroller/compare/v4.3.4...v4.3.5) (2022-08-16)
 
 
