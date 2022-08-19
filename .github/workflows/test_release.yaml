@@ -139,8 +139,11 @@ jobs:
         with:
           name: logs
           path: |
-            /tmp/metacontroller*/**
+            /tmp/metacontroller????/**
           retention-days: 5
+      - name: Cleanup
+        run: |
+          rm -rf /tmp/metacontroller????
 
   helmtests:
     runs-on: ubuntu-22.04

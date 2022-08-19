@@ -85,7 +85,7 @@ cleanup() {
   then
     rm -rf "${logdir}"
   else
-    echo "Not removing logs in CI mode"
+    echo "Skip cleaning logs in CI mode"
   fi
 }
 
@@ -111,7 +111,12 @@ for test in */test.sh; do
     exit 1
   fi
   kill "${serverPID}" || true
-  rm "${metacontrollerLogFile}" || true
-  rm "${testLogFile}" || true
+  if [ -z ${CI_MODE+x} ];
+  then
+    rm "${metacontrollerLogFile}" || true
+    rm "${testLogFile}" || true
+  else
+    echo "Skip logs removal in CI_MODE"
+  fi
   echo "PASSED"
 done
