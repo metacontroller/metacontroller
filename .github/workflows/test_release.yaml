@@ -286,4 +286,5 @@ jobs:
           helm package ${{ github.workspace }}/deploy/helm/metacontroller/
       - name: publish chart to ghcr.io
         run: |
-          helm push $(metacontroller-helm-*) oci://ghcr.io/metacontroller
+          filename=$(ls metacontroller-helm*)
+          helm push "${filename}" oci://ghcr.io/metacontroller
