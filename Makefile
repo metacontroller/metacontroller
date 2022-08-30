@@ -10,7 +10,7 @@ API_GROUPS := metacontroller/v1alpha1
 export GO111MODULE=on
 export GOTESTSUM_FORMAT=pkgname
 
-CODE_GENERATOR_VERSION="v0.24.4"
+CODE_GENERATOR_VERSION="v0.25.0"
 
 PKGS = $(shell go list ./... | grep -v '/test/integration/\|/examples/')
 COVER_PKGS = $(shell echo ${PKGS} | tr " " ",")
