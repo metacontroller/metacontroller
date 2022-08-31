@@ -1,0 +1,29 @@
+---
+name: Release helm chart
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+jobs:
+  release-helm:
+    name: Release helm chart
+    env:
+      HELM_EXPERIMENTAL_OCI: 1
+    runs-on: ubuntu-20.04
+    if: github.repository_owner == 'metacontroller'
+    steps:
+      - uses: actions/checkout@v3
+        name: Checkout
+      - name: install helm
+        uses: Azure/setup-helm@v3
+        with:
+          version: 3.8.0
+      - name: login to ghcr.io using helm
+        run: |
+          echo ${{ secrets.GITHUB_TOKEN }} | helm registry login ghcr.io/metacontroller/metacontroller-helm --username ${{ github.repository_owner }} --password-stdin
+      - name: save helm chart to local registry
+        run: |
+          helm package ${{ github.workspace }}/deploy/helm/metacontroller/
+      - name: publish chart to ghcr.io
+        run: |
+          helm push metacontroller-helm-${{ github.ref_name }}.tgz oci://ghcr.io/metacontroller
