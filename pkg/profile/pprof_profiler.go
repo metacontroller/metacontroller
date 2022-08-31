@@ -54,7 +54,8 @@ func EnablePprof(address string) <-chan struct{} {
 	}()
 
 	go func() {
-		err := http.ListenAndServe(address, pprofMux)
+		// TODO replace with some server with timeout start method
+		err := http.ListenAndServe(address, pprofMux) //nolint:gosec
 		if err != nil {
 			logging.Logger.Error(err, "error enabling and serving pprof", "address", address)
 		}
