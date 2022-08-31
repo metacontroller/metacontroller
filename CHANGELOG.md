@@ -1,3 +1,12 @@
+## [4.3.8](https://github.com/metacontroller/metacontroller/compare/v4.3.7...v4.3.8) (2022-08-31)
+
+
+### Bug Fixes
+
+* **deps:** Update go.uber.org/zap to v1.23.0 ([039b78f](https://github.com/metacontroller/metacontroller/commit/039b78f90f915fc49d5b6559b2d03358778ddec5))
+* **deps:** Update k8s.io packages to v0.25.0 ([6396cbb](https://github.com/metacontroller/metacontroller/commit/6396cbbce815e8c800117f4a224f07f0b1773ae6))
+* **deps:** Update k8s.io/utils to v0.0.0-20220823124924-e9cbc92d1a73 ([c501bd9](https://github.com/metacontroller/metacontroller/commit/c501bd90e523b77f4843b8957c23bb902e647b79))
+
 ## [4.3.7](https://github.com/metacontroller/metacontroller/compare/v4.3.6...v4.3.7) (2022-08-18)
 
 
