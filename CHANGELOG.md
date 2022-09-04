@@ -1,3 +1,11 @@
+## [4.3.9](https://github.com/metacontroller/metacontroller/compare/v4.3.8...v4.3.9) (2022-09-04)
+
+
+### Bug Fixes
+
+* **deps:** Update k8s.io/klog/v2 to v2.80.0 ([9b6ee29](https://github.com/metacontroller/metacontroller/commit/9b6ee29776979021090724214bcfcd3654ec6246))
+* **deps:** Update sigs.k8s.io/controller-runtime to v0.13.0 ([52db9d0](https://github.com/metacontroller/metacontroller/commit/52db9d05fb7fd2a14d53fcf36c04c6baa62c0d7b))
+
 ## [4.3.8](https://github.com/metacontroller/metacontroller/compare/v4.3.7...v4.3.8) (2022-08-31)
 
 
