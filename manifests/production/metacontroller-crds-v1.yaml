@@ -47,6 +47,12 @@ spec:
                     updateStrategy:
                       properties:
                         method:
+                          enum:
+                          - OnDelete
+                          - Recreate
+                          - InPlace
+                          - RollingRecreate
+                          - RollingInPlace
                           type: string
                         statusChecks:
                           properties:
@@ -97,6 +103,14 @@ spec:
                             type: object
                           path:
                             type: string
+                          responseUnMarshallMode:
+                            description: Sets the json unmarshall mode. One of the
+                              'loose' or 'strict'. In 'strict' mode additional checks
+                              are performed to detect unknown and duplicated fields.
+                            enum:
+                            - loose
+                            - strict
+                            type: string
                           service:
                             properties:
                               name:
@@ -113,6 +127,7 @@ spec:
                             - namespace
                             type: object
                           timeout:
+                            format: duration
                             type: string
                           url:
                             type: string
@@ -141,6 +156,14 @@ spec:
                             type: object
                           path:
                             type: string
+                          responseUnMarshallMode:
+                            description: Sets the json unmarshall mode. One of the
+                              'loose' or 'strict'. In 'strict' mode additional checks
+                              are performed to detect unknown and duplicated fields.
+                            enum:
+                            - loose
+                            - strict
+                            type: string
                           service:
                             properties:
                               name:
@@ -157,6 +180,7 @@ spec:
                             - namespace
                             type: object
                           timeout:
+                            format: duration
                             type: string
                           url:
                             type: string
@@ -185,6 +209,14 @@ spec:
                             type: object
                           path:
                             type: string
+                          responseUnMarshallMode:
+                            description: Sets the json unmarshall mode. One of the
+                              'loose' or 'strict'. In 'strict' mode additional checks
+                              are performed to detect unknown and duplicated fields.
+                            enum:
+                            - loose
+                            - strict
+                            type: string
                           service:
                             properties:
                               name:
@@ -201,6 +233,7 @@ spec:
                             - namespace
                             type: object
                           timeout:
+                            format: duration
                             type: string
                           url:
                             type: string
@@ -229,6 +262,14 @@ spec:
                             type: object
                           path:
                             type: string
+                          responseUnMarshallMode:
+                            description: Sets the json unmarshall mode. One of the
+                              'loose' or 'strict'. In 'strict' mode additional checks
+                              are performed to detect unknown and duplicated fields.
+                            enum:
+                            - loose
+                            - strict
+                            type: string
                           service:
                             properties:
                               name:
@@ -245,6 +286,7 @@ spec:
                             - namespace
                             type: object
                           timeout:
+                            format: duration
                             type: string
                           url:
                             type: string
@@ -273,6 +315,14 @@ spec:
                             type: object
                           path:
                             type: string
+                          responseUnMarshallMode:
+                            description: Sets the json unmarshall mode. One of the
+                              'loose' or 'strict'. In 'strict' mode additional checks
+                              are performed to detect unknown and duplicated fields.
+                            enum:
+                            - loose
+                            - strict
+                            type: string
                           service:
                             properties:
                               name:
@@ -289,6 +339,7 @@ spec:
                             - namespace
                             type: object
                           timeout:
+                            format: duration
                             type: string
                           url:
                             type: string
@@ -438,6 +489,12 @@ spec:
                     updateStrategy:
                       properties:
                         method:
+                          enum:
+                          - OnDelete
+                          - Recreate
+                          - InPlace
+                          - RollingRecreate
+                          - RollingInPlace
                           type: string
                       type: object
                   required:
@@ -470,6 +527,14 @@ spec:
                             type: object
                           path:
                             type: string
+                          responseUnMarshallMode:
+                            description: Sets the json unmarshall mode. One of the
+                              'loose' or 'strict'. In 'strict' mode additional checks
+                              are performed to detect unknown and duplicated fields.
+                            enum:
+                            - loose
+                            - strict
+                            type: string
                           service:
                             properties:
                               name:
@@ -486,6 +551,7 @@ spec:
                             - namespace
                             type: object
                           timeout:
+                            format: duration
                             type: string
                           url:
                             type: string
@@ -514,6 +580,14 @@ spec:
                             type: object
                           path:
                             type: string
+                          responseUnMarshallMode:
+                            description: Sets the json unmarshall mode. One of the
+                              'loose' or 'strict'. In 'strict' mode additional checks
+                              are performed to detect unknown and duplicated fields.
+                            enum:
+                            - loose
+                            - strict
+                            type: string
                           service:
                             properties:
                               name:
@@ -530,6 +604,7 @@ spec:
                             - namespace
                             type: object
                           timeout:
+                            format: duration
                             type: string
                           url:
                             type: string
@@ -558,6 +633,14 @@ spec:
                             type: object
                           path:
                             type: string
+                          responseUnMarshallMode:
+                            description: Sets the json unmarshall mode. One of the
+                              'loose' or 'strict'. In 'strict' mode additional checks
+                              are performed to detect unknown and duplicated fields.
+                            enum:
+                            - loose
+                            - strict
+                            type: string
                           service:
                             properties:
                               name:
@@ -574,6 +657,7 @@ spec:
                             - namespace
                             type: object
                           timeout:
+                            format: duration
                             type: string
                           url:
                             type: string

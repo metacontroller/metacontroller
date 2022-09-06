@@ -26,7 +26,7 @@ import (
 )
 
 // NewHookExecutorStub creates new HookExecutorStub which returns given response
-func NewHookExecutorStub(response interface{}) hooks.Hook {
+func NewHookExecutorStub(response interface{}) *hookExecutorStub {
 	return &hookExecutorStub{
 		enabled:  true,
 		response: response,

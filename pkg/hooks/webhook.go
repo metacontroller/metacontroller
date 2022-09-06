@@ -28,11 +28,14 @@ import (
 	"net/http"
 	"time"
 
+	utilerrors "k8s.io/apimachinery/pkg/util/errors"
+
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"metacontroller/pkg/apis/metacontroller/v1alpha1"
 
 	k8sjson "k8s.io/apimachinery/pkg/util/json"
+	kjson "sigs.k8s.io/json"
 )
 
 const (
@@ -53,6 +56,77 @@ type WebhookExecutor interface {
 	Call(request WebhookRequest, response interface{}) error
 }
 
+// NewWebhookExecutor returns new WebhookExecutor
+func NewWebhookExecutor(
+	webhook *v1alpha1.Webhook,
+	controllerName string,
+	controllerType common.ControllerType,
+	hookType common.HookType) (WebhookExecutor, error) {
+	if webhook == nil {
+		return nil, nil
+	}
+	url, err := webhookURL(webhook)
+	if err != nil {
+		return nil, err
+	}
+	hookTimeout, err := webhookTimeout(webhook)
+	if err != nil {
+		logging.Logger.Info(err.Error())
+	}
+	client := &http.Client{Timeout: hookTimeout}
+	client, err = metrics.InstrumentClientWithConstLabels(
+		controllerName,
+		controllerType,
+		hookType,
+		client,
+		url)
+	if err != nil {
+		return nil, err
+	}
+	var abstract webhookAbstract
+	if isEtagEnabled(webhook) {
+		var defaultExpiration, cleanupInterval time.Duration
+		if webhook.Etag.CacheTimeoutSeconds != nil {
+			defaultExpiration = time.Second * time.Duration(*webhook.Etag.CacheTimeoutSeconds)
+		}
+		if webhook.Etag.CacheTimeoutSeconds != nil {
+			cleanupInterval = time.Second * time.Duration(*webhook.Etag.CacheCleanupSeconds)
+		}
+		abstract = &webhookExecutorEtag{
+			etagCache: cache.New[eTagKey, *eTagEntry](defaultExpiration, cleanupInterval)}
+	} else {
+		abstract = &webhookExecutorPlain{}
+	}
+	return newWebhookExecutor(
+		client,
+		url,
+		hookType,
+		webhook.ResponseUnmarshallMode,
+		abstract,
+	), nil
+}
+
+func newWebhookExecutor(client HttpClientInterface,
+	url string,
+	hookType common.HookType,
+	unmarshallMode *v1alpha1.ResponseUnmarshallMode,
+	abstract webhookAbstract) *webhookExecutor {
+	return &webhookExecutor{
+		client:                 client,
+		url:                    url,
+		hookType:               hookType.String(),
+		webhookAbstract:        abstract,
+		responseUnmarshallMode: responseUnmarshallMode(unmarshallMode),
+	}
+}
+
+func responseUnmarshallMode(mode *v1alpha1.ResponseUnmarshallMode) v1alpha1.ResponseUnmarshallMode {
+	if mode == nil {
+		return v1alpha1.ResponseUnmarshallModeLoose
+	}
+	return *mode
+}
+
 type webhookAbstract interface {
 	enrichHeaders(request *http.Request, webhookRequest WebhookRequest)
 	isStatusSupported(request *http.Request, response *http.Response) bool
@@ -60,10 +134,11 @@ type webhookAbstract interface {
 }
 
 type webhookExecutor struct {
-	client          HttpClientInterface
-	url             string
-	hookType        string
-	webhookAbstract webhookAbstract
+	client                 HttpClientInterface
+	url                    string
+	hookType               string
+	webhookAbstract        webhookAbstract
+	responseUnmarshallMode v1alpha1.ResponseUnmarshallMode
 }
 
 func (w *webhookExecutor) Call(webhookRequest WebhookRequest, webhookResponse interface{}) error {
@@ -107,60 +182,17 @@ func (w *webhookExecutor) Call(webhookRequest WebhookRequest, webhookResponse in
 	if err != nil {
 		return err
 	}
-
 	// Decode webhookResponse.
-	if err := k8sjson.Unmarshal(responseBody, webhookResponse); err != nil {
+	if strictErrors, err := kjson.UnmarshalStrict(responseBody, webhookResponse); err != nil {
 		return fmt.Errorf("can't unmarshal webhookResponse: %w", err)
+	} else if w.shouldReportStrictErrors() {
+		return fmt.Errorf("strict validation failed for webkookResponse: %w", utilerrors.NewAggregate(strictErrors))
 	}
 	return nil
 }
 
-// NewWebhookExecutor returns new WebhookExecutor
-func NewWebhookExecutor(
-	webhook *v1alpha1.Webhook,
-	controllerName string,
-	controllerType common.ControllerType,
-	hookType common.HookType) (WebhookExecutor, error) {
-	if webhook == nil {
-		return nil, nil
-	}
-	url, err := webhookURL(webhook)
-	if err != nil {
-		return nil, err
-	}
-	hookTimeout, err := webhookTimeout(webhook)
-	if err != nil {
-		logging.Logger.Info(err.Error())
-	}
-	client := &http.Client{Timeout: hookTimeout}
-	client, err = metrics.InstrumentClientWithConstLabels(
-		controllerName,
-		controllerType,
-		hookType,
-		client,
-		url)
-	if err != nil {
-		return nil, err
-	}
-	webhookExecutor := &webhookExecutor{
-		client:   client,
-		url:      url,
-		hookType: hookType.String(),
-	}
-	if isEtagEnabled(webhook) {
-		var defaultExpiration, cleanupInterval time.Duration
-		if webhook.Etag.CacheTimeoutSeconds != nil {
-			defaultExpiration = time.Second * time.Duration(*webhook.Etag.CacheTimeoutSeconds)
-		}
-		if webhook.Etag.CacheTimeoutSeconds != nil {
-			cleanupInterval = time.Second * time.Duration(*webhook.Etag.CacheCleanupSeconds)
-		}
-		webhookExecutor.webhookAbstract = &webhookExecutorEtag{
-			etagCache: cache.New[eTagKey, *eTagEntry](defaultExpiration, cleanupInterval)}
-	} else {
-		webhookExecutor.webhookAbstract = &webhookExecutorPlain{}
-	}
-	return webhookExecutor, nil
+func (w *webhookExecutor) shouldReportStrictErrors() bool {
+	return w.responseUnmarshallMode == v1alpha1.ResponseUnmarshallModeStrict
 }
 
 func isEtagEnabled(webhook *v1alpha1.Webhook) bool {
