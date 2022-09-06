@@ -65,6 +65,7 @@ type CompositeControllerRevisionHistory struct {
 	FieldPaths []string `json:"fieldPaths,omitempty"`
 }
 
+// +kubebuilder:validation:Enum={"OnDelete","Recreate","InPlace","RollingRecreate","RollingInPlace"}
 type ChildUpdateMethod string
 
 const (
@@ -122,13 +123,25 @@ type WebhookEtagConfig struct {
 }
 
 type Webhook struct {
-	URL     *string          `json:"url,omitempty"`
+	URL *string `json:"url,omitempty"`
+	// +kubebuilder:validation:Format:="duration"
 	Timeout *metav1.Duration `json:"timeout,omitempty"`
 
 	Etag    *WebhookEtagConfig `json:"etag,omitempty"`
 	Path    *string            `json:"path,omitempty"`
 	Service *ServiceReference  `json:"service,omitempty"`
+	// Sets the json unmarshall mode. One of the 'loose' or 'strict'. In 'strict'
+	// mode additional checks are performed to detect unknown and duplicated fields.
+	ResponseUnmarshallMode *ResponseUnmarshallMode `json:"responseUnMarshallMode,omitempty"`
 }
+
+// +kubebuilder:validation:Enum:={"loose","strict"}
+type ResponseUnmarshallMode string
+
+const (
+	ResponseUnmarshallModeLoose  ResponseUnmarshallMode = "loose"
+	ResponseUnmarshallModeStrict ResponseUnmarshallMode = "strict"
+)
 
 type CompositeControllerStatus struct{}
 

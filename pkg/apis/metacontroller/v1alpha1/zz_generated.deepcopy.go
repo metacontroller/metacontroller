@@ -762,6 +762,11 @@ func (in *Webhook) DeepCopyInto(out *Webhook) {
 		*out = new(ServiceReference)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.ResponseUnmarshallMode != nil {
+		in, out := &in.ResponseUnmarshallMode, &out.ResponseUnmarshallMode
+		*out = new(ResponseUnmarshallMode)
+		**out = **in
+	}
 	return
 }
 
