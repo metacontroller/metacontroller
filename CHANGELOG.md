@@ -1,3 +1,10 @@
+# [4.4.0](https://github.com/metacontroller/metacontroller/compare/v4.3.9...v4.4.0) (2022-09-08)
+
+
+### Features
+
+* **hooks:** Add versioning to hook API [#496](https://github.com/metacontroller/metacontroller/issues/496) ([6bb9690](https://github.com/metacontroller/metacontroller/commit/6bb96908bec27d753ad484ac6042737b6f2b7f0e))
+
 ## [4.3.9](https://github.com/metacontroller/metacontroller/compare/v4.3.8...v4.3.9) (2022-09-04)
 
 
