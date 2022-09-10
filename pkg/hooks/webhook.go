@@ -139,20 +139,18 @@ func (w *WebhookExecutor) Call(request WebhookRequest, response interface{}) err
 		logging.Logger.V(6).Info("Webhook response", "type", w.hookType, "url", w.url, "etag", eTagValue, "body", rawResponse)
 	}
 
-	if cacheEnabled && cacheEntryExists {
+	if cacheEnabled && cacheEntryExists && resp.StatusCode == 304 {
 		// According to https://datatracker.ietf.org/doc/html/rfc7232
 		// When 'If-None-Match' is present and backend responded with 304 it means that object has not changed
-		if resp.StatusCode == 304 {
-			// TODO: Find a way to deep copy from cacheEntry.Response to response and switch cacheEntry.Response to store decoded response
-			if logging.Logger.V(6).Enabled() {
-				rawResponse := json.RawMessage(cacheEntry.Response)
-				logging.Logger.V(6).Info("Webhook 304 response, reusing cached response", "type", w.hookType, "url", w.url, "etag", eTagValue, "body", rawResponse)
-			}
-			if err := k8sjson.Unmarshal(cacheEntry.Response, response); err != nil {
-				return fmt.Errorf("can't unmarshal response: %w", err)
-			}
-			return nil
+		// TODO: Find a way to deep copy from cacheEntry.Response to response and switch cacheEntry.Response to store decoded response
+		if logging.Logger.V(6).Enabled() {
+			rawResponse := json.RawMessage(cacheEntry.Response)
+			logging.Logger.V(6).Info("Webhook 304 response, reusing cached response", "type", w.hookType, "url", w.url, "etag", eTagValue, "body", rawResponse)
 		}
+		if err := k8sjson.Unmarshal(cacheEntry.Response, response); err != nil {
+			return fmt.Errorf("can't unmarshal response: %w", err)
+		}
+		return nil
 	} else if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("remote error: %s", respBody)
 	}

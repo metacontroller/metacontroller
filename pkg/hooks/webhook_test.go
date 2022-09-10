@@ -165,6 +165,18 @@ func httpResponse304NotModified() *MockResponse {
 	}
 }
 
+func httpResponse500(resp string) *MockResponse {
+	return &MockResponse{
+		&http.Response{
+			Status:     "500 Server Internal Error",
+			StatusCode: 500,
+			Header:     map[string][]string{},
+			Body:       ioutil.NopCloser(bytes.NewBufferString(resp)),
+		},
+		nil,
+	}
+}
+
 func httpResponse200(body string, etag string) *MockResponse {
 	t := http.Response{
 		Status:     "200 OK",
@@ -237,8 +249,28 @@ func TestHookETag(t *testing.T) {
 		}`
 	RunHookTest(t, TestSteps{
 		{
+			// Check if non-200 responses are no tolerated when no cache
+			httpResponse:    httpResponse500("Internal Server Error"),
+			expectedHeaders: nil,
+			hookResult: &CallResult{
+				res: compositev1.CompositeHookResponse{},
+				err: fmt.Errorf("remote error: %s", "Internal Server Error"),
+			},
+		},
+		{
 			httpResponse: httpResponse200(body1, "000-000-000-001"),
 			hookResult:   hookResultFromJson(body1),
+		},
+		{
+			// Check if non-200 responses are not breaking the cache
+			httpResponse: httpResponse500("Internal Server Error"),
+			expectedHeaders: map[string]string{
+				"If-None-Match": "000-000-000-001",
+			},
+			hookResult: &CallResult{
+				res: compositev1.CompositeHookResponse{},
+				err: fmt.Errorf("remote error: %s", "Internal Server Error"),
+			},
 		},
 		{
 			httpResponse: httpResponse304NotModified(),
@@ -246,6 +278,17 @@ func TestHookETag(t *testing.T) {
 				"If-None-Match": "000-000-000-001",
 			},
 			hookResult: hookResultFromJson(body1),
+		},
+		{
+			// Check if non-200 responses are no tolerated when cache is present
+			httpResponse: httpResponse500("Internal Server Error"),
+			expectedHeaders: map[string]string{
+				"If-None-Match": "000-000-000-001",
+			},
+			hookResult: &CallResult{
+				res: compositev1.CompositeHookResponse{},
+				err: fmt.Errorf("remote error: %s", "Internal Server Error"),
+			},
 		},
 		{
 			httpResponse: httpResponse200(body2, "000-000-000-002"),
