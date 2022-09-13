@@ -209,6 +209,8 @@ func stringMergeKey(val interface{}) string {
 var knownMergeKeys = []string{
 	"containerPort",
 	"port",
+	"name",
+	"mountPath",
 	"uid",
 	"ip",
 	"path",
