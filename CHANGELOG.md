@@ -1,3 +1,10 @@
+# [4.5.0](https://github.com/metacontroller/metacontroller/compare/v4.4.0...v4.5.0) (2022-09-13)
+
+
+### Features
+
+* **webhooks:** Select json deserialization mode of response: 'loose' (default) or 'strict' ([99bca2f](https://github.com/metacontroller/metacontroller/commit/99bca2fbe1c5fa20fee016dffd5856761ee90cc3)), closes [#572](https://github.com/metacontroller/metacontroller/issues/572)
+
 # [4.4.0](https://github.com/metacontroller/metacontroller/compare/v4.3.9...v4.4.0) (2022-09-08)
 
 
