@@ -1,3 +1,10 @@
+## [4.5.2](https://github.com/metacontroller/metacontroller/compare/v4.5.1...v4.5.2) (2022-09-14)
+
+
+### Bug Fixes
+
+* **deps, security:** Update golang.org/x/net to fix CVE-2022-27664 ([a0ddbf3](https://github.com/metacontroller/metacontroller/commit/a0ddbf32ed9bb5f8328bac47a5efb5ea8c51111b))
+
 ## [4.5.1](https://github.com/metacontroller/metacontroller/compare/v4.5.0...v4.5.1) (2022-09-14)
 
 
