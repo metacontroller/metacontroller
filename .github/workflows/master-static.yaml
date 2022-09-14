@@ -1,0 +1,79 @@
+name: Static checks on master
+on:
+  push:
+    branches:
+    - master
+jobs:
+  docker-image-for-linting:
+    runs-on: ubuntu-22.04
+    steps:
+    - name: checkout
+      uses: actions/checkout@v3
+    - uses: actions/setup-go@v3
+      with:
+        go-version-file: 'go.mod'
+        cache: true
+    - name: Install GoReleaser
+      uses: goreleaser/goreleaser-action@v3
+      with:
+        distribution: goreleaser
+        version: latest
+        install-only: true
+    - name: build image
+      run: make image
+    - name: Save image
+      run: |
+        docker save --output metacontroller-lint.tar metacontrollerio/metacontroller:dev
+    - uses: actions/upload-artifact@v3
+      name: Save metacontroller image
+      with:
+        name: metacontroller-lint-image
+        path: metacontroller-*.tar
+        retention-days: 1
+  trivy-scan:
+    runs-on: ubuntu-22.04
+    needs: [docker-image-for-linting]
+    steps:
+    - name: Download metacontroller images
+      uses: actions/download-artifact@v3
+      with:
+        name: metacontroller-lint-image
+    - name: Load metacontroller images
+      run: |
+        docker load --input metacontroller-lint.tar
+    - name: Trivy scan
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: 'metacontrollerio/metacontroller:dev'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+        exit-code: '1'
+        ignore-unfixed: true
+        vuln-type: 'os,library'
+        severity: 'CRITICAL,HIGH'
+    - name: Upload Trivy scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: 'trivy-results.sarif'
+  dockle-scan:
+    runs-on: ubuntu-22.04
+    needs: [docker-image-for-linting]
+    steps:
+    - name: Download metacontroller images
+      uses: actions/download-artifact@v3
+      with:
+        name: metacontroller-lint-image
+    - name: Load metacontroller images
+      run: |
+        docker load --input metacontroller-lint.tar
+    - name: Dockle scan
+      uses: erzz/dockle-action@v1
+      with:
+        image: 'metacontrollerio/metacontroller:dev'
+        report-format: sarif
+        report-name: dockle-report
+    - name: Upload SARIF file
+      uses: github/codeql-action/upload-sarif@v1.2.0
+      with:
+        # Path to SARIF file relative to the root of the repository
+        sarif_file: dockle-report.sarif
