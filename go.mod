@@ -23,8 +23,6 @@ require (
 	zgo.at/zcache/v2 v2.1.0
 )
 
-require sigs.k8s.io/json v0.0.0-20220713155537-f223a00ba0e2
-
 require (
 	github.com/PuerkitoBio/purell v1.1.1 // indirect
 	github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578 // indirect
@@ -79,7 +77,7 @@ require (
 )
 
 replace (
-	golang.org/x/net => golang.org/x/net v0.0.0-20220906165146-f3363e06e74c
+	golang.org/x/net => golang.org/x/net v0.0.0-20220909164309-bea034e7d591
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.25.0
 	k8s.io/apimachinery => k8s.io/apimachinery v0.25.0
 	k8s.io/client-go => k8s.io/client-go v0.25.0
