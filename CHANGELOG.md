@@ -1,3 +1,11 @@
+## [4.5.1](https://github.com/metacontroller/metacontroller/compare/v4.5.0...v4.5.1) (2022-09-14)
+
+
+### Bug Fixes
+
+* **deps:** Update github.com/google/go-cmp to v0.5.9 ([f0d7c9d](https://github.com/metacontroller/metacontroller/commit/f0d7c9dad6e2277755e387c03da9b601d79eda83))
+* **deps:** Update k8s.io/klog/v2 to v2.80.1 ([6d17582](https://github.com/metacontroller/metacontroller/commit/6d17582fb1c725a42e2f497e5e48fe43f934630c))
+
 # [4.5.0](https://github.com/metacontroller/metacontroller/compare/v4.4.0...v4.5.0) (2022-09-13)
 
 
