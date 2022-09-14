@@ -1,8 +1,3 @@
-# Ignoring things that aren't needed to build the Docker image
-# helps Skaffold know when not to rebuild the image.
-docs
-examples
-test
-tmp
-hack/bin
-vendor
+*
+!Dockerfile*
+!metacontroller*
