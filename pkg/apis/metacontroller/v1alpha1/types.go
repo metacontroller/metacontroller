@@ -49,6 +49,8 @@ type CompositeControllerSpec struct {
 
 	ResyncPeriodSeconds *int32 `json:"resyncPeriodSeconds,omitempty"`
 	GenerateSelector    *bool  `json:"generateSelector,omitempty"`
+
+	DefaultUpdateStrategy CompositeControllerChildUpdateStrategy `json:"defaultUpdateStrategy"`
 }
 
 type ResourceRule struct {

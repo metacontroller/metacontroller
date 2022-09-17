@@ -37,6 +37,36 @@ spec:
             type: object
           spec:
             properties:
+              defaultUpdateStrategy:
+                properties:
+                  method:
+                    enum:
+                      - OnDelete
+                      - Recreate
+                      - InPlace
+                      - RollingRecreate
+                      - RollingInPlace
+                    type: string
+                    default: OnDelete
+                  statusChecks:
+                    properties:
+                      conditions:
+                        items:
+                          properties:
+                            reason:
+                              type: string
+                            status:
+                              type: string
+                            type:
+                              type: string
+                          required:
+                            - type
+                          type: object
+                        type: array
+                    type: object
+                type: object
+                default:
+                  method: OnDelete
               childResources:
                 items:
                   properties:

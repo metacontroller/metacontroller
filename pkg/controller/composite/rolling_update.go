@@ -307,13 +307,18 @@ type updateStrategyMap map[string]*v1alpha1.CompositeControllerChildUpdateStrate
 func (m updateStrategyMap) GetMethod(apiGroup, kind string) v1alpha1.ChildUpdateMethod {
 	strategy := m.get(apiGroup, kind)
 	if strategy == nil || strategy.Method == "" {
-		return v1alpha1.ChildUpdateOnDelete
+		//return v1alpha1.ChildUpdateOnDelete
+		return v1alpha1.ChildUpdateInPlace
 	}
 	return strategy.Method
 }
 
 func (m updateStrategyMap) get(apiGroup, kind string) *v1alpha1.CompositeControllerChildUpdateStrategy {
-	return m[claimMapKey(apiGroup, kind)]
+	t := m[claimMapKey(apiGroup, kind)]
+	if t == nil {
+		return m[""]
+	}
+	return t
 }
 
 func (m updateStrategyMap) isRolling(apiGroup, kind string) bool {
@@ -357,5 +362,6 @@ func makeUpdateStrategyMap(resources *dynamicdiscovery.ResourceMap, cc *v1alpha1
 			m[key] = child.UpdateStrategy
 		}
 	}
+	m[""] = &cc.Spec.DefaultUpdateStrategy
 	return m, nil
 }

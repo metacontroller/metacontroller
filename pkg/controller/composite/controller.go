@@ -67,6 +67,7 @@ type parentController struct {
 	dynClient      *dynamicclientset.Clientset
 	parentClient   *dynamicclientset.ResourceClient
 	parentInformer *dynamicinformer.ResourceInformer
+	dynInformers   *dynamicinformer.SharedInformerFactory
 
 	revisionLister mclisters.ControllerRevisionLister
 
@@ -163,6 +164,7 @@ func newParentController(
 		mcClient:       mcClient,
 		dynClient:      dynClient,
 		childInformers: childInformers,
+		dynInformers:   dynInformers,
 		parentClient:   parentClient,
 		parentInformer: parentInformer,
 		parentResource: parentResource,
@@ -532,6 +534,11 @@ func (pc *parentController) syncParentObject(parent *unstructured.Unstructured) 
 	}
 	desiredChildren := commonv1.MakeRelativeObjectMap(parent, syncResult.Children)
 
+	_, err = common.UpdateConfigMap(pc.dynClient, parent, desiredChildren)
+	if err != nil {
+		return err
+	}
+
 	// Enqueue a delayed resync, if requested.
 	if syncResult.ResyncAfterSeconds > 0 {
 		pc.enqueueParentObjectAfter(parent, time.Duration(syncResult.ResyncAfterSeconds*float64(time.Second)))
@@ -658,6 +665,15 @@ func (pc *parentController) canAdoptFunc(parent *unstructured.Unstructured) func
 	})
 }
 
+func Contains[T comparable](s []T, e T) bool {
+	for _, v := range s {
+		if v == e {
+			return true
+		}
+	}
+	return false
+}
+
 func (pc *parentController) claimChildren(parent *unstructured.Unstructured) (commonv1.RelativeObjectMap, error) {
 	// Set up values common to all child types.
 	parentNamespace := parent.GetNamespace()
@@ -670,17 +686,48 @@ func (pc *parentController) claimChildren(parent *unstructured.Unstructured) (co
 
 	// Claim all child types.
 	childMap := make(commonv1.RelativeObjectMap)
+
+	gvks, err := common.GetGvkFromConfigMap(pc.dynClient, parent)
+	if err != nil {
+		return nil, err
+	}
 	for _, child := range pc.cc.Spec.ChildResources {
-		// List all objects of the child kind in the parent object's namespace,
-		// or in all namespaces if the parent is cluster-scoped.
+		gr, err := schema.ParseGroupVersion(child.APIVersion)
+		if err != nil {
+			return nil, err
+		}
 		childClient, err := pc.dynClient.Resource(child.APIVersion, child.Resource)
 		if err != nil {
 			return nil, err
 		}
-		groupVersion, _ := schema.ParseGroupVersion(child.APIVersion)
-		informer := pc.childInformers.Get(groupVersion.WithResource(child.Resource))
+		res := commonv1.GroupVersionKind{
+			schema.GroupVersionKind{
+				Group:   gr.Group,
+				Version: gr.Version,
+				Kind:    childClient.Kind,
+			},
+		}
+
+		if !Contains(gvks, res) {
+			gvks = append(gvks, res)
+		}
+	}
+	for _, child := range gvks {
+		groupVersion := child.GroupVersion()
+		// List all objects of the child kind in the parent object's namespace,
+		// or in all namespaces if the parent is cluster-scoped.
+		childClient, err := pc.dynClient.Kind(groupVersion.String(), child.Kind)
+		if err != nil {
+			return nil, err
+		}
+		resource := childClient.GroupVersionResource()
+		informer := pc.childInformers.Get(resource)
 		if informer == nil {
-			return nil, fmt.Errorf("no informer for resource %q in apiVersion %q", child.Resource, child.APIVersion)
+			informer, err = pc.dynInformers.Resource(groupVersion.String(), resource.Resource)
+			if err != nil {
+				return nil, fmt.Errorf("can't create informer for child resource: %w", err)
+			}
+			pc.childInformers.Set(groupVersion.WithResource(resource.Resource), informer)
 		}
 		var all []*unstructured.Unstructured
 		if pc.parentResource.Namespaced {
