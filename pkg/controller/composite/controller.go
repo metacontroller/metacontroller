@@ -534,7 +534,7 @@ func (pc *parentController) syncParentObject(parent *unstructured.Unstructured) 
 	}
 	desiredChildren := commonv1.MakeRelativeObjectMap(parent, syncResult.Children)
 
-	_, err = common.UpdateConfigMapCC(pc.cc.Spec.DefaultUpdateStrategy.Method, pc.dynClient, parent, desiredChildren)
+	_, err = common.UpdateConfigMapCC(pc.cc, pc.dynClient, parent, desiredChildren)
 	if err != nil {
 		return err
 	}
@@ -687,7 +687,7 @@ func (pc *parentController) claimChildren(parent *unstructured.Unstructured) (co
 	// Claim all child types.
 	childMap := make(commonv1.RelativeObjectMap)
 
-	gvks, err := common.GetGvkFromConfigMapCC(pc.dynClient, parent)
+	gvks, err := common.GetGvkFromConfigMapCC(pc.cc, pc.dynClient, parent)
 	if err != nil {
 		return nil, err
 	}
