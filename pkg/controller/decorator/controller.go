@@ -78,6 +78,7 @@ type decoratorController struct {
 
 	parentInformers common.InformerMap
 	childInformers  common.InformerMap
+	dynInformers    *dynamicinformer.SharedInformerFactory
 
 	numWorkers    int
 	eventRecorder record.EventRecorder
@@ -90,7 +91,15 @@ type decoratorController struct {
 	logger logr.Logger
 }
 
-func newDecoratorController(resources *dynamicdiscovery.ResourceMap, dynClient *dynamicclientset.Clientset, dynInformers *dynamicinformer.SharedInformerFactory, eventRecorder record.EventRecorder, dc *v1alpha1.DecoratorController, numWorkers int, logger logr.Logger) (controller *decoratorController, newErr error) {
+func newDecoratorController(
+	resources *dynamicdiscovery.ResourceMap,
+	dynClient *dynamicclientset.Clientset,
+	dynInformers *dynamicinformer.SharedInformerFactory,
+	eventRecorder record.EventRecorder,
+	dc *v1alpha1.DecoratorController,
+	numWorkers int,
+	logger logr.Logger,
+) (controller *decoratorController, newErr error) {
 	if dc.Spec.Hooks == nil {
 		return nil, fmt.Errorf("no hooks defined")
 	}
@@ -110,6 +119,7 @@ func newDecoratorController(resources *dynamicdiscovery.ResourceMap, dynClient *
 		parentKinds:     make(common.GroupKindMap),
 		parentInformers: make(common.InformerMap),
 		childInformers:  make(common.InformerMap),
+		dynInformers:    dynInformers,
 
 		queue:         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), common.DecoratorController.String()+"-"+dc.Name),
 		numWorkers:    numWorkers,
@@ -544,6 +554,11 @@ func (c *decoratorController) syncParentObject(parent *unstructured.Unstructured
 	}
 	desiredChildren := commonv1.MakeRelativeObjectMap(parent, syncResult.Attachments)
 
+	_, err = common.UpdateConfigMapDC(c.dc, c.dynClient, parent, desiredChildren)
+	if err != nil {
+		return err
+	}
+
 	// Enqueue a delayed resync, if requested.
 	if syncResult.ResyncAfterSeconds > 0 {
 		c.enqueueParentObjectAfter(parent, time.Duration(syncResult.ResyncAfterSeconds*float64(time.Second)))
@@ -656,36 +671,80 @@ func (c *decoratorController) syncParentObject(parent *unstructured.Unstructured
 	return manageErr
 }
 
+func Contains[T comparable](s []T, e T) bool {
+	for _, v := range s {
+		if v == e {
+			return true
+		}
+	}
+	return false
+}
+
 func (c *decoratorController) getChildren(parent *unstructured.Unstructured) (commonv1.RelativeObjectMap, error) {
 	parentUID := parent.GetUID()
 	parentNamespace := parent.GetNamespace()
 	childMap := make(commonv1.RelativeObjectMap)
 
+	gvks, err := common.GetGvkFromConfigMapDC(c.dc, c.dynClient)
+	if err != nil {
+		return nil, err
+	}
 	for _, child := range c.dc.Spec.Attachments {
+		gr, err := schema.ParseGroupVersion(child.APIVersion)
+		if err != nil {
+			return nil, err
+		}
+		childClient, err := c.dynClient.Resource(child.APIVersion, child.Resource)
+		if err != nil {
+			return nil, err
+		}
+		res := commonv1.GroupVersionKind{
+			schema.GroupVersionKind{
+				Group:   gr.Group,
+				Version: gr.Version,
+				Kind:    childClient.Kind,
+			},
+		}
+
+		if !Contains(gvks, res) {
+			gvks = append(gvks, res)
+		}
+	}
+
+	for _, child := range gvks {
 		// List all objects of the child kind in the parent object's namespace,
 		// or in all namespaces if the parent is cluster-scoped.
-		groupVersion, _ := schema.ParseGroupVersion(child.APIVersion)
-		informer := c.childInformers.Get(groupVersion.WithResource(child.Resource))
+		groupVersion := child.GroupVersion()
+		childClient, err := c.dynClient.Kind(groupVersion.String(), child.Kind)
+		if err != nil {
+			return nil, err
+		}
+		resource := childClient.GroupVersionResource()
+		informer := c.childInformers.Get(resource)
+
 		if informer == nil {
-			return nil, fmt.Errorf("no informer for resource %q in apiVersion %q", child.Resource, child.APIVersion)
+			informer, err = c.dynInformers.Resource(groupVersion.String(), resource.Resource)
+			if err != nil {
+				return nil, fmt.Errorf("can't create informer for child resource: %w", err)
+			}
+			c.childInformers.Set(groupVersion.WithResource(resource.Resource), informer)
 		}
 		var all []*unstructured.Unstructured
-		var err error
 		if parentNamespace != "" {
 			all, err = informer.Lister().Namespace(parentNamespace).List(labels.Everything())
 		} else {
 			all, err = informer.Lister().List(labels.Everything())
 		}
 		if err != nil {
-			return nil, fmt.Errorf("can't list children for resource %q in apiVersion %q: %w", child.Resource, child.APIVersion, err)
+			return nil, fmt.Errorf("can't list children for resource %q in apiVersion %q: %w", resource.Resource, groupVersion.String(), err)
 		}
 
 		// Always include the requested groups, even if there are no entries.
-		resource := c.resources.Get(child.APIVersion, child.Resource)
-		if resource == nil {
-			return nil, fmt.Errorf("can't find resource %q in apiVersion %q", child.Resource, child.APIVersion)
+		apiResource := c.resources.Get(groupVersion.String(), resource.Resource)
+		if apiResource == nil {
+			return nil, fmt.Errorf("can't find resource %q in apiVersion %q", resource.Resource, groupVersion.String())
 		}
-		childMap.InitGroup(resource.GroupVersionKind())
+		childMap.InitGroup(apiResource.GroupVersionKind())
 
 		// Take only the objects that belong to this parent,
 		// and that were created by this decorator.
@@ -714,7 +773,11 @@ func (m updateStrategyMap) GetMethod(apiGroup, kind string) v1alpha1.ChildUpdate
 }
 
 func (m updateStrategyMap) get(apiGroup, kind string) *v1alpha1.DecoratorControllerAttachmentUpdateStrategy {
-	return m[updateStrategyMapKey(apiGroup, kind)]
+	t := m[updateStrategyMapKey(apiGroup, kind)]
+	if t == nil {
+		return m[""]
+	}
+	return t
 }
 
 func updateStrategyMapKey(apiGroup, kind string) string {
@@ -735,6 +798,9 @@ func makeUpdateStrategyMap(resources *dynamicdiscovery.ResourceMap, dc *v1alpha1
 			key := updateStrategyMapKey(apiGroup, resource.Kind)
 			m[key] = child.UpdateStrategy
 		}
+	}
+	m[""] = &v1alpha1.DecoratorControllerAttachmentUpdateStrategy{
+		Method: dc.Spec.DefaultUpdateStrategy.Method,
 	}
 	return m, nil
 }

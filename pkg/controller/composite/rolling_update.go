@@ -362,6 +362,10 @@ func makeUpdateStrategyMap(resources *dynamicdiscovery.ResourceMap, cc *v1alpha1
 			m[key] = child.UpdateStrategy
 		}
 	}
-	m[""] = &cc.Spec.DefaultUpdateStrategy
+
+	m[""] = &v1alpha1.CompositeControllerChildUpdateStrategy{
+		Method:       cc.Spec.DefaultUpdateStrategy.Method,
+		StatusChecks: cc.Spec.DefaultUpdateStrategy.StatusChecks,
+	}
 	return m, nil
 }

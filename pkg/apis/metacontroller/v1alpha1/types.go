@@ -50,7 +50,7 @@ type CompositeControllerSpec struct {
 	ResyncPeriodSeconds *int32 `json:"resyncPeriodSeconds,omitempty"`
 	GenerateSelector    *bool  `json:"generateSelector,omitempty"`
 
-	DefaultUpdateStrategy CompositeControllerChildUpdateStrategy `json:"defaultUpdateStrategy"`
+	DefaultUpdateStrategy CompositeControllerDefaultChildUpdateStrategy `json:"defaultUpdateStrategy"`
 }
 
 type ResourceRule struct {
@@ -81,6 +81,12 @@ const (
 type CompositeControllerChildResourceRule struct {
 	ResourceRule   `json:",inline"`
 	UpdateStrategy *CompositeControllerChildUpdateStrategy `json:"updateStrategy,omitempty"`
+}
+
+type CompositeControllerDefaultChildUpdateStrategy struct {
+	Method             ChildUpdateMethod       `json:"method,omitempty"`
+	StatusChecks       ChildUpdateStatusChecks `json:"statusChecks,omitempty"`
+	ConfigMapNamespace string                  `json:"configMapNamespace"`
 }
 
 type CompositeControllerChildUpdateStrategy struct {
@@ -219,6 +225,8 @@ type DecoratorControllerSpec struct {
 	Hooks *DecoratorControllerHooks `json:"hooks,omitempty"`
 
 	ResyncPeriodSeconds *int32 `json:"resyncPeriodSeconds,omitempty"`
+
+	DefaultUpdateStrategy DecoratorControllerDefaultAttachmentUpdateStrategy `json:"defaultUpdateStrategy"`
 }
 
 type DecoratorControllerResourceRule struct {
@@ -235,6 +243,11 @@ type AnnotationSelector struct {
 type DecoratorControllerAttachmentRule struct {
 	ResourceRule   `json:",inline"`
 	UpdateStrategy *DecoratorControllerAttachmentUpdateStrategy `json:"updateStrategy,omitempty"`
+}
+
+type DecoratorControllerDefaultAttachmentUpdateStrategy struct {
+	Method             ChildUpdateMethod `json:"method,omitempty"`
+	ConfigMapNamespace string            `json:"configMapNamespace"`
 }
 
 type DecoratorControllerAttachmentUpdateStrategy struct {

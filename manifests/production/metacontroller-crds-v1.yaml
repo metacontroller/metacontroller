@@ -39,6 +39,9 @@ spec:
             properties:
               defaultUpdateStrategy:
                 properties:
+                  configMapNamespace:
+                    type: string
+                    default: default
                   method:
                     enum:
                       - OnDelete
@@ -509,6 +512,40 @@ spec:
             type: object
           spec:
             properties:
+              defaultUpdateStrategy:
+                properties:
+                  configMapNamespace:
+                    type: string
+                    default: default
+                  method:
+                    enum:
+                      - OnDelete
+                      - Recreate
+                      - InPlace
+                      - RollingRecreate
+                      - RollingInPlace
+                    type: string
+                    default: OnDelete
+                  statusChecks:
+                    properties:
+                      conditions:
+                        items:
+                          properties:
+                            reason:
+                              type: string
+                            status:
+                              type: string
+                            type:
+                              type: string
+                          required:
+                            - type
+                          type: object
+                        type: array
+                    type: object
+                type: object
+                default:
+                  method: OnDelete
+                  configMapNamespace: default
               attachments:
                 items:
                   properties:
