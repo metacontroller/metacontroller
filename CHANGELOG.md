@@ -1,3 +1,10 @@
+## [4.5.3](https://github.com/metacontroller/metacontroller/compare/v4.5.2...v4.5.3) (2022-09-18)
+
+
+### Bug Fixes
+
+* **dynamic apply:** Add 'mountPath' as known merge keys ([281aaf6](https://github.com/metacontroller/metacontroller/commit/281aaf67ed751f938b6a3e46a30067a7ee08eb63)), closes [#650](https://github.com/metacontroller/metacontroller/issues/650)
+
 ## [4.5.2](https://github.com/metacontroller/metacontroller/compare/v4.5.1...v4.5.2) (2022-09-14)
 
 
