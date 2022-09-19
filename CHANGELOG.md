@@ -1,3 +1,11 @@
+## [4.5.4](https://github.com/metacontroller/metacontroller/compare/v4.5.3...v4.5.4) (2022-09-19)
+
+
+### Bug Fixes
+
+* **deps:** Update golang.org/x/net to v0.0.0-20220919171627-f8f703f97925 ([e603f78](https://github.com/metacontroller/metacontroller/commit/e603f78d6f4b431ec75a78bb765131ef05ac0573))
+* **deps:** Update k8s.io to v0.25.1 ([0ba5706](https://github.com/metacontroller/metacontroller/commit/0ba57062d827ab367a6f96b8b048235cd92f6cd1))
+
 ## [4.5.3](https://github.com/metacontroller/metacontroller/compare/v4.5.2...v4.5.3) (2022-09-18)
 
 
