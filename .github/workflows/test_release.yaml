@@ -263,4 +263,4 @@ jobs:
           REPOSITORY_OWNER: ${{github.repository_owner}}
         run: |
           npm install @semantic-release/git @semantic-release/changelog @google/semantic-release-replace-plugin @semantic-release/exec -D
-          npx semantic-release --branch ${{github.ref_name}}
+          npx semantic-release --branches ${{github.ref_name}}
