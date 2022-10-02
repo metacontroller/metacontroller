@@ -86,7 +86,7 @@ type CompositeControllerChildResourceRule struct {
 type CompositeControllerDefaultChildUpdateStrategy struct {
 	Method             ChildUpdateMethod       `json:"method,omitempty"`
 	StatusChecks       ChildUpdateStatusChecks `json:"statusChecks,omitempty"`
-	ConfigMapNamespace string                  `json:"configMapNamespace"`
+	ConfigMapNamespace string                  `json:"configMapNamespace,omitempty"`
 }
 
 type CompositeControllerChildUpdateStrategy struct {
@@ -247,7 +247,7 @@ type DecoratorControllerAttachmentRule struct {
 
 type DecoratorControllerDefaultAttachmentUpdateStrategy struct {
 	Method             ChildUpdateMethod `json:"method,omitempty"`
-	ConfigMapNamespace string            `json:"configMapNamespace"`
+	ConfigMapNamespace string            `json:"configMapNamespace,omitempty"`
 }
 
 type DecoratorControllerAttachmentUpdateStrategy struct {

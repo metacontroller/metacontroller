@@ -117,6 +117,9 @@ func newDefaultDecoratorController() *v1alpha1.DecoratorController {
 		TypeMeta:   metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{},
 		Spec: v1alpha1.DecoratorControllerSpec{
+			DefaultUpdateStrategy: v1alpha1.DecoratorControllerDefaultAttachmentUpdateStrategy{
+				Method: v1alpha1.ChildUpdateOnDelete,
+			},
 			Hooks: &v1alpha1.DecoratorControllerHooks{
 				Sync: &v1alpha1.Hook{
 					Webhook: &v1alpha1.Webhook{

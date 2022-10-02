@@ -101,6 +101,9 @@ func newDefaultCompositeController() *v1alpha1.CompositeController {
 		TypeMeta:   metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{},
 		Spec: v1alpha1.CompositeControllerSpec{
+			DefaultUpdateStrategy: v1alpha1.CompositeControllerDefaultChildUpdateStrategy{
+				Method: v1alpha1.ChildUpdateOnDelete,
+			},
 			GenerateSelector: &generateSelector,
 			Hooks: &v1alpha1.CompositeControllerHooks{
 				Sync: &v1alpha1.Hook{

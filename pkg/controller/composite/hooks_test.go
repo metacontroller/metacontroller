@@ -24,6 +24,9 @@ func TestSyncHookRequest_MarshalJSON(t *testing.T) {
       "creationTimestamp": null
     },
     "spec": {
+	  "defaultUpdateStrategy": {
+        "statusChecks": {}
+      },
       "parentResource": {
         "apiVersion": "",
         "resource": ""

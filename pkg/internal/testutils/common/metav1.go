@@ -22,6 +22,15 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+func NewConfigMapAPIResource() metav1.APIResource {
+	return metav1.APIResource{
+		Name:       "configmaps",
+		Namespaced: true,
+		Group:      "",
+		Version:    "v1",
+		Kind:       "ConfigMap",
+	}
+}
 func NewDefaultAPIResource() metav1.APIResource {
 	return metav1.APIResource{
 		Name:       TestResource,
@@ -54,6 +63,16 @@ func NewDefaultAPIResourceList() []*metav1.APIResourceList {
 				NewDefaultAPIResource(),
 			},
 		},
+		{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "ConfigMap",
+				APIVersion: "v1",
+			},
+			GroupVersion: "v1",
+			APIResources: []metav1.APIResource{
+				NewConfigMapAPIResource(),
+			},
+		},
 	}
 }
 
@@ -68,6 +87,16 @@ func NewDefaultStatusAPIResourceList() []*metav1.APIResourceList {
 			APIResources: []metav1.APIResource{
 				NewDefaultAPIResource(),
 				NewDefaultStatusAPIResource(),
+			},
+		},
+		{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "ConfigMap",
+				APIVersion: "v1",
+			},
+			GroupVersion: "v1",
+			APIResources: []metav1.APIResource{
+				NewConfigMapAPIResource(),
 			},
 		},
 	}
