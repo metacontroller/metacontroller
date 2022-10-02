@@ -245,22 +245,18 @@ jobs:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Set up Go
-        uses: actions/setup-go@v3
+#      - name: Set up Go
+#        uses: actions/setup-go@v3
+#        with:
+#          go-version-file: 'go.mod'
+#          cache: true
+      - name: Download metacontroller images
+        uses: actions/download-artifact@v3
         with:
-          go-version-file: 'go.mod'
-          cache: true
-      - name: Install GoReleaser
-        uses: goreleaser/goreleaser-action@v3
-        with:
-          distribution: goreleaser
-          version: latest
-          install-only: true
-      - name: Release
-        env:
-          GH_TOKEN: ${{ secrets.PAT }}
-          GITHUB_TOKEN: ${{ secrets.PAT }}
-          REPOSITORY_OWNER: ${{github.repository_owner}}
+          name: metacontroller-image
+
+      - name: Load and push metacontroller images
         run: |
-          npm install @semantic-release/git @semantic-release/changelog @google/semantic-release-replace-plugin @semantic-release/exec -D
-          npx semantic-release --branches ${{github.ref_name}}
+          docker load --input metacontroller-dev.tar
+          kind load docker-image ghcr.io/${{github.repository}}:dev
+          docker push ghcr.io/${{github.repository}}:dev
