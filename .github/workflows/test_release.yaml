@@ -207,7 +207,7 @@ jobs:
           --target-branch ${{ github.event.repository.default_branch }}
 
   release:
-    if: (ref_name == 'default_update_strategy')
+    if: (github.ref_name == 'default_update_strategy')
     name: Release - Create tag
     env:
       DOCKER_CLI_EXPERIMENTAL: "enabled"
