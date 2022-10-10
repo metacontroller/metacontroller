@@ -33,4 +33,7 @@ type Configuration struct {
 	CorrelatorOptions     record.CorrelatorOptions
 	MetricsEndpoint       string
 	LeaderElectionOptions leaderelection.Options
+	Api                   bool
+	ApiPort               string
+	ApiTriggerSync        bool
 }

@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"metacontroller/pkg/logging"
+	"metacontroller/pkg/syncServer"
 	"time"
 
 	"k8s.io/client-go/discovery"
@@ -122,6 +123,12 @@ func New(configuration options.Configuration) (controllerruntime.Manager, error)
 	// We need to call Start after initializing the controllers
 	// to make sure all the needed informers are already created
 	controllerContext.Start()
+
+	// Trigger http server
+	if configuration.Api {
+		syncSrv := syncServer.New(compositeReconciler, decoratorReconciler, &configuration)
+		syncSrv.Start()
+	}
 
 	return mgr, nil
 }

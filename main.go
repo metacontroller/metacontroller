@@ -54,6 +54,9 @@ var (
 	leaderElectionNamespace    = flag.String("leader-election-namespace", "", "Determines the namespace in which the leader election resource will be created")
 	leaderElectionID           = flag.String("leader-election-id", "metacontroller", "Determines the name of the resource that leader election will use for holding the leader lock")
 	version                    = "No version provided"
+	api                        = flag.Bool("api", false, "Enable http api")
+	apiPort                    = flag.String("api-port", "8090", "The api port (default 8090)")
+	apiTriggerSync             = flag.Bool("api-trigger-sync", false, "Enable trigger-sync http api")
 )
 
 func main() {
@@ -76,7 +79,11 @@ func main() {
 		"leader-election-resource-lock", *leaderElectionResourceLock,
 		"leader-election-namespace", *leaderElectionNamespace,
 		"leader-election-id", *leaderElectionID,
-		"version", version)
+		"version", version,
+		"api", *api,
+		"api-port", *apiPort,
+		"api-trigger-sync", *apiTriggerSync,
+	)
 
 	pprofStopChan := profile.EnablePprof(*pprofAddr)
 
@@ -104,6 +111,9 @@ func main() {
 			LeaderElectionNamespace:    *leaderElectionNamespace,
 			LeaderElectionID:           *leaderElectionID,
 		},
+		Api:            *api,
+		ApiPort:        *apiPort,
+		ApiTriggerSync: *apiTriggerSync,
 	}
 
 	// Create a new manager with a stop function

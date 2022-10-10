@@ -82,3 +82,7 @@ service:
 #      port: 9999
 #      protocol: "TCP"
 #      targetPort: "metrics"
+#    - name: "api"
+#      port: 8090
+#      protocol: "TCP"
+#      targetPort: "8090"

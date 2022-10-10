@@ -30,5 +30,9 @@ in `manifests/metacontroller.yaml`):
 | `--leader-election-resource-lock` | Determines which resource lock to use for leader election (default `leases`, e.g., `--leader-election-resource-lock=leases`). Valid resource locks are `endpoints`, `configmaps`, `leases`, `endpointsleases`, or `configmapsleases`. See the client-go documentation [leaderelection/resourcelock](https://pkg.go.dev/k8s.io/client-go/tools/leaderelection/resourcelock#pkg-constants) for additional information. |
 | `--leader-election-namespace` | Determines the namespace in which the leader election resource will be created. If metacontroller is running in-cluster, the default leader election namespace is the same namespace as metacontroller. If metacontroller is running out-of-cluster, the default leader election namespace is undefined. If you are running metacontroller out-of-cluster with leader election enabled, you must specify the leader election namespace. (e.g., `--leader-election-namespace=metacontroller`) |
 | `--leader-election-id` | Determines the name of the resource that leader election will use for holding the leader lock. For example, if the leader election id is `metacontroller` and the leader election resource lock is `leases`, then a resource of kind `leases` with metadata.name `metacontroller` will hold the leader lock. (default metacontroller, e.g., `--leader-election-id=metacontroller`) |
+| `--api` | Enable or disable http api server, e.g. `--api=true` |
+| `--api-port` | The address to bind api server endpoint, e.g. `--api-port=8090` |
+| `--api-trigger-sync` | Enable or disable sync api trigger (GET localhost:8090/trigger_sync), e.g. `--api-trigger-sync=true` |
+
 
 Logging flags are being set by `controller-runtime`, more on the meaning of them can be found [here](https://sdk.operatorframework.io/docs/building-operators/golang/references/logging/#overview)

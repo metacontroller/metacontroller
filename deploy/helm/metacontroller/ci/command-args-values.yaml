@@ -63,6 +63,9 @@ commandArgs:
   - --events-qps=0.0033
   - --events-burst=25
   - --pprof-address=:6060
+  - --api=false
+  - --api-port=8090
+  - --api-trigger-sync=false
 
 # The name of the PriorityClass that will be assigned to metacontroller
 priorityClassName: ""
