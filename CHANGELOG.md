@@ -1,3 +1,10 @@
+## [4.5.5](https://github.com/metacontroller/metacontroller/compare/v4.5.4...v4.5.5) (2022-10-18)
+
+
+### Bug Fixes
+
+* **deps:** Update k8s dependencies to v0.25.3 ([4f35f0f](https://github.com/metacontroller/metacontroller/commit/4f35f0ff6fa3ac2e1e990e832fa93a8b5c0c92bb))
+
 ## [4.5.4](https://github.com/metacontroller/metacontroller/compare/v4.5.3...v4.5.4) (2022-09-19)
 
 
