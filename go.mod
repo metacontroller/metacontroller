@@ -81,5 +81,5 @@ replace (
 	k8s.io/apimachinery => k8s.io/apimachinery v0.25.0
 	k8s.io/client-go => k8s.io/client-go v0.25.0
 	k8s.io/component-base => k8s.io/component-base v0.25.0
-	k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20220803164354-a70c9af30aea // to address CVE-2022-1996
+	k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20221012153701-172d655c2280 // to address CVE-2022-1996
 )
