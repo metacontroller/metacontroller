@@ -87,17 +87,17 @@ jobs:
         run: |
           cd docs
           mdbook build
-  nancy-dependency-scan:
-    runs-on: ubuntu-22.04
-    steps:
-    - name: Check out code into the Go module directory
-      uses: actions/checkout@v3
-    - name: Set up Go 1.x in order to write go.list file
-      uses: actions/setup-go@v3
-      with:
-        go-version-file: 'go.mod'
-        cache: true
-    - name: WriteGoList
-      run: go list -deps -json ./... > go.list
-    - name: Nancy
-      uses: sonatype-nexus-community/nancy-github-action@main
+#  nancy-dependency-scan:
+#    runs-on: ubuntu-22.04
+#    steps:
+#    - name: Check out code into the Go module directory
+#      uses: actions/checkout@v3
+#    - name: Set up Go 1.x in order to write go.list file
+#      uses: actions/setup-go@v3
+#      with:
+#        go-version-file: 'go.mod'
+#        cache: true
+#    - name: WriteGoList
+#      run: go list -deps -json ./... > go.list
+#    - name: Nancy
+#      uses: sonatype-nexus-community/nancy-github-action@main
