@@ -32,6 +32,8 @@ apiVersion: examples.metacontroller.io/v1alpha1
 kind: ConfigMapPropagation
 metadata:
   name: settings-propagation
+  labels:
+    version: v1
 spec:
   sourceName: settings
   sourceNamespace: original
@@ -39,4 +41,27 @@ spec:
   - one
   - two
   - three
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: four
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: five
+---
+apiVersion: examples.metacontroller.io/v1alpha1
+kind: ConfigMapPropagation
+metadata:
+  name: settings-propagation-unmanaged
+  labels:
+    version: v2
+spec:
+  sourceName: settings
+  sourceNamespace: original
+  targetNamespaces:
+    - four
+    - five
 

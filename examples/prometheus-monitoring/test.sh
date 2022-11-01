@@ -15,7 +15,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-set -ex
+set -euo
 
 echo "Install prometheus..."
 kubectl apply -k github.com/prometheus-operator/prometheus-operator?ref=v0.49.0

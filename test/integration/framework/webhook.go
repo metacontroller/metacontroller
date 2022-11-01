@@ -17,7 +17,7 @@ limitations under the License.
 package framework
 
 import (
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 )
@@ -30,7 +30,7 @@ func (f *Fixture) ServeWebhook(handler func(request []byte) (response []byte, er
 			return
 		}
 
-		body, err := ioutil.ReadAll(r.Body)
+		body, err := io.ReadAll(r.Body)
 		r.Body.Close()
 		if err != nil {
 			http.Error(w, "can't read body", http.StatusBadRequest)

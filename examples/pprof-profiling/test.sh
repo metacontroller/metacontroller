@@ -11,7 +11,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-set -ex
+set -euo
 
 kubectl apply -f manifest/service.yaml
 sleep 2
@@ -21,7 +21,7 @@ if ((!$?)); then
   echo "Expected failure sending request to disabled pprof"
   exit 1
 fi
-set -ex
+set -euo
 
 echo "Enable pprof on metacontroller..."
 kubectl apply -k ./manifest

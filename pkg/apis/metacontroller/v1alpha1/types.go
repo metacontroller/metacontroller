@@ -59,6 +59,7 @@ type ResourceRule struct {
 type CompositeControllerParentResourceRule struct {
 	ResourceRule    `json:",inline"`
 	RevisionHistory *CompositeControllerRevisionHistory `json:"revisionHistory,omitempty"`
+	LabelSelector   *metav1.LabelSelector               `json:"labelSelector,omitempty"`
 }
 
 type CompositeControllerRevisionHistory struct {

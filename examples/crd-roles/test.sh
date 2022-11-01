@@ -10,7 +10,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-set -ex
+set -euo
 
 echo "Install controller..."
 kubectl apply -k "${crd_version}"

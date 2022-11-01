@@ -61,7 +61,8 @@ func (f *Fixture) CreateCompositeController(name, syncHookURL string, customizeH
 			// Set a big resyncPeriod so tests can precisely control when syncs happen.
 			ResyncPeriodSeconds: pointer.Int32Ptr(3600),
 			ParentResource: v1alpha1.CompositeControllerParentResourceRule{
-				ResourceRule: *parentRule,
+				ResourceRule:  *parentRule,
+				LabelSelector: nil,
 			},
 			ChildResources: childResources,
 			Hooks: &v1alpha1.CompositeControllerHooks{

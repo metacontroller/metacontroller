@@ -97,7 +97,8 @@ func TestWhenChildrenArrayIsNullThenDeserializeToEmptySlice(t *testing.T) {
 	"children": [null]
 }`
 	parentController := parentController{
-		syncHook: hooks.NewSerializingExecutorStub(input),
+		syncHook:     hooks.NewSerializingExecutorStub(input),
+		finalizeHook: hooks.NewDisabledExecutorStub(),
 	}
 	parent := &unstructured.Unstructured{}
 	parent.SetDeletionTimestamp(nil)

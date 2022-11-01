@@ -12,7 +12,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-set -ex
+set -euo
 
 cs="catsets"
 finalizer="metacontroller.io/catset-test"
