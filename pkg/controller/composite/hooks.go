@@ -39,7 +39,13 @@ func (pc *parentController) callHook(
 	// First check if we should instead call the finalize hook,
 	// which has the same API as the sync hook except that it's
 	// called while the object is pending deletion.
-	if request.Parent.GetDeletionTimestamp() != nil && pc.finalizeHook.IsEnabled() {
+	//
+	// In addition to finalizing when the object is deleted, we also finalize
+	// when the object no longer matches our composite selector.
+	// This allows the composite to clean up after itself if the object has been
+	// updated to disable the functionality added by the decorator.
+	if pc.finalizeHook.IsEnabled() &&
+		(request.Parent.GetDeletionTimestamp() != nil || pc.doNotMatchLabels(parent.GetLabels())) {
 		// Finalize
 		request.Finalizing = true
 		if err := pc.finalizeHook.Call(request, &response); err != nil {

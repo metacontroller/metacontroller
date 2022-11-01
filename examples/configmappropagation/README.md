@@ -1,6 +1,20 @@
 ## ConfigMap propagation
 
-This is an example CompositeController that propagates a speficied configmap to given namespaces. It uses `customize` hook to select ConfigMap for propagation. Please note that we ignore `labelSelector` setting it to empty one, to select related resources just by namespace/name.
+This is an example CompositeController that propagates a specified configmap to given namespaces. 
+It uses `customize` hook to select ConfigMap for propagation. 
+Please note that we ignore `labelSelector` setting it to empty one, to select related resources just by namespace/name.
+
+Also, in `CompositeControler` we set `labelSelector`
+```yaml
+  parentResource:
+    apiVersion: examples.metacontroller.io/v1alpha1
+    resource: configmappropagations
+    labelSelector:
+      matchLabels:
+        version: v1
+```
+
+to process only one of the `ConfigMapPropagation` CR's.
 
 ### Prerequisites
 

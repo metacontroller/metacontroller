@@ -27,6 +27,8 @@ class Controller(BaseHTTPRequestHandler):
     def sync(self, parent: dict, related: dict) -> dict:
         sourceNamespace: str = parent['spec']['sourceNamespace']
         sourceName: str = parent['spec']['sourceName']
+        parentName = parent['metadata']['name']
+        LOGGER.info(f'Processing: {parentName}')
         if len(related['ConfigMap.v1']) == 0:
             LOGGER.info("Related resource has been deleted, clean-up copies")
             return []

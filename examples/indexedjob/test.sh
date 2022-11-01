@@ -11,7 +11,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-set -ex
+set -euo
 
 ij="indexedjobs"
 

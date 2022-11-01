@@ -25,6 +25,8 @@ import (
 	"sync"
 	"time"
 
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
 	"github.com/go-logr/logr"
 
 	"metacontroller/pkg/events"
@@ -67,6 +69,7 @@ type parentController struct {
 	dynClient      *dynamicclientset.Clientset
 	parentClient   *dynamicclientset.ResourceClient
 	parentInformer *dynamicinformer.ResourceInformer
+	parentSelector labels.Selector
 
 	revisionLister mclisters.ControllerRevisionLister
 
@@ -157,6 +160,14 @@ func newParentController(
 	if err != nil {
 		return nil, err
 	}
+	parentSelector := labels.Everything()
+	// for backward compatibility - if not set, handle all resources
+	if cc.Spec.ParentResource.LabelSelector != nil {
+		parentSelector, err = metav1.LabelSelectorAsSelector(cc.Spec.ParentResource.LabelSelector)
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	pc = &parentController{
 		cc:             cc,
@@ -165,6 +176,7 @@ func newParentController(
 		childInformers: childInformers,
 		parentClient:   parentClient,
 		parentInformer: parentInformer,
+		parentSelector: parentSelector,
 		parentResource: parentResource,
 		revisionLister: revisionLister,
 		updateStrategy: updateStrategy,
@@ -304,6 +316,14 @@ func (pc *parentController) processNextWorkItem() bool {
 }
 
 func (pc *parentController) enqueueParentObject(obj interface{}) {
+	// If the parent doesn't match our selector, and it doesn't have our
+	// finalizer, we don't care about it.
+	if parent, ok := obj.(*unstructured.Unstructured); ok {
+		if !controllerutil.ContainsFinalizer(parent, pc.finalizer.Name) && pc.doNotMatchLabels(parent.GetLabels()) {
+			return
+		}
+	}
+
 	key, err := common.KeyFunc(obj)
 	if err != nil {
 		utilruntime.HandleError(fmt.Errorf("couldn't get key for object %+v: %w", obj, err))
@@ -360,6 +380,12 @@ func (pc *parentController) resolveControllerRef(childNamespace string, controll
 		// ControllerRef points to.
 		return nil
 	}
+	if !controllerutil.ContainsFinalizer(parent, pc.finalizer.Name) && pc.doNotMatchLabels(parent.GetLabels()) {
+		// If the parent doesn't match our selector and doesn't have our finalizer,
+		// we don't care about it.
+		return nil
+	}
+
 	return parent
 }
 
@@ -503,6 +529,12 @@ func (pc *parentController) sync(key string) error {
 }
 
 func (pc *parentController) syncParentObject(parent *unstructured.Unstructured) error {
+	// If the parent doesn't match our selector, and it doesn't have our
+	// finalizer, we don't care about it.
+	if !controllerutil.ContainsFinalizer(parent, pc.finalizer.Name) && pc.doNotMatchLabels(parent.GetLabels()) {
+		return nil
+	}
+
 	// Before taking any other action, add our finalizer (if desired).
 	// This ensures we have a chance to clean up after any action we later take.
 	updatedParent, err := pc.finalizer.SyncObject(pc.parentClient, parent)
@@ -511,6 +543,11 @@ func (pc *parentController) syncParentObject(parent *unstructured.Unstructured) 
 		return fmt.Errorf("can't sync finalizer for %v %v/%v: %w", parent.GetKind(), parent.GetNamespace(), parent.GetName(), err)
 	}
 	parent = updatedParent
+
+	// Check the finalizer again in case we just removed it.
+	if !controllerutil.ContainsFinalizer(parent, pc.finalizer.Name) && pc.doNotMatchLabels(parent.GetLabels()) {
+		return nil
+	}
 
 	// Claim all matching child resources, including orphan/adopt as necessary.
 	observedChildren, err := pc.claimChildren(parent)
@@ -731,4 +768,8 @@ func (pc *parentController) updateParentStatus(parent *unstructured.Unstructured
 		obj.UnstructuredContent()["status"] = status
 		return true
 	})
+}
+
+func (pc parentController) doNotMatchLabels(labelsMap map[string]string) bool {
+	return pc.parentSelector != nil && !pc.parentSelector.Matches(labels.Set(labelsMap))
 }

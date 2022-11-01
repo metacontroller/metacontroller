@@ -12,7 +12,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-set -ex
+set -euo
 
 dj="daemonjobs"
 

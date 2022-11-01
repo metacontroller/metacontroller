@@ -11,7 +11,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-set -ex
+set -euo
 
 success_msg='successfully acquired lease'
 attempt_msg='attempting to acquire leader lease'

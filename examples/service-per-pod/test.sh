@@ -10,7 +10,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-set -ex
+set -euo
 
 finalizer="metacontroller.io/service-per-pod-test"
 

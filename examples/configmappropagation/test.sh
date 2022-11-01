@@ -10,7 +10,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-set -ex
+set -euo
 
 echo "Install controller..."
 kubectl apply -k "${crd_version}"
@@ -24,3 +24,9 @@ until [[ "$(kubectl get cm settings -n two -o 'jsonpath={.metadata.name}')" == "
 until [[ "$(kubectl get cm settings -n three -o 'jsonpath={.metadata.name}')" == "settings" ]]; do sleep 1; done
 echo "Check status update on parent..."
 until [[ "$(kubectl get ConfigMapPropagation settings-propagation -o 'jsonpath={.status.actual_copies}')" == "3" ]]; do sleep 1; done
+sleep 5
+if [[ "$(kubectl get cm settings -n four -o 'jsonpath={.metadata.name}')" == "settings" ]];
+then
+  echo "ERROR: Found configmap in unmanaged namespace"
+  exit 1
+fi

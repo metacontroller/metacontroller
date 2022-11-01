@@ -8,6 +8,9 @@ spec:
   parentResource:
     apiVersion: examples.metacontroller.io/v1alpha1
     resource: configmappropagations
+    labelSelector:
+      matchLabels:
+        version: v1
   childResources:
   - apiVersion: v1
     resource: configmaps

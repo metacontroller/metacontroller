@@ -33,6 +33,13 @@ func NewHookExecutorStub(response interface{}) *hookExecutorStub {
 	}
 }
 
+func NewDisabledExecutorStub() *hookExecutorStub {
+	return &hookExecutorStub{
+		enabled:  false,
+		response: nil,
+	}
+}
+
 // HookExecutorStub is Hook stub to return any given response
 type hookExecutorStub struct {
 	enabled  bool
@@ -40,7 +47,7 @@ type hookExecutorStub struct {
 }
 
 func (h *hookExecutorStub) IsEnabled() bool {
-	return true
+	return h.enabled
 }
 
 func (h *hookExecutorStub) Call(request hooks.WebhookRequest, response interface{}) error {
