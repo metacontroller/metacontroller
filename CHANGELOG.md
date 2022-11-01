@@ -1,3 +1,10 @@
+## [4.5.6](https://github.com/metacontroller/metacontroller/compare/v4.5.5...v4.5.6) (2022-11-01)
+
+
+### Bug Fixes
+
+* **security, CVE-2022-32149:** Update golang.org/x/text to v0.3.8 to fix CVE-2022-32149 ([cc377af](https://github.com/metacontroller/metacontroller/commit/cc377af9cabf9313e5c1944f77b6e4e1a8167d60))
+
 ## [4.5.5](https://github.com/metacontroller/metacontroller/compare/v4.5.4...v4.5.5) (2022-10-18)
 
 
