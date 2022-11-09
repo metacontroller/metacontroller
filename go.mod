@@ -17,7 +17,7 @@ require (
 	k8s.io/apimachinery v0.25.3
 	k8s.io/client-go v0.25.3
 	k8s.io/klog/v2 v2.80.1
-	k8s.io/utils v0.0.0-20220823124924-e9cbc92d1a73
+	k8s.io/utils v0.0.0-20221108210102-8e77b1f39fe2
 	sigs.k8s.io/controller-runtime v0.13.0
 	sigs.k8s.io/json v0.0.0-20220713155537-f223a00ba0e2
 	zgo.at/zcache/v2 v2.1.0
