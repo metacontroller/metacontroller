@@ -119,8 +119,8 @@ func MakeControllerRef(parent *unstructured.Unstructured) *metav1.OwnerReference
 		Kind:               parent.GetKind(),
 		Name:               parent.GetName(),
 		UID:                parent.GetUID(),
-		Controller:         pointer.BoolPtr(true),
-		BlockOwnerDeletion: pointer.BoolPtr(true),
+		Controller:         pointer.Bool(true),
+		BlockOwnerDeletion: pointer.Bool(true),
 	}
 }
 

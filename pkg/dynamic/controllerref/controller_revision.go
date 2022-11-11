@@ -88,8 +88,8 @@ func (m *ControllerRevisionManager) adoptControllerRevision(obj *v1alpha1.Contro
 		Kind:               m.parentKind.Kind,
 		Name:               m.Controller.GetName(),
 		UID:                m.Controller.GetUID(),
-		Controller:         pointer.BoolPtr(true),
-		BlockOwnerDeletion: pointer.BoolPtr(true),
+		Controller:         pointer.Bool(true),
+		BlockOwnerDeletion: pointer.Bool(true),
 	}
 
 	// We can't use strategic merge patch because we want this to work with custom resources.
