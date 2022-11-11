@@ -1,3 +1,15 @@
+## [4.5.8](https://github.com/metacontroller/metacontroller/compare/v4.5.7...v4.5.8) (2022-11-11)
+
+
+### Bug Fixes
+
+* **deps:** github.com/prometheus/client_golang to v1.14.0 ([a7ffd56](https://github.com/metacontroller/metacontroller/commit/a7ffd566f6d1af3e3fddb941ead8a318ed055482))
+* **deps:** update alpine:3.16.2 docker digest to 65a2763 ([65cebb2](https://github.com/metacontroller/metacontroller/commit/65cebb2608d44b3f650e0df5ac293e8b5927ef53))
+* **deps:** Update golang.org/x/net to v0.2.0 ([205adc2](https://github.com/metacontroller/metacontroller/commit/205adc279f433d916baa23d7fc35c0ebd1394195))
+* **deps:** Update k8s.io packages to v0.25.4 ([be96b2d](https://github.com/metacontroller/metacontroller/commit/be96b2d3c445470c42bfa9a6cb89fc65fae82e1f))
+* **deps:** Update k8s.io/utils to v0.0.0-20221108210102-8e77b1f39fe2 ([47d686d](https://github.com/metacontroller/metacontroller/commit/47d686d371244b4ff5cedf2a80157acfc319e802))
+* **deps:** Update sigs.k8s.io/controller-runtime to v0.13.1 ([c934953](https://github.com/metacontroller/metacontroller/commit/c9349536523cc35ea82606a36186551ed25e18d0))
+
 ## [4.5.7](https://github.com/metacontroller/metacontroller/compare/v4.5.6...v4.5.7) (2022-11-01)
 
 
