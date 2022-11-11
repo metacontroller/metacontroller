@@ -70,6 +70,7 @@ func New(configuration options.Configuration) (controllerruntime.Manager, error)
 		// Disables serving built-in metrics.
 		// We already start a standalone metrics server in parallel to the manager.
 		MetricsBindAddress:         configuration.MetricsEndpoint,
+		HealthProbeBindAddress:     configuration.HealthProbeBindAddress,
 		EventBroadcaster:           controllerContext.Broadcaster,
 		LeaderElection:             configuration.LeaderElectionOptions.LeaderElection,
 		LeaderElectionResourceLock: configuration.LeaderElectionOptions.LeaderElectionResourceLock,
