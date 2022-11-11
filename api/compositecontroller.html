@@ -247,6 +247,7 @@ better suited for adding behavior to existing resources.</p>
 <table><thead><tr><th>Field</th><th>Description</th></tr></thead><tbody>
 <tr><td><code>apiVersion</code></td><td>The API <code>&lt;group&gt;/&lt;version&gt;</code> of the parent resource, or just <code>&lt;version&gt;</code> for core APIs. (e.g. <code>v1</code>, <code>apps/v1</code>, <code>batch/v1</code>)</td></tr>
 <tr><td><code>resource</code></td><td>The canonical, lowercase, plural name of the parent resource. (e.g. <code>deployments</code>, <code>replicasets</code>, <code>statefulsets</code>)</td></tr>
+<tr><td><code>labelSelector</code></td><td>An optional label selector for narrowing down the objects to target. When not set defaults to all objects</td></tr>
 <tr><td><a href="#revision-history"><code>revisionHistory</code></a></td><td>If any <a href="#child-resources">child resources</a> use rolling updates, this field specifies how parent revisions are tracked.</td></tr>
 </tbody></table>
 <h3 id="label-selector"><a class="header" href="#label-selector">Label Selector</a></h3>
