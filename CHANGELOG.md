@@ -1,3 +1,10 @@
+# [4.6.0](https://github.com/metacontroller/metacontroller/compare/v4.5.8...v4.6.0) (2022-11-11)
+
+
+### Features
+
+* **composite controller:** Add label selector to choose parent objects ([5a2adb7](https://github.com/metacontroller/metacontroller/commit/5a2adb784f8e90f7ebc7cc2b60d9b9387b2e2644)), closes [#695](https://github.com/metacontroller/metacontroller/issues/695)
+
 ## [4.5.8](https://github.com/metacontroller/metacontroller/compare/v4.5.7...v4.5.8) (2022-11-11)
 
 
