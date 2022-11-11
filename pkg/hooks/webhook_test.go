@@ -34,7 +34,7 @@ func TestWebhookTimeout_defaultTimeoutIfNotSpecified(t *testing.T) {
 	}{
 		{
 			v1alpha1.Webhook{
-				URL:     pointer.StringPtr(""),
+				URL:     pointer.String(""),
 				Timeout: &metav1.Duration{},
 				Path:    new(string),
 				Service: &v1alpha1.ServiceReference{},
@@ -55,7 +55,7 @@ func TestWebhookTimeout_defaultTimeoutIfNegative(t *testing.T) {
 	}{
 		{
 			v1alpha1.Webhook{
-				URL:     pointer.StringPtr(""),
+				URL:     pointer.String(""),
 				Timeout: &metav1.Duration{Duration: -2 * time.Second},
 				Path:    new(string),
 				Service: &v1alpha1.ServiceReference{},
@@ -77,7 +77,7 @@ func TestWebhookTimeout_givenTimeoutIfPositive(t *testing.T) {
 	}{
 		{
 			v1alpha1.Webhook{
-				URL:     pointer.StringPtr(""),
+				URL:     pointer.String(""),
 				Timeout: &metav1.Duration{Duration: 2 * time.Second},
 				Path:    new(string),
 				Service: &v1alpha1.ServiceReference{},
