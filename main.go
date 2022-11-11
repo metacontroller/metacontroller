@@ -24,6 +24,8 @@ import (
 	"sync"
 	"time"
 
+	"sigs.k8s.io/controller-runtime/pkg/healthz"
+
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	"sigs.k8s.io/controller-runtime/pkg/leaderelection"
 
@@ -53,6 +55,7 @@ var (
 	leaderElectionResourceLock = flag.String("leader-election-resource-lock", resourcelock.LeasesResourceLock, "Determines which resource lock to use for leader election")
 	leaderElectionNamespace    = flag.String("leader-election-namespace", "", "Determines the namespace in which the leader election resource will be created")
 	leaderElectionID           = flag.String("leader-election-id", "metacontroller", "Determines the name of the resource that leader election will use for holding the leader lock")
+	healthProbeBindAddress     = flag.String("health-probe-bind-address", ":8081", "The address the health probes endpoint binds to")
 	version                    = "No version provided"
 )
 
@@ -76,6 +79,7 @@ func main() {
 		"leader-election-resource-lock", *leaderElectionResourceLock,
 		"leader-election-namespace", *leaderElectionNamespace,
 		"leader-election-id", *leaderElectionID,
+		"health-probe-bind-address", *healthProbeBindAddress,
 		"version", version)
 
 	pprofStopChan := profile.EnablePprof(*pprofAddr)
@@ -97,7 +101,8 @@ func main() {
 			BurstSize: *eventsBurst,
 			QPS:       float32(*eventsQPS),
 		},
-		MetricsEndpoint: *metricsAddr,
+		MetricsEndpoint:        *metricsAddr,
+		HealthProbeBindAddress: *healthProbeBindAddress,
 		LeaderElectionOptions: leaderelection.Options{
 			LeaderElection:             *leaderElection,
 			LeaderElectionResourceLock: *leaderElectionResourceLock,
@@ -110,7 +115,16 @@ func main() {
 	// for resource cleanup
 	mgr, err := server.New(configuration)
 	if err != nil {
-		logging.Logger.Error(err, "Terminating")
+		logging.Logger.Error(err, "Cannot create server")
+		os.Exit(1)
+	}
+
+	if err = mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
+		logging.Logger.Error(err, "unable to set up health check")
+		os.Exit(1)
+	}
+	if err = mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
+		logging.Logger.Error(err, "unable to set up ready check")
 		os.Exit(1)
 	}
 

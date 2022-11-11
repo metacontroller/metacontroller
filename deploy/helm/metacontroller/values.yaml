@@ -53,6 +53,10 @@ commandArgs:
   - --zap-log-level=4
   - --discovery-interval=20s
   - --cache-flush-interval=30m
+  - --health-probe-bind-address=:8081
+
+probes:
+  port: 8081
 
 # The name of the PriorityClass that will be assigned to metacontroller
 priorityClassName: ""

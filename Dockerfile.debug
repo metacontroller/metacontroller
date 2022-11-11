@@ -1,4 +1,4 @@
-FROM golang:1.19 AS build
+FROM golang:1.19.3-alpine3.16 AS build
 RUN go install github.com/go-delve/delve/cmd/dlv@latest
 
 FROM alpine:3.16.3@sha256:b95359c2505145f16c6aa384f9cc74eeff78eb36d308ca4fd902eeeb0a0b161b
@@ -9,5 +9,7 @@ COPY --from=build /go/bin/dlv /
 # See https://github.com/GoogleContainerTools/distroless/blob/0d757ece34cdc83a2148cea6c697e262c333cb84/base/base.bzl#L8
 RUN addgroup -g 65532 -S nonroot && adduser -D -u 65532 -g nonroot -S nonroot -G nonroot
 USER nonroot:nonroot
+
+COPY metacontroller /usr/bin/metacontroller
 
 CMD ["/dlv", "--listen=:40000", "--headless=true", "--api-version=2", "exec", "/usr/bin/metacontroller"]

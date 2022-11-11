@@ -1,7 +1,7 @@
 env:
   - REPOSITORY_OWNER={{ if index .Env "REPOSITORY_OWNER" }}{{ .Env.REPOSITORY_OWNER }}{{ else }}local{{ end }}
   - GC_FLAGS={{ if index .Env "DEBUG" }}all=-N -l{{ else }}-c 1{{ end }}
-  - REMOVE_DEBUG_SYMBOLS={{ if index .Env "DEBUG" }}{{ else }}-w{{ end }}
+  - REMOVE_DEBUG_SYMBOLS={{ if index .Env "DEBUG" }}{{ else }}-s -w{{ end }}
 before:
   hooks:
 #    - make generated_files
@@ -21,7 +21,7 @@ builds:
       - 6
       - 7
     ldflags:
-      - -s {{ .Env.REMOVE_DEBUG_SYMBOLS }} -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}} -X main.builtBy=goreleaser
+      - -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}} -X main.builtBy=goreleaser {{ .Env.REMOVE_DEBUG_SYMBOLS }}
     gcflags:
       - '{{ .Env.GC_FLAGS }}'
 # probably won't be used
