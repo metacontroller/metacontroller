@@ -22,7 +22,7 @@ build: generated_files
 	DEBUG=$(DEBUG) goreleaser build --single-target --rm-dist --snapshot --output $(PWD)/metacontroller
 
 .PHONY: build_debug
-build_debug: DEBUG='all=-N -l'
+build_debug: DEBUG=true
 build_debug: build
 
 .PHONY: unit-test

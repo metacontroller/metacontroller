@@ -33,6 +33,14 @@ spec:
             {{- toYaml .Values.securityContext | nindent 12 }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          livenessProbe:
+            httpGet:
+              port: {{ .Values.probes.port | default 8081 }}
+              path: /healthz
+          readinessProbe:
+            httpGet:
+              port: {{ .Values.probes.port | default 8081 }}
+              path: /readyz
           command:
           - {{ .Values.command | default "/usr/bin/metacontroller" }}
           args:
