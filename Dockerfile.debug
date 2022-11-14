@@ -1,9 +1,13 @@
 FROM golang:1.19 AS build
+
+ENV CGO_ENABLED=0
+ENV ADDITIONAL_BUILD_ARGUMENTS='-gcflags="all=-N -l"'
 RUN go install github.com/go-delve/delve/cmd/dlv@latest
 
 FROM alpine:3.16.2@sha256:65a2763f593ae85fab3b5406dc9e80f744ec5b449f269b699b5efd37a07ad32e
 RUN apk update && apk add --no-cache ca-certificates
 COPY --from=build /go/bin/dlv /
+COPY metacontroller /usr/bin/metacontroller
 
 # Run container as nonroot, use the same uid and naming convention as distroless images
 # See https://github.com/GoogleContainerTools/distroless/blob/0d757ece34cdc83a2148cea6c697e262c333cb84/base/base.bzl#L8
