@@ -1,3 +1,15 @@
+# [4.7.0](https://github.com/metacontroller/metacontroller/compare/v4.6.1...v4.7.0) (2022-11-15)
+
+
+### Bug Fixes
+
+* **helm:** Start delve immediately for e2e tests ([94b2015](https://github.com/metacontroller/metacontroller/commit/94b2015227b49eb0c1f5986531dd5d86bc9bf005))
+
+
+### Features
+
+* **probes:** Add liveness and readiness probes ([43cb4de](https://github.com/metacontroller/metacontroller/commit/43cb4dec08ad176530fd0afc805974d579758a9a))
+
 ## [4.6.1](https://github.com/metacontroller/metacontroller/compare/v4.6.0...v4.6.1) (2022-11-12)
 
 
