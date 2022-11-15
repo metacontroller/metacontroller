@@ -53,6 +53,8 @@ commandArgs:
   - --listen=:40000
   - --headless=true
   - --api-version=2
+  - --continue            # start immediately without waiting for debug client connection
+  - --accept-multiclient  # see https://github.com/go-delve/delve/blob/master/Documentation/faq.md
   - exec
   - /usr/bin/metacontroller
   - --

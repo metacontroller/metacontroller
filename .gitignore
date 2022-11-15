@@ -3,6 +3,7 @@
 /metacontroller
 **/hack/bin/
 .*.swp
+.*.swo
 .history
 **/.vscode
 **/.venv
