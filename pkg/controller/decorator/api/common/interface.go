@@ -14,28 +14,21 @@
  * /
  */
 
-package hooks
+package common
 
 import (
+	"metacontroller/pkg/apis/metacontroller/v1alpha1"
 	"metacontroller/pkg/controller/common/api"
-	"net/http"
+	commonv1 "metacontroller/pkg/controller/common/api/v1"
+
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-type webhookExecutorPlain struct {
-}
-
-func (w *webhookExecutorPlain) enrichHeaders(request *http.Request, webhookRequest api.WebhookRequest) {
-	// do nothing
-}
-
-func (w *webhookExecutorPlain) adjustResponse(
-	request *http.Request,
-	webhookRequest api.WebhookRequest,
-	responseBody []byte,
-	response *http.Response) ([]byte, error) {
-	return responseBody, nil
-}
-
-func (w *webhookExecutorPlain) isStatusSupported(request *http.Request, response *http.Response) bool {
-	return response.StatusCode == http.StatusOK
+type WebhookRequestBuilder interface {
+	WithController(controller *v1alpha1.DecoratorController) WebhookRequestBuilder
+	WithParet(object *unstructured.Unstructured) WebhookRequestBuilder
+	WithAttachments(attachments commonv1.RelativeObjectMap) WebhookRequestBuilder
+	WithRelatedObjects(related commonv1.RelativeObjectMap) WebhookRequestBuilder
+	IsFinalizing() WebhookRequestBuilder
+	Build() api.WebhookRequest
 }

@@ -14,28 +14,10 @@
  * /
  */
 
-package hooks
+package api
 
-import (
-	"metacontroller/pkg/controller/common/api"
-	"net/http"
-)
+import "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-type webhookExecutorPlain struct {
-}
-
-func (w *webhookExecutorPlain) enrichHeaders(request *http.Request, webhookRequest api.WebhookRequest) {
-	// do nothing
-}
-
-func (w *webhookExecutorPlain) adjustResponse(
-	request *http.Request,
-	webhookRequest api.WebhookRequest,
-	responseBody []byte,
-	response *http.Response) ([]byte, error) {
-	return responseBody, nil
-}
-
-func (w *webhookExecutorPlain) isStatusSupported(request *http.Request, response *http.Response) bool {
-	return response.StatusCode == http.StatusOK
+type WebhookRequest interface {
+	GetRootObject() *unstructured.Unstructured
 }
