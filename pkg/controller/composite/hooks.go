@@ -28,12 +28,11 @@ func (pc *parentController) callHook(
 	parent *unstructured.Unstructured,
 	observedChildren, related commonv1.RelativeObjectMap,
 ) (*v1.CompositeHookResponse, error) {
-	request := &v1.CompositeHookRequest{
-		Controller: pc.cc,
-		Parent:     parent,
-		Children:   observedChildren,
-		Related:    related,
-	}
+	requestBuilder := v1.NewRequestBuilder().
+		WithController(pc.cc).
+		WithParent(parent).
+		WithChildren(observedChildren).
+		WithRelatedObjects(related)
 
 	response := v1.CompositeHookResponse{Children: []*unstructured.Unstructured{}}
 	// First check if we should instead call the finalize hook,
@@ -45,16 +44,14 @@ func (pc *parentController) callHook(
 	// This allows the composite to clean up after itself if the object has been
 	// updated to disable the functionality added by the decorator.
 	if pc.finalizeHook.IsEnabled() &&
-		(request.Parent.GetDeletionTimestamp() != nil || pc.doNotMatchLabels(parent.GetLabels())) {
+		(parent.GetDeletionTimestamp() != nil || pc.doNotMatchLabels(parent.GetLabels())) {
 		// Finalize
-		request.Finalizing = true
-		if err := pc.finalizeHook.Call(request, &response); err != nil {
+		if err := pc.finalizeHook.Call(requestBuilder.IsFinalizing().Build(), &response); err != nil {
 			return nil, fmt.Errorf("finalize hook failed: %w", err)
 		}
 	} else {
 		// Sync
-		request.Finalizing = false
-		if err := pc.syncHook.Call(request, &response); err != nil {
+		if err := pc.syncHook.Call(requestBuilder.Build(), &response); err != nil {
 			return nil, fmt.Errorf("sync hook failed: %w", err)
 		}
 	}

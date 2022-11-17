@@ -19,6 +19,7 @@ package hooks
 import (
 	"fmt"
 	"metacontroller/pkg/cache"
+	"metacontroller/pkg/controller/common/api"
 	"metacontroller/pkg/logging"
 	"net/http"
 
@@ -46,7 +47,7 @@ func (w *webhookExecutorEtag) getKeyFromObject(obj *unstructured.Unstructured) e
 	}
 }
 
-func (w *webhookExecutorEtag) enrichHeaders(request *http.Request, webhookRequest WebhookRequest) {
+func (w *webhookExecutorEtag) enrichHeaders(request *http.Request, webhookRequest api.WebhookRequest) {
 	cacheKey := w.getKeyFromObject(webhookRequest.GetRootObject())
 	cacheEntry, cacheEntryExists := w.etagCache.Get(cacheKey)
 	if cacheEntryExists {
@@ -59,7 +60,7 @@ func (w *webhookExecutorEtag) enrichHeaders(request *http.Request, webhookReques
 
 func (w *webhookExecutorEtag) adjustResponse(
 	request *http.Request,
-	webhookRequest WebhookRequest,
+	webhookRequest api.WebhookRequest,
 	responseBody []byte,
 	response *http.Response) ([]byte, error) {
 	cacheKey := w.getKeyFromObject(webhookRequest.GetRootObject())

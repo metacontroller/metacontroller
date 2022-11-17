@@ -23,14 +23,13 @@ import (
 	"io"
 	"metacontroller/pkg/cache"
 	"metacontroller/pkg/controller/common"
+	"metacontroller/pkg/controller/common/api"
 	"metacontroller/pkg/logging"
 	"metacontroller/pkg/metrics"
 	"net/http"
 	"time"
 
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
-
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"metacontroller/pkg/apis/metacontroller/v1alpha1"
 
@@ -43,17 +42,13 @@ const (
 	headerETag        = "ETag"
 )
 
-type WebhookRequest interface {
-	GetRootObject() *unstructured.Unstructured
-}
-
 type HttpClientInterface interface {
 	Do(req *http.Request) (*http.Response, error)
 }
 
 // WebhookExecutor executes a call to a webhook
 type WebhookExecutor interface {
-	Call(request WebhookRequest, response interface{}) error
+	Call(request api.WebhookRequest, response interface{}) error
 }
 
 // NewWebhookExecutor returns new WebhookExecutor
@@ -128,9 +123,9 @@ func responseUnmarshallMode(mode *v1alpha1.ResponseUnmarshallMode) v1alpha1.Resp
 }
 
 type webhookAbstract interface {
-	enrichHeaders(request *http.Request, webhookRequest WebhookRequest)
+	enrichHeaders(request *http.Request, webhookRequest api.WebhookRequest)
 	isStatusSupported(request *http.Request, response *http.Response) bool
-	adjustResponse(request *http.Request, webhookRequest WebhookRequest, responseBody []byte, response *http.Response) ([]byte, error)
+	adjustResponse(request *http.Request, webhookRequest api.WebhookRequest, responseBody []byte, response *http.Response) ([]byte, error)
 }
 
 type webhookExecutor struct {
@@ -141,7 +136,7 @@ type webhookExecutor struct {
 	responseUnmarshallMode v1alpha1.ResponseUnmarshallMode
 }
 
-func (w *webhookExecutor) Call(webhookRequest WebhookRequest, webhookResponse interface{}) error {
+func (w *webhookExecutor) Call(webhookRequest api.WebhookRequest, webhookResponse interface{}) error {
 	// Encode webhookRequest.
 	requestBody, err := k8sjson.Marshal(webhookRequest)
 	if err != nil {

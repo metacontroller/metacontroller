@@ -19,12 +19,13 @@ package hooks
 import (
 	"metacontroller/pkg/apis/metacontroller/v1alpha1"
 	"metacontroller/pkg/controller/common"
+	"metacontroller/pkg/controller/common/api"
 )
 
 // Hook an execute Hook requests
 type Hook interface {
 	IsEnabled() bool
-	Call(request WebhookRequest, response interface{}) error
+	Call(request api.WebhookRequest, response interface{}) error
 }
 
 // NewHook return new Hook which implements given v1alpha1.Hook
@@ -56,6 +57,6 @@ func (h *hookExecutorImpl) IsEnabled() bool {
 	return h.webhookExecutor != nil
 }
 
-func (h *hookExecutorImpl) Call(request WebhookRequest, response interface{}) error {
+func (h *hookExecutorImpl) Call(request api.WebhookRequest, response interface{}) error {
 	return h.webhookExecutor.Call(request, response)
 }

@@ -32,12 +32,11 @@ func (c *decoratorController) callHook(
 		return nil, fmt.Errorf("no hooks defined")
 	}
 
-	request := &v1.DecoratorHookRequest{
-		Controller:  c.dc,
-		Object:      parent,
-		Attachments: observedChildren,
-		Related:     related,
-	}
+	requestBuilder := v1.NewRequestBuilder().
+		WithController(c.dc).
+		WithParet(parent).
+		WithAttachments(observedChildren).
+		WithRelatedObjects(related)
 
 	response := v1.DecoratorHookResponse{Attachments: []*unstructured.Unstructured{}}
 
@@ -50,16 +49,14 @@ func (c *decoratorController) callHook(
 	// This allows the decorator to clean up after itself if the object has been
 	// updated to disable the functionality added by the decorator.
 	if c.finalizeHook.IsEnabled() &&
-		(request.Object.GetDeletionTimestamp() != nil || !c.parentSelector.Matches(request.Object)) {
+		(parent.GetDeletionTimestamp() != nil || !c.parentSelector.Matches(parent)) {
 		// Finalize
-		request.Finalizing = true
-		if err := c.finalizeHook.Call(request, &response); err != nil {
+		if err := c.finalizeHook.Call(requestBuilder.IsFinalizing().Build(), &response); err != nil {
 			return nil, fmt.Errorf("finalize hook failed: %w", err)
 		}
 	} else {
 		// Sync
-		request.Finalizing = false
-		if err := c.syncHook.Call(request, &response); err != nil {
+		if err := c.syncHook.Call(requestBuilder.Build(), &response); err != nil {
 			return nil, fmt.Errorf("sync hook failed: %w", err)
 		}
 	}
