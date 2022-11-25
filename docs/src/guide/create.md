@@ -53,6 +53,15 @@ spec:
   - name: v1
     served: true
     storage: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            type: object
+            properties:
+              who:
+                type: string
     subresources:
      status: {}
 ```
