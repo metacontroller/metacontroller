@@ -15,6 +15,20 @@ git clone git@github.com:metacontroller/metacontroller.git metacontroller
 cd metacontroller
 ```
 
+Then you can build a `metacontroller` binary like so:
+
+```sh
+make build
+```
+
+Note that you will need the following k8s code-generation tools:
+* deepcopy-gen
+* client-gen
+* lister-gen
+* informer-gen
+
+...all of which can be found [here](https://github.com/kubernetes/code-generator).
+
 ## Local build and development
 
 Check [debug section](./debug.md)
@@ -74,8 +88,9 @@ and also greatly reduces the requirements to run tests.
 
 Other than the Metacontroller codebase, all you need to run integration tests
 is to download a few binaries from a Kubernetes release.
-You can run the following script to fetch the versions of these binaries
-currently used in continuous integration, and place them in `./hack/bin`:
+You can run the following script from the `test/integration` directory in to
+order to fetch the versions of these binaries currently used in continuous
+integration, and place them in `./hack/bin`:
 
 ```sh
 hack/get-kube-binaries.sh
@@ -103,7 +118,8 @@ that a human might run when using Metacontroller.
 Since these tests verify end-to-end behavior, they require a fully-functioning
 Kubernetes cluster.
 Before running them, you should have `kubectl` in your PATH, and it should be
-configured to talk to a suitable, empty test cluster.
+configured to talk to a suitable, empty test cluster that has had the
+Metacontroller manifests applied.
 
 Then you can run the end-to-end tests against your cluster with the following:
 
