@@ -115,11 +115,12 @@ func TestRevertObjectMetaSystemFields(t *testing.T) {
 func TestManageChildren(t *testing.T) {
 	logging.InitLogging(&zap.Options{})
 	type args struct {
-		dynClient        func() *dynamicclientset.Clientset
-		updateStrategy   ChildUpdateStrategy
-		parent           *unstructured.Unstructured
-		observedChildren commonv1.RelativeObjectMap
-		desiredChildren  commonv1.RelativeObjectMap
+		dynClient          func() *dynamicclientset.Clientset
+		updateStrategy     ChildUpdateStrategy
+		parent             *unstructured.Unstructured
+		observedChildren   commonv1.RelativeObjectMap
+		desiredChildren    commonv1.RelativeObjectMap
+		managingController bool
 	}
 
 	unstructuredDefault := NewDefaultUnstructured()
@@ -146,7 +147,8 @@ func TestManageChildren(t *testing.T) {
 					unstructuredDefault,
 					unstructuredDefaultList,
 				),
-				desiredChildren: nil,
+				desiredChildren:    nil,
+				managingController: true,
 			},
 		},
 		{
@@ -168,7 +170,8 @@ func TestManageChildren(t *testing.T) {
 					unstructuredDefault,
 					unstructuredDefaultList,
 				),
-				desiredChildren: nil,
+				desiredChildren:    nil,
+				managingController: true,
 			},
 		},
 		{
@@ -194,6 +197,7 @@ func TestManageChildren(t *testing.T) {
 					unstructuredDefault,
 					unstructuredDefaultList,
 				),
+				managingController: true,
 			},
 		},
 		{
@@ -216,6 +220,7 @@ func TestManageChildren(t *testing.T) {
 					unstructuredDefault,
 					unstructuredDefaultList,
 				),
+				managingController: true,
 			},
 			wantErr: true,
 		},
@@ -235,7 +240,8 @@ func TestManageChildren(t *testing.T) {
 					unstructuredDefault,
 					unstructuredDefaultList,
 				),
-				desiredChildren: nil,
+				desiredChildren:    nil,
+				managingController: true,
 			},
 			wantErr: true,
 		},
@@ -256,6 +262,7 @@ func TestManageChildren(t *testing.T) {
 					unstructuredDefault,
 					unstructuredDefaultList,
 				),
+				managingController: true,
 			},
 		},
 		{
@@ -281,6 +288,7 @@ func TestManageChildren(t *testing.T) {
 					unstructuredDefault,
 					unstructuredDefaultList,
 				),
+				managingController: true,
 			},
 		},
 		{
@@ -306,6 +314,7 @@ func TestManageChildren(t *testing.T) {
 					unstructuredDefault,
 					unstructuredDefaultList,
 				),
+				managingController: true,
 			},
 		},
 		{
@@ -328,6 +337,7 @@ func TestManageChildren(t *testing.T) {
 					unstructuredDefault,
 					unstructuredDefaultList,
 				),
+				managingController: true,
 			},
 			wantErr: true,
 		},
@@ -351,6 +361,7 @@ func TestManageChildren(t *testing.T) {
 					unstructuredDefault,
 					unstructuredDefaultList,
 				),
+				managingController: true,
 			},
 		},
 		{
@@ -370,14 +381,76 @@ func TestManageChildren(t *testing.T) {
 					unstructuredDefault,
 					unstructuredDefaultList,
 				),
+				managingController: true,
 			},
 			wantErr: true,
+		},
+		{
+			name: "no error on successful child update with managingController false",
+			args: args{
+				dynClient: func() *dynamicclientset.Clientset {
+					simpleDynClient := fake.NewSimpleDynamicClient(scheme, NewDefaultUnstructured())
+					return NewClientset(testRestConfig, testResourceMap, simpleDynClient)
+				},
+				updateStrategy: childUpdateInPlaceStrategy{},
+				parent:         unstructuredDefault,
+				observedChildren: commonv1.MakeRelativeObjectMap(
+					unstructuredDefault,
+					unstructuredDefaultList,
+				),
+				desiredChildren: commonv1.MakeRelativeObjectMap(
+					unstructuredDefault,
+					unstructuredDefaultList,
+				),
+				managingController: false,
+			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := ManageChildren(tt.args.dynClient(), tt.args.updateStrategy, tt.args.parent, tt.args.observedChildren, tt.args.desiredChildren); (err != nil) != tt.wantErr {
+			if err := ManageChildren(tt.args.dynClient(), tt.args.updateStrategy, tt.args.parent, tt.args.observedChildren, tt.args.desiredChildren, tt.args.managingController); (err != nil) != tt.wantErr {
 				t.Errorf("ManageChildren() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestMakeControllerRef(t *testing.T) {
+	logging.InitLogging(&zap.Options{})
+	type args struct {
+		parent             *unstructured.Unstructured
+		managingController bool
+	}
+
+	unstructuredDefault := NewDefaultUnstructured()
+
+	tests := []struct {
+		name                string
+		args                args
+		wantControllerValue bool
+	}{
+		{
+			name: "fields match on make ref with controller true",
+			args: args{
+				parent:             unstructuredDefault,
+				managingController: true,
+			},
+			wantControllerValue: true,
+		},
+		{
+			name: "fields match on make ref with controller false",
+			args: args{
+				parent:             unstructuredDefault,
+				managingController: false,
+			},
+			wantControllerValue: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			controllerRef := MakeControllerRef(tt.args.parent, tt.args.managingController)
+			if *controllerRef.Controller != tt.wantControllerValue {
+				t.Fatalf("MakeControllerRef() .Controller = %#v, want %#v", *controllerRef.Controller, tt.wantControllerValue)
 			}
 		})
 	}

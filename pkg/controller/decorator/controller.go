@@ -648,7 +648,11 @@ func (c *decoratorController) syncParentObject(parent *unstructured.Unstructured
 	var manageErr error
 	if parent.GetDeletionTimestamp() == nil || c.finalizer.ShouldFinalize(parent) {
 		// Reconcile children.
-		if err := common.ManageChildren(c.dynClient, c.updateStrategy, parent, observedChildren, desiredChildren); err != nil {
+		managingController := true
+		if c.dc.Spec.ManagingController != nil {
+			managingController = *c.dc.Spec.ManagingController
+		}
+		if err := common.ManageChildren(c.dynClient, c.updateStrategy, parent, observedChildren, desiredChildren, managingController); err != nil {
 			manageErr = fmt.Errorf("can't reconcile children for %v %v/%v: %w", parent.GetKind(), parent.GetNamespace(), parent.GetName(), err)
 		}
 	}

@@ -49,6 +49,7 @@ type CompositeControllerSpec struct {
 
 	ResyncPeriodSeconds *int32 `json:"resyncPeriodSeconds,omitempty"`
 	GenerateSelector    *bool  `json:"generateSelector,omitempty"`
+	ManagingController  *bool  `json:"managingController,omitempty"`
 }
 
 type ResourceRule struct {
@@ -218,6 +219,7 @@ type DecoratorControllerSpec struct {
 	Hooks *DecoratorControllerHooks `json:"hooks,omitempty"`
 
 	ResyncPeriodSeconds *int32 `json:"resyncPeriodSeconds,omitempty"`
+	ManagingController  *bool  `json:"managingController,omitempty"`
 }
 
 type DecoratorControllerResourceRule struct {

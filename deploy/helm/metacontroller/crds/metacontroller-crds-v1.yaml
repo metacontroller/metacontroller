@@ -205,6 +205,8 @@ spec:
                         type: object
                     type: object
                 type: object
+              managingController:
+                type: boolean
               parentResource:
                 properties:
                   apiVersion:
@@ -441,6 +443,8 @@ spec:
                         type: object
                     type: object
                 type: object
+              managingController:
+                type: boolean
               resources:
                 items:
                   properties:

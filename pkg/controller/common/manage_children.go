@@ -113,13 +113,13 @@ func revertField(newObj, orig *unstructured.Unstructured, fieldPath ...string) e
 	return nil
 }
 
-func MakeControllerRef(parent *unstructured.Unstructured) *metav1.OwnerReference {
+func MakeControllerRef(parent *unstructured.Unstructured, controller bool) *metav1.OwnerReference {
 	return &metav1.OwnerReference{
 		APIVersion:         parent.GetAPIVersion(),
 		Kind:               parent.GetKind(),
 		Name:               parent.GetName(),
 		UID:                parent.GetUID(),
-		Controller:         pointer.Bool(true),
+		Controller:         pointer.Bool(controller),
 		BlockOwnerDeletion: pointer.Bool(true),
 	}
 }
@@ -128,7 +128,7 @@ type ChildUpdateStrategy interface {
 	GetMethod(apiGroup, kind string) v1alpha1.ChildUpdateMethod
 }
 
-func ManageChildren(dynClient *dynamicclientset.Clientset, updateStrategy ChildUpdateStrategy, parent *unstructured.Unstructured, observedChildren, desiredChildren commonv1.RelativeObjectMap) error {
+func ManageChildren(dynClient *dynamicclientset.Clientset, updateStrategy ChildUpdateStrategy, parent *unstructured.Unstructured, observedChildren, desiredChildren commonv1.RelativeObjectMap, managingController bool) error {
 	// If some operations fail, keep trying others so, for example,
 	// we don't block recovery (create new Pod) on a failed delete.
 	var errs []error
@@ -153,7 +153,7 @@ func ManageChildren(dynClient *dynamicclientset.Clientset, updateStrategy ChildU
 			errs = append(errs, err)
 			continue
 		}
-		if err := updateChildren(client, updateStrategy, parent, observedChildren[key], objects); err != nil {
+		if err := updateChildren(client, updateStrategy, parent, observedChildren[key], objects, managingController); err != nil {
 			errs = append(errs, err)
 			continue
 		}
@@ -198,7 +198,7 @@ func deleteChildren(client *dynamicclientset.ResourceClient, parent *unstructure
 	return utilerrors.NewAggregate(errs)
 }
 
-func updateChildren(client *dynamicclientset.ResourceClient, updateStrategy ChildUpdateStrategy, parent *unstructured.Unstructured, observed, desired map[string]*unstructured.Unstructured) error {
+func updateChildren(client *dynamicclientset.ResourceClient, updateStrategy ChildUpdateStrategy, parent *unstructured.Unstructured, observed, desired map[string]*unstructured.Unstructured, managingController bool) error {
 	var errs []error
 	for name, obj := range desired {
 		ns := obj.GetNamespace()
@@ -299,8 +299,8 @@ func updateChildren(client *dynamicclientset.ResourceClient, updateStrategy Chil
 				continue
 			}
 
-			// We always claim everything we create.
-			controllerRef := MakeControllerRef(parent)
+			// We always claim everything we create, but controller bool is configurable.
+			controllerRef := MakeControllerRef(parent, managingController)
 			ownerRefs := obj.GetOwnerReferences()
 			ownerRefs = append(ownerRefs, *controllerRef)
 			obj.SetOwnerReferences(ownerRefs)

@@ -293,6 +293,11 @@ func (in *CompositeControllerSpec) DeepCopyInto(out *CompositeControllerSpec) {
 		*out = new(bool)
 		**out = **in
 	}
+	if in.ManagingController != nil {
+		in, out := &in.ManagingController, &out.ManagingController
+		*out = new(bool)
+		**out = **in
+	}
 	return
 }
 
@@ -592,6 +597,11 @@ func (in *DecoratorControllerSpec) DeepCopyInto(out *DecoratorControllerSpec) {
 	if in.ResyncPeriodSeconds != nil {
 		in, out := &in.ResyncPeriodSeconds, &out.ResyncPeriodSeconds
 		*out = new(int32)
+		**out = **in
+	}
+	if in.ManagingController != nil {
+		in, out := &in.ManagingController, &out.ManagingController
+		*out = new(bool)
 		**out = **in
 	}
 	return

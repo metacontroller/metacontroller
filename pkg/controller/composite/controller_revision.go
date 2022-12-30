@@ -337,7 +337,7 @@ func (pc *parentController) newControllerRevision(parent *unstructured.Unstructu
 		},
 		ParentPatch: runtime.RawExtension{Raw: patchData},
 	}
-	controllerRef := common.MakeControllerRef(parent)
+	controllerRef := common.MakeControllerRef(parent, true)
 	revision.OwnerReferences = append(revision.OwnerReferences, *controllerRef)
 	return revision, nil
 }

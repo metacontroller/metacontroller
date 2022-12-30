@@ -50,6 +50,7 @@ A DecoratorController `spec` has the following fields:
 | [`resources`](#resources) | A list of resource rules specifying which objects to target for decoration (adding behavior). |
 | [`attachments`](#attachments) | A list of resource rules specifying what this decorator can attach to the target resources. |
 | [`resyncPeriodSeconds`](#resync-period) | How often, in seconds, you want every target object to be resynced (sent to your hook), even if no changes are detected. |
+| [`managingController`](#managing-controller) | If `true`, set `controller: true` in the `ownerReferences` object appended to child objects denote ownership by the parent. Defaults to `true` if unset. |
 | [`hooks`](#hooks) | A set of lambda hooks for defining your controller's behavior. |
 
 ## Resources
@@ -165,6 +166,21 @@ like Deployment or StatefulSet).
 The `resyncPeriodSeconds` field in DecoratorController's `spec`
 works similarly to the same field in
 [CompositeController](./compositecontroller.md#resync-period).
+
+## Managing Controller
+
+Metacontroller ensures that all attachments created from your sync hook are
+owned by the parent object, which is best practice when building operators.
+There are some occasions, however, where you may not want Metacontroller to set
+the `controller` field of this `ownerReferences` object to `true`. This is
+usually when you are creating children that will become owned by some other
+controller, for e.g. a cluster-api cluster custom resource; such a resource
+needs to be owned and controller by its own controller.
+
+If you set this to `false`, the attachments will still get an entry in
+`ownerReferences` pointing to the parent, but the `controller` field will be
+set to `false`. It is not possible to set this value for some attachments and
+not for others.
 
 ## Hooks
 

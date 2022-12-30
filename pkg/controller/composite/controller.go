@@ -624,7 +624,11 @@ func (pc *parentController) syncParentObject(parent *unstructured.Unstructured) 
 	var manageErr error
 	if parent.GetDeletionTimestamp() == nil || pc.finalizer.ShouldFinalize(parent) {
 		// Reconcile children.
-		if err := common.ManageChildren(pc.dynClient, pc.updateStrategy, parent, observedChildren, desiredChildren); err != nil {
+		managingController := true
+		if pc.cc.Spec.ManagingController != nil {
+			managingController = *pc.cc.Spec.ManagingController
+		}
+		if err := common.ManageChildren(pc.dynClient, pc.updateStrategy, parent, observedChildren, desiredChildren, managingController); err != nil {
 			manageErr = fmt.Errorf("can't reconcile children for %v %v/%v: %w", pc.parentResource.Kind, parent.GetNamespace(), parent.GetName(), err)
 		}
 	}
