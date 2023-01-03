@@ -35,10 +35,10 @@ func CRDResourceRule(crd *apiextensions.CustomResourceDefinition) *v1alpha1.Reso
 
 // CreateCompositeController generates a test CompositeController and installs
 // it in the test API server.
-func (f *Fixture) CreateCompositeController(name, syncHookURL string, customizeHookUrl string, parentRule, childRule *v1alpha1.ResourceRule) *v1alpha1.CompositeController {
+func (f *Fixture) CreateCompositeController(name, syncHookURL string, customizeHookUrl string, parentRule, childRule *v1alpha1.ResourceRule, managingController *bool) *v1alpha1.CompositeController {
 	childResources := []v1alpha1.CompositeControllerChildResourceRule{}
 	if childRule != nil {
-		childResources = append(childResources, v1alpha1.CompositeControllerChildResourceRule{ResourceRule: *childRule})
+		childResources = append(childResources, v1alpha1.CompositeControllerChildResourceRule{ResourceRule: *childRule, ManagingController: managingController})
 	}
 
 	var customizeHook *v1alpha1.Hook

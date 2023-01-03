@@ -31,6 +31,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/json"
+	"k8s.io/utils/pointer"
 
 	"metacontroller/pkg/apis/metacontroller/v1alpha1"
 	"metacontroller/test/integration/framework"
@@ -70,7 +71,7 @@ func TestSyncWebhook(t *testing.T) {
 		return json.Marshal(resp)
 	})
 
-	f.CreateCompositeController("test-sync-webhook", hook.URL, "", framework.CRDResourceRule(parentCRD), framework.CRDResourceRule(childCRD))
+	f.CreateCompositeController("test-sync-webhook", hook.URL, "", framework.CRDResourceRule(parentCRD), framework.CRDResourceRule(childCRD), nil)
 
 	parent := framework.UnstructuredCRD(parentCRD, "test-sync-webhook")
 	unstructured.SetNestedStringMap(parent.Object, labels, "spec", "selector", "matchLabels")
@@ -137,7 +138,7 @@ func TestCascadingDelete(t *testing.T) {
 		return json.Marshal(resp)
 	})
 
-	f.CreateCompositeController("test-cascading-delete", hook.URL, "", framework.CRDResourceRule(parentCRD), &v1alpha1.ResourceRule{APIVersion: "batch/v1", Resource: "jobs"})
+	f.CreateCompositeController("test-cascading-delete", hook.URL, "", framework.CRDResourceRule(parentCRD), &v1alpha1.ResourceRule{APIVersion: "batch/v1", Resource: "jobs"}, nil)
 
 	parent := framework.UnstructuredCRD(parentCRD, "test-cascading-delete")
 	unstructured.SetNestedStringMap(parent.Object, labels, "spec", "selector", "matchLabels")
@@ -175,6 +176,290 @@ func TestCascadingDelete(t *testing.T) {
 	err = f.Wait(func() (bool, error) {
 		var getErr error
 		child, getErr = childClient.Get(context.TODO(), "test-cascading-delete", metav1.GetOptions{})
+		return apierrors.IsNotFound(getErr), nil
+	})
+	if err != nil {
+		out, _ := json.Marshal(child)
+		t.Errorf("timed out waiting for child object to be deleted: %v; object: %s", err, out)
+	}
+}
+
+func TestCascadingDeleteWithControllerFalse(t *testing.T) {
+	ns := "test-cascading-delete-controller-false"
+	labels := map[string]string{
+		"test": "test-cascading-delete",
+	}
+
+	f := framework.NewFixture(t)
+	defer f.TearDown()
+
+	f.CreateNamespace(ns)
+	parentCRD, parentClient := f.CreateCRD("TestCascadingDeleteControllerFalseParent", apiextensions.NamespaceScoped)
+	childClient := f.Clientset().BatchV1().Jobs(ns)
+
+	hook := f.ServeWebhook(func(body []byte) ([]byte, error) {
+		req := v1.CompositeHookRequest{}
+		if err := json.Unmarshal(body, &req); err != nil {
+			return nil, err
+		}
+		resp := v1.CompositeHookResponse{}
+		if replicas, _, _ := unstructured.NestedInt64(req.Parent.Object, "spec", "replicas"); replicas > 0 {
+			// Create a child batch/v1 Job.
+			// For backward compatibility, the server-side default on that API is
+			// non-cascading deletion (don't delete Pods).
+			// So we can use this as a test case for whether we are correctly requesting
+			// cascading deletion.
+			child := framework.UnstructuredJSON("batch/v1", "Job", "test-cascading-delete-controller-false", `{
+				"spec": {
+					"template": {
+						"spec": {
+							"restartPolicy": "Never",
+							"containers": [
+								{
+									"name": "pi",
+									"image": "perl"
+								}
+							]
+						}
+					}
+				}
+			}`)
+			child.SetLabels(labels)
+			resp.Children = append(resp.Children, child)
+		}
+		return json.Marshal(resp)
+	})
+
+	f.CreateCompositeController("test-cascading-delete-controller-false", hook.URL, "", framework.CRDResourceRule(parentCRD), &v1alpha1.ResourceRule{APIVersion: "batch/v1", Resource: "jobs"}, pointer.Bool(false))
+
+	parent := framework.UnstructuredCRD(parentCRD, "test-cascading-delete-controller-false")
+	unstructured.SetNestedStringMap(parent.Object, labels, "spec", "selector", "matchLabels")
+	unstructured.SetNestedField(parent.Object, int64(1), "spec", "replicas")
+	var err error
+	if parent, err = parentClient.Namespace(ns).Create(context.TODO(), parent, metav1.CreateOptions{}); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Logf("Waiting for child object to be created...")
+	err = f.Wait(func() (bool, error) {
+		_, err := childClient.Get(context.TODO(), "test-cascading-delete-controller-false", metav1.GetOptions{})
+		return err == nil, err
+	})
+	if err != nil {
+		t.Errorf("didn't find expected child: %v", err)
+	}
+
+	// Now that child exists, tell parent to delete it.
+	//t.Logf("Deleting parent CR...")
+	//err = parentClient.Namespace(ns).Delete(context.TODO(), "test-cascading-delete-controller-false", metav1.DeleteOptions{})
+	//if err != nil {
+	//	t.Fatal(err)
+	//}
+	// Now that child exists, tell parent to delete it.
+	t.Logf("Updating parent to set replicas=0...")
+	_, err = parentClient.Namespace(ns).AtomicUpdate(parent, func(obj *unstructured.Unstructured) bool {
+		unstructured.SetNestedField(obj.Object, int64(0), "spec", "replicas")
+		return true
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Make sure the child gets actually deleted, which means no GC finalizers got
+	// added to it. Note that we don't actually run the GC in this integration
+	// test env, so we don't need to worry about the GC racing us to process the
+	// finalizers.
+	t.Logf("Waiting for child object to be deleted...")
+	var child *batchv1.Job
+	err = f.Wait(func() (bool, error) {
+		var getErr error
+		child, getErr = childClient.Get(context.TODO(), "test-cascading-delete-controller-false", metav1.GetOptions{})
+		return apierrors.IsNotFound(getErr), nil
+	})
+	if err != nil {
+		out, _ := json.Marshal(child)
+		t.Errorf("timed out waiting for child object to be deleted: %v; object: %s", err, out)
+	}
+}
+
+// TestDeleteParentWithControllerTrue ensures that the created children of the parent
+// get deleted when the parent is deleted, when we set managingController to true
+// (the default) in the CompositeController for that child type.
+func TestDeleteParentWithControllerTrue(t *testing.T) {
+	ns := "test-delete-parent-with-controller-true"
+	labels := map[string]string{
+		"test": "test-delete-parent-with-controller-true",
+	}
+
+	f := framework.NewFixture(t)
+	defer f.TearDown()
+
+	f.CreateNamespace(ns)
+	parentCRD, parentClient := f.CreateCRD("TestDeleteParentWithControllerFalseParent", apiextensions.NamespaceScoped)
+	childClient := f.Clientset().BatchV1().Jobs(ns)
+
+	hook := f.ServeWebhook(func(body []byte) ([]byte, error) {
+		req := v1.CompositeHookRequest{}
+		if err := json.Unmarshal(body, &req); err != nil {
+			return nil, err
+		}
+		resp := v1.CompositeHookResponse{}
+		child := framework.UnstructuredJSON("batch/v1", "Job", "test-delete-parent-with-controller-true", `{
+			"spec": {
+				"template": {
+					"spec": {
+						"restartPolicy": "Never",
+						"containers": [
+							{
+								"name": "pi",
+								"image": "perl"
+							}
+						]
+					}
+				}
+			}
+		}`)
+		child.SetLabels(labels)
+		resp.Children = append(resp.Children, child)
+		return json.Marshal(resp)
+	})
+
+	// create composite controller with `controller: true` set on the pod child resource
+	f.CreateCompositeController(
+		"test-delete-parent-with-controller-true",
+		hook.URL,
+		"",
+		framework.CRDResourceRule(parentCRD),
+		&v1alpha1.ResourceRule{APIVersion: "batch/v1", Resource: "jobs"},
+		nil,
+	)
+
+	parent := framework.UnstructuredCRD(parentCRD, "test-delete-parent-with-controller-true")
+	unstructured.SetNestedStringMap(parent.Object, labels, "spec", "selector", "matchLabels")
+	var err error
+	if parent, err = parentClient.Namespace(ns).Create(context.TODO(), parent, metav1.CreateOptions{}); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Logf("Waiting for child object to be created...")
+	err = f.Wait(func() (bool, error) {
+		_, err := childClient.Get(context.TODO(), "test-delete-parent-with-controller-true", metav1.GetOptions{})
+		return err == nil, err
+	})
+	if err != nil {
+		children, err := childClient.List(context.TODO(), metav1.ListOptions{})
+		t.Errorf("didn't find expected child: %v, %v", err, children)
+	}
+
+	// Now that child exists, delete the parent.
+	t.Logf("Deleting parent CR...")
+	err = parentClient.Namespace(ns).Delete(context.TODO(), "test-delete-parent-with-controller-true", metav1.DeleteOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Make sure the child gets actually deleted, which means no GC finalizers got
+	// added to it. Note that we don't actually run the GC in this integration
+	// test env, so we don't need to worry about the GC racing us to process the
+	// finalizers.
+	t.Logf("Waiting for child object to be deleted...")
+	var child *batchv1.Job
+	err = f.Wait(func() (bool, error) {
+		var getErr error
+		child, getErr = childClient.Get(context.TODO(), "test-delete-parent-with-controller-true", metav1.GetOptions{})
+		return apierrors.IsNotFound(getErr), nil
+	})
+	if err != nil {
+		out, _ := json.Marshal(child)
+		t.Errorf("timed out waiting for child object to be deleted: %v; object: %s", err, out)
+	}
+}
+
+// TestDeleteParentWithControllerFalse ensures that the created children of the parent
+// get deleted when the parent is deleted, even when we set managingController to false
+// in the CompositeController for that child type.
+func TestDeleteParentWithControllerFalse(t *testing.T) {
+	ns := "test-delete-parent-with-controller-false"
+	labels := map[string]string{
+		"test": "test-delete-parent-with-controller-false",
+	}
+
+	f := framework.NewFixture(t)
+	defer f.TearDown()
+
+	f.CreateNamespace(ns)
+	parentCRD, parentClient := f.CreateCRD("TestDeleteParentWithControllerFalseParent", apiextensions.NamespaceScoped)
+	childClient := f.Clientset().BatchV1().Jobs(ns)
+
+	hook := f.ServeWebhook(func(body []byte) ([]byte, error) {
+		req := v1.CompositeHookRequest{}
+		if err := json.Unmarshal(body, &req); err != nil {
+			return nil, err
+		}
+		resp := v1.CompositeHookResponse{}
+		child := framework.UnstructuredJSON("batch/v1", "Job", "test-delete-parent-with-controller-false", `{
+			"spec": {
+				"template": {
+					"spec": {
+						"restartPolicy": "Never",
+						"containers": [
+							{
+								"name": "pi",
+								"image": "perl"
+							}
+						]
+					}
+				}
+			}
+		}`)
+		child.SetLabels(labels)
+		resp.Children = append(resp.Children, child)
+		return json.Marshal(resp)
+	})
+
+	// create composite controller with `controller: false` set on the pod child resource
+	f.CreateCompositeController(
+		"test-delete-parent-with-controller-false",
+		hook.URL,
+		"",
+		framework.CRDResourceRule(parentCRD),
+		&v1alpha1.ResourceRule{APIVersion: "batch/v1", Resource: "jobs"},
+		pointer.Bool(false),
+	)
+
+	parent := framework.UnstructuredCRD(parentCRD, "test-delete-parent-with-controller-false")
+	unstructured.SetNestedStringMap(parent.Object, labels, "spec", "selector", "matchLabels")
+	var err error
+	if parent, err = parentClient.Namespace(ns).Create(context.TODO(), parent, metav1.CreateOptions{}); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Logf("Waiting for child object to be created...")
+	err = f.Wait(func() (bool, error) {
+		_, err := childClient.Get(context.TODO(), "test-delete-parent-with-controller-false", metav1.GetOptions{})
+		return err == nil, err
+	})
+	if err != nil {
+		children, err := childClient.List(context.TODO(), metav1.ListOptions{})
+		t.Errorf("didn't find expected child: %v, %v", err, children)
+	}
+
+	// Now that child exists, delete the parent.
+	t.Logf("Deleting parent CR...")
+	err = parentClient.Namespace(ns).Delete(context.TODO(), "test-delete-parent-with-controller-false", metav1.DeleteOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Make sure the child gets actually deleted, which means no GC finalizers got
+	// added to it. Note that we don't actually run the GC in this integration
+	// test env, so we don't need to worry about the GC racing us to process the
+	// finalizers.
+	t.Logf("Waiting for child object to be deleted...")
+	var child *batchv1.Job
+	err = f.Wait(func() (bool, error) {
+		var getErr error
+		child, getErr = childClient.Get(context.TODO(), "test-delete-parent-with-controller-false", metav1.GetOptions{})
 		return apierrors.IsNotFound(getErr), nil
 	})
 	if err != nil {
@@ -227,7 +512,7 @@ func TestResyncAfter(t *testing.T) {
 		return json.Marshal(resp)
 	})
 
-	f.CreateCompositeController("test-resync-after", hook.URL, "", framework.CRDResourceRule(parentCRD), nil)
+	f.CreateCompositeController("test-resync-after", hook.URL, "", framework.CRDResourceRule(parentCRD), nil, nil)
 
 	parent := framework.UnstructuredCRD(parentCRD, "test-resync-after")
 	unstructured.SetNestedStringMap(parent.Object, labels, "spec", "selector", "matchLabels")
@@ -337,7 +622,7 @@ func TestCustomizeWebhook(t *testing.T) {
 		return json.Marshal(resp)
 	})
 
-	f.CreateCompositeController("test-customize-webhook", syncHook.URL, customizeHook.URL, framework.CRDResourceRule(parentCRD), framework.CRDResourceRule(childCRD))
+	f.CreateCompositeController("test-customize-webhook", syncHook.URL, customizeHook.URL, framework.CRDResourceRule(parentCRD), framework.CRDResourceRule(childCRD), nil)
 
 	parent := framework.UnstructuredCRD(parentCRD, "test-customize-webhook")
 	unstructured.SetNestedStringMap(parent.Object, labels, "spec", "selector", "matchLabels")
@@ -375,7 +660,7 @@ func TestFailIfNoStatusSubresourceInParentCRD(t *testing.T) {
 		return json.Marshal(resp)
 	})
 
-	f.CreateCompositeController("test-sync-webhook", hook.URL, "", framework.CRDResourceRule(parentCRD), framework.CRDResourceRule(childCRD))
+	f.CreateCompositeController("test-sync-webhook", hook.URL, "", framework.CRDResourceRule(parentCRD), framework.CRDResourceRule(childCRD), nil)
 
 	parent := framework.UnstructuredCRD(parentCRD, "test-sync-webhook")
 	unstructured.SetNestedStringMap(parent.Object, labels, "spec", "selector", "matchLabels")
