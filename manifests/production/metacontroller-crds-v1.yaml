@@ -42,6 +42,8 @@ spec:
                   properties:
                     apiVersion:
                       type: string
+                    managingController:
+                      type: boolean
                     resource:
                       type: string
                     updateStrategy:
@@ -346,8 +348,6 @@ spec:
                         type: object
                     type: object
                 type: object
-              managingController:
-                type: boolean
               parentResource:
                 properties:
                   apiVersion:
@@ -534,6 +534,8 @@ spec:
                   properties:
                     apiVersion:
                       type: string
+                    managingController:
+                      type: boolean
                     resource:
                       type: string
                     updateStrategy:
@@ -714,8 +716,6 @@ spec:
                         type: object
                     type: object
                 type: object
-              managingController:
-                type: boolean
               resources:
                 items:
                   properties:

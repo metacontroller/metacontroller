@@ -74,7 +74,8 @@ type decoratorController struct {
 	stopCh, doneCh chan struct{}
 	queue          workqueue.RateLimitingInterface
 
-	updateStrategy updateStrategyMap
+	managingController map[string]*bool
+	updateStrategy     updateStrategyMap
 
 	parentInformers common.InformerMap
 	childInformers  common.InformerMap
@@ -151,6 +152,12 @@ func newDecoratorController(resources *dynamicdiscovery.ResourceMap, dynClient *
 			return nil, fmt.Errorf("can't find resource %q in apiVersion %q", parent.Resource, parent.APIVersion)
 		}
 		c.parentKinds.Set(schema.GroupKind{Group: resource.Group, Kind: resource.Kind}, resource)
+	}
+
+	// Remember the managingController bool value for each child type.
+	c.managingController, err = makeManagingControllerMap(resources, dc)
+	if err != nil {
+		return nil, err
 	}
 
 	// Remember the update strategy for each child type.
@@ -648,11 +655,7 @@ func (c *decoratorController) syncParentObject(parent *unstructured.Unstructured
 	var manageErr error
 	if parent.GetDeletionTimestamp() == nil || c.finalizer.ShouldFinalize(parent) {
 		// Reconcile children.
-		managingController := true
-		if c.dc.Spec.ManagingController != nil {
-			managingController = *c.dc.Spec.ManagingController
-		}
-		if err := common.ManageChildren(c.dynClient, c.updateStrategy, parent, observedChildren, desiredChildren, managingController); err != nil {
+		if err := common.ManageChildren(c.dynClient, c.managingController, c.updateStrategy, parent, observedChildren, desiredChildren); err != nil {
 			manageErr = fmt.Errorf("can't reconcile children for %v %v/%v: %w", parent.GetKind(), parent.GetNamespace(), parent.GetName(), err)
 		}
 	}
@@ -782,4 +785,22 @@ func updateStringMap(dest map[string]string, updates map[string]*string) (change
 		}
 	}
 	return changed
+}
+
+func makeManagingControllerMap(resources *dynamicdiscovery.ResourceMap, dc *v1alpha1.DecoratorController) (map[string]*bool, error) {
+	m := make(map[string]*bool)
+	for _, child := range dc.Spec.Attachments {
+		if child.ManagingController != nil {
+			// Map resource name to kind name.
+			resource := resources.Get(child.APIVersion, child.Resource)
+			if resource == nil {
+				return nil, fmt.Errorf("can't find child resource %q in %v", child.Resource, child.APIVersion)
+			}
+			// Ignore API version.
+			apiGroup, _ := common.ParseAPIVersion(child.APIVersion)
+			key := fmt.Sprintf("%s.%s", resource.Kind, apiGroup)
+			m[key] = child.ManagingController
+		}
+	}
+	return m, nil
 }

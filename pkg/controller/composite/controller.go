@@ -76,8 +76,9 @@ type parentController struct {
 	stopCh, doneCh chan struct{}
 	queue          workqueue.RateLimitingInterface
 
-	updateStrategy updateStrategyMap
-	childInformers common.InformerMap
+	managingController map[string]*bool
+	updateStrategy     updateStrategyMap
+	childInformers     common.InformerMap
 
 	numWorkers    int
 	eventRecorder record.EventRecorder
@@ -108,6 +109,13 @@ func newParentController(
 	}
 	parentResource := parentClient.APIResource
 
+	// Remember the managingController bool value for each child type.
+	managingController, err := makeManagingControllerMap(resources, cc)
+	if err != nil {
+		return nil, err
+	}
+
+	// Remember the update strategy for each child type.
 	updateStrategy, err := makeUpdateStrategyMap(resources, cc)
 	if err != nil {
 		return nil, err
@@ -170,19 +178,20 @@ func newParentController(
 	}
 
 	pc = &parentController{
-		cc:             cc,
-		mcClient:       mcClient,
-		dynClient:      dynClient,
-		childInformers: childInformers,
-		parentClient:   parentClient,
-		parentInformer: parentInformer,
-		parentSelector: parentSelector,
-		parentResource: parentResource,
-		revisionLister: revisionLister,
-		updateStrategy: updateStrategy,
-		queue:          workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), common.CompositeController.String()+"-"+cc.Name),
-		numWorkers:     numWorkers,
-		eventRecorder:  eventRecorder,
+		cc:                 cc,
+		mcClient:           mcClient,
+		dynClient:          dynClient,
+		childInformers:     childInformers,
+		managingController: managingController,
+		parentClient:       parentClient,
+		parentInformer:     parentInformer,
+		parentSelector:     parentSelector,
+		parentResource:     parentResource,
+		revisionLister:     revisionLister,
+		updateStrategy:     updateStrategy,
+		queue:              workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), common.CompositeController.String()+"-"+cc.Name),
+		numWorkers:         numWorkers,
+		eventRecorder:      eventRecorder,
 		finalizer: finalizer.NewManager(
 			"metacontroller.io/compositecontroller-"+cc.Name,
 			cc.Spec.Hooks.Finalize != nil,
@@ -624,11 +633,7 @@ func (pc *parentController) syncParentObject(parent *unstructured.Unstructured) 
 	var manageErr error
 	if parent.GetDeletionTimestamp() == nil || pc.finalizer.ShouldFinalize(parent) {
 		// Reconcile children.
-		managingController := true
-		if pc.cc.Spec.ManagingController != nil {
-			managingController = *pc.cc.Spec.ManagingController
-		}
-		if err := common.ManageChildren(pc.dynClient, pc.updateStrategy, parent, observedChildren, desiredChildren, managingController); err != nil {
+		if err := common.ManageChildren(pc.dynClient, pc.managingController, pc.updateStrategy, parent, observedChildren, desiredChildren); err != nil {
 			manageErr = fmt.Errorf("can't reconcile children for %v %v/%v: %w", pc.parentResource.Kind, parent.GetNamespace(), parent.GetName(), err)
 		}
 	}
@@ -776,4 +781,22 @@ func (pc *parentController) updateParentStatus(parent *unstructured.Unstructured
 
 func (pc parentController) doNotMatchLabels(labelsMap map[string]string) bool {
 	return pc.parentSelector != nil && !pc.parentSelector.Matches(labels.Set(labelsMap))
+}
+
+func makeManagingControllerMap(resources *dynamicdiscovery.ResourceMap, cc *v1alpha1.CompositeController) (map[string]*bool, error) {
+	m := make(map[string]*bool)
+	for _, child := range cc.Spec.ChildResources {
+		if child.ManagingController != nil {
+			// Map resource name to kind name.
+			resource := resources.Get(child.APIVersion, child.Resource)
+			if resource == nil {
+				return nil, fmt.Errorf("can't find child resource %q in %v", child.Resource, child.APIVersion)
+			}
+			// Ignore API version.
+			apiGroup, _ := common.ParseAPIVersion(child.APIVersion)
+			key := claimMapKey(apiGroup, resource.Kind)
+			m[key] = child.ManagingController
+		}
+	}
+	return m, nil
 }

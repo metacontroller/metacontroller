@@ -62,7 +62,6 @@ A CompositeController `spec` has the following fields:
 | [`childResources`](#child-resources) | A list of resource rules specifying the child resources. |
 | [`resyncPeriodSeconds`](#resync-period) | How often, in seconds, you want every parent object to be resynced (sent to your hook), even if no changes are detected. |
 | [`generateSelector`](#generate-selector) | If `true`, ignore the selector in each parent object and instead generate a unique selector that prevents overlap with other objects. |
-| [`managingController`](#managing-controller) | If `true`, set `controller: true` in the `ownerReferences` object appended to child objects denote ownership by the parent. Defaults to `true` if unset. |
 | [`hooks`](#hooks) | A set of lambda hooks for defining your controller's behavior. |
 
 ## Parent Resource
@@ -146,8 +145,23 @@ Each entry in the `childResources` list has the following fields:
 | Field | Description |
 | ----- | ----------- |
 | `apiVersion` | The API `group/version` of the child resource, or just `version` for core APIs. (e.g. `v1`, `apps/v1`, `batch/v1`) |
+| [`managingController`](#managing-controller) | An optional field which, if `true`, sets `controller: true` in the `ownerReferences` object appended to this child object to denote ownership by the parent. Defaults to `true` if unset. |
 | `resource`   | The canonical, lowercase, plural name of the child resource. (e.g. `deployments`, `replicasets`, `statefulsets`) |
 | [`updateStrategy`](#child-update-strategy) | An optional field that specifies how to update children when they already exist but don't match your desired state. **If no update strategy is specified, children of that type will never be updated if they already exist.** |
+
+### Managing Controller
+
+Metacontroller ensures that all child objects created from your sync hook are
+owned by the parent object, which is best practice when building operators.
+There are some occasions, however, where you may not want Metacontroller to set
+the `controller` field of this `ownerReferences` object to `true`. This is
+usually when you are creating children that will become owned by some other
+controller, for e.g. a cluster-api cluster custom resource; such a resource
+needs to be owned and controller by its own controller.
+
+If you set this to `false`, this child object will still get an entry in
+`ownerReferences` pointing to the parent, but the `controller` field will be
+set to `false`.
 
 ### Child Update Strategy
 
@@ -251,21 +265,6 @@ controller with the same selector to adopt those existing Pods instead of making
 new ones from scratch.
 
 [Job]: https://kubernetes.io/docs/concepts/workloads/controllers/jobs-run-to-completion/
-
-## Managing Controller
-
-Metacontroller ensures that all child objects created from your sync hook are
-owned by the parent object, which is best practice when building operators.
-There are some occasions, however, where you may not want Metacontroller to set
-the `controller` field of this `ownerReferences` object to `true`. This is
-usually when you are creating children that will become owned by some other
-controller, for e.g. a cluster-api cluster custom resource; such a resource
-needs to be owned and controller by its own controller.
-
-If you set this to `false`, the children will still get an entry in
-`ownerReferences` pointing to the parent, but the `controller` field will be
-set to `false`. It is not possible to set this value for some children and not
-for others.
 
 ## Hooks
 

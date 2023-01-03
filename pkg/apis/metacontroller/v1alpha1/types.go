@@ -49,7 +49,6 @@ type CompositeControllerSpec struct {
 
 	ResyncPeriodSeconds *int32 `json:"resyncPeriodSeconds,omitempty"`
 	GenerateSelector    *bool  `json:"generateSelector,omitempty"`
-	ManagingController  *bool  `json:"managingController,omitempty"`
 }
 
 type ResourceRule struct {
@@ -79,8 +78,9 @@ const (
 )
 
 type CompositeControllerChildResourceRule struct {
-	ResourceRule   `json:",inline"`
-	UpdateStrategy *CompositeControllerChildUpdateStrategy `json:"updateStrategy,omitempty"`
+	ManagingController *bool `json:"managingController,omitempty"`
+	ResourceRule       `json:",inline"`
+	UpdateStrategy     *CompositeControllerChildUpdateStrategy `json:"updateStrategy,omitempty"`
 }
 
 type CompositeControllerChildUpdateStrategy struct {
@@ -219,7 +219,6 @@ type DecoratorControllerSpec struct {
 	Hooks *DecoratorControllerHooks `json:"hooks,omitempty"`
 
 	ResyncPeriodSeconds *int32 `json:"resyncPeriodSeconds,omitempty"`
-	ManagingController  *bool  `json:"managingController,omitempty"`
 }
 
 type DecoratorControllerResourceRule struct {
@@ -234,8 +233,9 @@ type AnnotationSelector struct {
 }
 
 type DecoratorControllerAttachmentRule struct {
-	ResourceRule   `json:",inline"`
-	UpdateStrategy *DecoratorControllerAttachmentUpdateStrategy `json:"updateStrategy,omitempty"`
+	ManagingController *bool `json:"managingController,omitempty"`
+	ResourceRule       `json:",inline"`
+	UpdateStrategy     *DecoratorControllerAttachmentUpdateStrategy `json:"updateStrategy,omitempty"`
 }
 
 type DecoratorControllerAttachmentUpdateStrategy struct {
