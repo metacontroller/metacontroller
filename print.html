@@ -3316,6 +3316,9 @@ cd $GOPATH/src
 git clone git@github.com:metacontroller/metacontroller.git metacontroller
 cd metacontroller
 </code></pre>
+<p>Then you can build a <code>metacontroller</code> binary like so:</p>
+<pre><code class="language-sh">make build
+</code></pre>
 <h2 id="local-build-and-development"><a class="header" href="#local-build-and-development">Local build and development</a></h2>
 <p>Check <a href="contrib/./debug.html">debug section</a></p>
 <h2 id="documentation-build"><a class="header" href="#documentation-build">Documentation build</a></h2>
@@ -3366,8 +3369,9 @@ sees without interference from the normal controller for each API,
 and also greatly reduces the requirements to run tests.</p>
 <p>Other than the Metacontroller codebase, all you need to run integration tests
 is to download a few binaries from a Kubernetes release.
-You can run the following script to fetch the versions of these binaries
-currently used in continuous integration, and place them in <code>./hack/bin</code>:</p>
+You can run the following script from the <code>test/integration</code> directory in to
+order to fetch the versions of these binaries currently used in continuous
+integration, and place them in <code>./hack/bin</code>:</p>
 <pre><code class="language-sh">hack/get-kube-binaries.sh
 </code></pre>
 <p>You can then run the integration tests with this command, which will
@@ -3386,7 +3390,8 @@ that a human might run when using Metacontroller.</p>
 <p>Since these tests verify end-to-end behavior, they require a fully-functioning
 Kubernetes cluster.
 Before running them, you should have <code>kubectl</code> in your PATH, and it should be
-configured to talk to a suitable, empty test cluster.</p>
+configured to talk to a suitable, empty test cluster that has had the
+Metacontroller manifests applied.</p>
 <p>Then you can run the end-to-end tests against your cluster with the following:</p>
 <pre><code class="language-sh">cd examples
 ./test.sh
@@ -3422,16 +3427,16 @@ your PR by running these end-to-end tests yourself to see if they catch anything
 <p>The main difference it that image defined in manifest is <code>metacontrollerio/metacontroller:dev</code>, therefore:</p>
 <ul>
 <li>apply dev manifests - <code>kubectl apply -k manifests/dev</code></li>
-<li>build docker image with command - <code>docker build -t metacontrollerio/metacontroller:dev -f Dockerfile .</code></li>
+<li>build docker image with command - <code>make image</code> - this will compile the binary and build the container image</li>
 <li>load image into cluster (i.e. <code>kind load docker-image metacontrollerio/metacontroller:dev</code> in kind)</li>
 <li>restart pod</li>
 </ul>
 <h3 id="debug-build"><a class="header" href="#debug-build">Debug build</a></h3>
-<p>Debug requires building go sources in special way, which is done in <code>Dockerfile.debug</code> dockerfile.
-In order to use it, please:</p>
+<p>Debug requires building go sources in special way, which is done with <code>make build_debug</code>; the following image
+built with the <code>Dockerfile.debug</code> dockerfile will then add it to the debug Docker image:</p>
 <ul>
 <li>apply debug manifests - <code>kubectl apply -k manifests/debug</code></li>
-<li>build debug image - <code>docker build -t metacontrollerio/metacontroller:debug -f Dockerfile.debug .</code></li>
+<li>build debug binary and image - <code>make image_debug</code></li>
 <li>load image into cluster (i.e. <code>kind load docker-image metacontrollerio/metacontroller:debug</code> in kind)</li>
 <li>restart pod</li>
 <li>on startup, <code>go</code> process will wait for debugger on port 40000</li>

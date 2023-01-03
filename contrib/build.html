@@ -168,6 +168,9 @@ cd $GOPATH/src
 git clone git@github.com:metacontroller/metacontroller.git metacontroller
 cd metacontroller
 </code></pre>
+<p>Then you can build a <code>metacontroller</code> binary like so:</p>
+<pre><code class="language-sh">make build
+</code></pre>
 <h2 id="local-build-and-development"><a class="header" href="#local-build-and-development">Local build and development</a></h2>
 <p>Check <a href="./debug.html">debug section</a></p>
 <h2 id="documentation-build"><a class="header" href="#documentation-build">Documentation build</a></h2>
@@ -218,8 +221,9 @@ sees without interference from the normal controller for each API,
 and also greatly reduces the requirements to run tests.</p>
 <p>Other than the Metacontroller codebase, all you need to run integration tests
 is to download a few binaries from a Kubernetes release.
-You can run the following script to fetch the versions of these binaries
-currently used in continuous integration, and place them in <code>./hack/bin</code>:</p>
+You can run the following script from the <code>test/integration</code> directory in to
+order to fetch the versions of these binaries currently used in continuous
+integration, and place them in <code>./hack/bin</code>:</p>
 <pre><code class="language-sh">hack/get-kube-binaries.sh
 </code></pre>
 <p>You can then run the integration tests with this command, which will
@@ -238,7 +242,8 @@ that a human might run when using Metacontroller.</p>
 <p>Since these tests verify end-to-end behavior, they require a fully-functioning
 Kubernetes cluster.
 Before running them, you should have <code>kubectl</code> in your PATH, and it should be
-configured to talk to a suitable, empty test cluster.</p>
+configured to talk to a suitable, empty test cluster that has had the
+Metacontroller manifests applied.</p>
 <p>Then you can run the end-to-end tests against your cluster with the following:</p>
 <pre><code class="language-sh">cd examples
 ./test.sh

@@ -167,16 +167,16 @@
 <p>The main difference it that image defined in manifest is <code>metacontrollerio/metacontroller:dev</code>, therefore:</p>
 <ul>
 <li>apply dev manifests - <code>kubectl apply -k manifests/dev</code></li>
-<li>build docker image with command - <code>docker build -t metacontrollerio/metacontroller:dev -f Dockerfile .</code></li>
+<li>build docker image with command - <code>make image</code> - this will compile the binary and build the container image</li>
 <li>load image into cluster (i.e. <code>kind load docker-image metacontrollerio/metacontroller:dev</code> in kind)</li>
 <li>restart pod</li>
 </ul>
 <h3 id="debug-build"><a class="header" href="#debug-build">Debug build</a></h3>
-<p>Debug requires building go sources in special way, which is done in <code>Dockerfile.debug</code> dockerfile.
-In order to use it, please:</p>
+<p>Debug requires building go sources in special way, which is done with <code>make build_debug</code>; the following image
+built with the <code>Dockerfile.debug</code> dockerfile will then add it to the debug Docker image:</p>
 <ul>
 <li>apply debug manifests - <code>kubectl apply -k manifests/debug</code></li>
-<li>build debug image - <code>docker build -t metacontrollerio/metacontroller:debug -f Dockerfile.debug .</code></li>
+<li>build debug binary and image - <code>make image_debug</code></li>
 <li>load image into cluster (i.e. <code>kind load docker-image metacontrollerio/metacontroller:debug</code> in kind)</li>
 <li>restart pod</li>
 <li>on startup, <code>go</code> process will wait for debugger on port 40000</li>
