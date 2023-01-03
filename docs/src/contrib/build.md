@@ -21,14 +21,6 @@ Then you can build a `metacontroller` binary like so:
 make build
 ```
 
-Note that you will need the following k8s code-generation tools:
-* deepcopy-gen
-* client-gen
-* lister-gen
-* informer-gen
-
-...all of which can be found [here](https://github.com/kubernetes/code-generator).
-
 ## Local build and development
 
 Check [debug section](./debug.md)
