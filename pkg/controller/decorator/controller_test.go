@@ -161,24 +161,32 @@ func newUnstructuredWithSelectors() *unstructured.Unstructured {
 	return defaultUnstructured
 }
 
+func makeDefaultManagingControllerMap(controller bool) map[string]bool {
+	m := make(map[string]bool)
+	key := fmt.Sprintf("%s.%s", TestKind, TestGroup)
+	m[key] = controller
+	return m
+}
+
 func Test_decoratorController_sync(t *testing.T) {
 	logging.InitLogging(&zap.Options{})
 	type fields struct {
-		dc             *v1alpha1.DecoratorController
-		parentKinds    common.GroupKindMap
-		parentSelector *decoratorSelector
-		stopCh         chan struct{}
-		doneCh         chan struct{}
-		queue          workqueue.RateLimitingInterface
-		updateStrategy updateStrategyMap
-		childInformers common.InformerMap
-		numWorkers     int
-		eventRecorder  record.EventRecorder
-		finalizer      *finalizer.Manager
-		customize      *customize.Manager
-		syncHook       hooks.Hook
-		finalizeHook   hooks.Hook
-		logger         logr.Logger
+		dc                 *v1alpha1.DecoratorController
+		parentKinds        common.GroupKindMap
+		parentSelector     *decoratorSelector
+		stopCh             chan struct{}
+		doneCh             chan struct{}
+		queue              workqueue.RateLimitingInterface
+		managingController map[string]bool
+		updateStrategy     updateStrategyMap
+		childInformers     common.InformerMap
+		numWorkers         int
+		eventRecorder      record.EventRecorder
+		finalizer          *finalizer.Manager
+		customize          *customize.Manager
+		syncHook           hooks.Hook
+		finalizeHook       hooks.Hook
+		logger             logr.Logger
 	}
 	type args struct {
 		key string

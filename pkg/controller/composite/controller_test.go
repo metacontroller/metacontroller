@@ -125,25 +125,33 @@ func newDefaultCompositeController() *v1alpha1.CompositeController {
 	}
 }
 
+func makeDefaultManagingControllerMap(controller bool) map[string]bool {
+	m := make(map[string]bool)
+	key := fmt.Sprintf("%s.%s", TestKind, TestGroup)
+	m[key] = controller
+	return m
+}
+
 func Test_parentController_sync(t *testing.T) {
 	logging.InitLogging(&zap.Options{})
 	type fields struct {
-		cc             *v1alpha1.CompositeController
-		parentResource *dynamicdiscovery.APIResource
-		mcClient       internalclientset.Interface
-		revisionLister mclisters.ControllerRevisionLister
-		stopCh         chan struct{}
-		doneCh         chan struct{}
-		queue          workqueue.RateLimitingInterface
-		updateStrategy updateStrategyMap
-		childInformers common.InformerMap
-		numWorkers     int
-		eventRecorder  record.EventRecorder
-		finalizer      *finalizer.Manager
-		customize      *customize.Manager
-		syncHook       hooks.Hook
-		finalizeHook   hooks.Hook
-		logger         logr.Logger
+		cc                 *v1alpha1.CompositeController
+		parentResource     *dynamicdiscovery.APIResource
+		mcClient           internalclientset.Interface
+		revisionLister     mclisters.ControllerRevisionLister
+		stopCh             chan struct{}
+		doneCh             chan struct{}
+		queue              workqueue.RateLimitingInterface
+		managingController map[string]bool
+		updateStrategy     updateStrategyMap
+		childInformers     common.InformerMap
+		numWorkers         int
+		eventRecorder      record.EventRecorder
+		finalizer          *finalizer.Manager
+		customize          *customize.Manager
+		syncHook           hooks.Hook
+		finalizeHook       hooks.Hook
+		logger             logr.Logger
 	}
 	type args struct {
 		key string
@@ -172,22 +180,60 @@ func Test_parentController_sync(t *testing.T) {
 				return newDefaultControllerClientsAndInformers(fakeDynamicClientFn, true)
 			},
 			fields: fields{
-				cc:             newDefaultCompositeController(),
-				parentResource: &DefaultApiResource,
-				mcClient:       nil,
-				revisionLister: nil,
-				stopCh:         NewCh(),
-				doneCh:         NewCh(),
-				queue:          NewDefaultWorkQueue(),
-				updateStrategy: nil,
-				childInformers: nil,
-				numWorkers:     1,
-				eventRecorder:  NewFakeRecorder(),
-				finalizer:      DefaultFinalizerManager,
-				customize:      defaultCustomizeManager(),
-				syncHook:       NewHookExecutorStub(defaultSyncResponse),
-				finalizeHook:   NewHookExecutorStub(defaultSyncResponse),
-				logger:         logging.Logger,
+				cc:                 newDefaultCompositeController(),
+				parentResource:     &DefaultApiResource,
+				mcClient:           nil,
+				revisionLister:     nil,
+				stopCh:             NewCh(),
+				doneCh:             NewCh(),
+				queue:              NewDefaultWorkQueue(),
+				managingController: makeDefaultManagingControllerMap(true),
+				updateStrategy:     nil,
+				childInformers:     nil,
+				numWorkers:         1,
+				eventRecorder:      NewFakeRecorder(),
+				finalizer:          DefaultFinalizerManager,
+				customize:          defaultCustomizeManager(),
+				syncHook:           NewHookExecutorStub(defaultSyncResponse),
+				finalizeHook:       NewHookExecutorStub(defaultSyncResponse),
+				logger:             logging.Logger,
+			},
+			args: args{key: defaultTestKey},
+		},
+		{
+			name: "no error on successful sync with controller set to false",
+			clientsAndInformers: func() (*fake.FakeDynamicClient, *dynamicdiscovery.ResourceMap, *dynamicclientset.Clientset, *dynamicclientset.ResourceClient, *dynamicinformer.ResourceInformer) {
+				fakeDynamicClientFn := func(fakeDynamicClient *fake.FakeDynamicClient) {
+					fakeDynamicClient.PrependReactor("list", "*", func(action clientgotesting.Action) (handled bool, ret runtime.Object, err error) {
+						result := unstructured.UnstructuredList{
+							Object: make(map[string]interface{}),
+							Items: []unstructured.Unstructured{
+								*NewDefaultUnstructured(),
+							},
+						}
+						return true, &result, nil
+					})
+				}
+				return newDefaultControllerClientsAndInformers(fakeDynamicClientFn, true)
+			},
+			fields: fields{
+				cc:                 newDefaultCompositeController(),
+				parentResource:     &DefaultApiResource,
+				mcClient:           nil,
+				revisionLister:     nil,
+				stopCh:             NewCh(),
+				doneCh:             NewCh(),
+				queue:              NewDefaultWorkQueue(),
+				managingController: makeDefaultManagingControllerMap(false),
+				updateStrategy:     nil,
+				childInformers:     nil,
+				numWorkers:         1,
+				eventRecorder:      NewFakeRecorder(),
+				finalizer:          DefaultFinalizerManager,
+				customize:          defaultCustomizeManager(),
+				syncHook:           NewHookExecutorStub(defaultSyncResponse),
+				finalizeHook:       NewHookExecutorStub(defaultSyncResponse),
+				logger:             logging.Logger,
 			},
 			args: args{key: defaultTestKey},
 		},
@@ -197,22 +243,23 @@ func Test_parentController_sync(t *testing.T) {
 				return newDefaultControllerClientsAndInformers(NoOpFn, false)
 			},
 			fields: fields{
-				cc:             newDefaultCompositeController(),
-				parentResource: &DefaultApiResource,
-				mcClient:       nil,
-				revisionLister: nil,
-				stopCh:         NewCh(),
-				doneCh:         NewCh(),
-				queue:          NewDefaultWorkQueue(),
-				updateStrategy: nil,
-				childInformers: nil,
-				numWorkers:     1,
-				eventRecorder:  NewFakeRecorder(),
-				finalizer:      DefaultFinalizerManager,
-				customize:      defaultCustomizeManager(),
-				syncHook:       NewHookExecutorStub(defaultSyncResponse),
-				finalizeHook:   NewHookExecutorStub(defaultSyncResponse),
-				logger:         logging.Logger,
+				cc:                 newDefaultCompositeController(),
+				parentResource:     &DefaultApiResource,
+				mcClient:           nil,
+				revisionLister:     nil,
+				stopCh:             NewCh(),
+				doneCh:             NewCh(),
+				queue:              NewDefaultWorkQueue(),
+				managingController: makeDefaultManagingControllerMap(true),
+				updateStrategy:     nil,
+				childInformers:     nil,
+				numWorkers:         1,
+				eventRecorder:      NewFakeRecorder(),
+				finalizer:          DefaultFinalizerManager,
+				customize:          defaultCustomizeManager(),
+				syncHook:           NewHookExecutorStub(defaultSyncResponse),
+				finalizeHook:       NewHookExecutorStub(defaultSyncResponse),
+				logger:             logging.Logger,
 			},
 			args: args{key: defaultTestKey},
 		},
@@ -230,22 +277,23 @@ func Test_parentController_sync(t *testing.T) {
 				return newDefaultControllerClientsAndInformers(fakeDynamicClientFn, true)
 			},
 			fields: fields{
-				cc:             newDefaultCompositeController(),
-				parentResource: &DefaultApiResource,
-				mcClient:       nil,
-				revisionLister: nil,
-				stopCh:         NewCh(),
-				doneCh:         NewCh(),
-				queue:          NewDefaultWorkQueue(),
-				updateStrategy: nil,
-				childInformers: nil,
-				numWorkers:     1,
-				eventRecorder:  NewFakeRecorder(),
-				finalizer:      DefaultFinalizerManager,
-				customize:      defaultCustomizeManager(),
-				syncHook:       NewHookExecutorStub(defaultSyncResponse),
-				finalizeHook:   NewHookExecutorStub(defaultSyncResponse),
-				logger:         logging.Logger,
+				cc:                 newDefaultCompositeController(),
+				parentResource:     &DefaultApiResource,
+				mcClient:           nil,
+				revisionLister:     nil,
+				stopCh:             NewCh(),
+				doneCh:             NewCh(),
+				queue:              NewDefaultWorkQueue(),
+				managingController: makeDefaultManagingControllerMap(true),
+				updateStrategy:     nil,
+				childInformers:     nil,
+				numWorkers:         1,
+				eventRecorder:      NewFakeRecorder(),
+				finalizer:          DefaultFinalizerManager,
+				customize:          defaultCustomizeManager(),
+				syncHook:           NewHookExecutorStub(defaultSyncResponse),
+				finalizeHook:       NewHookExecutorStub(defaultSyncResponse),
+				logger:             logging.Logger,
 			},
 			args: args{key: defaultTestKey},
 		},
@@ -263,22 +311,23 @@ func Test_parentController_sync(t *testing.T) {
 				return newDefaultControllerClientsAndInformers(fakeDynamicClientFn, true)
 			},
 			fields: fields{
-				cc:             newDefaultCompositeController(),
-				parentResource: &DefaultApiResource,
-				mcClient:       nil,
-				revisionLister: nil,
-				stopCh:         NewCh(),
-				doneCh:         NewCh(),
-				queue:          NewDefaultWorkQueue(),
-				updateStrategy: nil,
-				childInformers: nil,
-				numWorkers:     1,
-				eventRecorder:  NewFakeRecorder(),
-				finalizer:      DefaultFinalizerManager,
-				customize:      defaultCustomizeManager(),
-				syncHook:       NewHookExecutorStub(defaultSyncResponse),
-				finalizeHook:   NewHookExecutorStub(defaultSyncResponse),
-				logger:         logging.Logger,
+				cc:                 newDefaultCompositeController(),
+				parentResource:     &DefaultApiResource,
+				mcClient:           nil,
+				revisionLister:     nil,
+				stopCh:             NewCh(),
+				doneCh:             NewCh(),
+				queue:              NewDefaultWorkQueue(),
+				managingController: makeDefaultManagingControllerMap(true),
+				updateStrategy:     nil,
+				childInformers:     nil,
+				numWorkers:         1,
+				eventRecorder:      NewFakeRecorder(),
+				finalizer:          DefaultFinalizerManager,
+				customize:          defaultCustomizeManager(),
+				syncHook:           NewHookExecutorStub(defaultSyncResponse),
+				finalizeHook:       NewHookExecutorStub(defaultSyncResponse),
+				logger:             logging.Logger,
 			},
 			args: args{key: defaultTestKey},
 		},
@@ -293,22 +342,23 @@ func Test_parentController_sync(t *testing.T) {
 				return newDefaultControllerClientsAndInformers(fakeDynamicClientFn, true)
 			},
 			fields: fields{
-				cc:             newDefaultCompositeController(),
-				parentResource: &DefaultApiResource,
-				mcClient:       nil,
-				revisionLister: nil,
-				stopCh:         NewCh(),
-				doneCh:         NewCh(),
-				queue:          NewDefaultWorkQueue(),
-				updateStrategy: nil,
-				childInformers: nil,
-				numWorkers:     1,
-				eventRecorder:  NewFakeRecorder(),
-				finalizer:      DefaultFinalizerManager,
-				customize:      defaultCustomizeManager(),
-				syncHook:       NewHookExecutorStub(defaultSyncResponse),
-				finalizeHook:   NewHookExecutorStub(defaultSyncResponse),
-				logger:         logging.Logger,
+				cc:                 newDefaultCompositeController(),
+				parentResource:     &DefaultApiResource,
+				mcClient:           nil,
+				revisionLister:     nil,
+				stopCh:             NewCh(),
+				doneCh:             NewCh(),
+				queue:              NewDefaultWorkQueue(),
+				managingController: makeDefaultManagingControllerMap(true),
+				updateStrategy:     nil,
+				childInformers:     nil,
+				numWorkers:         1,
+				eventRecorder:      NewFakeRecorder(),
+				finalizer:          DefaultFinalizerManager,
+				customize:          defaultCustomizeManager(),
+				syncHook:           NewHookExecutorStub(defaultSyncResponse),
+				finalizeHook:       NewHookExecutorStub(defaultSyncResponse),
+				logger:             logging.Logger,
 			},
 			args:    args{key: defaultTestKey},
 			wantErr: true,
@@ -318,25 +368,26 @@ func Test_parentController_sync(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			_, _, dynClient, parentClient, parentInformer := tt.clientsAndInformers()
 			pc := &parentController{
-				cc:             tt.fields.cc,
-				parentResource: tt.fields.parentResource,
-				mcClient:       tt.fields.mcClient,
-				dynClient:      dynClient,
-				parentClient:   parentClient,
-				parentInformer: parentInformer,
-				revisionLister: tt.fields.revisionLister,
-				stopCh:         tt.fields.stopCh,
-				doneCh:         tt.fields.doneCh,
-				queue:          tt.fields.queue,
-				updateStrategy: tt.fields.updateStrategy,
-				childInformers: tt.fields.childInformers,
-				numWorkers:     tt.fields.numWorkers,
-				eventRecorder:  tt.fields.eventRecorder,
-				finalizer:      tt.fields.finalizer,
-				customize:      tt.fields.customize,
-				syncHook:       tt.fields.syncHook,
-				finalizeHook:   tt.fields.finalizeHook,
-				logger:         tt.fields.logger,
+				cc:                 tt.fields.cc,
+				parentResource:     tt.fields.parentResource,
+				mcClient:           tt.fields.mcClient,
+				dynClient:          dynClient,
+				parentClient:       parentClient,
+				parentInformer:     parentInformer,
+				revisionLister:     tt.fields.revisionLister,
+				stopCh:             tt.fields.stopCh,
+				doneCh:             tt.fields.doneCh,
+				queue:              tt.fields.queue,
+				managingController: tt.fields.managingController,
+				updateStrategy:     tt.fields.updateStrategy,
+				childInformers:     tt.fields.childInformers,
+				numWorkers:         tt.fields.numWorkers,
+				eventRecorder:      tt.fields.eventRecorder,
+				finalizer:          tt.fields.finalizer,
+				customize:          tt.fields.customize,
+				syncHook:           tt.fields.syncHook,
+				finalizeHook:       tt.fields.finalizeHook,
+				logger:             tt.fields.logger,
 			}
 			if err := pc.sync(tt.args.key); (err != nil) != tt.wantErr {
 				t.Errorf("sync() error = %v, wantErr %v", err, tt.wantErr)
