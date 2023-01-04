@@ -76,7 +76,7 @@ type parentController struct {
 	stopCh, doneCh chan struct{}
 	queue          workqueue.RateLimitingInterface
 
-	managingController map[string]*bool
+	managingController map[string]bool
 	updateStrategy     updateStrategyMap
 	childInformers     common.InformerMap
 
@@ -783,8 +783,8 @@ func (pc parentController) doNotMatchLabels(labelsMap map[string]string) bool {
 	return pc.parentSelector != nil && !pc.parentSelector.Matches(labels.Set(labelsMap))
 }
 
-func makeManagingControllerMap(resources *dynamicdiscovery.ResourceMap, cc *v1alpha1.CompositeController) (map[string]*bool, error) {
-	m := make(map[string]*bool)
+func makeManagingControllerMap(resources *dynamicdiscovery.ResourceMap, cc *v1alpha1.CompositeController) (map[string]bool, error) {
+	m := make(map[string]bool)
 	for _, child := range cc.Spec.ChildResources {
 		if child.ManagingController != nil {
 			// Map resource name to kind name.
@@ -795,7 +795,11 @@ func makeManagingControllerMap(resources *dynamicdiscovery.ResourceMap, cc *v1al
 			// Ignore API version.
 			apiGroup, _ := common.ParseAPIVersion(child.APIVersion)
 			key := claimMapKey(apiGroup, resource.Kind)
-			m[key] = child.ManagingController
+			managingController := true
+			if child.ManagingController != nil {
+				managingController = *child.ManagingController
+			}
+			m[key] = managingController
 		}
 	}
 	return m, nil

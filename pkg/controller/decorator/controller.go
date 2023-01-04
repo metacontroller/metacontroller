@@ -74,7 +74,7 @@ type decoratorController struct {
 	stopCh, doneCh chan struct{}
 	queue          workqueue.RateLimitingInterface
 
-	managingController map[string]*bool
+	managingController map[string]bool
 	updateStrategy     updateStrategyMap
 
 	parentInformers common.InformerMap
@@ -787,8 +787,8 @@ func updateStringMap(dest map[string]string, updates map[string]*string) (change
 	return changed
 }
 
-func makeManagingControllerMap(resources *dynamicdiscovery.ResourceMap, dc *v1alpha1.DecoratorController) (map[string]*bool, error) {
-	m := make(map[string]*bool)
+func makeManagingControllerMap(resources *dynamicdiscovery.ResourceMap, dc *v1alpha1.DecoratorController) (map[string]bool, error) {
+	m := make(map[string]bool)
 	for _, child := range dc.Spec.Attachments {
 		if child.ManagingController != nil {
 			// Map resource name to kind name.
@@ -799,7 +799,11 @@ func makeManagingControllerMap(resources *dynamicdiscovery.ResourceMap, dc *v1al
 			// Ignore API version.
 			apiGroup, _ := common.ParseAPIVersion(child.APIVersion)
 			key := fmt.Sprintf("%s.%s", resource.Kind, apiGroup)
-			m[key] = child.ManagingController
+			managingController := true
+			if child.ManagingController != nil {
+				managingController = *child.ManagingController
+			}
+			m[key] = managingController
 		}
 	}
 	return m, nil

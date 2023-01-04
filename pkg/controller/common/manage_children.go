@@ -115,12 +115,13 @@ func revertField(newObj, orig *unstructured.Unstructured, fieldPath ...string) e
 
 func MakeControllerRef(parent *unstructured.Unstructured, controller bool) *metav1.OwnerReference {
 	return &metav1.OwnerReference{
-		APIVersion:         parent.GetAPIVersion(),
-		Kind:               parent.GetKind(),
-		Name:               parent.GetName(),
-		UID:                parent.GetUID(),
-		Controller:         pointer.Bool(controller),
-		BlockOwnerDeletion: pointer.Bool(true),
+		APIVersion: parent.GetAPIVersion(),
+		Kind:       parent.GetKind(),
+		Name:       parent.GetName(),
+		UID:        parent.GetUID(),
+		Controller: pointer.Bool(controller),
+		// If we're not setting Controller to true we shouldn't set BlockOwnerDeletion
+		BlockOwnerDeletion: pointer.Bool(controller),
 	}
 }
 
@@ -128,7 +129,7 @@ type ChildUpdateStrategy interface {
 	GetMethod(apiGroup, kind string) v1alpha1.ChildUpdateMethod
 }
 
-func ManageChildren(dynClient *dynamicclientset.Clientset, managingControllerMap map[string]*bool, updateStrategy ChildUpdateStrategy, parent *unstructured.Unstructured, observedChildren, desiredChildren commonv1.RelativeObjectMap) error {
+func ManageChildren(dynClient *dynamicclientset.Clientset, managingControllerMap map[string]bool, updateStrategy ChildUpdateStrategy, parent *unstructured.Unstructured, observedChildren, desiredChildren commonv1.RelativeObjectMap) error {
 	// If some operations fail, keep trying others so, for example,
 	// we don't block recovery (create new Pod) on a failed delete.
 	var errs []error
@@ -198,7 +199,7 @@ func deleteChildren(client *dynamicclientset.ResourceClient, parent *unstructure
 	return utilerrors.NewAggregate(errs)
 }
 
-func updateChildren(client *dynamicclientset.ResourceClient, managingControllerMap map[string]*bool, updateStrategy ChildUpdateStrategy, parent *unstructured.Unstructured, observed, desired map[string]*unstructured.Unstructured) error {
+func updateChildren(client *dynamicclientset.ResourceClient, managingControllerMap map[string]bool, updateStrategy ChildUpdateStrategy, parent *unstructured.Unstructured, observed, desired map[string]*unstructured.Unstructured) error {
 	var errs []error
 	for name, obj := range desired {
 		ns := obj.GetNamespace()
@@ -303,11 +304,7 @@ func updateChildren(client *dynamicclientset.ResourceClient, managingControllerM
 			// which we must fetch from the managingControllerMap
 			gvk := obj.GroupVersionKind()
 			key := fmt.Sprintf("%s.%s", gvk.Group, gvk.Kind)
-			managingController := true
-			if val, ok := managingControllerMap[key]; ok {
-				managingController = *val
-			}
-			controllerRef := MakeControllerRef(parent, managingController)
+			controllerRef := MakeControllerRef(parent, managingControllerMap[key])
 			ownerRefs := obj.GetOwnerReferences()
 			ownerRefs = append(ownerRefs, *controllerRef)
 			obj.SetOwnerReferences(ownerRefs)

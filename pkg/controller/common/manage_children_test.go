@@ -36,7 +36,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/json"
 	"k8s.io/client-go/dynamic/fake"
 	clientgotesting "k8s.io/client-go/testing"
-	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
@@ -114,10 +113,10 @@ func TestRevertObjectMetaSystemFields(t *testing.T) {
 	}
 }
 
-func makeDefaultManagingControllerMap(controller bool) map[string]*bool {
-	m := make(map[string]*bool)
+func makeDefaultManagingControllerMap(controller bool) map[string]bool {
+	m := make(map[string]bool)
 	key := fmt.Sprintf("%s.%s", TestKind, TestGroup)
-	m[key] = pointer.Bool(true)
+	m[key] = controller
 	return m
 }
 
@@ -125,7 +124,7 @@ func TestManageChildren(t *testing.T) {
 	logging.InitLogging(&zap.Options{})
 	type args struct {
 		dynClient          func() *dynamicclientset.Clientset
-		managingController map[string]*bool
+		managingController map[string]bool
 		updateStrategy     ChildUpdateStrategy
 		parent             *unstructured.Unstructured
 		observedChildren   commonv1.RelativeObjectMap
@@ -150,7 +149,7 @@ func TestManageChildren(t *testing.T) {
 					simpleDynClient := fake.NewSimpleDynamicClient(scheme, NewDefaultUnstructured())
 					return NewClientset(testRestConfig, testResourceMap, simpleDynClient)
 				},
-				managingController: map[string]*bool{},
+				managingController: makeDefaultManagingControllerMap(true),
 				updateStrategy:     childUpdateOnDeleteStrategy{},
 				parent:             unstructuredDefault,
 				observedChildren: commonv1.MakeRelativeObjectMap(
@@ -173,7 +172,7 @@ func TestManageChildren(t *testing.T) {
 					})
 					return NewClientset(testRestConfig, testResourceMap, simpleDynClient)
 				},
-				managingController: map[string]*bool{},
+				managingController: makeDefaultManagingControllerMap(true),
 				updateStrategy:     childUpdateOnDeleteStrategy{},
 				parent:             unstructuredDefault,
 				observedChildren: commonv1.MakeRelativeObjectMap(
@@ -196,7 +195,7 @@ func TestManageChildren(t *testing.T) {
 					})
 					return NewClientset(testRestConfig, testResourceMap, simpleDynClient)
 				},
-				managingController: map[string]*bool{},
+				managingController: makeDefaultManagingControllerMap(true),
 				updateStrategy:     childUpdateRecreateStrategy{},
 				parent:             unstructuredDefault,
 				observedChildren: commonv1.MakeRelativeObjectMap(
@@ -219,7 +218,7 @@ func TestManageChildren(t *testing.T) {
 					})
 					return NewClientset(testRestConfig, testResourceMap, simpleDynClient)
 				},
-				managingController: map[string]*bool{},
+				managingController: makeDefaultManagingControllerMap(true),
 				updateStrategy:     childUpdateRecreateStrategy{},
 				parent:             unstructuredDefault,
 				observedChildren: commonv1.MakeRelativeObjectMap(
@@ -243,7 +242,7 @@ func TestManageChildren(t *testing.T) {
 					})
 					return NewClientset(testRestConfig, testResourceMap, simpleDynClient)
 				},
-				managingController: map[string]*bool{},
+				managingController: makeDefaultManagingControllerMap(true),
 				updateStrategy:     childUpdateOnDeleteStrategy{},
 				parent:             unstructuredDefault,
 				observedChildren: commonv1.MakeRelativeObjectMap(
@@ -261,7 +260,7 @@ func TestManageChildren(t *testing.T) {
 					simpleDynClient := fake.NewSimpleDynamicClient(scheme, NewDefaultUnstructured())
 					return NewClientset(testRestConfig, testResourceMap, simpleDynClient)
 				},
-				managingController: map[string]*bool{},
+				managingController: makeDefaultManagingControllerMap(true),
 				updateStrategy:     childUpdateInPlaceStrategy{},
 				parent:             unstructuredDefault,
 				observedChildren: commonv1.MakeRelativeObjectMap(
@@ -287,7 +286,7 @@ func TestManageChildren(t *testing.T) {
 					})
 					return NewClientset(testRestConfig, testResourceMap, simpleDynClient)
 				},
-				managingController: map[string]*bool{},
+				managingController: makeDefaultManagingControllerMap(true),
 				updateStrategy:     childUpdateInPlaceStrategy{},
 				parent:             unstructuredDefault,
 				observedChildren: commonv1.MakeRelativeObjectMap(
@@ -313,7 +312,7 @@ func TestManageChildren(t *testing.T) {
 					})
 					return NewClientset(testRestConfig, testResourceMap, simpleDynClient)
 				},
-				managingController: map[string]*bool{},
+				managingController: makeDefaultManagingControllerMap(true),
 				updateStrategy:     childUpdateInPlaceStrategy{},
 				parent:             unstructuredDefault,
 				observedChildren: commonv1.MakeRelativeObjectMap(
@@ -336,7 +335,7 @@ func TestManageChildren(t *testing.T) {
 					})
 					return NewClientset(testRestConfig, testResourceMap, simpleDynClient)
 				},
-				managingController: map[string]*bool{},
+				managingController: makeDefaultManagingControllerMap(true),
 				updateStrategy:     childUpdateInPlaceStrategy{},
 				parent:             unstructuredDefault,
 				observedChildren: commonv1.MakeRelativeObjectMap(
@@ -363,7 +362,7 @@ func TestManageChildren(t *testing.T) {
 					})
 					return NewClientset(testRestConfig, testResourceMap, simpleDynClient)
 				},
-				managingController: map[string]*bool{},
+				managingController: makeDefaultManagingControllerMap(true),
 				updateStrategy:     childUpdateInPlaceStrategy{},
 				parent:             unstructuredDefault,
 				observedChildren:   nil,
@@ -383,7 +382,7 @@ func TestManageChildren(t *testing.T) {
 					})
 					return NewClientset(testRestConfig, testResourceMap, simpleDynClient)
 				},
-				managingController: map[string]*bool{},
+				managingController: makeDefaultManagingControllerMap(true),
 				updateStrategy:     childUpdateOnDeleteStrategy{},
 				parent:             unstructuredDefault,
 				observedChildren:   nil,
