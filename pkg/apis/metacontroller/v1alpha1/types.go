@@ -26,6 +26,7 @@ import (
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:path=compositecontrollers,scope=Cluster,shortName=cc;cctl
+// +kubebuilder:metadata:annotations="api-approved.kubernetes.io=unapproved, request not yet submitted"
 type CompositeController struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
@@ -170,6 +171,7 @@ type CompositeControllerList struct {
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:path=controllerrevisions,scope=Namespaced
+// +kubebuilder:metadata:annotations="api-approved.kubernetes.io=unapproved, request not yet submitted"
 type ControllerRevision struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
@@ -196,6 +198,7 @@ type ControllerRevisionList struct {
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:path=decoratorcontrollers,scope=Cluster,shortName=dec;decorators
+// +kubebuilder:metadata:annotations="api-approved.kubernetes.io=unapproved, request not yet submitted"
 type DecoratorController struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
