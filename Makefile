@@ -52,9 +52,6 @@ image_debug: image
 
 
 # CRD generation
-# remember to remove unnecessary metadata fields and
-# add "api-approved.kubernetes.io": "unapproved, request not yet submitted"
-# to annotations
 .PHONY: generate_crds
 generate_crds:
 	@echo "+ Generating crds"
