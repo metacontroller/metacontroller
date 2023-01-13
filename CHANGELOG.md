@@ -1,3 +1,13 @@
+## [4.7.3](https://github.com/metacontroller/metacontroller/compare/v4.7.2...v4.7.3) (2023-01-13)
+
+
+### Bug Fixes
+
+* **deps:** update alpine docker tag to v3.17.1 ([4ec4ab3](https://github.com/metacontroller/metacontroller/commit/4ec4ab3f0072d39ec49c970c53fb578a5d86d00b))
+* **deps:** Update go.uber.org/zap to v1.24.0 ([edfa9aa](https://github.com/metacontroller/metacontroller/commit/edfa9aa3c8a9b2961c71ebee00cae22e66180ae1))
+* **deps:** update golang docker tag to v1.19.5 ([c154e8c](https://github.com/metacontroller/metacontroller/commit/c154e8c73dd20511c82b631f07723782ec9fa14e))
+* **deps:** Update sigs.k8s.io/json to v0.0.0-20221116044647-bc3834ca7abd ([7b37bf1](https://github.com/metacontroller/metacontroller/commit/7b37bf146f623190d6036e5cc53eaa2e40cc16b0))
+
 ## [4.7.2](https://github.com/metacontroller/metacontroller/compare/v4.7.1...v4.7.2) (2022-12-09)
 
 
