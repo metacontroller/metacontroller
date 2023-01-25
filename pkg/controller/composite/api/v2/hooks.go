@@ -14,12 +14,11 @@
  * /
  */
 
-package v1
+package v2
 
 import (
 	"metacontroller/pkg/apis/metacontroller/v1alpha1"
 	"metacontroller/pkg/controller/common/api"
-	v1 "metacontroller/pkg/controller/common/api/v1"
 	v2 "metacontroller/pkg/controller/common/api/v2"
 	"metacontroller/pkg/controller/composite/api/common"
 
@@ -30,12 +29,13 @@ import (
 type CompositeHookRequest struct {
 	Controller *v1alpha1.CompositeController `json:"controller"`
 	Parent     *unstructured.Unstructured    `json:"parent"`
-	Children   v1.RelativeObjectMap          `json:"children"`
-	Related    v1.RelativeObjectMap          `json:"related"`
+	Children   v2.UniformObjectMap           `json:"children"`
+	Related    v2.UniformObjectMap           `json:"related"`
 	Finalizing bool                          `json:"finalizing"`
 }
 
 // CompositeHookResponse is the expected format of the JSON response from the sync and finalize hooks.
+// TODO Change - add events
 type CompositeHookResponse struct {
 	Status   map[string]interface{}       `json:"status"`
 	Children []*unstructured.Unstructured `json:"children"`
@@ -83,30 +83,12 @@ func (r *requestBuilder) IsFinalizing() common.WebhookRequestBuilder {
 	return r
 }
 
-func (r *requestBuilder) convert(parent *unstructured.Unstructured, objects v2.UniformObjectMap) v1.RelativeObjectMap {
-	potentialChildren := objects.List()
-	relativeObjects := make(v1.RelativeObjectMap)
-	parentIsClusterScope := parent.GetNamespace() == ""
-	if parentIsClusterScope {
-		// we can safely add all objects
-		relativeObjects.InsertAll(parent, potentialChildren)
-		return relativeObjects
-	}
-	// parent is namespace scope, we need filter out cluster-scope objects and objects from different namespace
-	for _, child := range potentialChildren {
-		if parent.GetNamespace() == child.GetNamespace() {
-			relativeObjects.Insert(parent, child)
-		}
-	}
-	return relativeObjects
-}
-
 func (r *requestBuilder) Build() api.WebhookRequest {
 	return &CompositeHookRequest{
 		Controller: r.controller,
 		Parent:     r.parent,
-		Children:   r.convert(r.parent, r.children),
-		Related:    r.convert(r.parent, r.related),
+		Children:   r.children,
+		Related:    r.related,
 		Finalizing: r.finalizing,
 	}
 }
