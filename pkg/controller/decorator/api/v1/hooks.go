@@ -1,19 +1,36 @@
+/*
+ *
+ * Copyright 2023. Metacontroller authors.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * https://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * /
+ */
+
 package v1
 
 import (
 	"metacontroller/pkg/apis/metacontroller/v1alpha1"
 	"metacontroller/pkg/controller/common/api"
 	v1 "metacontroller/pkg/controller/common/api/v1"
+	v2 "metacontroller/pkg/controller/common/api/v2"
 	"metacontroller/pkg/controller/decorator/api/common"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-// DecoratorHookRequest is the object sent as JSON to the sync hook.
+// DecoratorHookRequest is the parent sent as JSON to the sync hook.
 type DecoratorHookRequest struct {
 	Controller  *v1alpha1.DecoratorController `json:"controller"`
-	Object      *unstructured.Unstructured    `json:"object"`
-	Attachments v1.RelativeObjectMap          `json:"attachments"`
+	Object      *unstructured.Unstructured    `json:"parent"`
+	Attachments v1.RelativeObjectMap          `json:"children"`
 	Related     v1.RelativeObjectMap          `json:"related"`
 	Finalizing  bool                          `json:"finalizing"`
 }
@@ -27,7 +44,7 @@ type DecoratorHookResponse struct {
 	Labels      map[string]*string           `json:"labels"`
 	Annotations map[string]*string           `json:"annotations"`
 	Status      map[string]interface{}       `json:"status"`
-	Attachments []*unstructured.Unstructured `json:"attachments"`
+	Attachments []*unstructured.Unstructured `json:"children"`
 
 	ResyncAfterSeconds float64 `json:"resyncAfterSeconds"`
 
@@ -36,11 +53,11 @@ type DecoratorHookResponse struct {
 }
 
 type requestBuilder struct {
-	controller  *v1alpha1.DecoratorController
-	object      *unstructured.Unstructured
-	attachments v1.RelativeObjectMap
-	related     v1.RelativeObjectMap
-	finalizing  bool
+	controller *v1alpha1.DecoratorController
+	parent     *unstructured.Unstructured
+	children   v2.UniformObjectMap
+	related    v2.UniformObjectMap
+	finalizing bool
 }
 
 func NewRequestBuilder() common.WebhookRequestBuilder {
@@ -52,17 +69,17 @@ func (r *requestBuilder) WithController(controller *v1alpha1.DecoratorController
 	return r
 }
 
-func (r *requestBuilder) WithParet(object *unstructured.Unstructured) common.WebhookRequestBuilder {
-	r.object = object
+func (r *requestBuilder) WithParent(parent *unstructured.Unstructured) common.WebhookRequestBuilder {
+	r.parent = parent
 	return r
 }
 
-func (r *requestBuilder) WithAttachments(attachments v1.RelativeObjectMap) common.WebhookRequestBuilder {
-	r.attachments = attachments
+func (r *requestBuilder) WithChildren(children v2.UniformObjectMap) common.WebhookRequestBuilder {
+	r.children = children
 	return r
 }
 
-func (r *requestBuilder) WithRelatedObjects(related v1.RelativeObjectMap) common.WebhookRequestBuilder {
+func (r *requestBuilder) WithRelatedObjects(related v2.UniformObjectMap) common.WebhookRequestBuilder {
 	r.related = related
 	return r
 }
@@ -75,9 +92,9 @@ func (r *requestBuilder) IsFinalizing() common.WebhookRequestBuilder {
 func (r *requestBuilder) Build() api.WebhookRequest {
 	return &DecoratorHookRequest{
 		Controller:  r.controller,
-		Object:      r.object,
-		Attachments: r.attachments,
-		Related:     r.related,
+		Object:      r.parent,
+		Attachments: r.children.Convert(r.parent),
+		Related:     r.related.Convert(r.parent),
 		Finalizing:  r.finalizing,
 	}
 }

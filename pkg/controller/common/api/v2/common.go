@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	commonv1 "metacontroller/pkg/controller/common/api/v1"
+
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -142,4 +144,23 @@ func (m UniformObjectMap) List() []*unstructured.Unstructured {
 		}
 	}
 	return list
+}
+
+// Convert returns commonv1.RelativeObjectMap against given parent, removing non matching objects
+func (m UniformObjectMap) Convert(parent *unstructured.Unstructured) commonv1.RelativeObjectMap {
+	potentialChildren := m.List()
+	relativeObjects := make(commonv1.RelativeObjectMap)
+	parentIsClusterScope := parent.GetNamespace() == ""
+	if parentIsClusterScope {
+		// we can safely add all objects
+		relativeObjects.InsertAll(parent, potentialChildren)
+		return relativeObjects
+	}
+	// parent is namespace scope, we need filter out cluster-scope objects and objects from different namespace
+	for _, child := range potentialChildren {
+		if parent.GetNamespace() == child.GetNamespace() {
+			relativeObjects.Insert(parent, child)
+		}
+	}
+	return relativeObjects
 }

@@ -14,31 +14,36 @@
  * /
  */
 
-package v1
+package v2
 
 import (
 	"metacontroller/pkg/apis/metacontroller/v1alpha1"
 	"metacontroller/pkg/controller/common/api"
-	v1 "metacontroller/pkg/controller/common/api/v1"
 	v2 "metacontroller/pkg/controller/common/api/v2"
-	"metacontroller/pkg/controller/composite/api/common"
+	"metacontroller/pkg/controller/decorator/api/common"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-// CompositeHookRequest is the object sent as JSON to the sync and finalize hooks.
-type CompositeHookRequest struct {
-	Controller *v1alpha1.CompositeController `json:"controller"`
+// DecoratorHookRequest is the object sent as JSON to the sync hook.
+type DecoratorHookRequest struct {
+	Controller *v1alpha1.DecoratorController `json:"controller"`
 	Parent     *unstructured.Unstructured    `json:"parent"`
-	Children   v1.RelativeObjectMap          `json:"children"`
-	Related    v1.RelativeObjectMap          `json:"related"`
+	Children   v2.UniformObjectMap           `json:"children"`
+	Related    v2.UniformObjectMap           `json:"related"`
 	Finalizing bool                          `json:"finalizing"`
 }
 
-// CompositeHookResponse is the expected format of the JSON response from the sync and finalize hooks.
-type CompositeHookResponse struct {
-	Status   map[string]interface{}       `json:"status"`
-	Children []*unstructured.Unstructured `json:"children"`
+func (r *DecoratorHookRequest) GetRootObject() *unstructured.Unstructured {
+	return r.Parent
+}
+
+// DecoratorHookResponse is the expected format of the JSON response from the sync hook.
+type DecoratorHookResponse struct {
+	Labels      map[string]*string           `json:"labels"`
+	Annotations map[string]*string           `json:"annotations"`
+	Status      map[string]interface{}       `json:"status"`
+	Attachments []*unstructured.Unstructured `json:"attachments"`
 
 	ResyncAfterSeconds float64 `json:"resyncAfterSeconds"`
 
@@ -47,7 +52,7 @@ type CompositeHookResponse struct {
 }
 
 type requestBuilder struct {
-	controller *v1alpha1.CompositeController
+	controller *v1alpha1.DecoratorController
 	parent     *unstructured.Unstructured
 	children   v2.UniformObjectMap
 	related    v2.UniformObjectMap
@@ -58,7 +63,7 @@ func NewRequestBuilder() common.WebhookRequestBuilder {
 	return &requestBuilder{}
 }
 
-func (r *requestBuilder) WithController(controller *v1alpha1.CompositeController) common.WebhookRequestBuilder {
+func (r *requestBuilder) WithController(controller *v1alpha1.DecoratorController) common.WebhookRequestBuilder {
 	r.controller = controller
 	return r
 }
@@ -84,15 +89,11 @@ func (r *requestBuilder) IsFinalizing() common.WebhookRequestBuilder {
 }
 
 func (r *requestBuilder) Build() api.WebhookRequest {
-	return &CompositeHookRequest{
+	return &DecoratorHookRequest{
 		Controller: r.controller,
 		Parent:     r.parent,
-		Children:   r.children.Convert(r.parent),
-		Related:    r.related.Convert(r.parent),
+		Children:   r.children,
+		Related:    r.related,
 		Finalizing: r.finalizing,
 	}
-}
-
-func (r *CompositeHookRequest) GetRootObject() *unstructured.Unstructured {
-	return r.Parent
 }
