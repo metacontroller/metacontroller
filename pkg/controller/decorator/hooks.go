@@ -34,8 +34,8 @@ func (c *decoratorController) callHook(
 
 	requestBuilder := v1.NewRequestBuilder().
 		WithController(c.dc).
-		WithParet(parent).
-		WithAttachments(observedChildren).
+		WithParent(parent).
+		WithChildren(observedChildren).
 		WithRelatedObjects(related)
 
 	response := v1.DecoratorHookResponse{Attachments: []*unstructured.Unstructured{}}
