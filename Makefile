@@ -27,12 +27,11 @@ build_debug: build
 
 .PHONY: unit-test
 unit-test: test-setup
-	go test -i ${PKGS} && \
-	gotestsum -- -race -coverpkg="${COVER_PKGS}" -coverprofile=test/integration/hack/tmp/unit-test-coverage.out ${PKGS}
+	@gotestsum -- -race -coverpkg="${COVER_PKGS}" -coverprofile=test/integration/hack/tmp/unit-test-coverage.out ${PKGS}
 
 .PHONY: integration-test
 integration-test: test-setup
-	cd ./test/integration; \
+	@cd ./test/integration; \
  	gotestsum -- -coverpkg="${COVER_PKGS}" -coverprofile=hack/tmp/integration-test-coverage.out ./... -timeout 5m -parallel 1
 
 .PHONY: test-setup
