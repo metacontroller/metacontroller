@@ -18,7 +18,7 @@ package decorator
 
 import (
 	"fmt"
-	commonv1 "metacontroller/pkg/controller/common/api/v1"
+	commonv2 "metacontroller/pkg/controller/common/api/v2"
 	v1 "metacontroller/pkg/controller/decorator/api/v1"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -26,7 +26,8 @@ import (
 
 func (c *decoratorController) callHook(
 	parent *unstructured.Unstructured,
-	observedChildren, related commonv1.RelativeObjectMap,
+	observedChildren,
+	related commonv2.UniformObjectMap,
 ) (*v1.DecoratorHookResponse, error) {
 	if c.dc.Spec.Hooks == nil {
 		return nil, fmt.Errorf("no hooks defined")
@@ -58,6 +59,12 @@ func (c *decoratorController) callHook(
 		// Sync
 		if err := c.syncHook.Call(requestBuilder.Build(), &response); err != nil {
 			return nil, fmt.Errorf("sync hook failed: %w", err)
+		}
+	}
+
+	for _, child := range response.Attachments {
+		if child != nil && child.GetNamespace() == "" {
+			child.SetNamespace(parent.GetNamespace())
 		}
 	}
 

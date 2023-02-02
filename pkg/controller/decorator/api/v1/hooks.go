@@ -29,8 +29,8 @@ import (
 // DecoratorHookRequest is the parent sent as JSON to the sync hook.
 type DecoratorHookRequest struct {
 	Controller  *v1alpha1.DecoratorController `json:"controller"`
-	Object      *unstructured.Unstructured    `json:"parent"`
-	Attachments v1.RelativeObjectMap          `json:"children"`
+	Object      *unstructured.Unstructured    `json:"object"`
+	Attachments v1.RelativeObjectMap          `json:"attachments"`
 	Related     v1.RelativeObjectMap          `json:"related"`
 	Finalizing  bool                          `json:"finalizing"`
 }
@@ -44,7 +44,7 @@ type DecoratorHookResponse struct {
 	Labels      map[string]*string           `json:"labels"`
 	Annotations map[string]*string           `json:"annotations"`
 	Status      map[string]interface{}       `json:"status"`
-	Attachments []*unstructured.Unstructured `json:"children"`
+	Attachments []*unstructured.Unstructured `json:"attachments"`
 
 	ResyncAfterSeconds float64 `json:"resyncAfterSeconds"`
 

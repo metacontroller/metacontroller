@@ -18,7 +18,7 @@ package composite
 
 import (
 	"fmt"
-	commonv1 "metacontroller/pkg/controller/common/api/v1"
+	commonv2 "metacontroller/pkg/controller/common/api/v2"
 	v1 "metacontroller/pkg/controller/composite/api/v1"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -26,7 +26,7 @@ import (
 
 func (pc *parentController) callHook(
 	parent *unstructured.Unstructured,
-	observedChildren, related commonv1.RelativeObjectMap,
+	observedChildren, related commonv2.UniformObjectMap,
 ) (*v1.CompositeHookResponse, error) {
 	requestBuilder := v1.NewRequestBuilder().
 		WithController(pc.cc).
@@ -53,6 +53,12 @@ func (pc *parentController) callHook(
 		// Sync
 		if err := pc.syncHook.Call(requestBuilder.Build(), &response); err != nil {
 			return nil, fmt.Errorf("sync hook failed: %w", err)
+		}
+	}
+
+	for _, child := range response.Children {
+		if child != nil && child.GetNamespace() == "" {
+			child.SetNamespace(parent.GetNamespace())
 		}
 	}
 

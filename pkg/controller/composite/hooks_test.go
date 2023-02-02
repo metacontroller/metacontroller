@@ -3,6 +3,7 @@ package composite
 import (
 	"metacontroller/pkg/apis/metacontroller/v1alpha1"
 	commonv1 "metacontroller/pkg/controller/common/api/v1"
+	commonv2 "metacontroller/pkg/controller/common/api/v2"
 	composite "metacontroller/pkg/controller/composite/api/v1"
 	"metacontroller/pkg/internal/testutils/hooks"
 	"testing"
@@ -101,9 +102,10 @@ func TestWhenChildrenArrayIsNullThenDeserializeToEmptySlice(t *testing.T) {
 		finalizeHook: hooks.NewDisabledExecutorStub(),
 	}
 	parent := &unstructured.Unstructured{}
+	parent.SetNamespace("some")
 	parent.SetDeletionTimestamp(nil)
 
-	response, err := parentController.callHook(parent, make(commonv1.RelativeObjectMap), make(commonv1.RelativeObjectMap))
+	response, err := parentController.callHook(parent, make(commonv2.UniformObjectMap), make(commonv2.UniformObjectMap))
 
 	if err != nil {
 		t.Error(err)

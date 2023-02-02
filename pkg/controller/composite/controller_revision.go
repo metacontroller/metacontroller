@@ -22,6 +22,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	commonv1 "metacontroller/pkg/controller/common/api/v1"
+	commonv2 "metacontroller/pkg/controller/common/api/v2"
 	v1 "metacontroller/pkg/controller/composite/api/v1"
 	"metacontroller/pkg/logging"
 	"strings"
@@ -76,7 +77,7 @@ func (pc *parentController) claimRevisions(parent *unstructured.Unstructured) ([
 	return revisions, nil
 }
 
-func (pc *parentController) syncRevisions(parent *unstructured.Unstructured, observedChildren commonv1.RelativeObjectMap, relatedObjects commonv1.RelativeObjectMap) (*v1.CompositeHookResponse, error) {
+func (pc *parentController) syncRevisions(parent *unstructured.Unstructured, observedChildren, relatedObjects commonv2.UniformObjectMap) (*v1.CompositeHookResponse, error) {
 	// If no child resources use rolling updates, just sync the latest parent.
 	// Also, if the parent object is being deleted and we don't have a finalizer,
 	// just sync the latest parent to get the status since we won't manage
@@ -154,7 +155,7 @@ func (pc *parentController) syncRevisions(parent *unstructured.Unstructured, obs
 			defer wg.Done()
 			related, err := pc.customize.GetRelatedObjects(pr.parent)
 			if err != nil {
-				related = make(commonv1.RelativeObjectMap)
+				related = make(commonv2.UniformObjectMap)
 			}
 			syncResult, err := pc.callHook(pr.parent, observedChildren, related)
 			if err != nil {

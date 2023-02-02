@@ -79,6 +79,8 @@ module.exports = async function (context) {
   let observed = context.request.body;
   let desired = {status: {}, children: []};
 
+  console.log('observed: ' + observed)
+
   try {
     let bgd = observed.parent;
     let observedRS = observed.children['ReplicaSet.apps/v1'];

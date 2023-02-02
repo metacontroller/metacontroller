@@ -2,7 +2,7 @@ package v1
 
 import (
 	"fmt"
-	"strings"
+	"metacontroller/pkg/controller/common/api"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -21,11 +21,11 @@ import (
 // "v1/Pod -> 'prometheus/Prometheus'" (for namespaced child resource if the parent is cluster scope)
 // "v1/Pod -> 'Prometheus'" (for namespaced child resource if parent is namespaced)
 // "v1/Namespace -> 'some'" (for cluster-scope child resource if parent is cluster scope)
-type RelativeObjectMap map[GroupVersionKind]map[string]*unstructured.Unstructured
+type RelativeObjectMap map[api.GroupVersionKind]map[string]*unstructured.Unstructured
 
 // InitGroup initializes a map for given schema.GroupVersionKind if not yet initialized
 func (m RelativeObjectMap) InitGroup(gvk schema.GroupVersionKind) {
-	internalGvk := GroupVersionKind{gvk}
+	internalGvk := api.GroupVersionKind{GroupVersionKind: gvk}
 	if m[internalGvk] == nil {
 		m[internalGvk] = make(map[string]*unstructured.Unstructured)
 	}
@@ -33,7 +33,7 @@ func (m RelativeObjectMap) InitGroup(gvk schema.GroupVersionKind) {
 
 // Insert inserts given obj to RelativeObjectMap regarding parent
 func (m RelativeObjectMap) Insert(parent v1.Object, obj *unstructured.Unstructured) {
-	internalGvk := GroupVersionKind{obj.GroupVersionKind()}
+	internalGvk := api.GroupVersionKind{GroupVersionKind: obj.GroupVersionKind()}
 	if m[internalGvk] == nil {
 		m.InitGroup(obj.GroupVersionKind())
 	}
@@ -80,7 +80,7 @@ func relativeName(parent v1.Object, obj *unstructured.Unstructured) string {
 // the given object with the contents of the given object. If no object exists
 // in the existing map then no action is taken.
 func (m RelativeObjectMap) ReplaceObjectIfExists(parent v1.Object, obj *unstructured.Unstructured) {
-	internalGvk := GroupVersionKind{obj.GroupVersionKind()}
+	internalGvk := api.GroupVersionKind{GroupVersionKind: obj.GroupVersionKind()}
 	objects := m[internalGvk]
 	if objects == nil {
 		// We only want to replace if it already exists, so do nothing.
@@ -127,38 +127,4 @@ func MakeRelativeObjectMap(parent v1.Object, list []*unstructured.Unstructured) 
 	relativeObjects.InsertAll(parent, list)
 
 	return relativeObjects
-}
-
-// GroupVersionKind is metacontroller wrapper around schema.GroupVersionKind
-// implementing encoding.TextMarshaler and encoding.TextUnmarshaler
-type GroupVersionKind struct {
-	schema.GroupVersionKind
-}
-
-// MarshalText is implementation of  encoding.TextMarshaler
-func (gvk GroupVersionKind) MarshalText() ([]byte, error) {
-	var marshalledText string
-	if gvk.Group == "" {
-		marshalledText = fmt.Sprintf("%s.%s", gvk.Kind, gvk.Version)
-	} else {
-		marshalledText = fmt.Sprintf("%s.%s/%s", gvk.Kind, gvk.Group, gvk.Version)
-	}
-	return []byte(marshalledText), nil
-}
-
-// UnmarshalText is implementation of encoding.TextUnmarshaler
-func (gvk *GroupVersionKind) UnmarshalText(text []byte) error {
-	kindGroupVersionString := string(text)
-	parts := strings.SplitN(kindGroupVersionString, ".", 2)
-	if len(parts) < 2 {
-		return fmt.Errorf("could not unmarshall [%s], expected string in 'kind.group/version' format", string(text))
-	}
-	groupVersion, err := schema.ParseGroupVersion(parts[1])
-	if err != nil {
-		return err
-	}
-	*gvk = GroupVersionKind{
-		groupVersion.WithKind(parts[0]),
-	}
-	return nil
 }

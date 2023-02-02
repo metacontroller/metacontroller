@@ -20,7 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	commonv1 "metacontroller/pkg/controller/common/api/v1"
+	commonv2 "metacontroller/pkg/controller/common/api/v2"
 	"metacontroller/pkg/hooks"
 	"metacontroller/pkg/logging"
 	"sync"
@@ -574,7 +574,7 @@ func (pc *parentController) syncParentObject(parent *unstructured.Unstructured) 
 	if err != nil {
 		return err
 	}
-	desiredChildren := commonv1.MakeRelativeObjectMap(parent, syncResult.Children)
+	desiredChildren := commonv2.MakeUniformObjectMap(parent, syncResult.Children)
 
 	// Enqueue a delayed resync, if requested.
 	if syncResult.ResyncAfterSeconds > 0 {
@@ -702,7 +702,7 @@ func (pc *parentController) canAdoptFunc(parent *unstructured.Unstructured) func
 	})
 }
 
-func (pc *parentController) claimChildren(parent *unstructured.Unstructured) (commonv1.RelativeObjectMap, error) {
+func (pc *parentController) claimChildren(parent *unstructured.Unstructured) (commonv2.UniformObjectMap, error) {
 	// Set up values common to all child types.
 	parentNamespace := parent.GetNamespace()
 	parentGVK := pc.parentResource.GroupVersionKind()
@@ -713,7 +713,7 @@ func (pc *parentController) claimChildren(parent *unstructured.Unstructured) (co
 	canAdoptFunc := pc.canAdoptFunc(parent)
 
 	// Claim all child types.
-	childMap := make(commonv1.RelativeObjectMap)
+	childMap := make(commonv2.UniformObjectMap)
 	for _, child := range pc.cc.Spec.ChildResources {
 		// List all objects of the child kind in the parent object's namespace,
 		// or in all namespaces if the parent is cluster-scoped.

@@ -2,8 +2,7 @@ package v2
 
 import (
 	"fmt"
-	"strings"
-
+	"metacontroller/pkg/controller/common/api"
 	commonv1 "metacontroller/pkg/controller/common/api/v1"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -11,47 +10,13 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-// GroupVersionKind is metacontroller wrapper around schema.GroupVersionKind
-// implementing encoding.TextMarshaler and encoding.TextUnmarshaler
-type GroupVersionKind struct {
-	schema.GroupVersionKind
-}
-
-// MarshalText is implementation of  encoding.TextMarshaler
-func (gvk GroupVersionKind) MarshalText() ([]byte, error) {
-	var marshalledText string
-	if gvk.Group == "" {
-		marshalledText = fmt.Sprintf("%s.%s", gvk.Kind, gvk.Version)
-	} else {
-		marshalledText = fmt.Sprintf("%s.%s/%s", gvk.Kind, gvk.Group, gvk.Version)
-	}
-	return []byte(marshalledText), nil
-}
-
-// UnmarshalText is implementation of encoding.TextUnmarshaler
-func (gvk *GroupVersionKind) UnmarshalText(text []byte) error {
-	kindGroupVersionString := string(text)
-	parts := strings.SplitN(kindGroupVersionString, ".", 2)
-	if len(parts) < 2 {
-		return fmt.Errorf("could not unmarshall [%s], expected string in 'kind.group/version' format", string(text))
-	}
-	groupVersion, err := schema.ParseGroupVersion(parts[1])
-	if err != nil {
-		return err
-	}
-	*gvk = GroupVersionKind{
-		groupVersion.WithKind(parts[0]),
-	}
-	return nil
-}
-
 // UniformObjectMap holds objects grouped by GroupVersionKind and uniform location in the form namespace/name (if object is clustered scope, just name)
 // it holds entries in form [GroupVersionKind] -> [namespace/name] -> object
 // where namespace is empty in case of resources which are cluster scoped,
 // i.e. :
 // "v1/Pod -> 'some-namespace/some-name'" (for namespaced child resource)
 // "v1/Namespace -> 'some-name'" (for cluster-scope child resource)
-type UniformObjectMap map[GroupVersionKind]map[string]*unstructured.Unstructured
+type UniformObjectMap map[api.GroupVersionKind]map[string]*unstructured.Unstructured
 
 // MakeUniformObjectMap builds the map of objects resources that is suitable for use
 // in the `children` field of a CompositeController SyncRequest or
@@ -71,7 +36,7 @@ func MakeUniformObjectMap(parent v1.Object, list []*unstructured.Unstructured) U
 
 // InitGroup initializes a map for given schema.GroupVersionKind if not yet initialized
 func (m UniformObjectMap) InitGroup(gvk schema.GroupVersionKind) {
-	internalGvk := GroupVersionKind{gvk}
+	internalGvk := api.GroupVersionKind{GroupVersionKind: gvk}
 	if m[internalGvk] == nil {
 		m[internalGvk] = make(map[string]*unstructured.Unstructured)
 	}
@@ -79,7 +44,7 @@ func (m UniformObjectMap) InitGroup(gvk schema.GroupVersionKind) {
 
 // Insert inserts given obj to UniformObjectMap
 func (m UniformObjectMap) Insert(parent v1.Object, obj *unstructured.Unstructured) {
-	internalGvk := GroupVersionKind{obj.GroupVersionKind()}
+	internalGvk := api.GroupVersionKind{GroupVersionKind: obj.GroupVersionKind()}
 	if m[internalGvk] == nil {
 		m.InitGroup(obj.GroupVersionKind())
 	}
@@ -123,7 +88,7 @@ func (m UniformObjectMap) FindGroupKindName(gk schema.GroupKind, name string) *u
 // the given object with the contents of the given object. If no object exists
 // in the existing map then no action is taken.
 func (m UniformObjectMap) ReplaceObjectIfExists(parent v1.Object, obj *unstructured.Unstructured) {
-	internalGvk := GroupVersionKind{obj.GroupVersionKind()}
+	internalGvk := api.GroupVersionKind{GroupVersionKind: obj.GroupVersionKind()}
 	objects, found := m[internalGvk]
 	if !found || len(objects) == 0 {
 		// We only want to replace if it already exists, so do nothing.
@@ -150,6 +115,9 @@ func (m UniformObjectMap) List() []*unstructured.Unstructured {
 func (m UniformObjectMap) Convert(parent *unstructured.Unstructured) commonv1.RelativeObjectMap {
 	potentialChildren := m.List()
 	relativeObjects := make(commonv1.RelativeObjectMap)
+	for gvk := range m {
+		relativeObjects.InitGroup(gvk.GroupVersionKind)
+	}
 	parentIsClusterScope := parent.GetNamespace() == ""
 	if parentIsClusterScope {
 		// we can safely add all objects
