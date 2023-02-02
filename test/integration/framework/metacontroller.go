@@ -113,7 +113,7 @@ func (f *Fixture) CreateDecoratorController(name, syncHookURL string, customizeH
 		},
 		Spec: v1alpha1.DecoratorControllerSpec{
 			// Set a big resyncPeriod so tests can precisely control when syncs happen.
-			ResyncPeriodSeconds: pointer.Int32Ptr(3600),
+			ResyncPeriodSeconds: pointer.Int32(3600),
 			Resources: []v1alpha1.DecoratorControllerResourceRule{
 				{
 					ResourceRule: *parentRule,

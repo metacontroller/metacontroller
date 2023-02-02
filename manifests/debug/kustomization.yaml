@@ -1,5 +1,28 @@
-bases:
-- ../production
+resources:
+  - ../production
 patches:
-- image.yaml
-- args.yaml
+- target:
+    group: apps
+    kind: StatefulSet
+    version: v1
+    name: metacontroller
+  path: args.yaml
+- target:
+    group: apps
+    kind: StatefulSet
+    version: v1
+    name: metacontroller
+  path: image.yaml
+- target:
+    group: apps
+    kind: StatefulSet
+    version: v1
+    name: metacontroller
+  patch: |-
+    - op: remove
+      path: "/spec/template/spec/containers/0/livenessProbe"
+      value: ""
+    - op: remove
+      path: "/spec/template/spec/containers/0/readinessProbe"
+      value: ""
+      

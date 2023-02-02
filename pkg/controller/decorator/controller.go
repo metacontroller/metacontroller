@@ -19,7 +19,7 @@ package decorator
 import (
 	"context"
 	"fmt"
-	commonv1 "metacontroller/pkg/controller/common/api/v1"
+	commonv2 "metacontroller/pkg/controller/common/api/v2"
 	"metacontroller/pkg/hooks"
 	"strings"
 	"sync"
@@ -542,7 +542,7 @@ func (c *decoratorController) syncParentObject(parent *unstructured.Unstructured
 	if err != nil {
 		return err
 	}
-	desiredChildren := commonv1.MakeRelativeObjectMap(parent, syncResult.Attachments)
+	desiredChildren := commonv2.MakeUniformObjectMap(parent, syncResult.Attachments)
 
 	// Enqueue a delayed resync, if requested.
 	if syncResult.ResyncAfterSeconds > 0 {
@@ -656,10 +656,10 @@ func (c *decoratorController) syncParentObject(parent *unstructured.Unstructured
 	return manageErr
 }
 
-func (c *decoratorController) getChildren(parent *unstructured.Unstructured) (commonv1.RelativeObjectMap, error) {
+func (c *decoratorController) getChildren(parent *unstructured.Unstructured) (commonv2.UniformObjectMap, error) {
 	parentUID := parent.GetUID()
 	parentNamespace := parent.GetNamespace()
-	childMap := make(commonv1.RelativeObjectMap)
+	childMap := make(commonv2.UniformObjectMap)
 
 	for _, child := range c.dc.Spec.Attachments {
 		// List all objects of the child kind in the parent object's namespace,

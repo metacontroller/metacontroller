@@ -20,7 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	commonv1 "metacontroller/pkg/controller/common/api/v1"
+	commonv2 "metacontroller/pkg/controller/common/api/v2"
 	"metacontroller/pkg/logging"
 
 	"k8s.io/utils/pointer"
@@ -128,7 +128,11 @@ type ChildUpdateStrategy interface {
 	GetMethod(apiGroup, kind string) v1alpha1.ChildUpdateMethod
 }
 
-func ManageChildren(dynClient *dynamicclientset.Clientset, updateStrategy ChildUpdateStrategy, parent *unstructured.Unstructured, observedChildren, desiredChildren commonv1.RelativeObjectMap) error {
+func ManageChildren(
+	dynClient *dynamicclientset.Clientset,
+	updateStrategy ChildUpdateStrategy,
+	parent *unstructured.Unstructured,
+	observedChildren, desiredChildren commonv2.UniformObjectMap) error {
 	// If some operations fail, keep trying others so, for example,
 	// we don't block recovery (create new Pod) on a failed delete.
 	var errs []error
@@ -201,10 +205,6 @@ func deleteChildren(client *dynamicclientset.ResourceClient, parent *unstructure
 func updateChildren(client *dynamicclientset.ResourceClient, updateStrategy ChildUpdateStrategy, parent *unstructured.Unstructured, observed, desired map[string]*unstructured.Unstructured) error {
 	var errs []error
 	for name, obj := range desired {
-		ns := obj.GetNamespace()
-		if ns == "" {
-			ns = parent.GetNamespace()
-		}
 		if oldObj := observed[name]; oldObj != nil {
 			// Update
 			newObj, err := ApplyUpdate(oldObj, obj)
@@ -248,7 +248,7 @@ func updateChildren(client *dynamicclientset.ResourceClient, updateStrategy Chil
 				// Explicitly request deletion propagation, which is what users expect,
 				// since some objects default to orphaning for backwards compatibility.
 				propagation := metav1.DeletePropagationBackground
-				err := client.Namespace(ns).Delete(
+				err := client.Namespace(obj.GetNamespace()).Delete(
 					context.TODO(),
 					obj.GetName(),
 					metav1.DeleteOptions{
@@ -268,7 +268,7 @@ func updateChildren(client *dynamicclientset.ResourceClient, updateStrategy Chil
 			case v1alpha1.ChildUpdateInPlace, v1alpha1.ChildUpdateRollingInPlace:
 				// Update the object in-place.
 				logging.Logger.Info("Updating", "parent", parent, "child", obj, "reason", "InPlace update strategy selected")
-				if _, err := client.Namespace(ns).Update(context.TODO(), newObj, metav1.UpdateOptions{}); err != nil {
+				if _, err := client.Namespace(obj.GetNamespace()).Update(context.TODO(), newObj, metav1.UpdateOptions{}); err != nil {
 					switch {
 					case apierrors.IsNotFound(err):
 						// Swallow the error since there's no point retrying if the child is gone.
@@ -305,7 +305,7 @@ func updateChildren(client *dynamicclientset.ResourceClient, updateStrategy Chil
 			ownerRefs = append(ownerRefs, *controllerRef)
 			obj.SetOwnerReferences(ownerRefs)
 
-			if _, err := client.Namespace(ns).Create(context.TODO(), obj, metav1.CreateOptions{}); err != nil {
+			if _, err := client.Namespace(obj.GetNamespace()).Create(context.TODO(), obj, metav1.CreateOptions{}); err != nil {
 				if apierrors.IsAlreadyExists(err) {
 					// Swallow the error since there's no point retrying if the child already exists
 					logging.Logger.Info("Failed to create child, child object already exists", "parent", parent, "child", obj)

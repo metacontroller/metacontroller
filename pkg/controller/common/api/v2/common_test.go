@@ -17,6 +17,7 @@
 package v2
 
 import (
+	"metacontroller/pkg/controller/common/api"
 	"reflect"
 	"testing"
 
@@ -27,21 +28,21 @@ import (
 
 var (
 	parameters = []struct {
-		gvk  GroupVersionKind
+		gvk  api.GroupVersionKind
 		text string
 	}{
-		{GroupVersionKind{
-			schema.GroupVersionKind{
+		{gvk: api.GroupVersionKind{
+			GroupVersionKind: schema.GroupVersionKind{
 				Group: "", Version: "v1", Kind: "kind"}},
-			"kind.v1"},
-		{GroupVersionKind{
-			schema.GroupVersionKind{
+			text: "kind.v1"},
+		{gvk: api.GroupVersionKind{
+			GroupVersionKind: schema.GroupVersionKind{
 				Group: "someGroup", Version: "v1", Kind: "kind"}},
-			"kind.someGroup/v1"},
-		{GroupVersionKind{
-			schema.GroupVersionKind{
+			text: "kind.someGroup/v1"},
+		{gvk: api.GroupVersionKind{
+			GroupVersionKind: schema.GroupVersionKind{
 				Group: "apps", Version: "v1", Kind: "StatefulSet"}},
-			"StatefulSet.apps/v1"},
+			text: "StatefulSet.apps/v1"},
 	}
 )
 
@@ -57,7 +58,7 @@ func TestGroupVersionKind_MarshalText(t *testing.T) {
 
 func TestGroupVersionKind_UnmarshalText(t *testing.T) {
 	for i := range parameters {
-		gvk := &GroupVersionKind{}
+		gvk := &api.GroupVersionKind{}
 		err := gvk.UnmarshalText([]byte(parameters[i].text))
 		if err != nil {
 			t.Error(err)

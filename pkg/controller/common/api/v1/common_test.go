@@ -17,6 +17,7 @@ limitations under the License.
 package v1
 
 import (
+	api "metacontroller/pkg/controller/common/api"
 	"reflect"
 	"testing"
 
@@ -28,21 +29,21 @@ import (
 
 var (
 	parameters = []struct {
-		gvk  GroupVersionKind
+		gvk  api.GroupVersionKind
 		text string
 	}{
-		{GroupVersionKind{
-			schema.GroupVersionKind{
+		{gvk: api.GroupVersionKind{
+			GroupVersionKind: schema.GroupVersionKind{
 				Group: "", Version: "v1", Kind: "kind"}},
-			"kind.v1"},
-		{GroupVersionKind{
-			schema.GroupVersionKind{
+			text: "kind.v1"},
+		{gvk: api.GroupVersionKind{
+			GroupVersionKind: schema.GroupVersionKind{
 				Group: "someGroup", Version: "v1", Kind: "kind"}},
-			"kind.someGroup/v1"},
-		{GroupVersionKind{
-			schema.GroupVersionKind{
+			text: "kind.someGroup/v1"},
+		{gvk: api.GroupVersionKind{
+			GroupVersionKind: schema.GroupVersionKind{
 				Group: "apps", Version: "v1", Kind: "StatefulSet"}},
-			"StatefulSet.apps/v1"},
+			text: "StatefulSet.apps/v1"},
 	}
 )
 
@@ -58,7 +59,7 @@ func TestGroupVersionKind_MarshalText(t *testing.T) {
 
 func TestGroupVersionKind_UnmarshalText(t *testing.T) {
 	for i := range parameters {
-		gvk := &GroupVersionKind{}
+		gvk := &api.GroupVersionKind{}
 		err := gvk.UnmarshalText([]byte(parameters[i].text))
 		if err != nil {
 			t.Error(err)
@@ -73,7 +74,7 @@ func TestGroupVersionKind_UnmarshalText(t *testing.T) {
 func TestGroupVersionKind_UnmrshalTextWithException(t *testing.T) {
 	wrongGvk := []string{"wrongOne", "wrong.//"}
 	for i := range wrongGvk {
-		gvk := &GroupVersionKind{}
+		gvk := &api.GroupVersionKind{}
 		err := gvk.UnmarshalText([]byte(wrongGvk[i]))
 		if err == nil {
 			t.Logf("expected exception but not thrown for [%s]", wrongGvk[i])
@@ -88,7 +89,7 @@ func TestRelativeObjectMap_InitGroup_ShouldInitializeNilGroup(t *testing.T) {
 
 	underTest.InitGroup(gvk)
 
-	internalGvk := GroupVersionKind{gvk}
+	internalGvk := api.GroupVersionKind{GroupVersionKind: gvk}
 	if underTest[internalGvk] == nil {
 		t.Logf("%s should not be nil after initialization", internalGvk)
 		t.Fail()
@@ -98,7 +99,7 @@ func TestRelativeObjectMap_InitGroup_ShouldInitializeNilGroup(t *testing.T) {
 func TestRelativeObjectMap_InitGroup_ShouldNotOverrideNonNilGroup(t *testing.T) {
 	underTest := make(RelativeObjectMap)
 	gvk := schema.GroupVersionKind{Group: "apps", Version: "v1", Kind: "StatefulSet"}
-	internalGvk := GroupVersionKind{gvk}
+	internalGvk := api.GroupVersionKind{GroupVersionKind: gvk}
 	expectedGroup := make(map[string]*unstructured.Unstructured)
 	expectedGroup["test"] = &unstructured.Unstructured{}
 	underTest[internalGvk] = expectedGroup
