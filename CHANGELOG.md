@@ -1,3 +1,10 @@
+## [4.7.4](https://github.com/metacontroller/metacontroller/compare/v4.7.3...v4.7.4) (2023-02-02)
+
+
+### Bug Fixes
+
+* **deps:** update golang docker tag to v1.20.0 ([333c539](https://github.com/metacontroller/metacontroller/commit/333c539020d25d0695153bdfba033bbb8a597fcd))
+
 ## [4.7.3](https://github.com/metacontroller/metacontroller/compare/v4.7.2...v4.7.3) (2023-01-13)
 
 
