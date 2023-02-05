@@ -13,7 +13,7 @@ helm package deploy/helm/metacontroller --destination deploy/helm
 ## Installing the chart from package
 
 ```shell
-helm install metacontroller deploy/helm/metacontroller-v*.tgz
+helm install metacontroller deploy/helm/metacontroller-helm-v*.tgz
 ```
 
 ## Installing chart from ghcr.io
