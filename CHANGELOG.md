@@ -1,3 +1,10 @@
+## [4.7.6](https://github.com/metacontroller/metacontroller/compare/v4.7.5...v4.7.6) (2023-02-16)
+
+
+### Bug Fixes
+
+* Support testing on arm64 ([3b9b8dd](https://github.com/metacontroller/metacontroller/commit/3b9b8ddae6c52a249f50c2443e94f0e12f8fc1d7))
+
 ## [4.7.5](https://github.com/metacontroller/metacontroller/compare/v4.7.4...v4.7.5) (2023-02-16)
 
 
