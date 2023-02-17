@@ -12,10 +12,10 @@ require (
 	github.com/prometheus/client_golang v1.14.0
 	github.com/stretchr/testify v1.8.1 //test
 	go.uber.org/zap v1.24.0
-	k8s.io/api v0.25.4
+	k8s.io/api v0.25.6
 	k8s.io/apiextensions-apiserver v0.25.4
-	k8s.io/apimachinery v0.25.4
-	k8s.io/client-go v0.25.4
+	k8s.io/apimachinery v0.25.6
+	k8s.io/client-go v0.25.6
 	k8s.io/klog/v2 v2.80.1
 	k8s.io/utils v0.0.0-20221108210102-8e77b1f39fe2
 	sigs.k8s.io/controller-runtime v0.13.1
@@ -58,11 +58,11 @@ require (
 	github.com/spf13/pflag v1.0.5 // indirect
 	go.uber.org/atomic v1.7.0 // indirect
 	go.uber.org/multierr v1.6.0 // indirect
-	golang.org/x/net v0.0.0-20220722155237-a158d28d115b // indirect
+	golang.org/x/net v0.3.1-0.20221206200815-1e63c2f08a10 // indirect
 	golang.org/x/oauth2 v0.0.0-20220223155221-ee480838109b // indirect
-	golang.org/x/sys v0.2.0 // indirect
-	golang.org/x/term v0.2.0 // indirect
-	golang.org/x/text v0.4.0 // indirect
+	golang.org/x/sys v0.3.0 // indirect
+	golang.org/x/term v0.3.0 // indirect
+	golang.org/x/text v0.5.0 // indirect
 	golang.org/x/time v0.0.0-20220609170525-579cf78fd858 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.2.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
@@ -80,7 +80,7 @@ replace (
 	golang.org/x/net => golang.org/x/net v0.2.0 // fix for CVE-2022-27664
 	golang.org/x/text => golang.org/x/text v0.3.8 // fix for CVE-2022-32149
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.25.4
-	k8s.io/apimachinery => k8s.io/apimachinery v0.25.4
-	k8s.io/client-go => k8s.io/client-go v0.25.4
-	k8s.io/component-base => k8s.io/component-base v0.25.4
+	k8s.io/apimachinery => k8s.io/apimachinery v0.25.6
+	k8s.io/client-go => k8s.io/client-go v0.25.6
+	k8s.io/component-base => k8s.io/component-base v0.25.6
 )
