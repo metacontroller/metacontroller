@@ -1,3 +1,12 @@
+## [4.7.8](https://github.com/metacontroller/metacontroller/compare/v4.7.7...v4.7.8) (2023-02-17)
+
+
+### Bug Fixes
+
+* **deps:** Update k8s.io/klog/v2 to v2.90.0 ([31d7850](https://github.com/metacontroller/metacontroller/commit/31d7850d2b32c316b7daf50f4aa93f3665ffc476))
+* **deps:** Update k8s.io/utils to v0.0.0-20230209194617-a36077c30491 ([fb92f04](https://github.com/metacontroller/metacontroller/commit/fb92f042ee7c83062cd2af95dd241bf17b1c98d0))
+* **deps:** Update kubernetes packages to v0.25.6 ([d82a47a](https://github.com/metacontroller/metacontroller/commit/d82a47a95d123f1242f2ce3dc7d944cad5c20f23))
+
 ## [4.7.7](https://github.com/metacontroller/metacontroller/compare/v4.7.6...v4.7.7) (2023-02-17)
 
 
