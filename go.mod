@@ -78,7 +78,7 @@ require (
 
 replace (
 	golang.org/x/net => golang.org/x/net v0.2.0 // fix for CVE-2022-27664
-	golang.org/x/text => golang.org/x/text v0.3.8 // fix for CVE-2022-32149
+	golang.org/x/text => golang.org/x/text v0.7.0 // fix for CVE-2022-32149
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.25.4
 	k8s.io/apimachinery => k8s.io/apimachinery v0.25.4
 	k8s.io/client-go => k8s.io/client-go v0.25.4
