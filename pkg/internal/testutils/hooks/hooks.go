@@ -41,10 +41,15 @@ func NewDisabledExecutorStub() *hookExecutorStub {
 	}
 }
 
+func NewErrorExecutorStub(err error) *hookExecutorStub {
+	return &hookExecutorStub{err: err}
+}
+
 // HookExecutorStub is Hook stub to return any given response
 type hookExecutorStub struct {
 	enabled  bool
 	response interface{}
+	err      error
 }
 
 func (h *hookExecutorStub) IsEnabled() bool {
@@ -52,6 +57,10 @@ func (h *hookExecutorStub) IsEnabled() bool {
 }
 
 func (h *hookExecutorStub) Call(request api.WebhookRequest, response interface{}) error {
+	if h.err != nil {
+		return h.err
+	}
+
 	val := reflect.ValueOf(response)
 	if val.Kind() != reflect.Ptr {
 		return fmt.Errorf(`panic("not a pointer")`)
