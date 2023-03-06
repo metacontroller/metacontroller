@@ -2,11 +2,13 @@ package hooks
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"metacontroller/pkg/controller/common"
 	v1 "metacontroller/pkg/controller/common/customize/api/v1"
 	"metacontroller/pkg/logging"
 	"net/http"
+	"strconv"
 	"testing"
 	"time"
 
@@ -94,29 +96,45 @@ func TestWebhookTimeout_givenTimeoutIfPositive(t *testing.T) {
 
 type clientMock struct {
 	jsonResponse string
+	statusCode   int
+	headers      http.Header
 }
 
-func NewHttpClientMockWithResponse(jsonResponse string) *clientMock {
+func newHttpClientMockWithResponse(jsonResponse string) *clientMock {
 	return &clientMock{
 		jsonResponse: jsonResponse,
+		statusCode:   http.StatusOK,
+		headers:      map[string][]string{},
 	}
 }
 
-func (c *clientMock) Do(req *http.Request) (*http.Response, error) {
+func newHttpClientMockWith429(retryAfter string) *clientMock {
+	return &clientMock{
+		jsonResponse: `{"some": "sother"}`,
+		statusCode:   http.StatusTooManyRequests,
+		headers: map[string][]string{
+			"Retry-After": {retryAfter},
+		},
+	}
+}
+
+func (c *clientMock) Do(*http.Request) (*http.Response, error) {
 	return &http.Response{
-		StatusCode: http.StatusOK,
+		StatusCode: c.statusCode,
 		Body:       io.NopCloser(bytes.NewBufferString(c.jsonResponse)),
+		Header:     c.headers,
 	}, nil
 }
 
 func Test_when_incorrectJsonResponseInLooseMode_deserializeToEmptyResponse(t *testing.T) {
 	logging.Logger = testr.New(t)
 	webhookExecutor := newWebhookExecutor(
-		NewHttpClientMockWithResponse(`{"some": "sother"}`),
+		newHttpClientMockWithResponse(`{"some": "sother"}`),
 		"",
 		common.CustomizeHook,
 		nil,
 		&webhookExecutorPlain{},
+		time.Now,
 	)
 
 	var response v1.CustomizeHookResponse
@@ -127,16 +145,54 @@ func Test_when_incorrectJsonResponseInLooseMode_deserializeToEmptyResponse(t *te
 func Test_when_incorrectJsonResponseInStrictMode_thrownError(t *testing.T) {
 	logging.Logger = testr.New(t)
 	webhookExecutor := newWebhookExecutor(
-		NewHttpClientMockWithResponse(`{"some": "sother"}`),
+		newHttpClientMockWithResponse(`{"some": "sother"}`),
 		"",
 		common.CustomizeHook,
 		toPointer(v1alpha1.ResponseUnmarshallModeStrict),
 		&webhookExecutorPlain{},
+		time.Now,
 	)
 
 	var response v1.CustomizeHookResponse
 	err := webhookExecutor.Call(nil, &response)
 	assert.Error(t, err)
+}
+
+func Test429Response_thrown_TooManyRequestError(t *testing.T) {
+	logging.Logger = testr.New(t)
+	now := time.Now()
+	expectAfterSecond := 10
+	tests := []struct {
+		name       string
+		retryAfter string
+	}{
+		{
+			name:       "is number",
+			retryAfter: strconv.Itoa(expectAfterSecond),
+		},
+		{
+			name:       "is http date format",
+			retryAfter: now.Add(time.Duration(expectAfterSecond) * time.Second).Format(time.RFC1123),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(fmt.Sprintf("error with right retryAfter seconds when backend service return 429 given retryAfter %s", tt.name), func(t *testing.T) {
+			webhookExecutor := newWebhookExecutor(
+				newHttpClientMockWith429(tt.retryAfter),
+				"",
+				common.CustomizeHook,
+				toPointer(v1alpha1.ResponseUnmarshallModeStrict),
+				&webhookExecutorPlain{},
+				func() time.Time {
+					return now
+				},
+			)
+
+			err := webhookExecutor.Call(nil, &v1.CustomizeHookResponse{})
+			assert.Equal(t, expectAfterSecond, err.(*TooManyRequestError).AfterSecond)
+		})
+	}
 }
 
 func toPointer(mode v1alpha1.ResponseUnmarshallMode) *v1alpha1.ResponseUnmarshallMode {

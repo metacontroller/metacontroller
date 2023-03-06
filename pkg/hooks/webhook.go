@@ -21,12 +21,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"metacontroller/pkg/cache"
 	"metacontroller/pkg/controller/common"
 	"metacontroller/pkg/controller/common/api"
 	"metacontroller/pkg/logging"
 	"metacontroller/pkg/metrics"
 	"net/http"
+	"strconv"
 	"time"
 
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
@@ -98,6 +100,7 @@ func NewWebhookExecutor(
 		hookType,
 		webhook.ResponseUnmarshallMode,
 		abstract,
+		time.Now,
 	), nil
 }
 
@@ -105,13 +108,15 @@ func newWebhookExecutor(client HttpClientInterface,
 	url string,
 	hookType common.HookType,
 	unmarshallMode *v1alpha1.ResponseUnmarshallMode,
-	abstract webhookAbstract) *webhookExecutor {
+	abstract webhookAbstract,
+	now func() time.Time) *webhookExecutor {
 	return &webhookExecutor{
 		client:                 client,
 		url:                    url,
 		hookType:               hookType.String(),
 		webhookAbstract:        abstract,
 		responseUnmarshallMode: responseUnmarshallMode(unmarshallMode),
+		now:                    now,
 	}
 }
 
@@ -134,6 +139,7 @@ type webhookExecutor struct {
 	hookType               string
 	webhookAbstract        webhookAbstract
 	responseUnmarshallMode v1alpha1.ResponseUnmarshallMode
+	now                    func() time.Time
 }
 
 func (w *webhookExecutor) Call(webhookRequest api.WebhookRequest, webhookResponse interface{}) error {
@@ -158,6 +164,18 @@ func (w *webhookExecutor) Call(webhookRequest api.WebhookRequest, webhookRespons
 		return fmt.Errorf("http error: %w", err)
 	}
 	defer response.Body.Close()
+
+	if response.StatusCode == 429 {
+		var afterSecond int
+		retryAfter := response.Header.Get("Retry-After")
+		nextTime, err := time.Parse(time.RFC1123, retryAfter)
+		if err != nil {
+			afterSecond, _ = strconv.Atoi(retryAfter)
+		} else {
+			afterSecond = int(math.Ceil(nextTime.Sub(w.now()).Seconds()))
+		}
+		return &TooManyRequestError{afterSecond}
+	}
 
 	// Read webhookResponse.
 	responseBody, err := io.ReadAll(response.Body)
