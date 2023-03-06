@@ -17,6 +17,9 @@ limitations under the License.
 package common
 
 import (
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
+	clientgotesting "k8s.io/client-go/testing"
 	"metacontroller/pkg/controller/common/finalizer"
 	dynamicdiscovery "metacontroller/pkg/dynamic/discovery"
 
@@ -30,6 +33,18 @@ func NewCh() chan struct{} {
 }
 
 var NoOpFn = func(fakeDynamicClient *fake.FakeDynamicClient) {}
+
+var ListFn = func(fakeDynamicClient *fake.FakeDynamicClient) {
+	fakeDynamicClient.PrependReactor("list", "*", func(action clientgotesting.Action) (handled bool, ret runtime.Object, err error) {
+		result := unstructured.UnstructuredList{
+			Object: make(map[string]interface{}),
+			Items: []unstructured.Unstructured{
+				*NewDefaultUnstructured(),
+			},
+		}
+		return true, &result, nil
+	})
+}
 
 var DefaultFinalizerManager = finalizer.NewManager("testFinalizerManager", false)
 

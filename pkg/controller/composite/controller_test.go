@@ -18,6 +18,7 @@ package composite
 
 import (
 	"fmt"
+	"github.com/stretchr/testify/assert"
 	"metacontroller/pkg/apis/metacontroller/v1alpha1"
 	"metacontroller/pkg/client/generated/clientset/internalclientset"
 	mclisters "metacontroller/pkg/client/generated/lister/metacontroller/v1alpha1"
@@ -40,7 +41,6 @@ import (
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic/fake"
@@ -158,18 +158,7 @@ func Test_parentController_sync(t *testing.T) {
 		{
 			name: "no error on successful sync",
 			clientsAndInformers: func() (*fake.FakeDynamicClient, *dynamicdiscovery.ResourceMap, *dynamicclientset.Clientset, *dynamicclientset.ResourceClient, *dynamicinformer.ResourceInformer) {
-				fakeDynamicClientFn := func(fakeDynamicClient *fake.FakeDynamicClient) {
-					fakeDynamicClient.PrependReactor("list", "*", func(action clientgotesting.Action) (handled bool, ret runtime.Object, err error) {
-						result := unstructured.UnstructuredList{
-							Object: make(map[string]interface{}),
-							Items: []unstructured.Unstructured{
-								*NewDefaultUnstructured(),
-							},
-						}
-						return true, &result, nil
-					})
-				}
-				return newDefaultControllerClientsAndInformers(fakeDynamicClientFn, true)
+				return newDefaultControllerClientsAndInformers(ListFn, true)
 			},
 			fields: fields{
 				cc:             newDefaultCompositeController(),
@@ -343,4 +332,34 @@ func Test_parentController_sync(t *testing.T) {
 			}
 		})
 	}
+}
+
+func Test_parentController_sync_requeue_item_when_hook_throw_TooManyRequestError(t *testing.T) {
+	logging.InitLogging(&zap.Options{})
+	_, _, dynClient, parentClient, parentInformer := newDefaultControllerClientsAndInformers(ListFn, true)
+	pc := &parentController{
+		cc:             newDefaultCompositeController(),
+		parentResource: &DefaultApiResource,
+		mcClient:       nil,
+		dynClient:      dynClient,
+		parentClient:   parentClient,
+		parentInformer: parentInformer,
+		revisionLister: nil,
+		stopCh:         NewCh(),
+		doneCh:         NewCh(),
+		queue:          NewDefaultWorkQueue(),
+		updateStrategy: nil,
+		childInformers: nil,
+		numWorkers:     1,
+		eventRecorder:  NewFakeRecorder(),
+		finalizer:      DefaultFinalizerManager,
+		customize:      defaultCustomizeManager(),
+		syncHook:       NewErrorExecutorStub(&hooks.TooManyRequestError{0}),
+		finalizeHook:   NewHookExecutorStub(defaultSyncResponse),
+		logger:         logging.Logger,
+	}
+
+	err := pc.sync(defaultTestKey)
+	assert.Nil(t, err)
+	assert.Equal(t, 1, pc.queue.Len())
 }
