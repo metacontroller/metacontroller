@@ -322,10 +322,8 @@ kubectl -n hello apply -f hello.yaml
 
 Our controller should see this and create a Pod that prints a greeting
 and then exits.
-If you list all Pods (with the `-a` flag) in the `hello` namespace:
-
 ```sh
-kubectl -n hello get pods -a
+kubectl -n hello get pods
 ```
 
 You should see something like this:
