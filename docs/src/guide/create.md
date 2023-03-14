@@ -383,7 +383,7 @@ kubectl -n hello delete helloworld your-name
 And then checking for the child Pod:
 
 ```sh
-kubectl -n hello get pods -a
+kubectl -n hello get pods
 ```
 
 You should see that the child Pod was cleaned up automatically,
