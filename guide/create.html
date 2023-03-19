@@ -409,9 +409,8 @@ spec:
 <pre><code class="language-sh">kubectl -n hello apply -f hello.yaml
 </code></pre>
 <p>Our controller should see this and create a Pod that prints a greeting
-and then exits.
-If you list all Pods (with the <code>-a</code> flag) in the <code>hello</code> namespace:</p>
-<pre><code class="language-sh">kubectl -n hello get pods -a
+and then exits.</p>
+<pre><code class="language-sh">kubectl -n hello get pods
 </code></pre>
 <p>You should see something like this:</p>
 <pre><code class="language-console">NAME                                READY     STATUS      RESTARTS   AGE
@@ -444,7 +443,7 @@ goes away (assuming your cluster is version 1.8+).</p>
 <pre><code class="language-sh">kubectl -n hello delete helloworld your-name
 </code></pre>
 <p>And then checking for the child Pod:</p>
-<pre><code class="language-sh">kubectl -n hello get pods -a
+<pre><code class="language-sh">kubectl -n hello get pods
 </code></pre>
 <p>You should see that the child Pod was cleaned up automatically,
 so only the webhook Pod remains:</p>
