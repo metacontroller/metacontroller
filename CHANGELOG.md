@@ -1,3 +1,10 @@
+## [4.7.9](https://github.com/metacontroller/metacontroller/compare/v4.7.8...v4.7.9) (2023-03-19)
+
+
+### Bug Fixes
+
+* **cve-2022-41723:** Fix cve 2022-41723 ([06d1c67](https://github.com/metacontroller/metacontroller/commit/06d1c67f4dee9101dc69f2273e6d461802b8848f))
+
 ## [4.7.8](https://github.com/metacontroller/metacontroller/compare/v4.7.7...v4.7.8) (2023-02-17)
 
 
