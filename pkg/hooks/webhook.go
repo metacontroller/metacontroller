@@ -174,7 +174,7 @@ func (w *webhookExecutor) Call(webhookRequest api.WebhookRequest, webhookRespons
 		} else {
 			afterSecond = int(math.Ceil(nextTime.Sub(w.now()).Seconds()))
 		}
-		return &TooManyRequestError{afterSecond}
+		return &TooManyRequestError{AfterSecond: afterSecond}
 	}
 
 	// Read webhookResponse.

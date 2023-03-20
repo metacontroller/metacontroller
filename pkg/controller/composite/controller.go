@@ -18,6 +18,7 @@ package composite
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	commonv1 "metacontroller/pkg/controller/common/api/v1"
 	"metacontroller/pkg/hooks"
@@ -518,8 +519,9 @@ func (pc *parentController) sync(key string) error {
 		}
 	}
 	err = pc.syncParentObject(parent)
-	if unwrapErr := hooks.UnwrapTo(err, &hooks.TooManyRequestError{}); unwrapErr != nil {
-		afterSec := unwrapErr.(*hooks.TooManyRequestError).AfterSecond
+	var tooManyRequestError *hooks.TooManyRequestError
+	if errors.As(err, &tooManyRequestError) {
+		afterSec := tooManyRequestError.AfterSecond
 		pc.logger.Info("Resync due to too many request for sync hooks", "second", afterSec, "parent", parent)
 		pc.queue.AddAfter(key, time.Duration(afterSec)*time.Second)
 		return nil
