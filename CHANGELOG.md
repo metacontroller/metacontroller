@@ -1,3 +1,12 @@
+## [4.7.10](https://github.com/metacontroller/metacontroller/compare/v4.7.9...v4.7.10) (2023-03-20)
+
+
+### Bug Fixes
+
+* **deps:** update alpine:3.17.2 docker digest to ff6bdca ([8857bca](https://github.com/metacontroller/metacontroller/commit/8857bcace96951eed3e97916ec9c53fcc86775a4))
+* **deps:** update golang docker tag to v1.20.2 ([c12742c](https://github.com/metacontroller/metacontroller/commit/c12742c9244aca025c2b31fbcd1d324c85cef2b4))
+* **deps:** update module github.com/stretchr/testify to v1.8.2 ([a83a5b9](https://github.com/metacontroller/metacontroller/commit/a83a5b9712dc449a5df813c6885bfb776a1de7d2))
+
 ## [4.7.9](https://github.com/metacontroller/metacontroller/compare/v4.7.8...v4.7.9) (2023-03-19)
 
 
