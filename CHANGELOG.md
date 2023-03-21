@@ -1,3 +1,10 @@
+# [4.8.0](https://github.com/metacontroller/metacontroller/compare/v4.7.10...v4.8.0) (2023-03-21)
+
+
+### Features
+
+* Add 390x support ([f8b6ca7](https://github.com/metacontroller/metacontroller/commit/f8b6ca7bf893a7c9ce43b9549af5ac80adf6d5ca))
+
 ## [4.7.10](https://github.com/metacontroller/metacontroller/compare/v4.7.9...v4.7.10) (2023-03-20)
 
 
