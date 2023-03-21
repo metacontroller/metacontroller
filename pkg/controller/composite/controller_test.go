@@ -354,7 +354,7 @@ func Test_parentController_sync_requeue_item_when_hook_throw_TooManyRequestError
 		eventRecorder:  NewFakeRecorder(),
 		finalizer:      DefaultFinalizerManager,
 		customize:      defaultCustomizeManager(),
-		syncHook:       NewErrorExecutorStub(&hooks.TooManyRequestError{0}),
+		syncHook:       NewErrorExecutorStub(&hooks.TooManyRequestError{AfterSecond: 0}),
 		finalizeHook:   NewHookExecutorStub(defaultSyncResponse),
 		logger:         logging.Logger,
 	}

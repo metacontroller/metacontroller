@@ -3,6 +3,7 @@ package hooks
 import (
 	"bytes"
 	"fmt"
+	"github.com/pkg/errors"
 	"io"
 	"metacontroller/pkg/controller/common"
 	v1 "metacontroller/pkg/controller/common/customize/api/v1"
@@ -190,7 +191,9 @@ func Test429Response_thrown_TooManyRequestError(t *testing.T) {
 			)
 
 			err := webhookExecutor.Call(nil, &v1.CustomizeHookResponse{})
-			assert.Equal(t, expectAfterSecond, err.(*TooManyRequestError).AfterSecond)
+			var tooManyRequestError *TooManyRequestError
+			errors.As(err, &tooManyRequestError)
+			assert.Equal(t, expectAfterSecond, tooManyRequestError.AfterSecond)
 		})
 	}
 }
