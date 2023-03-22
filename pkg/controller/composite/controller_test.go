@@ -18,7 +18,6 @@ package composite
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"metacontroller/pkg/apis/metacontroller/v1alpha1"
 	"metacontroller/pkg/client/generated/clientset/internalclientset"
 	mclisters "metacontroller/pkg/client/generated/lister/metacontroller/v1alpha1"
@@ -37,6 +36,8 @@ import (
 	"metacontroller/pkg/logging"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
