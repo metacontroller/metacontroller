@@ -3,7 +3,6 @@ package hooks
 import (
 	"bytes"
 	"fmt"
-	"github.com/pkg/errors"
 	"io"
 	"metacontroller/pkg/controller/common"
 	v1 "metacontroller/pkg/controller/common/customize/api/v1"
@@ -12,6 +11,8 @@ import (
 	"strconv"
 	"testing"
 	"time"
+
+	"github.com/pkg/errors"
 
 	"github.com/stretchr/testify/assert"
 

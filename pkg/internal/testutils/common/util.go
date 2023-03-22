@@ -17,11 +17,12 @@ limitations under the License.
 package common
 
 import (
+	"metacontroller/pkg/controller/common/finalizer"
+	dynamicdiscovery "metacontroller/pkg/dynamic/discovery"
+
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgotesting "k8s.io/client-go/testing"
-	"metacontroller/pkg/controller/common/finalizer"
-	dynamicdiscovery "metacontroller/pkg/dynamic/discovery"
 
 	"k8s.io/client-go/dynamic/fake"
 	"k8s.io/client-go/tools/record"
