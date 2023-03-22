@@ -1,3 +1,14 @@
+# [4.9.0](https://github.com/metacontroller/metacontroller/compare/v4.8.0...v4.9.0) (2023-03-22)
+
+
+### Features
+
+* **handle-429:** [#533](https://github.com/metacontroller/metacontroller/issues/533) - Fix lint about literal unkeyed field and use errors.As instead of cast directly. ([87698dd](https://github.com/metacontroller/metacontroller/commit/87698dd54f53c716f412098a37f69353e2057722))
+* **handle-429:** [#533](https://github.com/metacontroller/metacontroller/issues/533) - Fix lint errors. ([6821512](https://github.com/metacontroller/metacontroller/commit/68215126632fd71a6d93a3d2555ac7fb4a6fc738))
+* **handle-429:** [#533](https://github.com/metacontroller/metacontroller/issues/533) - Requeue item when syncing meet TooManyRequestError. ([b812df8](https://github.com/metacontroller/metacontroller/commit/b812df8f55c41a416f059a830f55186fc0e990f3))
+* **handle-429:** [#533](https://github.com/metacontroller/metacontroller/issues/533) - Support rate limiting based on retry-after header. ([b149833](https://github.com/metacontroller/metacontroller/commit/b1498334321fce1c370acc91321c759b62edbc73))
+* **handle-429:** [#533](https://github.com/metacontroller/metacontroller/issues/533) - Use goimports fix linting error. ([9a5a279](https://github.com/metacontroller/metacontroller/commit/9a5a279ec856bfe8401cf4a5c73bf629fc034875))
+
 # [4.8.0](https://github.com/metacontroller/metacontroller/compare/v4.7.10...v4.8.0) (2023-03-21)
 
 
