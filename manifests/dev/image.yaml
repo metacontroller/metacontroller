@@ -9,4 +9,4 @@ spec:
     spec:
       containers:
       - name: metacontroller
-        image: metacontrollerio/metacontroller:dev
+        image: localhost/metacontroller:dev

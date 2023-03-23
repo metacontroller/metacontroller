@@ -35,7 +35,7 @@ jobs:
       run: make image
     - name: Save image
       run: |
-        docker save --output metacontroller-lint.tar metacontrollerio/metacontroller:dev
+        docker save --output metacontroller-lint.tar localhost/metacontroller:dev
     - uses: actions/upload-artifact@v3
       name: Save metacontroller image
       with:
@@ -56,7 +56,7 @@ jobs:
     - name: Trivy scan
       uses: aquasecurity/trivy-action@master
       with:
-        image-ref: 'metacontrollerio/metacontroller:dev'
+        image-ref: 'localhost/metacontroller:dev'
         format: 'table'
         exit-code: '1'
         ignore-unfixed: true
@@ -76,7 +76,7 @@ jobs:
       - name: Dockle scan
         uses: erzz/dockle-action@v1
         with:
-          image: 'metacontrollerio/metacontroller:dev'
+          image: 'localhost/metacontroller:dev'
   documentation-test:
     runs-on: ubuntu-22.04
     container:
