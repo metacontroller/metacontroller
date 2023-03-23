@@ -2,7 +2,7 @@ rbac:
   create: true
 
 image:
-  repository: metacontrollerio/metacontroller
+  repository: ghcr.io/metacontroller/metacontroller
   pullPolicy: IfNotPresent
   tag: ""
 

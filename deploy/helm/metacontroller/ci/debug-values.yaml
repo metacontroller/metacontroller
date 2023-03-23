@@ -2,7 +2,7 @@ rbac:
   create: true
 
 image:
-  repository: metacontrollerio/metacontroller
+  repository: localhost/metacontroller
   pullPolicy: IfNotPresent
   tag: "debug"
 

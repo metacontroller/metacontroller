@@ -41,7 +41,7 @@ test-setup:
 
 .PHONY: image
 image: build
-	docker build -t metacontrollerio/metacontroller:$(TAG) -f $(DOCKERFILE) .
+	docker build -t localhost/metacontroller:$(TAG) -f $(DOCKERFILE) .
 
 .PHONY: image_debug
 image_debug: TAG=debug

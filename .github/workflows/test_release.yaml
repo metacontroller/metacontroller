@@ -31,7 +31,7 @@ jobs:
           make ${{ matrix.target.command }}
       - name: Build metacontroller:${{ matrix.target.name }}
         run: |
-          docker save --output metacontroller-${{ matrix.target.name }}.tar metacontrollerio/metacontroller:${{ matrix.target.name }}
+          docker save --output metacontroller-${{ matrix.target.name }}.tar localhost/metacontroller:${{ matrix.target.name }}
       - uses: actions/upload-artifact@v3
         name: Upload metacontroller images
         with:
@@ -121,7 +121,7 @@ jobs:
       - name: Load metacontroller images
         run: |
           docker load --input metacontroller-dev.tar
-          kind load docker-image metacontrollerio/metacontroller:dev
+          kind load docker-image localhost/metacontroller:dev
 
       - name: Apply metacontroller manifests
         run: |
@@ -188,13 +188,13 @@ jobs:
       - name: Load metacontroller images
         run: |
           docker load --input metacontroller-dev.tar
-          kind load docker-image metacontrollerio/metacontroller:dev
+          kind load docker-image localhost/metacontroller:dev
           docker load --input metacontroller-debug.tar
-          kind load docker-image metacontrollerio/metacontroller:debug
+          kind load docker-image localhost/metacontroller:debug
 
       - name: Copy default values.yaml to ci directory with dev image
         run: |
-          sed 's/tag: ""/tag: "dev"/g' deploy/helm/metacontroller/values.yaml > deploy/helm/metacontroller/ci/default-values.yaml
+          sed 's/tag: ""/tag: "dev"/g; s/ghcr.io\/metacontroller/localhost/' deploy/helm/metacontroller/values.yaml > deploy/helm/metacontroller/ci/default-values.yaml
 
       - name: Run chart-testing (lint-and-install)
         run: |
