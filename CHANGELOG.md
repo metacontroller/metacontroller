@@ -1,3 +1,10 @@
+# [4.10.0](https://github.com/metacontroller/metacontroller/compare/v4.9.0...v4.10.0) (2023-03-28)
+
+
+### Features
+
+* **helm/manifests:** Switch to ghcr.io container repository ([6db766b](https://github.com/metacontroller/metacontroller/commit/6db766b1c2556678a6ea14890b2dfd616979ad7e))
+
 # [4.9.0](https://github.com/metacontroller/metacontroller/compare/v4.8.0...v4.9.0) (2023-03-22)
 
 
