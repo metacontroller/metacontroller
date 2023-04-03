@@ -128,8 +128,8 @@ if the target object is deleted.
 
 Note that, if you are going to put status in the attachment resource thats being
 returned ([more about this in Hooks section](#Hooks)), you need to make sure that 
-there is no race with another controller trying to set the status of concerned 
-attachment. 
+there isn't going to be a race condition with another controller which is also 
+trying to set the status of the concerned attachment. 
 
 Each entry in the `attachments` list has the following fields:
 
