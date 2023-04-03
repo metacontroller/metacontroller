@@ -126,6 +126,11 @@ Instead, attachments are only connected to the target object
 through owner references, meaning they will get cleaned up
 if the target object is deleted.
 
+Note that, if you are going to put status in the attachment resource thats being
+returned ([more about this in Hooks section](#Hooks)), you need to make sure that 
+there is no race with another controller trying to set the status of concerned 
+attachment. 
+
 Each entry in the `attachments` list has the following fields:
 
 | Field | Description |

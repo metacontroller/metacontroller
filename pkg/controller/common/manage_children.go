@@ -54,11 +54,6 @@ func ApplyUpdate(orig, update *unstructured.Unstructured) (*unstructured.Unstruc
 	if err := revertObjectMetaSystemFields(newObj, orig); err != nil {
 		return nil, fmt.Errorf("failed to revert ObjectMeta system fields: %w", err)
 	}
-	// Revert status because we don't currently support a parent changing status of
-	// its children, so we need to ensure no diffs on the children involve status.
-	if err := revertField(newObj, orig, "status"); err != nil {
-		return nil, fmt.Errorf("failed to revert .status: %w", err)
-	}
 	if err = dynamicapply.SetLastApplied(newObj, update.UnstructuredContent()); err != nil {
 		logging.Logger.Error(err, "failed to set lastApplied")
 	}
