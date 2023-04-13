@@ -12,16 +12,18 @@ require (
 	github.com/prometheus/client_golang v1.14.0
 	github.com/stretchr/testify v1.8.2 //test
 	go.uber.org/zap v1.24.0
-	k8s.io/api v0.25.6
+	k8s.io/api v0.25.9
 	k8s.io/apiextensions-apiserver v0.25.6
-	k8s.io/apimachinery v0.25.6
-	k8s.io/client-go v0.25.6
+	k8s.io/apimachinery v0.25.9
+	k8s.io/client-go v0.25.9
 	k8s.io/klog/v2 v2.90.0
 	k8s.io/utils v0.0.0-20230209194617-a36077c30491
 	sigs.k8s.io/controller-runtime v0.13.1
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd
 	zgo.at/zcache/v2 v2.1.0
 )
+
+require github.com/pkg/errors v0.9.1
 
 require (
 	github.com/PuerkitoBio/purell v1.1.1 // indirect
@@ -50,7 +52,6 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
-	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/client_model v0.3.0 // indirect
 	github.com/prometheus/common v0.37.0 // indirect
@@ -58,7 +59,7 @@ require (
 	github.com/spf13/pflag v1.0.5 // indirect
 	go.uber.org/atomic v1.7.0 // indirect
 	go.uber.org/multierr v1.6.0 // indirect
-	golang.org/x/net v0.3.1-0.20221206200815-1e63c2f08a10 // indirect
+	golang.org/x/net v0.7.0 // indirect
 	golang.org/x/oauth2 v0.0.0-20220223155221-ee480838109b // indirect
 	golang.org/x/sys v0.5.0 // indirect
 	golang.org/x/term v0.5.0 // indirect
@@ -79,7 +80,7 @@ require (
 replace (
 	golang.org/x/net => golang.org/x/net v0.7.0 // https://avd.aquasec.com/nvd/cve-2022-41723
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.25.6
-	k8s.io/apimachinery => k8s.io/apimachinery v0.25.6
-	k8s.io/client-go => k8s.io/client-go v0.25.6
-	k8s.io/component-base => k8s.io/component-base v0.25.6
+	k8s.io/apimachinery => k8s.io/apimachinery v0.25.9
+	k8s.io/client-go => k8s.io/client-go v0.25.9
+	k8s.io/component-base => k8s.io/component-base v0.25.9
 )
