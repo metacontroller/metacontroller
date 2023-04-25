@@ -16,7 +16,7 @@ require (
 	k8s.io/apiextensions-apiserver v0.25.9
 	k8s.io/apimachinery v0.25.9
 	k8s.io/client-go v0.25.9
-	k8s.io/klog/v2 v2.90.0
+	k8s.io/klog/v2 v2.90.1
 	k8s.io/utils v0.0.0-20230406110748-d93618cff8a2
 	sigs.k8s.io/controller-runtime v0.13.1
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd
