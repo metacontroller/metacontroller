@@ -1,3 +1,14 @@
+## [4.10.2](https://github.com/metacontroller/metacontroller/compare/v4.10.1...v4.10.2) (2023-04-25)
+
+
+### Bug Fixes
+
+* **deps:** Update github.com/go-logr/logr to v1.2.4 ([89b55d1](https://github.com/metacontroller/metacontroller/commit/89b55d1654b42e09766a9a18961c7096c9eececf))
+* **deps:** Update github.com/prometheus/client_golang to v1.15.0 ([682c0ae](https://github.com/metacontroller/metacontroller/commit/682c0ae360ba472adc05545db8a03441d6e43d41))
+* **deps:** Update k8s.io packages to v0.25.9 ([1b351d4](https://github.com/metacontroller/metacontroller/commit/1b351d486067ce309d540206547baaa3984b4feb))
+* **deps:** Update k8s.io/klog/v2 to v2.90.1 ([9b5187d](https://github.com/metacontroller/metacontroller/commit/9b5187d8047208d956e160e4b7344930047bb467))
+* **deps:** Update k8s.io/utils to v0.0.0-20230406110748-d93618cff8a2 ([f3d01b9](https://github.com/metacontroller/metacontroller/commit/f3d01b9d2bb6da554e744ce38bdf58d668d02c17))
+
 ## [4.10.1](https://github.com/metacontroller/metacontroller/compare/v4.10.0...v4.10.1) (2023-04-08)
 
 
