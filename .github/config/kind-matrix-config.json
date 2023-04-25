@@ -14,44 +14,56 @@
     },
     {
       "version": "1.19",
-      "kind": "v0.15.0",
-      "image": "kindest/node:v1.19.16@sha256:707469aac7e6805e52c3bde2a8a8050ce2b15decff60db6c5077ba9975d28b98",
+      "kind": "v0.17.0",
+      "image": "kindest/node:v1.19.16@sha256:476cb3269232888437b61deca013832fee41f9f074f9bed79f57e4280f7c48b7",
       "runner": "ubuntu-22.04"
     },
     {
       "version": "1.20",
-      "kind": "v0.15.0",
-      "image": "kindest/node:v1.20.15@sha256:d67de8f84143adebe80a07672f370365ec7d23f93dc86866f0e29fa29ce026fe",
+      "kind": "v0.17.0",
+      "image": "kindest/node:v1.20.15@sha256:a32bf55309294120616886b5338f95dd98a2f7231519c7dedcec32ba29699394",
       "runner": "ubuntu-22.04"
     },
     {
       "version": "1.21",
-      "kind": "v0.15.0",
-      "image": "kindest/node:v1.21.14@sha256:f9b4d3d1112f24a7254d2ee296f177f628f9b4c1b32f0006567af11b91c1f301",
+      "kind": "v0.18.0",
+      "image": "kindest/node:v1.21.14@sha256:27ef72ea623ee879a25fe6f9982690a3e370c68286f4356bf643467c552a3888",
       "runner": "ubuntu-22.04"
     },
     {
       "version": "1.22",
-      "kind": "v0.15.0",
-      "image": "kindest/node:v1.22.13@sha256:4904eda4d6e64b402169797805b8ec01f50133960ad6c19af45173a27eadf959",
+      "kind": "v0.18.0",
+      "image": "kindest/node:v1.22.17@sha256:c8a828709a53c25cbdc0790c8afe12f25538617c7be879083248981945c38693",
       "runner": "ubuntu-22.04"
     },
     {
       "version": "1.23",
-      "kind": "v0.15.0",
-      "image": "kindest/node:v1.23.10@sha256:f047448af6a656fae7bc909e2fab360c18c487ef3edc93f06d78cdfd864b2d12",
+      "kind": "v0.18.0",
+      "image": "kindest/node:v1.23.17@sha256:e5fd1d9cd7a9a50939f9c005684df5a6d145e8d695e78463637b79464292e66c",
       "runner": "ubuntu-22.04"
     },
     {
       "version": "1.24",
-      "kind": "v0.15.0",
-      "image": "kindest/node:v1.24.4@sha256:adfaebada924a26c2c9308edd53c6e33b3d4e453782c0063dc0028bdebaddf98",
+      "kind": "v0.18.0",
+      "image": "kindest/node:v1.24.12@sha256:1e12918b8bc3d4253bc08f640a231bb0d3b2c5a9b28aa3f2ca1aee93e1e8db16",
       "runner": "ubuntu-22.04"
     },
     {
       "version": "1.25",
-      "kind": "v0.14.0",
-      "image": "kindest/node:v1.25.0@sha256:428aaa17ec82ccde0131cb2d1ca6547d13cf5fdabcc0bbecf749baa935387cbf",
+      "kind": "v0.18.0",
+      "image": "kindest/node:v1.25.8@sha256:00d3f5314cc35327706776e95b2f8e504198ce59ac545d0200a89e69fce10b7f",
+      "runner": "ubuntu-22.04"
+    },
+    {
+      "version": "1.26",
+      "kind": "v0.18.0",
+      "image": "kindest/node:v1.26.3@sha256:61b92f38dff6ccc29969e7aa154d34e38b89443af1a2c14e6cfbd2df6419c66f",
+      "runner": "ubuntu-22.04"
+    },
+    {
+      "version": "1.27",
+      "kind": "v0.18.0",
+      "image": "kindest/node:v1.27.1@sha256:9915f5629ef4d29f35b478e819249e89cfaffcbfeebda4324e5c01d53d937b09",
       "runner": "ubuntu-22.04"
     }
   ]
