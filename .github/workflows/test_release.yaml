@@ -55,8 +55,16 @@ jobs:
         run: |
           full_json=$(cat ./.github/config/kind-matrix-config.json | jq -rc .)
           latest_json=$(cat ./.github/config/kind-matrix-config.json  | jq -rc '.configuration |= [last]')
-          echo "::set-output name=matrix::${full_json}"
-          echo "::set-output name=latest_matrix::${latest_json}"
+          {
+            echo 'matrix<<EOF'
+            echo "${full_json}"
+            echo EOF
+          } >> "$GITHUB_OUTPUT"
+          {
+            echo 'latest_matrix<<EOF'
+            echo "${latest_json}"
+            echo EOF
+          } >> "$GITHUB_OUTPUT"
   tests:
     runs-on: ubuntu-22.04
     strategy:
