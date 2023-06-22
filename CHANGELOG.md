@@ -1,3 +1,11 @@
+## [4.10.4](https://github.com/metacontroller/metacontroller/compare/v4.10.3...v4.10.4) (2023-06-22)
+
+
+### Bug Fixes
+
+* **deps:** update alpine docker tag to v3.18.2 ([acd1a21](https://github.com/metacontroller/metacontroller/commit/acd1a2178e82edca50f6ebe05d095d41ae3f224f))
+* **deps:** update module github.com/stretchr/testify to v1.8.4 ([7498c6c](https://github.com/metacontroller/metacontroller/commit/7498c6c2a5079670626d77555f69726c1a0931d3))
+
 ## [4.10.3](https://github.com/metacontroller/metacontroller/compare/v4.10.2...v4.10.3) (2023-05-03)
 
 
