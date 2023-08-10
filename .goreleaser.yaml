@@ -26,14 +26,6 @@ builds:
       - -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}} -X main.builtBy=goreleaser {{ .Env.REMOVE_DEBUG_SYMBOLS }}
     gcflags:
       - '{{ .Env.GC_FLAGS }}'
-# probably won't be used
-archives:
-  - replacements:
-      darwin: Darwin
-      linux: Linux
-      windows: Windows
-      386: i386
-      amd64: x86_64
 dockers:
   - image_templates:
       - "{{ .Env.REPOSITORY_OWNER }}io/{{ .ProjectName }}:v{{ .Version }}-amd64"
