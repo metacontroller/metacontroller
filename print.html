@@ -3423,12 +3423,12 @@ your PR by running these end-to-end tests yourself to see if they catch anything
 <li>manifests/debug</li>
 </ul>
 <h3 id="development-build"><a class="header" href="#development-build">Development build</a></h3>
-<p>The main difference it that image defined in manifest is <code>metacontrollerio/metacontroller:dev</code>, therefore:</p>
+<p>The main difference it that image defined in manifest is <code>localhost/metacontroller:dev</code>, therefore:</p>
 <ul>
 <li>apply dev manifests - <code>kubectl apply -k manifests/dev</code></li>
 <li>build docker image with command - <code>make image</code> - this will compile the binary and build the container image</li>
-<li>load image into cluster (i.e. <code>kind load docker-image metacontrollerio/metacontroller:dev</code> in kind)</li>
-<li>restart pod</li>
+<li>load image into cluster (i.e. <code>kind load docker-image localhost/metacontroller:dev</code> in kind)</li>
+<li>restart pod (i.e. <code>kubectl delete pod/metacontroller-0 --namespace metacontroller</code>)</li>
 </ul>
 <h3 id="debug-build"><a class="header" href="#debug-build">Debug build</a></h3>
 <p>Debug requires building go sources in special way, which is done with <code>make build_debug</code>; the following image
@@ -3436,7 +3436,7 @@ built with the <code>Dockerfile.debug</code> dockerfile will then add it to the 
 <ul>
 <li>apply debug manifests - <code>kubectl apply -k manifests/debug</code></li>
 <li>build debug binary and image - <code>make image_debug</code></li>
-<li>load image into cluster (i.e. <code>kind load docker-image metacontrollerio/metacontroller:debug</code> in kind)</li>
+<li>load image into cluster (i.e. <code>kind load docker-image localhost/metacontroller:debug</code> in kind)</li>
 <li>restart pod</li>
 <li>on startup, <code>go</code> process will wait for debugger on port 40000</li>
 <li>port forward port 40000 from container into localhost, i.e. <code>kubectl port-forward metacontroller-0 40000:40000</code></li>
