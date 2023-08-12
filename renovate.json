@@ -4,7 +4,7 @@
   ],
   "semanticCommits": "enabled",
   "semanticCommitType": "fix",
-  "commitBody": "Signed-off-by: Renovate Bot <bot@renovateapp.com>",
+  "commitBody": "Signed-off-by: Mend Renovate <bot@renovateapp.com>",
   "rebaseWhen": "behind-base-branch",
   "packageRules": [
     {
