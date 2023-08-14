@@ -56,6 +56,7 @@ var (
 	leaderElectionNamespace    = flag.String("leader-election-namespace", "", "Determines the namespace in which the leader election resource will be created")
 	leaderElectionID           = flag.String("leader-election-id", "metacontroller", "Determines the name of the resource that leader election will use for holding the leader lock")
 	healthProbeBindAddress     = flag.String("health-probe-bind-address", ":8081", "The address the health probes endpoint binds to")
+	targetLabelSelector        = flag.String("target-label-selector", "", "Label selector used to restrict an instance of metacontroller to manage specific Composite and Decorator controllers")
 	version                    = "No version provided"
 )
 
@@ -80,6 +81,7 @@ func main() {
 		"leader-election-namespace", *leaderElectionNamespace,
 		"leader-election-id", *leaderElectionID,
 		"health-probe-bind-address", *healthProbeBindAddress,
+		"target-label-selector", *targetLabelSelector,
 		"version", version)
 
 	pprofStopChan := profile.EnablePprof(*pprofAddr)
@@ -109,6 +111,7 @@ func main() {
 			LeaderElectionNamespace:    *leaderElectionNamespace,
 			LeaderElectionID:           *leaderElectionID,
 		},
+		TargetLabelSelector: *targetLabelSelector,
 	}
 
 	// Create a new manager with a stop function

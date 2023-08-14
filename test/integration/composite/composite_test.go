@@ -70,7 +70,7 @@ func TestSyncWebhook(t *testing.T) {
 		return json.Marshal(resp)
 	})
 
-	f.CreateCompositeController("test-sync-webhook", hook.URL, "", framework.CRDResourceRule(parentCRD), framework.CRDResourceRule(childCRD))
+	f.CreateCompositeController("test-sync-webhook", hook.URL, "", framework.CRDResourceRule(parentCRD), framework.CRDResourceRule(childCRD), nil)
 
 	parent := framework.UnstructuredCRD(parentCRD, "test-sync-webhook")
 	unstructured.SetNestedStringMap(parent.Object, labels, "spec", "selector", "matchLabels")
@@ -137,7 +137,7 @@ func TestCascadingDelete(t *testing.T) {
 		return json.Marshal(resp)
 	})
 
-	f.CreateCompositeController("test-cascading-delete", hook.URL, "", framework.CRDResourceRule(parentCRD), &v1alpha1.ResourceRule{APIVersion: "batch/v1", Resource: "jobs"})
+	f.CreateCompositeController("test-cascading-delete", hook.URL, "", framework.CRDResourceRule(parentCRD), &v1alpha1.ResourceRule{APIVersion: "batch/v1", Resource: "jobs"}, nil)
 
 	parent := framework.UnstructuredCRD(parentCRD, "test-cascading-delete")
 	unstructured.SetNestedStringMap(parent.Object, labels, "spec", "selector", "matchLabels")
@@ -227,7 +227,7 @@ func TestResyncAfter(t *testing.T) {
 		return json.Marshal(resp)
 	})
 
-	f.CreateCompositeController("test-resync-after", hook.URL, "", framework.CRDResourceRule(parentCRD), nil)
+	f.CreateCompositeController("test-resync-after", hook.URL, "", framework.CRDResourceRule(parentCRD), nil, nil)
 
 	parent := framework.UnstructuredCRD(parentCRD, "test-resync-after")
 	unstructured.SetNestedStringMap(parent.Object, labels, "spec", "selector", "matchLabels")
@@ -337,7 +337,7 @@ func TestCustomizeWebhook(t *testing.T) {
 		return json.Marshal(resp)
 	})
 
-	f.CreateCompositeController("test-customize-webhook", syncHook.URL, customizeHook.URL, framework.CRDResourceRule(parentCRD), framework.CRDResourceRule(childCRD))
+	f.CreateCompositeController("test-customize-webhook", syncHook.URL, customizeHook.URL, framework.CRDResourceRule(parentCRD), framework.CRDResourceRule(childCRD), nil)
 
 	parent := framework.UnstructuredCRD(parentCRD, "test-customize-webhook")
 	unstructured.SetNestedStringMap(parent.Object, labels, "spec", "selector", "matchLabels")
@@ -375,7 +375,7 @@ func TestFailIfNoStatusSubresourceInParentCRD(t *testing.T) {
 		return json.Marshal(resp)
 	})
 
-	f.CreateCompositeController("test-sync-webhook", hook.URL, "", framework.CRDResourceRule(parentCRD), framework.CRDResourceRule(childCRD))
+	f.CreateCompositeController("test-sync-webhook", hook.URL, "", framework.CRDResourceRule(parentCRD), framework.CRDResourceRule(childCRD), nil)
 
 	parent := framework.UnstructuredCRD(parentCRD, "test-sync-webhook")
 	unstructured.SetNestedStringMap(parent.Object, labels, "spec", "selector", "matchLabels")

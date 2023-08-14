@@ -104,6 +104,7 @@ func (mc *Metacontroller) Reconcile(ctx context.Context, request reconcile.Reque
 			"[%s] sync error - %s", dc.Name, err)
 		return reconcile.Result{}, err
 	}
+
 	reconcileErr := mc.reconcileDecoratorController(&dc)
 	return reconcile.Result{}, reconcileErr
 }

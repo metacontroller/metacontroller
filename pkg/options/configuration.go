@@ -34,4 +34,5 @@ type Configuration struct {
 	MetricsEndpoint        string
 	LeaderElectionOptions  leaderelection.Options
 	HealthProbeBindAddress string
+	TargetLabelSelector    string
 }

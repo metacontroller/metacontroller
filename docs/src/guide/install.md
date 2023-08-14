@@ -14,7 +14,7 @@ Feel free to use whatever suits your need, they identical. Note - currently in `
 
 ## Prerequisites
 
-* Kubernetes v1.16+ (because of maintainability, e2e test suite might not cover all releases)
+* Kubernetes v1.17+ (because of maintainability, e2e test suite might not cover all releases)
 * You should have `kubectl` available and configured to talk to the desired cluster.
 
 ### Grant yourself cluster-admin (GKE only)

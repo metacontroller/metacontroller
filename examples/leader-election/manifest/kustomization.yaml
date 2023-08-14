@@ -1,5 +1,5 @@
-bases:
+resources:
 - ../../../manifests/dev
 patches:
-- args.yaml
-- replicas.yaml
+- path: args.yaml
+- path: replicas.yaml

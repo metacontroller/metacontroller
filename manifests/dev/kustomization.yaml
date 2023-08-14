@@ -1,5 +1,5 @@
-bases:
+resources:
 - ../production
 patches:
-- image.yaml
-- args.yaml
+- path:  image.yaml
+- path:  args.yaml
