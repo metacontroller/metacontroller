@@ -1,0 +1,4 @@
+resources:
+- ../../secretpropagation/v1
+patches:
+- path: controller-with-labels.yaml

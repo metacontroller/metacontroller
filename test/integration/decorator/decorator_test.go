@@ -67,7 +67,7 @@ func TestSyncWebhook(t *testing.T) {
 		return json.Marshal(resp)
 	})
 
-	f.CreateDecoratorController("dc", hook.URL, "", framework.CRDResourceRule(parentCRD), framework.CRDResourceRule(childCRD))
+	f.CreateDecoratorController("dc", hook.URL, "", framework.CRDResourceRule(parentCRD), framework.CRDResourceRule(childCRD), nil)
 
 	parent := framework.UnstructuredCRD(parentCRD, "test-sync-webhook")
 	unstructured.SetNestedStringMap(parent.Object, labels, "spec", "selector", "matchLabels")
@@ -130,7 +130,7 @@ func TestResyncAfter(t *testing.T) {
 		return json.Marshal(resp)
 	})
 
-	f.CreateDecoratorController("test-resync-after", hook.URL, "", framework.CRDResourceRule(parentCRD), nil)
+	f.CreateDecoratorController("test-resync-after", hook.URL, "", framework.CRDResourceRule(parentCRD), nil, nil)
 
 	parent := framework.UnstructuredCRD(parentCRD, "test-resync-after")
 	unstructured.SetNestedStringMap(parent.Object, labels, "spec", "selector", "matchLabels")
@@ -241,7 +241,7 @@ func TestCustomizeWebhook(t *testing.T) {
 		return json.Marshal(resp)
 	})
 
-	f.CreateDecoratorController("dc", syncHook.URL, customizeHook.URL, framework.CRDResourceRule(parentCRD), framework.CRDResourceRule(childCRD))
+	f.CreateDecoratorController("dc", syncHook.URL, customizeHook.URL, framework.CRDResourceRule(parentCRD), framework.CRDResourceRule(childCRD), nil)
 
 	parent := framework.UnstructuredCRD(parentCRD, "test-customize-webhook")
 	unstructured.SetNestedStringMap(parent.Object, labels, "spec", "selector", "matchLabels")

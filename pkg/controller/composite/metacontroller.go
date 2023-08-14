@@ -120,6 +120,7 @@ func (mc *Metacontroller) Reconcile(ctx context.Context, request reconcile.Reque
 			"[%s] Sync error - %s", cc.Name, err)
 		return reconcile.Result{}, err
 	}
+
 	groupVersion, err := schema.ParseGroupVersion(cc.Spec.ParentResource.APIVersion)
 	if err != nil {
 		return reconcile.Result{}, err

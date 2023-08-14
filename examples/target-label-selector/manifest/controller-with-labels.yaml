@@ -1,0 +1,24 @@
+# Add the labels that the target-label-selector with match on.
+apiVersion: metacontroller.k8s.io/v1alpha1
+kind: CompositeController
+metadata:
+  name: secret-propagation-controller
+  labels:
+    controller-group: cicd
+spec:
+  generateSelector: true
+  parentResource:
+    apiVersion: examples.metacontroller.io/v1alpha1
+    resource: secretpropagations
+  childResources:
+  - apiVersion: v1
+    resource: secrets
+    updateStrategy:
+      method: InPlace
+  hooks:
+    sync:
+      webhook:
+        url: http://secret-propagation-controller.metacontroller/sync
+    customize:
+      webhook:
+        url: http://secret-propagation-controller.metacontroller/customize

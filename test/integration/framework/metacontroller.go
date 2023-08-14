@@ -35,7 +35,7 @@ func CRDResourceRule(crd *apiextensions.CustomResourceDefinition) *v1alpha1.Reso
 
 // CreateCompositeController generates a test CompositeController and installs
 // it in the test API server.
-func (f *Fixture) CreateCompositeController(name, syncHookURL string, customizeHookUrl string, parentRule, childRule *v1alpha1.ResourceRule) *v1alpha1.CompositeController {
+func (f *Fixture) CreateCompositeController(name, syncHookURL string, customizeHookUrl string, parentRule, childRule *v1alpha1.ResourceRule, labels *map[string]string) *v1alpha1.CompositeController {
 	childResources := []v1alpha1.CompositeControllerChildResourceRule{}
 	if childRule != nil {
 		childResources = append(childResources, v1alpha1.CompositeControllerChildResourceRule{ResourceRule: *childRule})
@@ -76,6 +76,11 @@ func (f *Fixture) CreateCompositeController(name, syncHookURL string, customizeH
 		},
 	}
 
+	// Add labels if specified.
+	if labels != nil {
+		cc.ObjectMeta.Labels = *labels
+	}
+
 	err := f.metacontroller.Create(context.Background(), cc)
 	if err != nil {
 		f.t.Fatal(err)
@@ -89,7 +94,7 @@ func (f *Fixture) CreateCompositeController(name, syncHookURL string, customizeH
 
 // CreateDecoratorController generates a test DecoratorController and installs
 // it in the test API server.
-func (f *Fixture) CreateDecoratorController(name, syncHookURL string, customizeHookUrl string, parentRule, childRule *v1alpha1.ResourceRule) *v1alpha1.DecoratorController {
+func (f *Fixture) CreateDecoratorController(name, syncHookURL, customizeHookUrl string, parentRule, childRule *v1alpha1.ResourceRule, labels *map[string]string) *v1alpha1.DecoratorController {
 	childResources := []v1alpha1.DecoratorControllerAttachmentRule{}
 	if childRule != nil {
 		childResources = append(childResources, v1alpha1.DecoratorControllerAttachmentRule{ResourceRule: *childRule})
@@ -129,6 +134,11 @@ func (f *Fixture) CreateDecoratorController(name, syncHookURL string, customizeH
 				Customize: customizeHook,
 			},
 		},
+	}
+
+	// Add labels if specified.
+	if labels != nil {
+		dc.ObjectMeta.Labels = *labels
 	}
 
 	err := f.metacontroller.Create(context.Background(), dc)

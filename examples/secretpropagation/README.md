@@ -13,7 +13,7 @@ kubectl apply -k v1
 ```
 (or pass `v1beta1` for kubernetes 1.15 or older)
 
-### Create an example configmap, several namespaces and ConfigMapPropagation custom resource
+### Create an example secret, several namespaces and SecretPropagation custom resource
 
 ```sh
 kubectl apply -f example-secret.yaml

@@ -68,15 +68,36 @@ func init() {
 	logging.InitLogging(&opts)
 }
 
+func defaultConfiguration() *options.Configuration {
+	return &options.Configuration{
+		DiscoveryInterval: 500 * time.Millisecond,
+		InformerRelist:    30 * time.Minute,
+		Workers:           5,
+		CorrelatorOptions: record.CorrelatorOptions{},
+	}
+}
+
 // TestMain starts etcd, kube-apiserver, and metacontroller before running tests.
 func TestMain(tests func() int) {
-	if err := testMain(tests); err != nil {
+	configuration := defaultConfiguration()
+	if err := testMain(tests, *configuration); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 }
 
-func testMain(tests func() int) error {
+// TestMainWithTargetLabelSelector starts etcd, kube-apiserver,
+// and metacontroller with a target-label-selector before running tests.
+func TestMainWithTargetLabelSelector(tests func() int) {
+	configuration := defaultConfiguration()
+	configuration.TargetLabelSelector = "foo=bar"
+	if err := testMain(tests, *configuration); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+}
+
+func testMain(tests func() int, configuration options.Configuration) error {
 	if _, err := getKubectlPath(); err != nil {
 		return errors.New(installKubectl)
 	}
@@ -138,14 +159,9 @@ func testMain(tests func() int) error {
 	if err != nil {
 		return fmt.Errorf("cannot find a port: %v", err)
 	}
-	configuration := options.Configuration{
-		RestConfig:        ApiserverConfig(),
-		DiscoveryInterval: 500 * time.Millisecond,
-		InformerRelist:    30 * time.Minute,
-		Workers:           5,
-		CorrelatorOptions: record.CorrelatorOptions{},
-		MetricsEndpoint:   ":" + strconv.Itoa(port),
-	}
+	configuration.MetricsEndpoint = ":" + strconv.Itoa(port)
+	configuration.RestConfig = ApiserverConfig()
+
 	mgr, err := server.New(configuration)
 	if err != nil {
 		return fmt.Errorf("cannot create a metacontroller server: %v", err)

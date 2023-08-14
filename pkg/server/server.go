@@ -29,9 +29,13 @@ import (
 	"metacontroller/pkg/controller/decorator"
 	"metacontroller/pkg/options"
 
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+
+	"k8s.io/apimachinery/pkg/labels"
 
 	"metacontroller/pkg/apis/metacontroller/v1alpha1"
 	mcclientset "metacontroller/pkg/client/generated/clientset/internalclientset"
@@ -91,6 +95,26 @@ func New(configuration options.Configuration) (controllerruntime.Manager, error)
 		return nil, err
 	}
 
+	// If configuration has a TargetLabelSelector, then read the values
+	// and create the labels.Selector object.
+	targetLabelSelector := labels.Everything()
+	logging.Logger.Info("Initializing target label selector", "label_selector", configuration.TargetLabelSelector)
+	if configuration.TargetLabelSelector != "" {
+		targetLabelSelector, err = labels.Parse(configuration.TargetLabelSelector)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// Filter function using the labelSelector to match against the objects.
+	byLabelSelectorFilter := func(labelSelector labels.Selector) func(object client.Object) bool {
+		return func(object client.Object) bool {
+			return labelSelector.Matches(labels.Set(object.GetLabels()))
+		}
+	}
+	// Predicate filter to apply the byLabelSelectorFilter using our targetLabelSelector.
+	predicateFuncs := predicate.NewPredicateFuncs(byLabelSelectorFilter(targetLabelSelector))
+
 	// Set the Kubernetes client to the one created by the manager.
 	// In this way we can take advantage of the underlying caching
 	// mechanism for reads instead of hitting the API directly.
@@ -103,11 +127,10 @@ func New(configuration options.Configuration) (controllerruntime.Manager, error)
 	if err != nil {
 		return nil, err
 	}
-	err = compositeCtrl.Watch(&source.Kind{Type: &v1alpha1.CompositeController{}}, &handler.EnqueueRequestForObject{})
+	err = compositeCtrl.Watch(&source.Kind{Type: &v1alpha1.CompositeController{}}, &handler.EnqueueRequestForObject{}, predicateFuncs)
 	if err != nil {
 		return nil, err
 	}
-
 	decoratorReconciler := decorator.NewMetacontroller(*controllerContext, configuration.Workers)
 	decoratorCtrl, err := controller.New("decorator-metacontroller", mgr, controller.Options{
 		Reconciler: decoratorReconciler,
@@ -115,7 +138,7 @@ func New(configuration options.Configuration) (controllerruntime.Manager, error)
 	if err != nil {
 		return nil, err
 	}
-	err = decoratorCtrl.Watch(&source.Kind{Type: &v1alpha1.DecoratorController{}}, &handler.EnqueueRequestForObject{})
+	err = decoratorCtrl.Watch(&source.Kind{Type: &v1alpha1.DecoratorController{}}, &handler.EnqueueRequestForObject{}, predicateFuncs)
 	if err != nil {
 		return nil, err
 	}
