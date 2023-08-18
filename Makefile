@@ -56,6 +56,7 @@ generate_crds:
 	@echo "+ Generating crds"
 	@go install sigs.k8s.io/controller-tools/cmd/controller-gen@latest
 	@controller-gen +crd +paths="./pkg/apis/..." +output:crd:stdout > manifests/production/metacontroller-crds-v1.yaml
+	@cp manifests/production/metacontroller-crds-v1.yaml deploy/helm/metacontroller/crds/
 
 # Code generators
 # https://github.com/kubernetes/community/blob/master/contributors/devel/api_changes.md#generate-code

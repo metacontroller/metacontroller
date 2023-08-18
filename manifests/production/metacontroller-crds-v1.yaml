@@ -4,8 +4,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: unapproved, request not yet submitted
-    controller-gen.kubebuilder.io/version: v0.11.2
-  creationTimestamp: null
+    controller-gen.kubebuilder.io/version: v0.13.0
   name: compositecontrollers.metacontroller.k8s.io
 spec:
   group: metacontroller.k8s.io
@@ -434,8 +433,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: unapproved, request not yet submitted
-    controller-gen.kubebuilder.io/version: v0.11.2
-  creationTimestamp: null
+    controller-gen.kubebuilder.io/version: v0.13.0
   name: controllerrevisions.metacontroller.k8s.io
 spec:
   group: metacontroller.k8s.io
@@ -497,8 +495,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: unapproved, request not yet submitted
-    controller-gen.kubebuilder.io/version: v0.11.2
-  creationTimestamp: null
+    controller-gen.kubebuilder.io/version: v0.13.0
   name: decoratorcontrollers.metacontroller.k8s.io
 spec:
   group: metacontroller.k8s.io
