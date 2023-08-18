@@ -93,8 +93,8 @@ func (r *requestBuilder) Build() api.WebhookRequest {
 	return &DecoratorHookRequest{
 		Controller:  r.controller,
 		Object:      r.parent,
-		Attachments: r.children.Convert(r.parent),
-		Related:     r.related.Convert(r.parent),
+		Attachments: r.children.Convert(r.parent, false),
+		Related:     r.related.Convert(r.parent, true),
 		Finalizing:  r.finalizing,
 	}
 }

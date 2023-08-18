@@ -112,18 +112,19 @@ func (m UniformObjectMap) List() []*unstructured.Unstructured {
 }
 
 // Convert returns commonv1.RelativeObjectMap against given parent, removing non matching objects
-func (m UniformObjectMap) Convert(parent *unstructured.Unstructured) commonv1.RelativeObjectMap {
+func (m UniformObjectMap) Convert(parent *unstructured.Unstructured, isRelated bool) commonv1.RelativeObjectMap {
 	potentialChildren := m.List()
 	relativeObjects := make(commonv1.RelativeObjectMap)
 	for gvk := range m {
 		relativeObjects.InitGroup(gvk.GroupVersionKind)
 	}
 	parentIsClusterScope := parent.GetNamespace() == ""
-	if parentIsClusterScope {
+	if parentIsClusterScope || isRelated {
 		// we can safely add all objects
 		relativeObjects.InsertAll(parent, potentialChildren)
 		return relativeObjects
 	}
+
 	// parent is namespace scope, we need filter out cluster-scope objects and objects from different namespace
 	for _, child := range potentialChildren {
 		if parent.GetNamespace() == child.GetNamespace() {

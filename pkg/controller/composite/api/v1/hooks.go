@@ -87,8 +87,8 @@ func (r *requestBuilder) Build() api.WebhookRequest {
 	return &CompositeHookRequest{
 		Controller: r.controller,
 		Parent:     r.parent,
-		Children:   r.children.Convert(r.parent),
-		Related:    r.related.Convert(r.parent),
+		Children:   r.children.Convert(r.parent, false),
+		Related:    r.related.Convert(r.parent, true),
 		Finalizing: r.finalizing,
 	}
 }
