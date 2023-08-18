@@ -321,15 +321,6 @@ func (rm *Manager) matchesRelatedRule(parent, related *unstructured.Unstructured
 		}
 		return selector.Matches(labels.Set(related.GetLabels())), nil
 	case selectByNamespaceAndNames:
-		if parentResource.Namespaced {
-			parentNamespace := parent.GetNamespace()
-			if len(relatedRule.Namespace) != 0 && parentNamespace != relatedRule.Namespace {
-				return false, fmt.Errorf("%s: Namespace of parent %s does not match with namespace %s of related rule for %s/%s", parentResource.Kind, parent.GetName(), relatedRule.Namespace, relatedRule.APIVersion, relatedRule.Resource)
-			}
-			if parentNamespace != related.GetNamespace() {
-				return false, nil
-			}
-		}
 		if len(relatedRule.Names) != 0 {
 			relatedName := related.GetName()
 			return stringInArray(relatedName, relatedRule.Names), nil
@@ -359,8 +350,6 @@ func (rm *Manager) GetRelatedObjects(parent *unstructured.Unstructured) (commonv
 		return nil, fmt.Errorf("unknown parent %v/%v", parentGroup, parent.GetKind())
 	}
 
-	parentNamespace := parent.GetNamespace()
-
 	customizeHookResponse, err := rm.getCustomizeHookResponse(parent)
 
 	if err != nil {
@@ -381,12 +370,8 @@ func (rm *Manager) GetRelatedObjects(parent *unstructured.Unstructured) (commonv
 			if err != nil {
 				return nil, err
 			}
-			var all []*unstructured.Unstructured
-			if parentResource.Namespaced {
-				all, err = informer.Lister().Namespace(parentNamespace).List(selector)
-			} else {
-				all, err = informer.Lister().List(selector)
-			}
+
+			all, err := informer.Lister().List(selector)
 			if err != nil {
 				return nil, fmt.Errorf("can't list %v related objects: %w", relatedClient.Kind, err)
 			}
@@ -394,9 +379,6 @@ func (rm *Manager) GetRelatedObjects(parent *unstructured.Unstructured) (commonv
 			childMap.InsertAll(parent, all)
 
 		case selectByNamespaceAndNames:
-			if parentResource.Namespaced && len(relatedRule.Namespace) != 0 && parentNamespace != relatedRule.Namespace {
-				return nil, fmt.Errorf("requested related object namespace %s differs from parent object namespace %s", relatedRule.Namespace, parentNamespace)
-			}
 			all, err := listObjects(labels.Everything(), relatedRule.Namespace, informer)
 			if err != nil {
 				return nil, fmt.Errorf("can't list %v related objects: %w", relatedClient.Kind, err)
