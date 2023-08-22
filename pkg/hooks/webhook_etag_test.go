@@ -92,6 +92,18 @@ func httpResponse304NotModified() *MockResponse {
 	}
 }
 
+func httpResponse412NotModified() *MockResponse {
+	return &MockResponse{
+		&http.Response{
+			Status:     "412 Precondition Failed",
+			StatusCode: 412,
+			Header:     map[string][]string{},
+			Body:       io.NopCloser(bytes.NewBufferString("")),
+		},
+		nil,
+	}
+}
+
 func httpResponse200(body string, etag string) *MockResponse {
 	t := http.Response{
 		Status:     "200 OK",
@@ -169,6 +181,13 @@ func TestHookETag(t *testing.T) {
 		},
 		{
 			httpResponse: httpResponse304NotModified(),
+			expectedHeaders: map[string]string{
+				"If-None-Match": "000-000-000-001",
+			},
+			hookResult: hookResultFromJson(body1),
+		},
+		{
+			httpResponse: httpResponse412NotModified(),
 			expectedHeaders: map[string]string{
 				"If-None-Match": "000-000-000-001",
 			},

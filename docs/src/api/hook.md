@@ -43,11 +43,11 @@ Within a `webhook`, the `service` field has the following subfields:
 
 ### Etag Reference
 
-More details in [rfc2616](https://datatracker.ietf.org/doc/html/rfc2616).
+More details in [rfc7232](https://www.rfc-editor.org/rfc/rfc7232).
 
 Etag is a hash of response content, controller that supports etag notion should add "ETag" header to each 200 response.
-Metacontroller that supports "ETag" should send "If-None-Match" tag with value of ETag of cached content.
-If content have not changed controller replies with "304 Not modified", otherwise it sends 200 with "ETag" header.
+Metacontrollers that support "ETag" should send the "If-None-Match" header with value of ETag of cached content.
+If content has not changed, controller should reply with "304 Not modified" or "412 Precondition Failed", otherwise it sends 200 with "ETag" header.
 
 This logic helps save traffic and CPU time on webhook processing.
 
