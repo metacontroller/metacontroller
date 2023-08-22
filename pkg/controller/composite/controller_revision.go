@@ -262,8 +262,9 @@ func (pc *parentController) manageRevisions(parent *unstructured.Unstructured, o
 		observedMap[revision.Name] = revision
 
 		if _, desired := desiredMap[revision.Name]; !desired {
+			uid := revision.UID
 			opts := metav1.DeleteOptions{
-				Preconditions: &metav1.Preconditions{UID: &revision.UID},
+				Preconditions: &metav1.Preconditions{UID: &uid},
 			}
 			logging.Logger.Info("Deleting ControllerRevision", "parent_kind", parent.GetKind(), "parent", parent, "name", revision.GetName())
 			if err := client.Delete(context.TODO(), revision.Name, opts); err != nil {
