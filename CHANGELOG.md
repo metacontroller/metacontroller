@@ -1,3 +1,10 @@
+## [4.10.5](https://github.com/metacontroller/metacontroller/compare/v4.10.4...v4.10.5) (2023-08-22)
+
+
+### Bug Fixes
+
+* **helm:** Make helm CRD's up to date ([f33d59d](https://github.com/metacontroller/metacontroller/commit/f33d59d7e99d8a655596d2af466bf2285875af82)), closes [#838](https://github.com/metacontroller/metacontroller/issues/838)
+
 ## [4.10.4](https://github.com/metacontroller/metacontroller/compare/v4.10.3...v4.10.4) (2023-06-22)
 
 

@@ -20,7 +20,7 @@ spec:
       serviceAccountName: metacontroller
       containers:
       - name: metacontroller
-        image: ghcr.io/metacontroller/metacontroller:v4.10.4
+        image: ghcr.io/metacontroller/metacontroller:v4.10.5
         command: ["/usr/bin/metacontroller"]
         args:
         - --zap-log-level=4
