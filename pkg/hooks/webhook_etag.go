@@ -64,7 +64,7 @@ func (w *webhookExecutorEtag) adjustResponse(
 	responseBody []byte,
 	response *http.Response) ([]byte, error) {
 	cacheKey := w.getKeyFromObject(webhookRequest.GetRootObject())
-	if request.Header.Get(headerIfNoneMatch) != "" && response.StatusCode == http.StatusNotModified {
+	if request.Header.Get(headerIfNoneMatch) != "" && (response.StatusCode == http.StatusNotModified || response.StatusCode == http.StatusPreconditionFailed) {
 		logging.Logger.Info("retrieving body from cache", "cacheKey", cacheKey)
 		cacheEntry, cacheEntryExists := w.etagCache.Get(cacheKey)
 		if !cacheEntryExists {
@@ -84,7 +84,7 @@ func (w *webhookExecutorEtag) isStatusSupported(request *http.Request, response 
 	switch response.StatusCode {
 	case http.StatusOK:
 		return true
-	case http.StatusNotModified: // we only accept 304 when "If-None-Match" header were set
+	case http.StatusNotModified, http.StatusPreconditionFailed: // we only accept 304 and 412 when "If-None-Match" header were set
 		return request.Header.Get(headerIfNoneMatch) != ""
 	default:
 		return false
