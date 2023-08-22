@@ -48,7 +48,8 @@ func TestWebhookTimeout_defaultTimeoutIfNotSpecified(t *testing.T) {
 	}
 
 	for _, table := range tables {
-		duration, _ := webhookTimeout(&table.webhook)
+		webhook := table.webhook
+		duration, _ := webhookTimeout(&webhook)
 		assert.Equal(t, table.duration, duration, "Duration was incorrect")
 	}
 }
@@ -69,7 +70,8 @@ func TestWebhookTimeout_defaultTimeoutIfNegative(t *testing.T) {
 	}
 
 	for _, table := range tables {
-		duration, _ := webhookTimeout(&table.webhook)
+		webhook := table.webhook
+		duration, _ := webhookTimeout(&webhook)
 		assert.Equal(t, table.duration, duration, "Duration was incorrect")
 	}
 }
@@ -91,7 +93,8 @@ func TestWebhookTimeout_givenTimeoutIfPositive(t *testing.T) {
 	}
 
 	for _, table := range tables {
-		duration, _ := webhookTimeout(&table.webhook)
+		webhook := table.webhook
+		duration, _ := webhookTimeout(&webhook)
 		assert.Equal(t, table.duration, duration, "Duration was incorrect")
 	}
 }
