@@ -2869,10 +2869,10 @@ has the following fields:</p>
 <tr><td>protocol</td><td>The protocol to use for the target Service. Defaults to <code>http</code>.</td></tr>
 </tbody></table>
 <h3 id="etag-reference"><a class="header" href="#etag-reference">Etag Reference</a></h3>
-<p>More details in <a href="https://datatracker.ietf.org/doc/html/rfc2616">rfc2616</a>.</p>
+<p>More details in <a href="https://www.rfc-editor.org/rfc/rfc7232">rfc7232</a>.</p>
 <p>Etag is a hash of response content, controller that supports etag notion should add &quot;ETag&quot; header to each 200 response.
-Metacontroller that supports &quot;ETag&quot; should send &quot;If-None-Match&quot; tag with value of ETag of cached content.
-If content have not changed controller replies with &quot;304 Not modified&quot;, otherwise it sends 200 with &quot;ETag&quot; header.</p>
+Metacontrollers that support &quot;ETag&quot; should send the &quot;If-None-Match&quot; header with value of ETag of cached content.
+If content has not changed, controller should reply with &quot;304 Not modified&quot; or &quot;412 Precondition Failed&quot;, otherwise it sends 200 with &quot;ETag&quot; header.</p>
 <p>This logic helps save traffic and CPU time on webhook processing.</p>
 <p>Within a <code>webhook</code>, the <code>eTag</code> field has the following subfields:</p>
 <pre><code>Enabled             *bool  `json:&quot;enabled,omitempty&quot;`
