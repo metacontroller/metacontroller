@@ -1,6 +1,6 @@
 apiVersion: v2
-version: v4.10.6
-appVersion: v4.10.6
+version: v4.10.5
+appVersion: v4.10.5
 kubeVersion: '^1.14.0-0'
 name: metacontroller-helm
 description: Writing kubernetes controllers can be simple
