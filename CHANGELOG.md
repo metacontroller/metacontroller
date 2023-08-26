@@ -1,3 +1,10 @@
+## [4.10.6](https://github.com/metacontroller/metacontroller/compare/v4.10.5...v4.10.6) (2023-08-26)
+
+
+### Bug Fixes
+
+* **hooks:** Make ETag header RFC compliant ([#850](https://github.com/metacontroller/metacontroller/issues/850)) ([81b5c09](https://github.com/metacontroller/metacontroller/commit/81b5c093e8b29ec5d99f7e782ba5ca58951350e8))
+
 ## [4.10.5](https://github.com/metacontroller/metacontroller/compare/v4.10.4...v4.10.5) (2023-08-22)
 
 
