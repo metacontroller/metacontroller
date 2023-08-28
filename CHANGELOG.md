@@ -1,3 +1,10 @@
+# [4.11.0](https://github.com/metacontroller/metacontroller/compare/v4.10.7...v4.11.0) (2023-08-28)
+
+
+### Features
+
+* **target_label_selector:** Add target-label-selector for multi-instance ([d6b5737](https://github.com/metacontroller/metacontroller/commit/d6b5737133c55d6a25a478c4f93b6b1f3a30004c))
+
 ## [4.10.7](https://github.com/metacontroller/metacontroller/compare/v4.10.6...v4.10.7) (2023-08-28)
 
 
