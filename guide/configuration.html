@@ -151,6 +151,18 @@
 <p>This page describes how to configure Metacontroller.</p>
 <ul>
 <li><a href="#command-line-flags">Command line flags</a></li>
+<li><a href="#running-multiple-instances">Running multiple instances</a>
+<ul>
+<li><a href="#pros">Pros</a></li>
+<li><a href="#cons">Cons</a></li>
+<li><a href="#example">Example</a>
+<ul>
+<li><a href="#1-configure-metacontroller">1. Configure Metacontroller</a></li>
+<li><a href="#2-specify-labels-on-the-controller">2. Specify labels on the Controller</a></li>
+</ul>
+</li>
+</ul>
+</li>
 </ul>
 <h2 id="command-line-flags"><a class="header" href="#command-line-flags">Command line flags</a></h2>
 <p>The Metacontroller server has a few settings that can be configured
@@ -175,9 +187,66 @@ in <code>manifests/metacontroller.yaml</code>):</p>
 <tr><td><code>--leader-election-resource-lock</code></td><td>Determines which resource lock to use for leader election (default <code>leases</code>, e.g., <code>--leader-election-resource-lock=leases</code>). Valid resource locks are <code>endpoints</code>, <code>configmaps</code>, <code>leases</code>, <code>endpointsleases</code>, or <code>configmapsleases</code>. See the client-go documentation <a href="https://pkg.go.dev/k8s.io/client-go/tools/leaderelection/resourcelock#pkg-constants">leaderelection/resourcelock</a> for additional information.</td></tr>
 <tr><td><code>--leader-election-namespace</code></td><td>Determines the namespace in which the leader election resource will be created. If metacontroller is running in-cluster, the default leader election namespace is the same namespace as metacontroller. If metacontroller is running out-of-cluster, the default leader election namespace is undefined. If you are running metacontroller out-of-cluster with leader election enabled, you must specify the leader election namespace. (e.g., <code>--leader-election-namespace=metacontroller</code>)</td></tr>
 <tr><td><code>--leader-election-id</code></td><td>Determines the name of the resource that leader election will use for holding the leader lock. For example, if the leader election id is <code>metacontroller</code> and the leader election resource lock is <code>leases</code>, then a resource of kind <code>leases</code> with metadata.name <code>metacontroller</code> will hold the leader lock. (default metacontroller, e.g., <code>--leader-election-id=metacontroller</code>)</td></tr>
-<tr><td><code>--health-probe-bind-address</code></td><td>&quot;The address the health probes endpoint binds to (default &quot;:8081&quot;, e.g., <code>--health-probe-bind-address=&quot;:8081&quot;</code>)</td></tr>
+<tr><td><code>--health-probe-bind-address</code></td><td>The address the health probes endpoint binds to (default &quot;:8081&quot;, e.g., <code>--health-probe-bind-address=&quot;:8081&quot;</code>)</td></tr>
+<tr><td><code>--target-label-selector</code></td><td><a href="https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#label-selectors">Label selector</a> used to restrict an instance of metacontroller to manage specific Composite and Decorator controllers, which enables the ability to run multiple metacontroller instances on the same cluster (e.g. <code>--target-label-selector=controller-group=cicd&quot;</code>)</td></tr>
 </tbody></table>
 <p>Logging flags are being set by <code>controller-runtime</code>, more on the meaning of them can be found <a href="https://sdk.operatorframework.io/docs/building-operators/golang/references/logging/#overview">here</a></p>
+<h2 id="running-multiple-instances"><a class="header" href="#running-multiple-instances">Running multiple instances</a></h2>
+<p>Metacontroller can be setup to run multiple instances in the same Kubernetes cluster that can watch resources based on separate grouping or as a way to split responsibilities; which can also act as a scaling aid.</p>
+<p>This is made possible by configuring Metacontroller with the <code>target-label-selector</code> argument.</p>
+<p>Further details on this feature can be found <a href="https://github.com/metacontroller/metacontroller/issues/218">here</a>.</p>
+<h3 id="pros"><a class="header" href="#pros">Pros</a></h3>
+<ul>
+<li>Clean separation of different Metacontroller instances, in case of
+<ul>
+<li>Permissions needed to manage its controllers (they can be limited to what the actual operator needs)</li>
+<li>Allowing the Sidecar pattern - so in the pod there is Metacontroller pod and operator pod, metacontroller manages only this operator.</li>
+</ul>
+</li>
+<li>Allow scaling (in a primitive way in term of separation of concerns / grouping)</li>
+</ul>
+<h3 id="cons"><a class="header" href="#cons">Cons</a></h3>
+<ul>
+<li>Metacontroller fighting over resources - can be caused by two Metacontroller instances managing the same CRD
+<ul>
+<li>Care needs to be taken when configuring multiple Metacontroller instances and not just deploy the default configuration but properly set the <code>target-label-selector</code> value for each Metacontroller instance to be unique if what it is managing.</li>
+</ul>
+</li>
+</ul>
+<h3 id="example"><a class="header" href="#example">Example</a></h3>
+<h4 id="1-configure-metacontroller"><a class="header" href="#1-configure-metacontroller">1. Configure Metacontroller</a></h4>
+<p>Add the <code>--target-label-selector</code> argument to Metacontroller binary arguments; below this is inside the Kubernetes deployment spec for Metacontroller:</p>
+<pre><code class="language-yaml">...
+    spec:
+      containers:
+      - args:
+        - --zap-devel
+        - --zap-log-level=5
+        - --discovery-interval=5s
+        - --target-label-selector=controller-group=cicd
+...
+</code></pre>
+<p>You can also use the more advanced features like <a href="https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#equality-based-requirement">Equality-based requirement</a> and <a href="https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#set-based-requirement">Set-base requirement</a> when defining your target label selector.</p>
+<h4 id="2-specify-labels-on-the-controller"><a class="header" href="#2-specify-labels-on-the-controller">2. Specify labels on the Controller</a></h4>
+<p>Below is an example of a <a href="https://metacontroller.github.io/metacontroller/api/decoratorcontroller.html">Decorator Controller</a> that has the appropriate label added so that this instance of Metacontroller can target and manage it:</p>
+<pre><code class="language-yaml">apiVersion: metacontroller.k8s.io/v1alpha1
+kind: DecoratorController
+metadata:
+  name: pod-name-label
+  labels:
+    controller-group: cicd
+spec:
+  resources:
+  - apiVersion: v1
+    resource: pods
+    annotationSelector:
+      matchExpressions:
+      - {key: pod-name-label, operator: Exists}
+  hooks:
+    sync:
+      webhook:
+        url: http://service-per-pod.metacontroller/sync-pod-name-label
+</code></pre>
 
                     </main>
 
