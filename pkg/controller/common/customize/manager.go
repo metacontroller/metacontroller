@@ -259,7 +259,13 @@ func (rm *Manager) findRelatedParents(relatedSlice ...*unstructured.Unstructured
 
 			for _, relatedRule := range customizeHookResponse.RelatedResourceRules {
 				for _, related := range relatedSlice {
-					matches, err := rm.matchesRelatedRule(parent, related, relatedRule)
+					parentGroup, _ := schema.ParseGroupVersion(parent.GetAPIVersion())
+					parentResource := rm.parentKinds.Get(schema.GroupKind{Group: parentGroup.Group, Kind: parent.GetKind()})
+					if parentResource == nil {
+						utilruntime.HandleError(fmt.Errorf("unknown parent %v/%v", parentGroup, parent.GetKind()))
+						continue
+					}
+					matches, err := matchesRelatedRule(parentResource.Namespaced, parent, related, relatedRule)
 					if err != nil {
 						utilruntime.HandleError(err)
 						continue
@@ -304,11 +310,14 @@ func toSelector(labelSelector *metav1.LabelSelector) (labels.Selector, error) {
 	}
 }
 
-func (rm *Manager) matchesRelatedRule(parent, related *unstructured.Unstructured, relatedRule *v1alpha1.RelatedResourceRule) (bool, error) {
-	parentGroup, _ := schema.ParseGroupVersion(parent.GetAPIVersion())
-	parentResource := rm.parentKinds.Get(schema.GroupKind{Group: parentGroup.Group, Kind: parent.GetKind()})
-	if parentResource == nil {
-		return false, fmt.Errorf("unknown parent %v/%v", parentGroup, parent.GetKind())
+func matchesTypeAndVersion(related *unstructured.Unstructured, relatedRule *v1alpha1.RelatedResourceRule) bool {
+	_, groupKind := schema.ParseKindArg(relatedRule.ResourceRule.Resource)
+	return related.GetAPIVersion() == relatedRule.ResourceRule.APIVersion && related.GetKind() == groupKind.Kind
+}
+
+func matchesRelatedRule(parentIsNamespaced bool, parent, related *unstructured.Unstructured, relatedRule *v1alpha1.RelatedResourceRule) (bool, error) {
+	if !matchesTypeAndVersion(related, relatedRule) {
+		return false, nil
 	}
 
 	selectionType, err := determineSelectionType(relatedRule)
@@ -321,14 +330,16 @@ func (rm *Manager) matchesRelatedRule(parent, related *unstructured.Unstructured
 		}
 		return selector.Matches(labels.Set(related.GetLabels())), nil
 	case selectByNamespaceAndNames:
-		if parentResource.Namespaced {
+		if parentIsNamespaced {
 			parentNamespace := parent.GetNamespace()
 			if len(relatedRule.Namespace) != 0 && parentNamespace != relatedRule.Namespace {
-				return false, fmt.Errorf("%s: Namespace of parent %s does not match with namespace %s of related rule for %s/%s", parentResource.Kind, parent.GetName(), relatedRule.Namespace, relatedRule.APIVersion, relatedRule.Resource)
+				return false, fmt.Errorf("%s: Namespace of parent %s does not match with namespace %s of related rule for %s/%s", parent.GetKind(), parent.GetName(), relatedRule.Namespace, relatedRule.APIVersion, relatedRule.Resource)
 			}
 			if parentNamespace != related.GetNamespace() {
 				return false, nil
 			}
+		} else if len(relatedRule.Namespace) != 0 && related.GetNamespace() != relatedRule.Namespace {
+			return false, nil
 		}
 		if len(relatedRule.Names) != 0 {
 			relatedName := related.GetName()
