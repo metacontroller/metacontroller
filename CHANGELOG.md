@@ -1,3 +1,10 @@
+## [4.11.1](https://github.com/metacontroller/metacontroller/compare/v4.11.0...v4.11.1) (2023-10-16)
+
+
+### Bug Fixes
+
+* **matches_related_rule:** Add check to match Kind and Resource for matchesRelatedRule ([5a86976](https://github.com/metacontroller/metacontroller/commit/5a8697628f6e927d444d61801fa3cc0bcb6e7e2a))
+
 # [4.11.0](https://github.com/metacontroller/metacontroller/compare/v4.10.7...v4.11.0) (2023-08-28)
 
 
