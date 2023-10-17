@@ -251,9 +251,9 @@ func (rm *Manager) findRelatedParents(relatedSlice ...*unstructured.Unstructured
 
 	MATCHPARENTS:
 		for _, parent := range parents {
-			customizeHookResponse, found := rm.getCachedCustomizeHookResponse(parent)
-
-			if !found {
+			customizeHookResponse, err := rm.getCustomizeHookResponse(parent)
+			if err != nil || customizeHookResponse == nil {
+				// skip for now, the informer relist interval will try again later.
 				continue
 			}
 
