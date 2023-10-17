@@ -265,7 +265,12 @@ func (rm *Manager) findRelatedParents(relatedSlice ...*unstructured.Unstructured
 						utilruntime.HandleError(fmt.Errorf("unknown parent %v/%v", parentGroup, parent.GetKind()))
 						continue
 					}
-					matches, err := matchesRelatedRule(parentResource.Namespaced, parent, related, relatedRule)
+					relatedRuleClient, _ := rm.dynClient.Resource(relatedRule.APIVersion, relatedRule.Resource)
+					if relatedRuleClient == nil {
+						utilruntime.HandleError(fmt.Errorf("unknown related rule %v/%v", relatedRule.APIVersion, relatedRule.Resource))
+						continue
+					}
+					matches, err := matchesRelatedRule(parentResource.Namespaced, parent, related, relatedRule, relatedRuleClient.Kind)
 					if err != nil {
 						utilruntime.HandleError(err)
 						continue
@@ -310,13 +315,9 @@ func toSelector(labelSelector *metav1.LabelSelector) (labels.Selector, error) {
 	}
 }
 
-func matchesTypeAndVersion(related *unstructured.Unstructured, relatedRule *v1alpha1.RelatedResourceRule) bool {
-	_, groupKind := schema.ParseKindArg(relatedRule.ResourceRule.Resource)
-	return related.GetAPIVersion() == relatedRule.ResourceRule.APIVersion && related.GetKind() == groupKind.Kind
-}
-
-func matchesRelatedRule(parentIsNamespaced bool, parent, related *unstructured.Unstructured, relatedRule *v1alpha1.RelatedResourceRule) (bool, error) {
-	if !matchesTypeAndVersion(related, relatedRule) {
+func matchesRelatedRule(parentIsNamespaced bool, parent, related *unstructured.Unstructured, relatedRule *v1alpha1.RelatedResourceRule, relatedRuleKind string) (bool, error) {
+	// Ensure that the related resource matches the version and kind of the related rule.
+	if !(related.GetAPIVersion() == relatedRule.ResourceRule.APIVersion && related.GetKind() == relatedRuleKind) {
 		return false, nil
 	}
 
