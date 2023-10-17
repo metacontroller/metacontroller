@@ -1,3 +1,10 @@
+## [4.11.3](https://github.com/metacontroller/metacontroller/compare/v4.11.2...v4.11.3) (2023-10-17)
+
+
+### Bug Fixes
+
+* **fix_related_kind_check:** Fix bug where kind not matching resource ([1cd8419](https://github.com/metacontroller/metacontroller/commit/1cd841948350f03ea72bcef04f599c747accec0d))
+
 ## [4.11.2](https://github.com/metacontroller/metacontroller/compare/v4.11.1...v4.11.2) (2023-10-16)
 
 
