@@ -1,3 +1,10 @@
+## [4.11.4](https://github.com/metacontroller/metacontroller/compare/v4.11.3...v4.11.4) (2023-10-17)
+
+
+### Bug Fixes
+
+* **fix_related_resources_informer:** Call getCustomizeHookResponse in findRelatedParents ([bcd5c74](https://github.com/metacontroller/metacontroller/commit/bcd5c74772bcf3f5db41ed86db4cda28dc832963))
+
 ## [4.11.3](https://github.com/metacontroller/metacontroller/compare/v4.11.2...v4.11.3) (2023-10-17)
 
 
