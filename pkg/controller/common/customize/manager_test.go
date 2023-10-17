@@ -233,13 +233,14 @@ func Test_matchRelatedRule(t *testing.T) {
 	}
 
 	tests := []struct {
-		name         string
-		isNamespaced bool
-		parent       *unstructured.Unstructured
-		related      *unstructured.Unstructured
-		relatedRule  *v1alpha1.RelatedResourceRule
-		wantMatch    bool
-		wantErr      bool
+		name            string
+		isNamespaced    bool
+		parent          *unstructured.Unstructured
+		related         *unstructured.Unstructured
+		relatedRule     *v1alpha1.RelatedResourceRule
+		relatedRuleKind string
+		wantMatch       bool
+		wantErr         bool
 	}{
 		// When parent is namespace scoped
 		{
@@ -247,19 +248,20 @@ func Test_matchRelatedRule(t *testing.T) {
 			parent: fakeGenericParent(),
 			related: func() *unstructured.Unstructured {
 				rc := &unstructured.Unstructured{}
-				rc.SetAPIVersion("some")
-				rc.SetKind("some")
+				rc.SetAPIVersion("v1")
+				rc.SetKind("Secret")
 				rc.SetLabels(map[string]string{"aaa": "bbb"})
 				return rc
 			}(),
 			relatedRule: &v1alpha1.RelatedResourceRule{
 				ResourceRule: v1alpha1.ResourceRule{
-					APIVersion: "some",
-					Resource:   "some",
+					APIVersion: "v1",
+					Resource:   "secrets",
 				},
 				LabelSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"aaa": "bbb"}},
 			},
-			wantMatch: true,
+			relatedRuleKind: "Secret",
+			wantMatch:       true,
 		},
 		{
 			name:   "return false when labels do not match",
@@ -271,12 +273,13 @@ func Test_matchRelatedRule(t *testing.T) {
 			}(),
 			relatedRule: &v1alpha1.RelatedResourceRule{
 				ResourceRule: v1alpha1.ResourceRule{
-					APIVersion: "some",
-					Resource:   "some",
+					APIVersion: "v1",
+					Resource:   "secrets",
 				},
 				LabelSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"aaa": "bbb"}},
 			},
-			wantMatch: false,
+			relatedRuleKind: "Secret",
+			wantMatch:       false,
 		},
 		{
 			name:   "return false when no labels",
@@ -286,12 +289,13 @@ func Test_matchRelatedRule(t *testing.T) {
 			}(),
 			relatedRule: &v1alpha1.RelatedResourceRule{
 				ResourceRule: v1alpha1.ResourceRule{
-					APIVersion: "some",
-					Resource:   "some",
+					APIVersion: "v1",
+					Resource:   "secrets",
 				},
 				LabelSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"aaa": "bbb"}},
 			},
-			wantMatch: false,
+			relatedRuleKind: "Secret",
+			wantMatch:       false,
 		},
 		{
 			name:         "return true when parent is namespace scoped and name and namespace matches",
@@ -299,22 +303,23 @@ func Test_matchRelatedRule(t *testing.T) {
 			parent:       fakeGenericParentWithNamespace(),
 			related: func() *unstructured.Unstructured {
 				rc := &unstructured.Unstructured{}
-				rc.SetAPIVersion("some")
-				rc.SetKind("some")
+				rc.SetAPIVersion("v1")
+				rc.SetKind("Secret")
 				rc.SetNamespace("some")
 				rc.SetName("name")
 				return rc
 			}(),
 			relatedRule: &v1alpha1.RelatedResourceRule{
 				ResourceRule: v1alpha1.ResourceRule{
-					APIVersion: "some",
-					Resource:   "some",
+					APIVersion: "v1",
+					Resource:   "secrets",
 				},
 				LabelSelector: nil,
 				Namespace:     "some",
 				Names:         []string{"name"},
 			},
-			wantMatch: true,
+			relatedRuleKind: "Secret",
+			wantMatch:       true,
 		},
 		{
 			name:         "return false when parent is namespace scoped and name matches but namespace does not match",
@@ -323,21 +328,22 @@ func Test_matchRelatedRule(t *testing.T) {
 			related: func() *unstructured.Unstructured {
 				rc := &unstructured.Unstructured{}
 				rc.SetAPIVersion("some")
-				rc.SetKind("some")
+				rc.SetKind("Secret")
 				rc.SetNamespace("other")
 				rc.SetName("name")
 				return rc
 			}(),
 			relatedRule: &v1alpha1.RelatedResourceRule{
 				ResourceRule: v1alpha1.ResourceRule{
-					APIVersion: "some",
-					Resource:   "some",
+					APIVersion: "v1",
+					Resource:   "secrets",
 				},
 				LabelSelector: nil,
 				Namespace:     "some",
 				Names:         []string{"name"},
 			},
-			wantMatch: false,
+			relatedRuleKind: "Secret",
+			wantMatch:       false,
 		},
 		{
 			name:         "return false when parent is namespace scoped and namespace matches but name does not match",
@@ -345,22 +351,23 @@ func Test_matchRelatedRule(t *testing.T) {
 			parent:       fakeGenericParentWithNamespace(),
 			related: func() *unstructured.Unstructured {
 				rc := &unstructured.Unstructured{}
-				rc.SetAPIVersion("some")
-				rc.SetKind("some")
+				rc.SetAPIVersion("v1")
+				rc.SetKind("Secret")
 				rc.SetNamespace("some")
 				rc.SetName("othername")
 				return rc
 			}(),
 			relatedRule: &v1alpha1.RelatedResourceRule{
 				ResourceRule: v1alpha1.ResourceRule{
-					APIVersion: "some",
-					Resource:   "some",
+					APIVersion: "v1",
+					Resource:   "secrets",
 				},
 				LabelSelector: nil,
 				Namespace:     "some",
 				Names:         []string{"name"},
 			},
-			wantMatch: false,
+			relatedRuleKind: "Secret",
+			wantMatch:       false,
 		},
 		// When parent is cluster scoped
 		{
@@ -369,22 +376,23 @@ func Test_matchRelatedRule(t *testing.T) {
 			parent:       fakeGenericParentWithNamespace(),
 			related: func() *unstructured.Unstructured {
 				rc := &unstructured.Unstructured{}
-				rc.SetAPIVersion("some")
-				rc.SetKind("some")
+				rc.SetAPIVersion("v1")
+				rc.SetKind("Secret")
 				rc.SetNamespace("some")
 				rc.SetName("name")
 				return rc
 			}(),
 			relatedRule: &v1alpha1.RelatedResourceRule{
 				ResourceRule: v1alpha1.ResourceRule{
-					APIVersion: "some",
-					Resource:   "some",
+					APIVersion: "v1",
+					Resource:   "secrets",
 				},
 				LabelSelector: nil,
 				Namespace:     "some",
 				Names:         []string{"name"},
 			},
-			wantMatch: true,
+			relatedRuleKind: "Secret",
+			wantMatch:       true,
 		},
 		{
 			name:         "return false when name matches but namespace does not match",
@@ -392,23 +400,24 @@ func Test_matchRelatedRule(t *testing.T) {
 			parent:       fakeGenericParentWithNamespace(),
 			related: func() *unstructured.Unstructured {
 				rc := &unstructured.Unstructured{}
-				rc.SetAPIVersion("some")
-				rc.SetKind("some")
+				rc.SetAPIVersion("v1")
+				rc.SetKind("Secret")
 				rc.SetNamespace("other")
 				rc.SetName("name")
 				return rc
 			}(),
 			relatedRule: &v1alpha1.RelatedResourceRule{
 				ResourceRule: v1alpha1.ResourceRule{
-					APIVersion: "some",
-					Resource:   "some",
+					APIVersion: "v1",
+					Resource:   "secrets",
 				},
 				LabelSelector: nil,
 				Namespace:     "some",
 				Names:         []string{"name"},
 			},
-			wantMatch: false,
-			wantErr:   true,
+			relatedRuleKind: "Secret",
+			wantMatch:       false,
+			wantErr:         true,
 		},
 		{
 			name:         "return false when namespace matches but name does not match",
@@ -416,114 +425,32 @@ func Test_matchRelatedRule(t *testing.T) {
 			parent:       fakeGenericParentWithNamespace(),
 			related: func() *unstructured.Unstructured {
 				rc := &unstructured.Unstructured{}
-				rc.SetAPIVersion("some")
-				rc.SetKind("some")
+				rc.SetAPIVersion("v1")
+				rc.SetKind("Secret")
 				rc.SetNamespace("some")
 				rc.SetName("othername")
 				return rc
 			}(),
 			relatedRule: &v1alpha1.RelatedResourceRule{
 				ResourceRule: v1alpha1.ResourceRule{
-					APIVersion: "some",
-					Resource:   "some",
+					APIVersion: "v1",
+					Resource:   "secrets",
 				},
 				LabelSelector: nil,
 				Namespace:     "some",
 				Names:         []string{"name"},
 			},
-			wantMatch: false,
+			relatedRuleKind: "Secret",
+			wantMatch:       false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			matches, err := matchesRelatedRule(tt.isNamespaced, tt.parent, tt.related, tt.relatedRule)
+			matches, err := matchesRelatedRule(tt.isNamespaced, tt.parent, tt.related, tt.relatedRule, tt.relatedRuleKind)
 			if err != nil && !tt.wantErr {
 				t.Error(err)
 			}
-			if matches != tt.wantMatch {
-				t.Errorf("Expected match: %v, actual match: %v", tt.wantMatch, matches)
-			}
-		})
-	}
-}
-
-func Test_matchesTypeAndVersion(t *testing.T) {
-	tests := []struct {
-		name        string
-		related     *unstructured.Unstructured
-		relatedRule *v1alpha1.RelatedResourceRule
-		wantMatch   bool
-	}{
-		{
-			name: "return true when match is found",
-			related: func() *unstructured.Unstructured {
-				rc := &unstructured.Unstructured{}
-				rc.SetAPIVersion("some")
-				rc.SetKind("some")
-				return rc
-			}(),
-			relatedRule: &v1alpha1.RelatedResourceRule{
-				ResourceRule: v1alpha1.ResourceRule{
-					APIVersion: "some",
-					Resource:   "some",
-				},
-			},
-			wantMatch: true,
-		},
-		{
-			name: "return false when kind does not match",
-			related: func() *unstructured.Unstructured {
-				rc := &unstructured.Unstructured{}
-				rc.SetAPIVersion("some")
-				rc.SetKind("other")
-				return rc
-			}(),
-			relatedRule: &v1alpha1.RelatedResourceRule{
-				ResourceRule: v1alpha1.ResourceRule{
-					APIVersion: "some",
-					Resource:   "some",
-				},
-			},
-			wantMatch: false,
-		},
-		{
-			name: "return false when apiVersion does not match",
-			related: func() *unstructured.Unstructured {
-				rc := &unstructured.Unstructured{}
-				rc.SetAPIVersion("other")
-				rc.SetKind("some")
-				return rc
-			}(),
-			relatedRule: &v1alpha1.RelatedResourceRule{
-				ResourceRule: v1alpha1.ResourceRule{
-					APIVersion: "some",
-					Resource:   "some",
-				},
-			},
-			wantMatch: false,
-		},
-		{
-			name: "return false when kind and apiVersion do not match",
-			related: func() *unstructured.Unstructured {
-				rc := &unstructured.Unstructured{}
-				rc.SetAPIVersion("other")
-				rc.SetKind("other")
-				return rc
-			}(),
-			relatedRule: &v1alpha1.RelatedResourceRule{
-				ResourceRule: v1alpha1.ResourceRule{
-					APIVersion: "some",
-					Resource:   "some",
-				},
-			},
-			wantMatch: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			matches := matchesTypeAndVersion(tt.related, tt.relatedRule)
 			if matches != tt.wantMatch {
 				t.Errorf("Expected match: %v, actual match: %v", tt.wantMatch, matches)
 			}
