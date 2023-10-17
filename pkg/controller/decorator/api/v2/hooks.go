@@ -34,7 +34,7 @@ type DecoratorHookRequest struct {
 	Finalizing bool                          `json:"finalizing"`
 }
 
-func (r *DecoratorHookRequest) GetRootObject() *unstructured.Unstructured {
+func (r *DecoratorHookRequest) GetParent() *unstructured.Unstructured {
 	return r.Parent
 }
 

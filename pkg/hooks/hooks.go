@@ -41,6 +41,7 @@ func NewHook(
 		}
 		return &hookExecutorImpl{
 			webhookExecutor: executor,
+			version: parseVersion(hook.Version),
 		}, nil
 	}
 	return &hookExecutorImpl{
@@ -48,9 +49,17 @@ func NewHook(
 	}, nil
 }
 
+func parseVersion(version *v1alpha1.HookVersion) string {
+	if version == nil {
+		return string(v1alpha1.HookVersionV1)
+	}
+	return string(*version)
+}
+
 // hookExecutorImpl is default implementation of Hook
 type hookExecutorImpl struct {
 	webhookExecutor WebhookExecutor
+	version         string
 }
 
 func (h *hookExecutorImpl) IsEnabled() bool {
@@ -58,5 +67,6 @@ func (h *hookExecutorImpl) IsEnabled() bool {
 }
 
 func (h *hookExecutorImpl) Call(request api.WebhookRequest, response interface{}) error {
+	use hook version to serialize/deserialize
 	return h.webhookExecutor.Call(request, response)
 }
