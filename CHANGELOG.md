@@ -1,3 +1,10 @@
+## [4.11.5](https://github.com/metacontroller/metacontroller/compare/v4.11.4...v4.11.5) (2023-10-18)
+
+
+### Bug Fixes
+
+* **deps:** Update dependencies ([07ef821](https://github.com/metacontroller/metacontroller/commit/07ef821af27261c4ee6e4144377fc64e32494808))
+
 ## [4.11.4](https://github.com/metacontroller/metacontroller/compare/v4.11.3...v4.11.4) (2023-10-17)
 
 
