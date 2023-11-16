@@ -13,7 +13,7 @@ jobs:
           - { name: 'debug', command: 'image_debug' }
     steps:
       - name: checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: '5'
       - uses: actions/setup-go@v4
@@ -46,7 +46,7 @@ jobs:
       latest_matrix: ${{ steps.set-matrix.outputs.latest_matrix }}
     steps:
       - name: checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: '5'
       - id: set-matrix
@@ -74,7 +74,7 @@ jobs:
     name: Tests
     steps:
       - name: checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: '5'
       - name: Set up Go
@@ -110,7 +110,7 @@ jobs:
     name: e2e test k8s ${{ matrix.configuration.version }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: '5'
       - name: Setup kind
@@ -164,7 +164,7 @@ jobs:
     name: helm test k8s ${{ matrix.configuration.version }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -224,7 +224,7 @@ jobs:
     needs: [ 'tests', 'e2etests', 'helmtests' ]
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
           persist-credentials: false
