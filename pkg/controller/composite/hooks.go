@@ -43,17 +43,22 @@ func (pc *parentController) callHook(
 	// when the object no longer matches our composite selector.
 	// This allows the composite to clean up after itself if the object has been
 	// updated to disable the functionality added by the decorator.
-	if pc.finalizeHook.IsEnabled() &&
-		(parent.GetDeletionTimestamp() != nil || pc.doNotMatchLabels(parent.GetLabels())) {
+	switch {
+	case pc.finalizeHook.IsEnabled() && (parent.GetDeletionTimestamp() != nil || pc.doNotMatchLabels(parent.GetLabels())):
 		// Finalize
 		if err := pc.finalizeHook.Call(requestBuilder.IsFinalizing().Build(), &response); err != nil {
 			return nil, fmt.Errorf("finalize hook failed: %w", err)
 		}
-	} else {
+
+	case pc.syncHook.IsEnabled():
 		// Sync
 		if err := pc.syncHook.Call(requestBuilder.Build(), &response); err != nil {
 			return nil, fmt.Errorf("sync hook failed: %w", err)
 		}
+
+	default:
+		// Neither of the hook's was called
+		return nil, nil
 	}
 
 	for _, child := range response.Children {
