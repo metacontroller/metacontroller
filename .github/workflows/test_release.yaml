@@ -206,7 +206,7 @@ jobs:
 
       - name: Run chart-testing (lint-and-install)
         run: |
-          ct lint-and-install --chart-dirs deploy/helm \
+          ct lint-and-install  --all --chart-dirs deploy/helm \
           --chart-yaml-schema '.github/config/chart-testing/etc/chart_schema.yaml' \
           --lint-conf '.github/config/chart-testing/etc/lintconf.yaml' \
           --validate-maintainers=false \
