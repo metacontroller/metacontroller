@@ -5,7 +5,7 @@ jobs:
   golangci-lint:
     runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - uses: actions/setup-go@v4
       with:
         go-version-file: 'go.mod'
@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
     - name: checkout
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
     - uses: actions/setup-go@v4
       with:
         go-version-file: 'go.mod'
@@ -82,7 +82,7 @@ jobs:
     container:
       image: "michaelfbryan/mdbook-docker-image:latest"
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Build mdbook
         run: |
           cd docs
@@ -91,7 +91,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
     - name: Check out code into the Go module directory
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
     - name: Set up Go 1.x in order to write go.list file
       uses: actions/setup-go@v4
       with:
