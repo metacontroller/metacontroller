@@ -574,6 +574,9 @@ func (pc *parentController) syncParentObject(parent *unstructured.Unstructured) 
 	if err != nil {
 		return err
 	}
+	if syncResult == nil {
+		return nil
+	}
 	desiredChildren := commonv2.MakeUniformObjectMap(parent, syncResult.Children)
 
 	// Enqueue a delayed resync, if requested.

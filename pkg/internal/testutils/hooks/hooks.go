@@ -42,7 +42,7 @@ func NewDisabledExecutorStub() *hookExecutorStub {
 }
 
 func NewErrorExecutorStub(err error) *hookExecutorStub {
-	return &hookExecutorStub{err: err}
+	return &hookExecutorStub{err: err, enabled: true}
 }
 
 // HookExecutorStub is Hook stub to return any given response

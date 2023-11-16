@@ -88,6 +88,9 @@ func (pc *parentController) syncRevisions(parent *unstructured.Unstructured, obs
 		if err != nil {
 			return nil, fmt.Errorf("sync hook failed for %v %v/%v: %w", pc.parentResource.Kind, parent.GetNamespace(), parent.GetName(), err)
 		}
+		if syncResult == nil {
+			return nil, fmt.Errorf("sync hook nil//not defined for %v %v/%v: %w", pc.parentResource.Kind, parent.GetNamespace(), parent.GetName(), err)
+		}
 		return syncResult, nil
 	}
 
