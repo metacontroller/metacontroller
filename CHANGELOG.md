@@ -1,3 +1,10 @@
+## [4.11.6](https://github.com/metacontroller/metacontroller/compare/v4.11.5...v4.11.6) (2023-11-24)
+
+
+### Bug Fixes
+
+* **hooks:** [#702](https://github.com/metacontroller/metacontroller/issues/702) Handle missing sync hook scenario ([e7f469f](https://github.com/metacontroller/metacontroller/commit/e7f469f2003787026552497260183a877e3a525b))
+
 ## [4.11.5](https://github.com/metacontroller/metacontroller/compare/v4.11.4...v4.11.5) (2023-10-18)
 
 
