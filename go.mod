@@ -61,9 +61,9 @@ require (
 	go.uber.org/multierr v1.10.0 // indirect
 	golang.org/x/net v0.17.0 // indirect
 	golang.org/x/oauth2 v0.5.0 // indirect
-	golang.org/x/sys v0.13.0 // indirect
-	golang.org/x/term v0.13.0 // indirect
-	golang.org/x/text v0.13.0 // indirect
+	golang.org/x/sys v0.15.0 // indirect
+	golang.org/x/term v0.15.0 // indirect
+	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/time v0.0.0-20220609170525-579cf78fd858 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.2.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
@@ -78,7 +78,7 @@ require (
 )
 
 replace (
-	golang.org/x/net => golang.org/x/net v0.17.0 // https://avd.aquasec.com/nvd/cve-2022-41723
+	golang.org/x/net => golang.org/x/net v0.19.0 // https://avd.aquasec.com/nvd/cve-2022-41723
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.25.9
 	k8s.io/apimachinery => k8s.io/apimachinery v0.25.9
 	k8s.io/client-go => k8s.io/client-go v0.25.9
