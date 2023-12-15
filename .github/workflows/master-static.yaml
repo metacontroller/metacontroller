@@ -24,7 +24,7 @@ jobs:
     - name: Save image
       run: |
         docker save --output metacontroller-lint.tar localhost/metacontroller:dev
-    - uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@v4
       name: Save metacontroller image
       with:
         name: metacontroller-lint-image
