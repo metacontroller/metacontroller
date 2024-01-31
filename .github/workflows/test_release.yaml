@@ -91,7 +91,7 @@ jobs:
         run: make ${{ matrix.target }}
       - name: coverage-unit
         if: (github.repository_owner == 'metacontroller')
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
           files: test/integration/hack/tmp/${{ matrix.target }}-coverage.out
