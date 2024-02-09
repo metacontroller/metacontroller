@@ -299,5 +299,9 @@ release:
     - `{{ .Env.REPOSITORY_OWNER }}io/{{ .ProjectName }}:v{{ .Version }}`
     - `{{ .Env.REPOSITORY_OWNER }}io/{{ .ProjectName }}:v{{ .Version }}-distroless`
     - `{{ .Env.REPOSITORY_OWNER }}io/{{ .ProjectName }}:v{{ .Version }}-distroless-debug`
+    ## Helm chart
+    ### Github container registry
+    - `ghcr.io/{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}-helm:{{ .Version }}`
+
   extra_files:
     - glob: manifests/production/*

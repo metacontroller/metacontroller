@@ -29,18 +29,32 @@ module.exports = {
           },
           {
             "files": ["deploy/helm/metacontroller/Chart.yaml"],
-            "from": "(version|appVersion): v.*",
-            "to": "$1: v${nextRelease.version}",
+            "from": "appVersion: v.*",
+            "to": "appVersion: v${nextRelease.version}",
             "results": [
               {
                 "file": "deploy/helm/metacontroller/Chart.yaml",
                 "hasChanged": true,
-                "numMatches": 2,
-                "numReplacements": 2
+                "numMatches": 1,
+                "numReplacements": 1
               }
             ],
             "countMatches": true
-          }
+          },
+          {
+            "files": ["deploy/helm/metacontroller/Chart.yaml"],
+            "from": "version: .*",
+            "to": "version: ${nextRelease.version}",
+            "results": [
+              {
+                "file": "deploy/helm/metacontroller/Chart.yaml",
+                "hasChanged": true,
+                "numMatches": 1,
+                "numReplacements": 1
+              }
+            ],
+            "countMatches": true
+          },
         ]
       }
     ],
