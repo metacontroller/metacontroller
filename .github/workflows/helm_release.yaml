@@ -15,7 +15,7 @@ jobs:
       - uses: actions/checkout@v3
         name: Checkout
       - name: install helm
-        uses: Azure/setup-helm@v3
+        uses: Azure/setup-helm@v4
         with:
           version: 3.8.0
       - name: login to ghcr.io using helm
