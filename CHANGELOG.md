@@ -1,3 +1,11 @@
+## [4.11.8](https://github.com/metacontroller/metacontroller/compare/v4.11.7...v4.11.8) (2024-02-28)
+
+
+### Bug Fixes
+
+* **deps:** update alpine docker tag to v3.19.1 ([46a244b](https://github.com/metacontroller/metacontroller/commit/46a244b7f0eea068631759ff195a3d8e2d8e0ddf))
+* **helm:** [[#946](https://github.com/metacontroller/metacontroller/issues/946)] - Drop v prefix from helm chart version ([101041f](https://github.com/metacontroller/metacontroller/commit/101041f123c29c3f6a717c888313d8404e898ba0))
+
 ## [4.11.7](https://github.com/metacontroller/metacontroller/compare/v4.11.6...v4.11.7) (2023-12-01)
 
 
