@@ -6,7 +6,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
     - uses: actions/checkout@v3
-    - uses: actions/setup-go@v4
+    - uses: actions/setup-go@v5
       with:
         go-version-file: 'go.mod'
         cache: true
@@ -21,7 +21,7 @@ jobs:
     steps:
     - name: checkout
       uses: actions/checkout@v3
-    - uses: actions/setup-go@v4
+    - uses: actions/setup-go@v5
       with:
         go-version-file: 'go.mod'
         cache: true
@@ -93,7 +93,7 @@ jobs:
     - name: Check out code into the Go module directory
       uses: actions/checkout@v3
     - name: Set up Go 1.x in order to write go.list file
-      uses: actions/setup-go@v4
+      uses: actions/setup-go@v5
       with:
         go-version-file: 'go.mod'
         cache: true
