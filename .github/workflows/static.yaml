@@ -36,7 +36,7 @@ jobs:
     - name: Save image
       run: |
         docker save --output metacontroller-lint.tar localhost/metacontroller:dev
-    - uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@v4
       name: Save metacontroller image
       with:
         name: metacontroller-lint-image
@@ -47,7 +47,7 @@ jobs:
     needs: [docker-image-for-linting]
     steps:
     - name: Download metacontroller images
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: metacontroller-lint-image
     - name: Load metacontroller images
@@ -67,7 +67,7 @@ jobs:
     needs: [docker-image-for-linting]
     steps:
       - name: Download metacontroller images
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: metacontroller-lint-image
       - name: Load metacontroller images
