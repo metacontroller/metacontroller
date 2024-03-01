@@ -10,7 +10,7 @@ require (
 	github.com/google/go-cmp v0.6.0
 	github.com/nsf/jsondiff v0.0.0-20230430225905-43f6cf3098c1 // test
 	github.com/prometheus/client_golang v1.15.0
-	github.com/stretchr/testify v1.8.4 //test
+	github.com/stretchr/testify v1.9.0 //test
 	go.uber.org/zap v1.26.0
 	k8s.io/api v0.25.9
 	k8s.io/apiextensions-apiserver v0.25.9
