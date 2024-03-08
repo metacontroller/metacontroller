@@ -1,3 +1,10 @@
+## [4.11.9](https://github.com/metacontroller/metacontroller/compare/v4.11.8...v4.11.9) (2024-03-08)
+
+
+### Bug Fixes
+
+* **deps:** update module github.com/stretchr/testify to v1.9.0 ([dee11f1](https://github.com/metacontroller/metacontroller/commit/dee11f1f1fc71c34afb8f032d8c24cb1e42675e5))
+
 ## [4.11.8](https://github.com/metacontroller/metacontroller/compare/v4.11.7...v4.11.8) (2024-02-28)
 
 
