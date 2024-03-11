@@ -18,7 +18,6 @@ package controllerref
 
 import (
 	"fmt"
-	"k8s.io/utils/ptr"
 	"metacontroller/pkg/logging"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -30,6 +29,8 @@ import (
 
 	dynamicclientset "metacontroller/pkg/dynamic/clientset"
 	k8s "metacontroller/pkg/third_party/kubernetes"
+
+	"k8s.io/utils/ptr"
 )
 
 type UnstructuredManager struct {
