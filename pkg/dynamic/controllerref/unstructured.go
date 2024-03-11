@@ -18,9 +18,8 @@ package controllerref
 
 import (
 	"fmt"
+	"k8s.io/utils/ptr"
 	"metacontroller/pkg/logging"
-
-	"k8s.io/utils/pointer"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -99,8 +98,8 @@ func (m *UnstructuredManager) adoptChild(child *unstructured.Unstructured) error
 		Kind:               m.parentKind.Kind,
 		Name:               m.Controller.GetName(),
 		UID:                m.Controller.GetUID(),
-		Controller:         pointer.Bool(true),
-		BlockOwnerDeletion: pointer.Bool(true),
+		Controller:         ptr.To[bool](true),
+		BlockOwnerDeletion: ptr.To[bool](true),
 	}
 	return atomicUpdate(m.client, child, func(obj *unstructured.Unstructured) bool {
 		ownerRefs := addOwnerReference(obj.GetOwnerReferences(), controllerRef)

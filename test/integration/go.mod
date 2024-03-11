@@ -1,13 +1,13 @@
 module metacontroller/test/integration
 
-go 1.17
+go 1.20
 
 require (
 	k8s.io/api v0.25.9
 	k8s.io/apiextensions-apiserver v0.25.9
 	k8s.io/apimachinery v0.25.9
 	k8s.io/client-go v0.25.9
-	k8s.io/utils v0.0.0-20230406110748-d93618cff8a2
+	k8s.io/utils v0.0.0-20240310230437-4693a0247e57
 	metacontroller v0.0.0-00010101000000-000000000000
 	sigs.k8s.io/controller-runtime v0.13.1
 )

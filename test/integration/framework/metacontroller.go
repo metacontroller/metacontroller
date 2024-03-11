@@ -18,11 +18,10 @@ package framework
 
 import (
 	"context"
+	"k8s.io/utils/ptr"
 
 	apiextensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
-
 	"metacontroller/pkg/apis/metacontroller/v1alpha1"
 )
 
@@ -59,7 +58,7 @@ func (f *Fixture) CreateCompositeController(name, syncHookURL string, customizeH
 		},
 		Spec: v1alpha1.CompositeControllerSpec{
 			// Set a big resyncPeriod so tests can precisely control when syncs happen.
-			ResyncPeriodSeconds: pointer.Int32Ptr(3600),
+			ResyncPeriodSeconds: ptr.To[int32](3600),
 			ParentResource: v1alpha1.CompositeControllerParentResourceRule{
 				ResourceRule:  *parentRule,
 				LabelSelector: nil,
@@ -118,7 +117,7 @@ func (f *Fixture) CreateDecoratorController(name, syncHookURL, customizeHookUrl 
 		},
 		Spec: v1alpha1.DecoratorControllerSpec{
 			// Set a big resyncPeriod so tests can precisely control when syncs happen.
-			ResyncPeriodSeconds: pointer.Int32(3600),
+			ResyncPeriodSeconds: ptr.To[int32](3600),
 			Resources: []v1alpha1.DecoratorControllerResourceRule{
 				{
 					ResourceRule: *parentRule,
