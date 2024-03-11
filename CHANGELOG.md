@@ -1,3 +1,12 @@
+## [4.11.10](https://github.com/metacontroller/metacontroller/compare/v4.11.9...v4.11.10) (2024-03-11)
+
+
+### Bug Fixes
+
+* **deps:** fix issue with goimports lint ([4a8a585](https://github.com/metacontroller/metacontroller/commit/4a8a58571f573381ee77b4cbfd7b57d588d6a294))
+* **deps:** update google.golang.org/protobuf to v1.33.0 ([8cc4bf9](https://github.com/metacontroller/metacontroller/commit/8cc4bf9ba9dbf22e9e02f3a733a1d38466b94387))
+* **deps:** update k8s.io/utils digest to 4693a02 ([9b7651e](https://github.com/metacontroller/metacontroller/commit/9b7651ed10a08ded228ee07d886e3a62529d07c1))
+
 ## [4.11.9](https://github.com/metacontroller/metacontroller/compare/v4.11.8...v4.11.9) (2024-03-08)
 
 
