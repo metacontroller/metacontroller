@@ -115,7 +115,7 @@ func (s serializingHookExecutorStub) IsEnabled() bool {
 func (s serializingHookExecutorStub) Call(request api.WebhookRequest, response interface{}) error {
 	err := k8sjson.Unmarshal([]byte(s.response), response)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	return nil
 }

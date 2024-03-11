@@ -112,7 +112,53 @@ func TestWhenChildrenArrayIsNullThenDeserializeToEmptySlice(t *testing.T) {
 		t.Fail()
 	}
 
-	if response.Children == nil {
+	if response == nil || response.Children == nil {
 		t.Errorf("Children should not be nil")
+	}
+}
+
+func TestWhenChildrenArrayHasInvalidValueShouldFail(t *testing.T) {
+	input := `
+{
+	"children": [None]
+}`
+	parentController := parentController{
+		syncHook:     hooks.NewSerializingExecutorStub(input),
+		finalizeHook: hooks.NewDisabledExecutorStub(),
+	}
+	parent := &unstructured.Unstructured{}
+	parent.SetNamespace("some")
+	parent.SetDeletionTimestamp(nil)
+
+	response, err := parentController.callHook(parent, make(commonv2.UniformObjectMap), make(commonv2.UniformObjectMap))
+
+	if err == nil {
+		t.Error("Should fail with invalid input")
+	}
+	if response != nil {
+		t.Error("Response should be nil due to error raised")
+	}
+}
+
+func TestWhenChildrenArrayHasInvalidJSONValueShouldFail(t *testing.T) {
+	input := `
+{
+	"children": {None}
+}`
+	parentController := parentController{
+		syncHook:     hooks.NewSerializingExecutorStub(input),
+		finalizeHook: hooks.NewDisabledExecutorStub(),
+	}
+	parent := &unstructured.Unstructured{}
+	parent.SetNamespace("some")
+	parent.SetDeletionTimestamp(nil)
+
+	response, err := parentController.callHook(parent, make(commonv2.UniformObjectMap), make(commonv2.UniformObjectMap))
+
+	if err == nil {
+		t.Error("Should fail with invalid input")
+	}
+	if response != nil {
+		t.Error("Response should be nil due to error raised")
 	}
 }
