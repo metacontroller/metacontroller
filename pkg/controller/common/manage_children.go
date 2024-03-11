@@ -23,7 +23,7 @@ import (
 	commonv2 "metacontroller/pkg/controller/common/api/v2"
 	"metacontroller/pkg/logging"
 
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"metacontroller/pkg/apis/metacontroller/v1alpha1"
 	dynamicapply "metacontroller/pkg/dynamic/apply"
@@ -119,8 +119,8 @@ func MakeControllerRef(parent *unstructured.Unstructured) *metav1.OwnerReference
 		Kind:               parent.GetKind(),
 		Name:               parent.GetName(),
 		UID:                parent.GetUID(),
-		Controller:         pointer.Bool(true),
-		BlockOwnerDeletion: pointer.Bool(true),
+		Controller:         ptr.To[bool](true),
+		BlockOwnerDeletion: ptr.To[bool](true),
 	}
 }
 
