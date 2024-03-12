@@ -12,10 +12,10 @@ require (
 	github.com/prometheus/client_golang v1.15.0
 	github.com/stretchr/testify v1.9.0 //test
 	go.uber.org/zap v1.26.0
-	k8s.io/api v0.25.9
+	k8s.io/api v0.25.16
 	k8s.io/apiextensions-apiserver v0.25.9
-	k8s.io/apimachinery v0.25.9
-	k8s.io/client-go v0.25.9
+	k8s.io/apimachinery v0.25.16
+	k8s.io/client-go v0.25.16
 	k8s.io/klog/v2 v2.100.1
 	k8s.io/utils v0.0.0-20240310230437-4693a0247e57
 	sigs.k8s.io/controller-runtime v0.13.1
@@ -43,7 +43,7 @@ require (
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/gnostic v0.5.7-v3refs // indirect
 	github.com/google/gofuzz v1.1.0 // indirect
-	github.com/google/uuid v1.1.2 // indirect
+	github.com/google/uuid v1.3.0 // indirect
 	github.com/imdario/mergo v0.3.12 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
@@ -80,7 +80,7 @@ require (
 replace (
 	golang.org/x/net => golang.org/x/net v0.17.0 // https://avd.aquasec.com/nvd/cve-2022-41723
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.25.9
-	k8s.io/apimachinery => k8s.io/apimachinery v0.25.9
-	k8s.io/client-go => k8s.io/client-go v0.25.9
-	k8s.io/component-base => k8s.io/component-base v0.25.9
+	k8s.io/apimachinery => k8s.io/apimachinery v0.25.16
+	k8s.io/client-go => k8s.io/client-go v0.25.16
+	k8s.io/component-base => k8s.io/component-base v0.25.16
 )
