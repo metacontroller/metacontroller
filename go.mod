@@ -18,7 +18,7 @@ require (
 	k8s.io/client-go v0.25.9
 	k8s.io/klog/v2 v2.100.1
 	k8s.io/utils v0.0.0-20240310230437-4693a0247e57
-	sigs.k8s.io/controller-runtime v0.13.1
+	sigs.k8s.io/controller-runtime v0.17.2
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd
 	zgo.at/zcache/v2 v2.1.0
 )
