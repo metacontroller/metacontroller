@@ -12,8 +12,8 @@ require (
 	github.com/prometheus/client_golang v1.15.0
 	github.com/stretchr/testify v1.9.0 //test
 	go.uber.org/zap v1.26.0
-	k8s.io/api v0.25.9
-	k8s.io/apiextensions-apiserver v0.25.9
+	k8s.io/api v0.29.3
+	k8s.io/apiextensions-apiserver v0.29.3
 	k8s.io/apimachinery v0.25.9
 	k8s.io/client-go v0.25.9
 	k8s.io/klog/v2 v2.100.1
@@ -79,7 +79,7 @@ require (
 
 replace (
 	golang.org/x/net => golang.org/x/net v0.17.0 // https://avd.aquasec.com/nvd/cve-2022-41723
-	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.25.9
+	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.29.3
 	k8s.io/apimachinery => k8s.io/apimachinery v0.25.9
 	k8s.io/client-go => k8s.io/client-go v0.25.9
 	k8s.io/component-base => k8s.io/component-base v0.25.9
