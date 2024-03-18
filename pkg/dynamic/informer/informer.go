@@ -199,13 +199,13 @@ func (seh *sharedEventHandler) removeHandlers(iw *informerWrapper) {
 	delete(seh.handlers, iw)
 }
 
-func (seh *sharedEventHandler) OnAdd(obj interface{}) {
+func (seh *sharedEventHandler) OnAdd(obj interface{}, isInInitialList bool) {
 	seh.mutex.RLock()
 	defer seh.mutex.RUnlock()
 
 	for _, handlers := range seh.handlers {
 		for _, handler := range handlers {
-			handler.OnAdd(obj)
+			handler.OnAdd(obj, isInInitialList)
 		}
 	}
 }
@@ -300,12 +300,16 @@ type informerWrapper struct {
 	sharedResourceInformer *sharedResourceInformer
 }
 
-func (iw *informerWrapper) AddEventHandler(handler cache.ResourceEventHandler) {
+func (iw *informerWrapper) AddEventHandler(handler cache.ResourceEventHandler) (cache.ResourceEventHandlerRegistration, error) {
 	iw.sharedResourceInformer.eventHandlers.addHandler(iw, handler, iw.sharedResourceInformer.defaultResyncPeriod)
+
+	return nil, nil
 }
 
-func (iw *informerWrapper) AddEventHandlerWithResyncPeriod(handler cache.ResourceEventHandler, resyncPeriod time.Duration) {
+func (iw *informerWrapper) AddEventHandlerWithResyncPeriod(handler cache.ResourceEventHandler, resyncPeriod time.Duration) (cache.ResourceEventHandlerRegistration, error) {
 	iw.sharedResourceInformer.eventHandlers.addHandler(iw, handler, resyncPeriod)
+
+	return nil, nil
 }
 
 func (iw *informerWrapper) RemoveEventHandlers() {

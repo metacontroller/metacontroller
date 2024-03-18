@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"metacontroller/pkg/logging"
+	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"time"
 
 	"k8s.io/client-go/discovery"
@@ -29,13 +30,11 @@ import (
 	"metacontroller/pkg/controller/decorator"
 	"metacontroller/pkg/options"
 
+	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
-	"sigs.k8s.io/controller-runtime/pkg/source"
-
-	"k8s.io/apimachinery/pkg/labels"
 
 	"metacontroller/pkg/apis/metacontroller/v1alpha1"
 	mcclientset "metacontroller/pkg/client/generated/clientset/internalclientset"
@@ -73,7 +72,7 @@ func New(configuration options.Configuration) (controllerruntime.Manager, error)
 	mgr, err := controllerruntime.NewManager(configuration.RestConfig, manager.Options{
 		// Disables serving built-in metrics.
 		// We already start a standalone metrics server in parallel to the manager.
-		MetricsBindAddress:         configuration.MetricsEndpoint,
+		Metrics:                    server.Options{BindAddress: configuration.MetricsEndpoint},
 		HealthProbeBindAddress:     configuration.HealthProbeBindAddress,
 		EventBroadcaster:           controllerContext.Broadcaster,
 		LeaderElection:             configuration.LeaderElectionOptions.LeaderElection,
@@ -127,7 +126,7 @@ func New(configuration options.Configuration) (controllerruntime.Manager, error)
 	if err != nil {
 		return nil, err
 	}
-	err = compositeCtrl.Watch(&source.Kind{Type: &v1alpha1.CompositeController{}}, &handler.EnqueueRequestForObject{}, predicateFuncs)
+	err = compositeCtrl.Watch(&v1alpha1.CompositeController{}, &handler.EnqueueRequestForObject{}, predicateFuncs)
 	if err != nil {
 		return nil, err
 	}
@@ -138,7 +137,7 @@ func New(configuration options.Configuration) (controllerruntime.Manager, error)
 	if err != nil {
 		return nil, err
 	}
-	err = decoratorCtrl.Watch(&source.Kind{Type: &v1alpha1.DecoratorController{}}, &handler.EnqueueRequestForObject{}, predicateFuncs)
+	err = decoratorCtrl.Watch(&v1alpha1.DecoratorController{}, &handler.EnqueueRequestForObject{}, predicateFuncs)
 	if err != nil {
 		return nil, err
 	}
