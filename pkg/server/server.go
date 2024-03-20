@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"metacontroller/pkg/logging"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 	"time"
 
 	"k8s.io/client-go/discovery"
@@ -126,7 +127,7 @@ func New(configuration options.Configuration) (controllerruntime.Manager, error)
 	if err != nil {
 		return nil, err
 	}
-	err = compositeCtrl.Watch(&v1alpha1.CompositeController{}, &handler.EnqueueRequestForObject{}, predicateFuncs)
+	err = compositeCtrl.Watch(source.Kind(mgr.GetCache(), &v1alpha1.CompositeController{}), &handler.EnqueueRequestForObject{}, predicateFuncs)
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +138,7 @@ func New(configuration options.Configuration) (controllerruntime.Manager, error)
 	if err != nil {
 		return nil, err
 	}
-	err = decoratorCtrl.Watch(&v1alpha1.DecoratorController{}, &handler.EnqueueRequestForObject{}, predicateFuncs)
+	err = decoratorCtrl.Watch(source.Kind(mgr.GetCache(), &v1alpha1.DecoratorController{}), &handler.EnqueueRequestForObject{}, predicateFuncs)
 	if err != nil {
 		return nil, err
 	}

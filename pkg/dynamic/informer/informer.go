@@ -107,11 +107,12 @@ type sharedResourceInformer struct {
 	defaultResyncPeriod time.Duration
 
 	eventHandlers *sharedEventHandler
+	registration  cache.ResourceEventHandlerRegistration
 
 	close func()
 }
 
-func newSharedResourceInformer(client *dynamicclientset.ResourceClient, defaultResyncPeriod time.Duration, close func()) *sharedResourceInformer {
+func newSharedResourceInformer(client *dynamicclientset.ResourceClient, defaultResyncPeriod time.Duration, close func()) (*sharedResourceInformer, error) {
 	informer := cache.NewSharedIndexInformer(
 		&cache.ListWatch{
 			ListFunc: func(opts metav1.ListOptions) (runtime.Object, error) {
@@ -136,8 +137,12 @@ func newSharedResourceInformer(client *dynamicclientset.ResourceClient, defaultR
 		lister: dynamiclister.New(informer.GetIndexer(), client.GroupVersionResource()),
 	}
 	sri.eventHandlers = newSharedEventHandler(sri.lister, defaultResyncPeriod)
-	informer.AddEventHandler(sri.eventHandlers)
-	return sri
+	reg, err := informer.AddEventHandler(sri.eventHandlers)
+	sri.registration = reg
+	if err != nil {
+		return nil, err
+	}
+	return sri, nil
 }
 
 // sharedEventHandler is the one and only event handler that's actually added

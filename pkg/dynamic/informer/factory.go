@@ -101,7 +101,10 @@ func (f *SharedInformerFactory) Resource(apiVersion, resource string) (*Resource
 	}
 
 	logging.Logger.V(4).Info("Starting shared informer", "resource", resource, "api_version", apiVersion)
-	sharedInformer := newSharedResourceInformer(client, f.defaultResync, closeFn)
+	sharedInformer, err := newSharedResourceInformer(client, f.defaultResync, closeFn)
+	if err != nil {
+		return nil, fmt.Errorf("can't create client for %v shared informer: %w", key, err)
+	}
 	f.sharedInformers[key] = sharedInformer
 	f.refCount[key] = 1
 
