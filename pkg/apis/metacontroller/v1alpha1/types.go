@@ -20,7 +20,6 @@ package v1alpha1
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 // CompositeController
@@ -34,8 +33,6 @@ type CompositeController struct {
 
 	Spec   CompositeControllerSpec   `json:"spec"`
 	Status CompositeControllerStatus `json:"status,omitempty"`
-
-	source.Source
 }
 
 func (cc *CompositeController) GetCustomizeHook() *Hook {
@@ -208,8 +205,6 @@ type DecoratorController struct {
 
 	Spec   DecoratorControllerSpec   `json:"spec"`
 	Status DecoratorControllerStatus `json:"status,omitempty"`
-
-	source.Source
 }
 
 func (dc *DecoratorController) GetCustomizeHook() *Hook {
