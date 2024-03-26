@@ -223,17 +223,26 @@ func (c *decoratorController) Start() {
 	}
 	for _, informer := range c.parentInformers {
 		if resyncPeriod != 0 {
-			informer.Informer().AddEventHandlerWithResyncPeriod(parentHandlers, resyncPeriod)
+			_, err := informer.Informer().AddEventHandlerWithResyncPeriod(parentHandlers, resyncPeriod)
+			if err != nil {
+				c.logger.Error(err, "Unable to AddEventHandlerWithResyncPeriod Parent Informer to Informer", "controller", c.dc.Name)
+			}
 		} else {
-			informer.Informer().AddEventHandler(parentHandlers)
+			_, err := informer.Informer().AddEventHandler(parentHandlers)
+			if err != nil {
+				c.logger.Error(err, "Unable to AddEventHandler Parent Informer to Informer", "controller", c.dc.Name)
+			}
 		}
 	}
 	for _, informer := range c.childInformers {
-		informer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		_, err := informer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 			AddFunc:    c.onChildAdd,
 			UpdateFunc: c.onChildUpdate,
 			DeleteFunc: c.onChildDelete,
 		})
+		if err != nil {
+			c.logger.Error(err, "Unable to AddEventHandler Child Informer to Informer", "controller", c.dc.Name)
+		}
 	}
 
 	go func() {
