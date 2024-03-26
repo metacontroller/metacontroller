@@ -19,23 +19,23 @@ package server
 import (
 	"context"
 	"fmt"
-	"metacontroller/pkg/logging"
-	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 	"time"
 
-	"k8s.io/client-go/discovery"
-
-	"metacontroller/pkg/controller/common"
-
-	"metacontroller/pkg/controller/decorator"
-	"metacontroller/pkg/options"
+	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/discovery"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+
+	"metacontroller/pkg/controller/common"
+	"metacontroller/pkg/controller/decorator"
+	"metacontroller/pkg/logging"
+	"metacontroller/pkg/options"
 
 	"metacontroller/pkg/apis/metacontroller/v1alpha1"
 	mcclientset "metacontroller/pkg/client/generated/clientset/internalclientset"
