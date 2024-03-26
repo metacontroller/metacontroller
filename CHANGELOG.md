@@ -1,3 +1,12 @@
+## [4.11.11](https://github.com/metacontroller/metacontroller/compare/v4.11.10...v4.11.11) (2024-03-26)
+
+
+### Bug Fixes
+
+* **fix-deps:** add nocoverageredesign for integration-test ([c6f8be9](https://github.com/metacontroller/metacontroller/commit/c6f8be9a56bd05932cac974754ce7bcb439955d3))
+* **fix-deps:** added error checking; fixed deprecation in .golangci.yml ([361ad96](https://github.com/metacontroller/metacontroller/commit/361ad9634c54b328d7e7a127bd369fc7129381de))
+* **fix-deps:** resolved golangci-lint goimports ([aaba4b4](https://github.com/metacontroller/metacontroller/commit/aaba4b4f651ee1aabd8ec44339e204e572b7e8c3))
+
 ## [4.11.10](https://github.com/metacontroller/metacontroller/compare/v4.11.9...v4.11.10) (2024-03-11)
 
 
