@@ -29,10 +29,11 @@ build_debug: build
 unit-test: test-setup
 	@gotestsum -- -race -coverpkg="${COVER_PKGS}" -coverprofile=test/integration/hack/tmp/unit-test-coverage.out ${PKGS}
 
+# NOTE: Added GOEXPERIMENT=nocoverageredesign due to issue with covmeta in go 1.22 see https://github.com/golang/go/issues/65653
 .PHONY: integration-test
 integration-test: test-setup
 	@cd ./test/integration; \
- 	gotestsum -- -coverpkg="${COVER_PKGS}" -coverprofile=hack/tmp/integration-test-coverage.out ./... -timeout 5m -parallel 1
+ 	GOEXPERIMENT=nocoverageredesign gotestsum -- -coverpkg="${COVER_PKGS}" -coverprofile=hack/tmp/integration-test-coverage.out ./... -timeout 5m -parallel 1
 
 .PHONY: test-setup
 test-setup:
