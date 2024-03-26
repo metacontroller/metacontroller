@@ -169,11 +169,15 @@ func (rm *Manager) getRelatedClient(apiVersion, resource string) (*dynamicclient
 			return nil, nil, fmt.Errorf("can't create informer for related resource: %w", err)
 		}
 
-		informer.Informer().AddEventHandler(clientgo_cache.ResourceEventHandlerFuncs{
+		_, err := informer.Informer().AddEventHandler(clientgo_cache.ResourceEventHandlerFuncs{
 			AddFunc:    rm.onRelatedAdd,
 			UpdateFunc: rm.onRelatedUpdate,
 			DeleteFunc: rm.onRelatedDelete,
 		})
+
+		if err != nil {
+			return nil, nil, fmt.Errorf("can't create informer for related resource: %w", err)
+		}
 
 		if !clientgo_cache.WaitForNamedCacheSync(rm.name, rm.stopCh, informer.Informer().HasSynced) {
 			rm.logger.Info("related Manager - cache sync never finished", "name", rm.name)

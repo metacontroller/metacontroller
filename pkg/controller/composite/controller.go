@@ -232,16 +232,25 @@ func (pc *parentController) Start() {
 		if resyncPeriod < time.Second {
 			resyncPeriod = time.Second
 		}
-		pc.parentInformer.Informer().AddEventHandlerWithResyncPeriod(parentHandlers, resyncPeriod)
+		_, err := pc.parentInformer.Informer().AddEventHandlerWithResyncPeriod(parentHandlers, resyncPeriod)
+		if err != nil {
+			pc.logger.Error(err, "Unable to AddEventHandlerWithResyncPeriod Informer to Parent Informer", "controller", pc.cc.Name)
+		}
 	} else {
-		pc.parentInformer.Informer().AddEventHandler(parentHandlers)
+		_, err := pc.parentInformer.Informer().AddEventHandler(parentHandlers)
+		if err != nil {
+			pc.logger.Error(err, "Unable to AddEventHandler Informer to Parent Informer", "controller", pc.cc.Name)
+		}
 	}
 	for _, childInformer := range pc.childInformers {
-		childInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		_, err := childInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 			AddFunc:    pc.onChildAdd,
 			UpdateFunc: pc.onChildUpdate,
 			DeleteFunc: pc.onChildDelete,
 		})
+		if err != nil {
+			pc.logger.Error(err, "Unable to AddEventHandler Informer to Child Informer", "controller", pc.cc.Name)
+		}
 	}
 
 	go func() {
