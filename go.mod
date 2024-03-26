@@ -2,7 +2,7 @@ module metacontroller
 
 // This denotes the minimum supported language version and
 // should not include the patch version.
-go 1.21
+go 1.22
 
 toolchain go1.22.1
 
