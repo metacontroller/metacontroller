@@ -4,4 +4,4 @@ resources:
 - service.yaml
 - serviceMonitor.yaml
 patches:
-- ports.yaml
+- path: ports.yaml
