@@ -112,8 +112,9 @@ func New(configuration options.Configuration) (controllerruntime.Manager, error)
 			return labelSelector.Matches(labels.Set(object.GetLabels()))
 		}
 	}
+
 	// Predicate filter to apply the byLabelSelectorFilter using our targetLabelSelector.
-	predicateFuncs := predicate.NewPredicateFuncs(byLabelSelectorFilter(targetLabelSelector))
+	predicateFuncs := predicate.NewTypedPredicateFuncs[client.Object](byLabelSelectorFilter(targetLabelSelector))
 
 	// Set the Kubernetes client to the one created by the manager.
 	// In this way we can take advantage of the underlying caching
@@ -127,7 +128,8 @@ func New(configuration options.Configuration) (controllerruntime.Manager, error)
 	if err != nil {
 		return nil, err
 	}
-	err = compositeCtrl.Watch(source.Kind(mgr.GetCache(), &v1alpha1.CompositeController{}), &handler.EnqueueRequestForObject{}, predicateFuncs)
+
+	err = compositeCtrl.Watch(source.Kind[client.Object](mgr.GetCache(), &v1alpha1.CompositeController{}, &handler.TypedEnqueueRequestForObject[client.Object]{}, predicateFuncs))
 	if err != nil {
 		return nil, err
 	}
@@ -138,7 +140,7 @@ func New(configuration options.Configuration) (controllerruntime.Manager, error)
 	if err != nil {
 		return nil, err
 	}
-	err = decoratorCtrl.Watch(source.Kind(mgr.GetCache(), &v1alpha1.DecoratorController{}), &handler.EnqueueRequestForObject{}, predicateFuncs)
+	err = decoratorCtrl.Watch(source.Kind[client.Object](mgr.GetCache(), &v1alpha1.DecoratorController{}, &handler.TypedEnqueueRequestForObject[client.Object]{}, predicateFuncs))
 	if err != nil {
 		return nil, err
 	}
