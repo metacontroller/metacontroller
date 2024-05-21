@@ -19,7 +19,7 @@ all: install
 
 .PHONY: build
 build: generated_files
-	DEBUG=$(DEBUG) goreleaser build --single-target --rm-dist --snapshot --output $(PWD)/metacontroller
+	DEBUG=$(DEBUG) goreleaser build --single-target --clean --snapshot --output $(PWD)/metacontroller
 
 .PHONY: build_debug
 build_debug: DEBUG=true
