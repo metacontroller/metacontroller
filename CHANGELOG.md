@@ -1,3 +1,13 @@
+## [4.11.13](https://github.com/metacontroller/metacontroller/compare/v4.11.12...v4.11.13) (2024-05-22)
+
+
+### Bug Fixes
+
+* **deps:** update module github.com/prometheus/client_golang to v1.19.1 ([7ebc10a](https://github.com/metacontroller/metacontroller/commit/7ebc10aadfd49d9d4a1d69ac8fcf83b98d25545c))
+* **deps:** update module golang.org/x/net to v0.25.0 ([80d6086](https://github.com/metacontroller/metacontroller/commit/80d6086dc458d30042fa68e5814759f539ae96a4))
+* **deps:** update module k8s.io/utils to v0.0.0-20240502163921-fe8a2dddb1d0 ([5e29d28](https://github.com/metacontroller/metacontroller/commit/5e29d288cf934d45e73e18b7aa7c32d99711f84f))
+* **deps:** update module sigs.k8s.io/controller-runtime to v0.18.2 ([c3017b4](https://github.com/metacontroller/metacontroller/commit/c3017b43f984d19dfbab54ae6d5a06b78c164c9e))
+
 ## [4.11.12](https://github.com/metacontroller/metacontroller/compare/v4.11.11...v4.11.12) (2024-05-08)
 
 
