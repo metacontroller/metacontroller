@@ -1,3 +1,10 @@
+## [4.11.15](https://github.com/metacontroller/metacontroller/compare/v4.11.14...v4.11.15) (2024-06-23)
+
+
+### Bug Fixes
+
+* **deps:** update dependency go to v1.22.4 ([0335afc](https://github.com/metacontroller/metacontroller/commit/0335afcd7be8ac59d24c63fe61fd18790b40da86))
+
 ## [4.11.14](https://github.com/metacontroller/metacontroller/compare/v4.11.13...v4.11.14) (2024-06-01)
 
 
