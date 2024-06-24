@@ -21,6 +21,7 @@ import (
 	"fmt"
 	commonv2 "metacontroller/pkg/controller/common/api/v2"
 	"metacontroller/pkg/hooks"
+	"reflect"
 	"strings"
 	"sync"
 	"time"
@@ -349,6 +350,32 @@ func (c *decoratorController) enqueueParentObjectAfter(obj interface{}, delay ti
 
 func (c *decoratorController) updateParentObject(old, cur interface{}) {
 	// TODO(enisoc): Is there any way to avoid resyncing after our own updates?
+	if parentOld, ok := old.(*unstructured.Unstructured); ok {
+		parentKind := parentOld.GetKind()
+		parentAPIVersion := parentOld.GetAPIVersion()
+		for _, parent := range c.dc.Spec.Resources {
+			resource := c.resources.Get(parent.APIVersion, parent.Resource)
+			if resource == nil {
+				// it's not a resource we care about, and we should not arrive at this situation since resourceMap discovers
+				// all the resources from API Server
+				continue
+			}
+			if resource.APIVersion == parentAPIVersion && resource.Kind == parentKind {
+				// if ignoreStatusChanges is set to true in the decorator controller, a parent object should only be
+				// enqueued if either there is a change in the generation or if there is a change in its labels/annotations,
+				// otherwise it will be ignored.
+				if parent.IgnoreStatusChanges != nil && *parent.IgnoreStatusChanges {
+					if parentCur, ok := cur.(*unstructured.Unstructured); ok {
+						if parentOld.GetGeneration() == parentCur.GetGeneration() {
+							if reflect.DeepEqual(parentOld.GetLabels(), parentCur.GetLabels()) && reflect.DeepEqual(parentOld.GetAnnotations(), parentCur.GetAnnotations()) {
+								return
+							}
+						}
+					}
+				}
+			}
+		}
+	}
 	c.enqueueParentObject(cur)
 }
 

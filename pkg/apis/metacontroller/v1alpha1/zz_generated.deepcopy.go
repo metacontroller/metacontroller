@@ -233,6 +233,11 @@ func (in *CompositeControllerParentResourceRule) DeepCopyInto(out *CompositeCont
 		*out = new(v1.LabelSelector)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.IgnoreStatusChanges != nil {
+		in, out := &in.IgnoreStatusChanges, &out.IgnoreStatusChanges
+		*out = new(bool)
+		**out = **in
+	}
 	return
 }
 
@@ -553,6 +558,11 @@ func (in *DecoratorControllerResourceRule) DeepCopyInto(out *DecoratorController
 		in, out := &in.AnnotationSelector, &out.AnnotationSelector
 		*out = new(AnnotationSelector)
 		(*in).DeepCopyInto(*out)
+	}
+	if in.IgnoreStatusChanges != nil {
+		in, out := &in.IgnoreStatusChanges, &out.IgnoreStatusChanges
+		*out = new(bool)
+		**out = **in
 	}
 	return
 }
