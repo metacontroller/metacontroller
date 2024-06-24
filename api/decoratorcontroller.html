@@ -231,6 +231,7 @@ call your <a href="#sync-hook">sync hook</a> to ask for your desired state.</p>
 <tr><td><code>resource</code></td><td>The canonical, lowercase, plural name of the target resource. (e.g. <code>deployments</code>, <code>replicasets</code>, <code>statefulsets</code>)</td></tr>
 <tr><td><a href="#label-selector"><code>labelSelector</code></a></td><td>An optional label selector for narrowing down the objects to target.</td></tr>
 <tr><td><a href="#annotation-selector"><code>annotationSelector</code></a></td><td>An optional annotation selector for narrowing down the objects to target.</td></tr>
+<tr><td><code>ignoreStatusChanges</code></td><td>An optional field through which status changes can be ignored for reconcilation. If set to <code>true</code>, only spec changes or labels/annotations changes will reconcile the parent resource.</td></tr>
 </tbody></table>
 <h3 id="label-selector"><a class="header" href="#label-selector">Label Selector</a></h3>
 <p>The <code>labelSelector</code> field within a <a href="#resources">resource rule</a> has the following subfields:</p>
