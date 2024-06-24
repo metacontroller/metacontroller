@@ -350,6 +350,8 @@ spec:
                 properties:
                   apiVersion:
                     type: string
+                  ignoreStatusChanges:
+                    type: boolean
                   labelSelector:
                     description: A label selector is a label query over a set of resources.
                       The result of matchLabels and matchExpressions are ANDed. An
@@ -754,6 +756,8 @@ spec:
                       type: object
                     apiVersion:
                       type: string
+                    ignoreStatusChanges:
+                      type: boolean
                     labelSelector:
                       description: A label selector is a label query over a set of
                         resources. The result of matchLabels and matchExpressions

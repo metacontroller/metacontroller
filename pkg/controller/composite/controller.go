@@ -23,6 +23,7 @@ import (
 	commonv2 "metacontroller/pkg/controller/common/api/v2"
 	"metacontroller/pkg/hooks"
 	"metacontroller/pkg/logging"
+	"reflect"
 	"sync"
 	"time"
 
@@ -359,6 +360,20 @@ func (pc *parentController) updateParentObject(old, cur interface{}) {
 	// different status (e.g. you have some incrementing counter).
 	// Doing that is an anti-pattern anyway because status generation should be
 	// idempotent if nothing meaningful has actually changed in the system.
+	if pc.cc.Spec.ParentResource.IgnoreStatusChanges != nil && *pc.cc.Spec.ParentResource.IgnoreStatusChanges {
+		if parentOld, ok := old.(*unstructured.Unstructured); ok {
+			if parentCur, ok := cur.(*unstructured.Unstructured); ok {
+				// if ignoreStatusChanges is set to true in the composite controller, a parent object should only be
+				// enqueued if either there is a change in the generation or if there is a change in its labels/annotations,
+				// otherwise it will be ignored.
+				if parentOld.GetGeneration() == parentCur.GetGeneration() {
+					if reflect.DeepEqual(parentOld.GetLabels(), parentCur.GetLabels()) && reflect.DeepEqual(parentOld.GetAnnotations(), parentCur.GetAnnotations()) {
+						return
+					}
+				}
+			}
+		}
+	}
 	pc.enqueueParentObject(cur)
 }
 

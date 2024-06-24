@@ -60,12 +60,13 @@ call your [sync hook](#sync-hook) to ask for your desired state.
 
 Each entry in the `resources` list has the following fields:
 
-| Field | Description |
-| ----- | ----------- |
-| `apiVersion` | The API `<group>/<version>` of the target resource, or just `<version>` for core APIs. (e.g. `v1`, `apps/v1`, `batch/v1`) |
-| `resource`   | The canonical, lowercase, plural name of the target resource. (e.g. `deployments`, `replicasets`, `statefulsets`) |
-| [`labelSelector`](#label-selector) | An optional label selector for narrowing down the objects to target. |
-| [`annotationSelector`](#annotation-selector) | An optional annotation selector for narrowing down the objects to target. |
+| Field                                        | Description                                                                                                                                                                            |
+|----------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `apiVersion`                                 | The API `<group>/<version>` of the target resource, or just `<version>` for core APIs. (e.g. `v1`, `apps/v1`, `batch/v1`)                                                              |
+| `resource`                                   | The canonical, lowercase, plural name of the target resource. (e.g. `deployments`, `replicasets`, `statefulsets`)                                                                      |
+| [`labelSelector`](#label-selector)           | An optional label selector for narrowing down the objects to target.                                                                                                                   |
+| [`annotationSelector`](#annotation-selector) | An optional annotation selector for narrowing down the objects to target.                                                                                                              |
+| `ignoreStatusChanges`                        | An optional field through which status changes can be ignored for reconcilation. If set to `true`, only spec changes or labels/annotations changes will reconcile the parent resource. |
 
 ### Label Selector
 

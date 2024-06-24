@@ -82,12 +82,13 @@ better suited for adding behavior to existing resources.
 
 The `parentResource` rule has the following fields:
 
-| Field                                  | Description                                                                                                               |
-|----------------------------------------|---------------------------------------------------------------------------------------------------------------------------|
-| `apiVersion`                           | The API `<group>/<version>` of the parent resource, or just `<version>` for core APIs. (e.g. `v1`, `apps/v1`, `batch/v1`) |
-| `resource`                             | The canonical, lowercase, plural name of the parent resource. (e.g. `deployments`, `replicasets`, `statefulsets`)         |
-| `labelSelector`                        | An optional label selector for narrowing down the objects to target. When not set defaults to all objects                 |
-| [`revisionHistory`](#revision-history) | If any [child resources][] use rolling updates, this field specifies how parent revisions are tracked.                    |
+| Field                               | Description                                                                                                                                                                           |
+|-------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `apiVersion`                        | The API `<group>/<version>` of the parent resource, or just `<version>` for core APIs. (e.g. `v1`, `apps/v1`, `batch/v1`)                                                             |
+| `resource`                          | The canonical, lowercase, plural name of the parent resource. (e.g. `deployments`, `replicasets`, `statefulsets`)                                                                     |
+| `labelSelector`                     | An optional label selector for narrowing down the objects to target. When not set defaults to all objects                                                                             |
+| [`revisionHistory`](#revision-history) | If any [child resources][] use rolling updates, this field specifies how parent revisions are tracked.                                                                                |
+| `ignoreStatusChanges`               | An optional field through which status changes can be ignored for reconcilation. If set to `true`, only spec changes or labels/annotations changes will reconcile the parent resource. |
 
 ### Label Selector
 

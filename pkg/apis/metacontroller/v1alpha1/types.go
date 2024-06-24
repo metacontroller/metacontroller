@@ -58,9 +58,10 @@ type ResourceRule struct {
 }
 
 type CompositeControllerParentResourceRule struct {
-	ResourceRule    `json:",inline"`
-	RevisionHistory *CompositeControllerRevisionHistory `json:"revisionHistory,omitempty"`
-	LabelSelector   *metav1.LabelSelector               `json:"labelSelector,omitempty"`
+	ResourceRule        `json:",inline"`
+	RevisionHistory     *CompositeControllerRevisionHistory `json:"revisionHistory,omitempty"`
+	LabelSelector       *metav1.LabelSelector               `json:"labelSelector,omitempty"`
+	IgnoreStatusChanges *bool                               `json:"ignoreStatusChanges,omitempty"`
 }
 
 type CompositeControllerRevisionHistory struct {
@@ -224,9 +225,10 @@ type DecoratorControllerSpec struct {
 }
 
 type DecoratorControllerResourceRule struct {
-	ResourceRule       `json:",inline"`
-	LabelSelector      *metav1.LabelSelector `json:"labelSelector,omitempty"`
-	AnnotationSelector *AnnotationSelector   `json:"annotationSelector,omitempty"`
+	ResourceRule        `json:",inline"`
+	LabelSelector       *metav1.LabelSelector `json:"labelSelector,omitempty"`
+	AnnotationSelector  *AnnotationSelector   `json:"annotationSelector,omitempty"`
+	IgnoreStatusChanges *bool                 `json:"ignoreStatusChanges,omitempty"`
 }
 
 type AnnotationSelector struct {
