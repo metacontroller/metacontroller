@@ -364,10 +364,12 @@ func (pc *parentController) updateParentObject(old, cur interface{}) {
 		if parentOld, ok := old.(*unstructured.Unstructured); ok {
 			if parentCur, ok := cur.(*unstructured.Unstructured); ok {
 				// if ignoreStatusChanges is set to true in the composite controller, a parent object should only be
-				// enqueued if either there is a change in the generation or if there is a change in its labels/annotations,
-				// otherwise it will be ignored.
+				// enqueued if there is a change in the generation or if there is a change in its labels/annotations,
+				// or if there is a deletion timestamp attached to the object, otherwise it will be ignored.
 				if parentOld.GetGeneration() == parentCur.GetGeneration() {
-					if reflect.DeepEqual(parentOld.GetLabels(), parentCur.GetLabels()) && reflect.DeepEqual(parentOld.GetAnnotations(), parentCur.GetAnnotations()) {
+					if reflect.DeepEqual(parentOld.GetLabels(), parentCur.GetLabels()) &&
+						reflect.DeepEqual(parentOld.GetAnnotations(), parentCur.GetAnnotations()) &&
+						parentCur.GetDeletionTimestamp() == nil {
 						return
 					}
 				}
