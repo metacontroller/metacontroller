@@ -1,3 +1,10 @@
+## [4.11.17](https://github.com/metacontroller/metacontroller/compare/v4.11.16...v4.11.17) (2024-06-25)
+
+
+### Bug Fixes
+
+* allow update enqueue for parent resources being deleted ([9c6d1e0](https://github.com/metacontroller/metacontroller/commit/9c6d1e0fe9b2805a0e03caca772958d93b9b8202))
+
 ## [4.11.16](https://github.com/metacontroller/metacontroller/compare/v4.11.15...v4.11.16) (2024-06-24)
 
 
