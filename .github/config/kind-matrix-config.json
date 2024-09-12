@@ -62,20 +62,32 @@
     },
     {
       "version": "1.27",
-      "kind": "v0.22.0",
-      "image": "kindest/node:v1.27.11@sha256:681253009e68069b8e01aad36a1e0fa8cf18bb0ab3e5c4069b2e65cafdd70843",
+      "kind": "v0.24.0",
+      "image": "kindest/node:v1.27.17@sha256:3fd82731af34efe19cd54ea5c25e882985bafa2c9baefe14f8deab1737d9fabe",
       "runner": "ubuntu-22.04"
     },
     {
       "version": "1.28",
-      "kind": "v0.22.0",
-      "image": "kindest/node:v1.28.7@sha256:9bc6c451a289cf96ad0bbaf33d416901de6fd632415b076ab05f5fa7e4f65c58",
+      "kind": "v0.24.0",
+      "image": "kindest/node:v1.28.13@sha256:45d319897776e11167e4698f6b14938eb4d52eb381d9e3d7a9086c16c69a8110",
       "runner": "ubuntu-22.04"
     },
     {
       "version": "1.29",
-      "kind": "v0.22.0",
-      "image": "kindest/node:v1.29.2@sha256:51a1434a5397193442f0be2a297b488b6c919ce8a3931be0ce822606ea5ca245",
+      "kind": "v0.24.0",
+      "image": "kindest/node:v1.29.8@sha256:d46b7aa29567e93b27f7531d258c372e829d7224b25e3fc6ffdefed12476d3aa",
+      "runner": "ubuntu-22.04"
+    },
+    {
+      "version": "1.30",
+      "kind": "v0.24.0",
+      "image": "kindest/node:v1.30.4@sha256:976ea815844d5fa93be213437e3ff5754cd599b040946b5cca43ca45c2047114",
+      "runner": "ubuntu-22.04"
+    },
+    {
+      "version": "1.31",
+      "kind": "v0.24.0",
+      "image": "kindest/node:v1.31.0@sha256:53df588e04085fd41ae12de0c3fe4c72f7013bba32a20e7325357a1ac94ba865",
       "runner": "ubuntu-22.04"
     }
   ]
