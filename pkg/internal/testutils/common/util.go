@@ -58,6 +58,11 @@ func NewFakeRecorder() *record.FakeRecorder {
 	return record.NewFakeRecorder(1)
 }
 
-func NewDefaultWorkQueue() workqueue.RateLimitingInterface {
-	return workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "testQueue")
+func NewDefaultWorkQueue() workqueue.TypedRateLimitingInterface[any] {
+	return workqueue.NewTypedRateLimitingQueueWithConfig(
+		workqueue.DefaultTypedControllerRateLimiter[any](),
+		workqueue.TypedRateLimitingQueueConfig[any]{
+			Name: "testQueue",
+		},
+	)
 }

@@ -111,8 +111,12 @@ func newDecoratorController(resources *dynamicdiscovery.ResourceMap, dynClient *
 		parentKinds:     make(common.GroupKindMap),
 		parentInformers: make(common.InformerMap),
 		childInformers:  make(common.InformerMap),
-
-		queue:         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), common.DecoratorController.String()+"-"+dc.Name),
+		queue: workqueue.NewTypedRateLimitingQueueWithConfig(
+			workqueue.DefaultTypedControllerRateLimiter[any](),
+			workqueue.TypedRateLimitingQueueConfig[any]{
+				Name: common.DecoratorController.String() + "-" + dc.Name,
+			},
+		),
 		numWorkers:    numWorkers,
 		eventRecorder: eventRecorder,
 		finalizer: finalizer.NewManager(
