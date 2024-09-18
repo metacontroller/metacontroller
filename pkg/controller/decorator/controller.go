@@ -72,7 +72,7 @@ type decoratorController struct {
 	dynClient *dynamicclientset.Clientset
 
 	stopCh, doneCh chan struct{}
-	queue          workqueue.RateLimitingInterface
+	queue          workqueue.TypedRateLimitingInterface[any]
 
 	updateStrategy updateStrategyMap
 
