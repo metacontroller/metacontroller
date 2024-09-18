@@ -75,7 +75,7 @@ type parentController struct {
 	revisionLister mclisters.ControllerRevisionLister
 
 	stopCh, doneCh chan struct{}
-	queue          workqueue.RateLimitingInterface
+	queue          workqueue.TypedRateLimitingInterface[any]
 
 	updateStrategy updateStrategyMap
 	childInformers common.InformerMap
@@ -181,9 +181,14 @@ func newParentController(
 		parentResource: parentResource,
 		revisionLister: revisionLister,
 		updateStrategy: updateStrategy,
-		queue:          workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), common.CompositeController.String()+"-"+cc.Name),
-		numWorkers:     numWorkers,
-		eventRecorder:  eventRecorder,
+		queue: workqueue.NewTypedRateLimitingQueueWithConfig(
+			workqueue.DefaultTypedControllerRateLimiter[any](),
+			workqueue.TypedRateLimitingQueueConfig[any]{
+				Name: common.CompositeController.String() + "-" + cc.Name,
+			},
+		),
+		numWorkers:    numWorkers,
+		eventRecorder: eventRecorder,
 		finalizer: finalizer.NewManager(
 			"metacontroller.io/compositecontroller-"+cc.Name,
 			cc.Spec.Hooks.Finalize != nil,

@@ -135,7 +135,7 @@ func Test_parentController_sync(t *testing.T) {
 		revisionLister mclisters.ControllerRevisionLister
 		stopCh         chan struct{}
 		doneCh         chan struct{}
-		queue          workqueue.RateLimitingInterface
+		queue          workqueue.TypedRateLimitingInterface[any]
 		updateStrategy updateStrategyMap
 		childInformers common.InformerMap
 		numWorkers     int
