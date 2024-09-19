@@ -1,3 +1,12 @@
+## [4.11.19](https://github.com/metacontroller/metacontroller/compare/v4.11.18...v4.11.19) (2024-09-19)
+
+
+### Bug Fixes
+
+* **deps:** switch ratelimiting to new typed rate limiting interface ([6a0290b](https://github.com/metacontroller/metacontroller/commit/6a0290bf82de82839102c1dbdc327fac87063c0a))
+* **deps:** switch ratelimiting to new typed rate limiting interface for decoratorcontroller ([a106ac2](https://github.com/metacontroller/metacontroller/commit/a106ac2554d8d35b9ecd5ff5ddcdc4ba49ee930a))
+* **deps:** update a batch of dependencies ([e31c65f](https://github.com/metacontroller/metacontroller/commit/e31c65f9e6d54f34bbc9d9f904f56d3003e79ae5))
+
 ## [4.11.18](https://github.com/metacontroller/metacontroller/compare/v4.11.17...v4.11.18) (2024-09-12)
 
 
