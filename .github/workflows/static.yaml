@@ -3,7 +3,7 @@ name: Static Checks
 on: [pull_request]
 jobs:
   golangci-lint:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@v4
     - uses: actions/setup-go@v5
@@ -17,7 +17,7 @@ jobs:
         version: latest
         args: --timeout 10m --enable errorlint,gofmt,goimports,gosec,whitespace,bodyclose,dogsled,durationcheck,errorlint,exhaustive,exportloopref,goconst,gocritic,gosec,importas,misspell,nilerr --exclude=G108
   docker-image-for-linting:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
     - name: checkout
       uses: actions/checkout@v4
@@ -43,7 +43,7 @@ jobs:
         path: metacontroller-*.tar
         retention-days: 1
   trivy-scan:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs: [docker-image-for-linting]
     steps:
     - name: Download metacontroller images
@@ -63,7 +63,7 @@ jobs:
         vuln-type: 'os,library'
         severity: 'CRITICAL,HIGH'
   dockle-scan:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs: [docker-image-for-linting]
     steps:
       - name: Download metacontroller images
@@ -78,7 +78,7 @@ jobs:
         with:
           image: 'localhost/metacontroller:dev'
   documentation-test:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     container:
       image: "michaelfbryan/mdbook-docker-image:latest"
     steps:
@@ -88,7 +88,7 @@ jobs:
           cd docs
           mdbook build
   nancy-dependency-scan:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
     - name: Check out code into the Go module directory
       uses: actions/checkout@v4

@@ -5,7 +5,7 @@ on:
     - master
 jobs:
   docker-image-for-linting:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
     - name: checkout
       uses: actions/checkout@v4
@@ -31,7 +31,7 @@ jobs:
         path: metacontroller-*.tar
         retention-days: 1
   trivy-scan:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs: [docker-image-for-linting]
     steps:
     - name: checkout
@@ -59,7 +59,7 @@ jobs:
       with:
         sarif_file: 'trivy-results.sarif'
   dockle-scan:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs: [docker-image-for-linting]
     steps:
     - name: checkout
