@@ -9,7 +9,7 @@ jobs:
     name: Release helm chart
     env:
       HELM_EXPERIMENTAL_OCI: 1
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     if: github.repository_owner == 'metacontroller'
     steps:
       - uses: actions/checkout@v4
