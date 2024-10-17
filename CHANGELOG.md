@@ -1,3 +1,15 @@
+## [4.11.20](https://github.com/metacontroller/metacontroller/compare/v4.11.19...v4.11.20) (2024-10-17)
+
+
+### Bug Fixes
+
+* **deps:** update dependency go to v1.23.2 ([5ab2414](https://github.com/metacontroller/metacontroller/commit/5ab2414e961f8f11cacf4c90657a4570bdab4f19))
+* **deps:** update module github.com/prometheus/client_golang to v1.20.5 ([1106076](https://github.com/metacontroller/metacontroller/commit/11060769458e1a1376669426b32284bd71a3e493))
+* **deps:** update module golang.org/x/net to v0.30.0 ([a47dfd6](https://github.com/metacontroller/metacontroller/commit/a47dfd6115a957a447a60474d9c7d757ac1711e0))
+* **deps:** update python version to 3.10 ([b659ead](https://github.com/metacontroller/metacontroller/commit/b659ead4cfaab0dc011a7095d5aeefe626390d14))
+* **deps:** update python version to 3.11.10 ([faa187d](https://github.com/metacontroller/metacontroller/commit/faa187d3153371e426ce881bfe4aed0ec2224218))
+* **deps:** update sigs.k8s.io/json digest to cfa47c3 ([3fdfdb3](https://github.com/metacontroller/metacontroller/commit/3fdfdb3104a7c98e59ee0aa8db0594f3d157be3e))
+
 ## [4.11.19](https://github.com/metacontroller/metacontroller/compare/v4.11.18...v4.11.19) (2024-09-19)
 
 
