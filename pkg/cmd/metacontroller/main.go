@@ -57,6 +57,7 @@ var (
 	leaderElectionID           = flag.String("leader-election-id", "metacontroller", "Determines the name of the resource that leader election will use for holding the leader lock")
 	healthProbeBindAddress     = flag.String("health-probe-bind-address", ":8081", "The address the health probes endpoint binds to")
 	targetLabelSelector        = flag.String("target-label-selector", "", "Label selector used to restrict an instance of metacontroller to manage specific Composite and Decorator controllers")
+	useServerSideApply         = flag.Bool("use-server-side-apply", false, "Use server-side apply for updating objects")
 	version                    = "No version provided"
 )
 
@@ -95,10 +96,11 @@ func main() {
 	config.Burst = *clientGoBurst
 
 	configuration := options.Configuration{
-		RestConfig:        config,
-		DiscoveryInterval: *discoveryInterval,
-		InformerRelist:    *informerRelist,
-		Workers:           *workers,
+		RestConfig:         config,
+		DiscoveryInterval:  *discoveryInterval,
+		InformerRelist:     *informerRelist,
+		Workers:            *workers,
+		UseServerSideApply: *useServerSideApply,
 		CorrelatorOptions: record.CorrelatorOptions{
 			BurstSize: *eventsBurst,
 			QPS:       float32(*eventsQPS),
