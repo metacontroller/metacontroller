@@ -22,7 +22,10 @@ import (
 	"fmt"
 	commonv2 "metacontroller/pkg/controller/common/api/v2"
 	"metacontroller/pkg/logging"
+	"strings"
+	"sync"
 
+	"github.com/cespare/xxhash/v2"
 	"k8s.io/utils/ptr"
 
 	"metacontroller/pkg/apis/metacontroller/v1alpha1"
@@ -32,6 +35,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/types"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 )
 
@@ -42,6 +46,10 @@ func ApplyUpdate(orig, update *unstructured.Unstructured) (*unstructured.Unstruc
 	if err != nil {
 		return nil, err
 	}
+
+	// prevent setting last applied values in the new object
+	nullifyLastAppliedAnnotation(update)
+
 	newObj := &unstructured.Unstructured{}
 	newObj.Object, err = dynamicapply.Merge(orig.UnstructuredContent(), lastApplied, update.UnstructuredContent())
 	if err != nil {
@@ -59,6 +67,7 @@ func ApplyUpdate(orig, update *unstructured.Unstructured) (*unstructured.Unstruc
 	if err := revertField(newObj, orig, "status"); err != nil {
 		return nil, fmt.Errorf("failed to revert .status: %w", err)
 	}
+
 	if err = dynamicapply.SetLastApplied(newObj, update.UnstructuredContent()); err != nil {
 		logging.Logger.Error(err, "failed to set lastApplied")
 	}
@@ -132,7 +141,7 @@ func ManageChildren(
 	dynClient *dynamicclientset.Clientset,
 	updateStrategy ChildUpdateStrategy,
 	parent *unstructured.Unstructured,
-	observedChildren, desiredChildren commonv2.UniformObjectMap) error {
+	observedChildren, desiredChildren commonv2.UniformObjectMap, ssaOptions *ApplyOptions) error {
 	// If some operations fail, keep trying others so, for example,
 	// we don't block recovery (create new Pod) on a failed delete.
 	var errs []error
@@ -144,6 +153,7 @@ func ManageChildren(
 			errs = append(errs, err)
 			continue
 		}
+
 		if err := deleteChildren(client, parent, objects, desiredChildren[key]); err != nil {
 			errs = append(errs, err)
 			continue
@@ -157,7 +167,7 @@ func ManageChildren(
 			errs = append(errs, err)
 			continue
 		}
-		if err := updateChildren(client, updateStrategy, parent, observedChildren[key], objects); err != nil {
+		if err := updateChildren(client, updateStrategy, parent, observedChildren[key], objects, ssaOptions); err != nil {
 			errs = append(errs, err)
 			continue
 		}
@@ -173,6 +183,7 @@ func deleteChildren(client *dynamicclientset.ResourceClient, parent *unstructure
 			// Skip objects that are already pending deletion.
 			continue
 		}
+
 		if desired == nil || desired[name] == nil {
 			// This observed object wasn't listed as desired.
 			logging.Logger.Info("Deleting child", "parent", parent, "child", obj)
@@ -197,14 +208,96 @@ func deleteChildren(client *dynamicclientset.ResourceClient, parent *unstructure
 				}
 				continue
 			}
+
+			lastUpdateName := lastUpdateCacheKey(client, obj)
+			cacheLock.Lock()
+			delete(lastUpdatedCache, lastUpdateName)
+			cacheLock.Unlock()
 		}
 	}
 	return utilerrors.NewAggregate(errs)
 }
 
-func updateChildren(client *dynamicclientset.ResourceClient, updateStrategy ChildUpdateStrategy, parent *unstructured.Unstructured, observed, desired map[string]*unstructured.Unstructured) error {
+type lastUpdate struct {
+	hash               uint64
+	resourcegeneration int64
+}
+
+var (
+	lastUpdatedCache = make(map[string]*lastUpdate)
+	cacheLock        = &sync.RWMutex{}
+)
+
+func lastUpdateCacheKey(client *dynamicclientset.ResourceClient, obj *unstructured.Unstructured) string {
+	return fmt.Sprintf("%s/%s/%s/%s", client.Group, client.Kind, obj.GetNamespace(), obj.GetName())
+}
+
+func updateChildren(client *dynamicclientset.ResourceClient, updateStrategy ChildUpdateStrategy, parent *unstructured.Unstructured, observed, desired map[string]*unstructured.Unstructured, ssaOptions *ApplyOptions) error {
 	var errs []error
+
 	for name, obj := range desired {
+		if ssaOptions.Strategy == ApplyStrategyServerSideApply {
+			data, err := json.Marshal(obj)
+			if err != nil {
+				errs = append(errs, err)
+				continue
+			}
+
+			hash := xxhash.Sum64(data)
+			lastUpdateCacheName := lastUpdateCacheKey(client, obj)
+			if oldObj := observed[name]; oldObj != nil {
+				cacheLock.RLock()
+				if lastUpdated, ok := lastUpdatedCache[lastUpdateCacheName]; ok {
+					cacheLock.RUnlock()
+					if lastUpdated.hash == hash && lastUpdated.resourcegeneration == oldObj.GetGeneration() {
+						logging.Logger.Info("Skipping update, no changes detected", "name", lastUpdateCacheName)
+						continue
+					}
+					logging.Logger.Info("Detected changes, updating", "name", lastUpdateCacheName)
+				} else {
+					cacheLock.RUnlock()
+					logging.Logger.Info("No cache entry found, updating", "name", lastUpdateCacheName)
+				}
+
+				// check if observed object hast last applied annotation
+				_, hasLastApplied := oldObj.GetAnnotations()[dynamicapply.LastAppliedAnnotation]
+				if hasLastApplied {
+					// if observed object has has last applied annotation we need to remove it
+					// from the remote object to avoid conflicts
+					annotationNameForJsonPatch := strings.ReplaceAll(strings.ReplaceAll(dynamicapply.LastAppliedAnnotation, "/", "~1"), ".", "~0")
+					_, err := client.Namespace(obj.GetNamespace()).Patch(context.TODO(), obj.GetName(), types.JSONPatchType, fmt.Appendf(nil, `[{"op": "remove", "path": "/metadata/annotations/%s"}]`, annotationNameForJsonPatch), metav1.PatchOptions{})
+					if err != nil {
+						logging.Logger.Error(err, "Failed to remove last applied annotation from observed object", "parent", parent, "child", obj)
+						errs = append(errs, err)
+						continue
+					}
+				}
+			}
+
+			patched, err := client.Namespace(obj.GetNamespace()).Patch(context.TODO(), obj.GetName(), types.ApplyPatchType, data, metav1.PatchOptions{
+				FieldManager: ssaOptions.FieldManager,
+				Force:        ptr.To(true),
+			})
+
+			if err != nil {
+				logging.Logger.Error(err, "Failed to apply server-side apply", "parent", parent, "child", obj)
+				errs = append(errs, err)
+				continue
+			}
+
+			cacheLock.Lock()
+			lastUpdatedCache[lastUpdateCacheName] = &lastUpdate{
+				hash:               hash,
+				resourcegeneration: patched.GetGeneration(),
+			}
+
+			logging.Logger.Info("Cache updated", "name", lastUpdateCacheName)
+
+			cacheLock.Unlock()
+
+			continue // skip the rest of the function, since we've already updated the object
+		}
+
 		if oldObj := observed[name]; oldObj != nil {
 			// Update
 			newObj, err := ApplyUpdate(oldObj, obj)
@@ -218,6 +311,7 @@ func updateChildren(client *dynamicclientset.ResourceClient, updateStrategy Chil
 				// Nothing changed.
 				continue
 			}
+
 			if logging.Logger.V(5).Enabled() {
 				mergePatch, err := JsonMergePatch(oldObj, newObj)
 				if err != nil {
