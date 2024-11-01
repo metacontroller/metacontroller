@@ -1,11 +1,10 @@
 # Apply Semantics
 
-This page describes how Metacontroller emulates [`kubectl apply`][kubectl apply].
+This page describes how Metacontroller applies changes to managed resources. Historically, Metacontroller has used a dynamic apply approach, which emulates [`kubectl apply`](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_apply/), particularly for working with CRDs.
 
-In most cases, you should be able to think of Metacontroller's apply semantics
-as being the same as `kubectl apply`, but there are some differences.
+Now, Metacontroller also supports Kubernetes server-side apply (SSA), which is the recommended approach for declarative resource management in Kubernetes. SSA enables better field ownership tracking and is the future of Kubernetes resource application.
 
-[kubectl apply]: https://kubernetes.io/docs/concepts/cluster-administration/manage-deployment/#kubectl-apply
+Below, we explain the motivation behind Metacontroller's apply mechanisms and describe both dynamic apply and server-side apply, including their use cases and trade-offs.
 
 [[_TOC_]]
 
@@ -25,8 +24,8 @@ metadata:
     app: my-app
 spec:
   containers:
-  - name: nginx
-    image: nginx
+    - name: nginx
+      image: nginx
 ```
 
 If you then read back the Pod you created with `kubectl get pod my-pod -o yaml`,
@@ -78,8 +77,8 @@ metadata:
     role: staging # added a label
 spec:
   containers:
-  - name: nginx
-    image: nginx
+    - name: nginx
+      image: nginx
 ```
 
 If you try to `kubectl create -f` your updated file, it will fail because
@@ -128,11 +127,11 @@ spec:
         app: nginx
     spec:
       containers:
-      - name: nginx
-        image: nginx
-        ports:
-        - containerPort: 80
-          name: web
+        - name: nginx
+          image: nginx
+          ports:
+            - containerPort: 80
+              name: web
 ```
 
 You create this with apply:
@@ -158,13 +157,13 @@ spec:
         app: nginx
     spec:
       containers:
-      - name: nginx
-        image: nginx
-        ports:
-        - containerPort: 80
-          name: web
-      - name: sidecar
-        image: log-uploader # fake sidecar example
+        - name: nginx
+          image: nginx
+          ports:
+            - containerPort: 80
+              name: web
+        - name: sidecar
+          image: log-uploader # fake sidecar example
 ```
 
 Now suppose you change something in your local file and reapply it:
@@ -208,7 +207,7 @@ and should never be merged (only replaced entirely).
 
 Even if there were a mechanism for CRDs to specify metadata for every field
 (e.g. through extensions to OpenAPI),
-it's not clear that it makes sense to *require* every CRD author to do so
+it's not clear that it makes sense to _require_ every CRD author to do so
 in order for their resources to behave correctly when used with `kubecl apply`.
 One alternative that has been considered for such "schemaless CRDs" is to
 establish a convention -- as long as your CRD follows the convention, you
@@ -220,30 +219,22 @@ many common cases encountered when embedding Pod templates in CRDs
 developed by surveying the use of associative lists across the resources
 built into Kubernetes:
 
-* A list is detected as an associative list if and only if all of the
+- A list is detected as an associative list if and only if all of the
   following conditions are met:
-  * All items in the list are JSON objects
+  - All items in the list are JSON objects
     (not scalars, nor other lists).
-  * All objects in the list have some field name in common,
+  - All objects in the list have some field name in common,
     where that field name is one of the conventional merge keys
     (most commonly `name`).
-* If a list is detected as an associative list, the conventional
+- If a list is detected as an associative list, the conventional
   field name that all objects have in common (e.g. `name`) is used
   as the merge key.
-  * If more than one conventional merge key might work,
+  - If more than one conventional merge key might work,
     pick only one according to a fixed order.
 
 This allows Metacontroller to "do the right thing" in the majority of cases,
 without requiring advance knowledge about the resources it's working with --
 knowledge that's not available anywhere in the case of CRDs.
-
-In the future, Metacontroller will likely switch from this custom apply
-implementation to [server-side apply][], which is trying to solve the
-broader problem for all components that interact with the Kubernetes API.
-However, it's not yet clear whether that proposal will embrace schemaless
-CRDs and support apply semantics on them.
-
-[server-side apply]: https://github.com/kubernetes/features/issues/555
 
 ### Limitations
 
@@ -260,13 +251,77 @@ If any of these are blockers for you,
 please [file an issue](https://www.github.com/metacontroller/metacontroller/issues) describing your
 use case.
 
-* Atomic object lists
-  * A list of objects that share one of the conventional keys,
+- Atomic object lists
+  - A list of objects that share one of the conventional keys,
     but should nevertheless be treated atomically (replaced rather than merged).
-* Unconventional associative list keys
-  * An associative list that doesn't use one of the conventional keys.
-* Multi-field associative list keys
-  * A key that's composed of two or more fields (e.g. both `port` and `protocol`).
-* Scalar-valued associative lists
-  * A list of scalars (not objects) that should be merged as if the
+- Unconventional associative list keys
+  - An associative list that doesn't use one of the conventional keys.
+- Multi-field associative list keys
+  - A key that's composed of two or more fields (e.g. both `port` and `protocol`).
+- Scalar-valued associative lists
+  - A list of scalars (not objects) that should be merged as if the
     scalar values were field names in an object.
+
+## Server-Side Apply
+
+Server-side apply (SSA) is a Kubernetes-native declarative update mechanism that allows clients (e.g., controllers) to send a full object definition to the API server, which then manages field ownership and performs merges. Since SSA is a new feature for Metacontroller, it's advisable to use it with caution - especially in production environments - until you fully understand its implications and field ownership model.
+
+SSA provides several advantages over client-side apply:
+
+- **Field Ownership Tracking**: The Kubernetes API server tracks which controller or user modified each field, preventing unintended overwrites.
+- **Strategic Merging**: Unlike dynamic apply, SSA applies **strategic merges** even inside CRDs, similar to native Kubernetes resources.
+- **Better Handling of Concurrent Updates**: SSA provides better conflict resolution when multiple controllers modify the same resource.
+
+### How Metacontroller Uses Server-Side Apply
+
+When enabled, Metacontroller will:
+
+- Use the `apply` verb with `server-side=true` when updating managed objects.
+- Allow multiple controllers to modify different fields of the same resource without conflicts.
+- Automatically merge updates to associative lists like `containers`, `volumes`, and `ports` without deleting unexpected changes.
+
+### Example of Server-Side Apply
+
+Instead of performing a full replacement, SSA updates only the fields specified:
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: my-pod
+  labels:
+    app: my-app
+    role: staging # added a label
+spec:
+  containers:
+    - name: nginx
+      image: nginx
+```
+
+When applied using SSA, Kubernetes ensures that fields like `resourceVersion`, `creationTimestamp`, and dynamically added containers (e.g., sidecars) **remain untouched**, unlike dynamic apply which would overwrite lists.
+
+### Comparison: Dynamic Apply vs. Server-Side Apply
+
+| Feature               | Dynamic Apply                       | Server-Side Apply (SSA)           |
+| --------------------- | ----------------------------------- | --------------------------------- |
+| Merging of CRD fields | Uses conventions (e.g., `name` key) | Full strategic merge support      |
+| Field ownership       | Not explicitly tracked              | Kubernetes tracks field ownership |
+| Concurrent updates    | Risk of overwriting fields          | Controlled conflict resolution    |
+| Associative lists     | Convention-based merging            | Kubernetes-native merging         |
+| Performance           | Fast (no API tracking)              | Slightly higher API overhead      |
+
+### Enabling Server-Side Apply
+
+To enable SSA in Metacontroller, configure the controller with:
+
+```sh
+--apply-strategy=server-side-apply
+```
+
+This setting ensures Metacontroller applies resources using Kubernetes-native [`server-side-apply`](https://kubernetes.io/docs/reference/using-api/server-side-apply) rather than dynamic apply.
+
+## Future Direction
+
+Previously, Metacontroller relied solely on a custom **dynamic apply** implementation to handle strategic merges within CRDs. However, with the introduction of Kubernetes **server-side apply (SSA)**, Metacontroller now supports SSA as a preferred alternative.
+
+While **dynamic apply** remains available for compatibility, SSA is the recommended method for most use cases because it provides **native field ownership tracking**, **strategic merging**, and **better concurrency handling**.

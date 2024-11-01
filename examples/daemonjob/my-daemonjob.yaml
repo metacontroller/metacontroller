@@ -8,11 +8,11 @@ spec:
       labels:
         app: hello-world
     spec:
+      terminationGracePeriodSeconds: 10
       containers:
-      - name: hello-world
-        image: busybox
-        command: ["sh", "-c", "echo 'Hello world' && sleep 30"]
-        resources:
-          requests:
-            cpu: 10m
-    terminationGracePeriodSeconds: 10
+        - name: hello-world
+          image: busybox
+          command: ["sh", "-c", "echo 'Hello world' && sleep 30"]
+          resources:
+            requests:
+              cpu: 10m

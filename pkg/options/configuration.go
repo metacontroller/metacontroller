@@ -35,4 +35,6 @@ type Configuration struct {
 	LeaderElectionOptions  leaderelection.Options
 	HealthProbeBindAddress string
 	TargetLabelSelector    string
+	ApplyStrategy          string
+	SsaFieldManager        string
 }

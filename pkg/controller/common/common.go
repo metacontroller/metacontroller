@@ -19,6 +19,7 @@ package common
 import (
 	"fmt"
 	"metacontroller/pkg/logging"
+	"metacontroller/pkg/options"
 	"strings"
 
 	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -26,7 +27,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"metacontroller/pkg/apis/metacontroller/v1alpha1"
-	"metacontroller/pkg/options"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -194,3 +194,15 @@ func HasStatusSubresource(crd *v1.CustomResourceDefinition, version string) bool
 	}
 	return false
 }
+
+type ApplyOptions struct {
+	FieldManager string
+	Strategy     ApplyStrategy
+}
+
+type ApplyStrategy string
+
+const (
+	ApplyStrategyServerSideApply ApplyStrategy = "server-side-apply"
+	ApplyStrategyDynamicApply    ApplyStrategy = "dynamic-apply"
+)

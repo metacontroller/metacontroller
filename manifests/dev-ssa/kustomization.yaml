@@ -1,0 +1,5 @@
+resources:
+- ../production
+patches:
+- path:  image.yaml
+- path:  args.yaml
