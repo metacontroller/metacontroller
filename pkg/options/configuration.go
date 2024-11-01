@@ -35,4 +35,5 @@ type Configuration struct {
 	LeaderElectionOptions  leaderelection.Options
 	HealthProbeBindAddress string
 	TargetLabelSelector    string
+	UseServerSideApply     bool
 }

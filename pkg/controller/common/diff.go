@@ -54,6 +54,6 @@ func nullifyLastAppliedAnnotation(object *unstructured.Unstructured) {
 	if !exists {
 		return
 	}
-	annotations[apply.LastAppliedAnnotation] = ""
+	delete(annotations, apply.LastAppliedAnnotation)
 	object.SetAnnotations(annotations)
 }
