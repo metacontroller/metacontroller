@@ -235,7 +235,7 @@ jobs:
           node-version: '20'
       - name: Install dependencies
         run: npm install ci
-      - uses: rlespinasse/github-slug-action@v4
+      - uses: rlespinasse/github-slug-action@v5
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
