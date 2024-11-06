@@ -4,7 +4,7 @@ module metacontroller
 // should not include the patch version.
 go 1.23.0
 
-toolchain go1.23.2
+toolchain go1.23.3
 
 require (
 	github.com/evanphx/json-patch/v5 v5.9.0
