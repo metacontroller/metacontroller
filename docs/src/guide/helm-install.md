@@ -21,7 +21,7 @@ helm install metacontroller deploy/helm/metacontroller-helm-v*.tgz
 Charts are published as [packages on ghcr.io](https://github.com/metacontroller/metacontroller/pkgs/container/metacontroller-helm)
 
 You can pull them like:
-* `HELM_EXPERIMENTAL_OCI=1 helm pull oci://ghcr.io/metacontroller/metacontroller-helm --version=4.11.19`
+* `HELM_EXPERIMENTAL_OCI=1 helm pull oci://ghcr.io/metacontroller/metacontroller-helm --version=<version>`
 
 as OCI is currently (at least for helm 3.8.x) a beta feature.
 
