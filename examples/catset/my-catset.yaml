@@ -36,7 +36,7 @@ spec:
       terminationGracePeriodSeconds: 1
       containers:
       - name: nginx
-        image: gcr.io/google_containers/nginx-slim:0.8
+        image: nginx:1.26.2
         ports:
         - containerPort: 80
           name: web

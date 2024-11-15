@@ -15,27 +15,27 @@
 # limitations under the License.
 
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from typing import List
 import json
 import logging
-import typing
 
 logging.basicConfig(level=logging.DEBUG)
 LOGGER = logging.getLogger(__name__)
 
 
 class Controller(BaseHTTPRequestHandler):
-    def sync(self, parent: dict, related: dict) -> dict:
-        sourceNamespace: str = parent['spec']['sourceNamespace']
-        sourceName: str = parent['spec']['sourceName']
-        parentName = parent['metadata']['name']
-        LOGGER.info(f'Processing: {parentName}')
+    def sync(self, parent: dict, related: dict) -> List[dict]:
+        source_namespace: str = parent['spec']['sourceNamespace']
+        source_name: str = parent['spec']['sourceName']
+        parent_name = parent['metadata']['name']
+        LOGGER.info(f'Processing: {parent_name}')
         if len(related['ConfigMap.v1']) == 0:
             LOGGER.info("Related resource has been deleted, clean-up copies")
             return []
-        original_configmap: dict = related['ConfigMap.v1'][f'{sourceNamespace}/{sourceName}']
-        targetNamespaces: list[str] = parent['spec']['targetNamespaces']
+        original_configmap: dict = related['ConfigMap.v1'][f'{source_namespace}/{source_name}']
+        target_namespaces: list[str] = parent['spec']['targetNamespaces']
         target_configmaps = [self.new_configmap(
-            sourceName, namespace, original_configmap['data']) for namespace in targetNamespaces]
+            source_name, namespace, original_configmap['data']) for namespace in target_namespaces]
         return target_configmaps
 
     def new_configmap(self, name: str, namespace: str, data: dict) -> dict:
@@ -49,13 +49,13 @@ class Controller(BaseHTTPRequestHandler):
             'data': data
         }
 
-    def customize(self, sourceName: str, sourceNamespace: str) -> dict:
+    def customize(self, source_name: str, source_namespace: str) -> List[dict]:
         return [
             {
                 'apiVersion': 'v1',
                 'resource': 'configmaps',
-                'namespace': sourceNamespace,
-                'names': [sourceName]
+                'namespace': source_namespace,
+                'names': [source_name]
             }
         ]
 
