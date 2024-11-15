@@ -15,28 +15,28 @@
 # limitations under the License.
 
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from typing import List
 import json
 import logging
-import typing
 
 logging.basicConfig(level=logging.DEBUG)
 LOGGER = logging.getLogger(__name__)
 
 
 class Controller(BaseHTTPRequestHandler):
-    def sync(self, parent: dict, related: dict) -> dict:
-        sourceNamespace: str = parent['spec']['sourceNamespace']
-        sourceName: str = parent['spec']['sourceName']
+    def sync(self, parent: dict, related: dict) -> List[dict]:
+        source_namespace: str = parent['spec']['sourceNamespace']
+        source_name: str = parent['spec']['sourceName']
         if len(related['ConfigMap.v1']) == 0:
             LOGGER.info("Related resource has been deleted, clean-up copies")
             return []
-        original_configmap: dict = related['ConfigMap.v1'][f'{sourceNamespace}/{sourceName}']
-        targetNamespaces = related['Namespace.v1']
+        original_configmap: dict = related['ConfigMap.v1'][f'{source_namespace}/{source_name}']
+        target_namespaces = related['Namespace.v1']
         target_configmaps = []
-        for namespace in targetNamespaces.values():
-            if namespace['metadata']['name'] != sourceNamespace:
+        for namespace in target_namespaces.values():
+            if namespace['metadata']['name'] != source_namespace:
                 target_configmaps.append(self.new_configmap(
-                    sourceName, namespace['metadata']['name'], original_configmap['data']))
+                    source_name, namespace['metadata']['name'], original_configmap['data']))
         return target_configmaps
 
     def new_configmap(self, name: str, namespace: str, data: dict) -> dict:
@@ -50,7 +50,7 @@ class Controller(BaseHTTPRequestHandler):
             'data': data
         }
 
-    def customize(self, sourceName: str, sourceNamespace: str) -> dict:
+    def customize(self, sourceName: str, sourceNamespace: str) -> List[dict]:
         return [
             {
                 'apiVersion': 'v1',

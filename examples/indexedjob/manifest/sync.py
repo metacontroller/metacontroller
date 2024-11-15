@@ -14,7 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, HTTPServer
+import io
 import json
 import copy
 import re
@@ -47,11 +48,11 @@ def new_pod(job, index):
   return pod
 
 class Controller(BaseHTTPRequestHandler):
-  def sync(self, job, children):
+  def sync(self, job, children) -> dict:
     # Arrange observed Pods by index, and count by phase.
     observed_pods = {}
     (active, succeeded, failed) = (0, 0, 0)
-    for pod_name, pod in children['Pod.v1'].iteritems():
+    for pod_name, pod in children['Pod.v1'].items():
       pod_index = get_index(job['metadata']['name'], pod_name)
       if pod_index >= 0:
         phase = pod.get('status', {}).get('phase')
@@ -69,7 +70,7 @@ class Controller(BaseHTTPRequestHandler):
     if is_job_finished(job):
       return {
         'status': job['status'],
-        'children': [new_pod(job, i) for i, pod in observed_pods.iteritems()]
+        'children': [new_pod(job, i) for i, pod in observed_pods.items()]
       }
 
     # Compute status based on what we observed, before building desired state.
@@ -79,26 +80,26 @@ class Controller(BaseHTTPRequestHandler):
 
     # Generate desired state for existing Pods.
     desired_pods = {}
-    for pod_index, pod in observed_pods.iteritems():
+    for pod_index, pod in observed_pods.items():
       desired_pods[pod_index] = new_pod(job, pod_index)
 
     # Create more Pods as needed.
     spec_parallelism = job['spec'].get('parallelism', 1)
-    for pod_index in xrange(spec_completions):
+    for pod_index in range(spec_completions):
       if pod_index not in desired_pods and active < spec_parallelism:
         desired_pods[pod_index] = new_pod(job, pod_index)
         active += 1
 
-    return {'status': desired_status, 'children': desired_pods.values()}
-
+    return {'status': desired_status, 'children': list(desired_pods.values())}
 
   def do_POST(self):
-    observed = json.loads(self.rfile.read(int(self.headers.getheader('content-length'))))
+    observed = json.loads(self.rfile.read(int(self.headers.get('content-length'))))
     desired = self.sync(observed['parent'], observed['children'])
 
     self.send_response(200)
     self.send_header('Content-type', 'application/json')
     self.end_headers()
-    self.wfile.write(json.dumps(desired))
+    self.wfile.write(io.BytesIO(json.dumps(desired).encode('utf-8')).getvalue())
+
 
 HTTPServer(('', 80), Controller).serve_forever()
