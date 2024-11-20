@@ -1,8 +1,6 @@
 module metacontroller/test/integration
 
-go 1.23.0
-
-toolchain go1.23.2
+go 1.23.3
 
 require (
 	k8s.io/api v0.31.1
