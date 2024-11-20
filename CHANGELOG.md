@@ -1,3 +1,11 @@
+## [4.11.21](https://github.com/metacontroller/metacontroller/compare/v4.11.20...v4.11.21) (2024-11-20)
+
+
+### Bug Fixes
+
+* **deps:** update alpine:3.20.3 docker digest to 1e42bbe ([c2270a2](https://github.com/metacontroller/metacontroller/commit/c2270a2bab380bd25f1eaf1ee56b0931412cd03a))
+* **deps:** update dependency go to v1.23.3 ([d058332](https://github.com/metacontroller/metacontroller/commit/d058332ebe507655f83ddf168a5109d84691c512))
+
 ## [4.11.20](https://github.com/metacontroller/metacontroller/compare/v4.11.19...v4.11.20) (2024-10-17)
 
 
