@@ -5,63 +5,63 @@ jobs:
   golangci-lint:
     runs-on: ubuntu-24.04
     steps:
-    - uses: actions/checkout@v4
-    - uses: actions/setup-go@v5
-      with:
-        go-version-file: 'go.mod'
-        cache: true
-    - name: golangci-lint
-      uses: golangci/golangci-lint-action@v6
-      with:
-        # Optional: version of golangci-lint to use in form of v1.2 or v1.2.3 or `latest` to use the latest version
-        version: latest
-        args: --timeout 10m --enable errorlint,gofmt,goimports,gosec,whitespace,bodyclose,dogsled,durationcheck,errorlint,exhaustive,exportloopref,goconst,gocritic,gosec,importas,misspell,nilerr --exclude=G108
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: "go.mod"
+          cache: true
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          # Optional: version of golangci-lint to use in form of v1.2 or v1.2.3 or `latest` to use the latest version
+          version: latest
+          args: --timeout 10m --enable errorlint,gofmt,goimports,gosec,whitespace,bodyclose,dogsled,durationcheck,errorlint,exhaustive,exportloopref,goconst,gocritic,gosec,importas,misspell,nilerr --exclude=G108
   docker-image-for-linting:
     runs-on: ubuntu-24.04
     steps:
-    - name: checkout
-      uses: actions/checkout@v4
-    - uses: actions/setup-go@v5
-      with:
-        go-version-file: 'go.mod'
-        cache: true
-    - name: Install GoReleaser
-      uses: goreleaser/goreleaser-action@v6
-      with:
-        distribution: goreleaser
-        version: latest
-        install-only: true
-    - name: build image
-      run: make image
-    - name: Save image
-      run: |
-        docker save --output metacontroller-lint.tar localhost/metacontroller:dev
-    - uses: actions/upload-artifact@v4
-      name: Save metacontroller image
-      with:
-        name: metacontroller-lint-image
-        path: metacontroller-*.tar
-        retention-days: 1
+      - name: checkout
+        uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: "go.mod"
+          cache: true
+      - name: Install GoReleaser
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: latest
+          install-only: true
+      - name: build image
+        run: make image
+      - name: Save image
+        run: |
+          docker save --output metacontroller-lint.tar localhost/metacontroller:dev
+      - uses: actions/upload-artifact@v4
+        name: Save metacontroller image
+        with:
+          name: metacontroller-lint-image
+          path: metacontroller-*.tar
+          retention-days: 1
   trivy-scan:
     runs-on: ubuntu-24.04
     needs: [docker-image-for-linting]
     steps:
-    - name: Download metacontroller images
-      uses: actions/download-artifact@v4
-      with:
-        name: metacontroller-lint-image
-    - name: Load metacontroller images
-      run: |
-        docker load --input metacontroller-lint.tar
-    - name: Trivy scan
-      uses: aquasecurity/trivy-action@master
-      with:
-        image-ref: 'localhost/metacontroller:dev'
-        format: 'table'
-        exit-code: '1'
-        ignore-unfixed: true
-        vuln-type: 'os,library'
-        severity: 'CRITICAL,HIGH'
+      - name: Download metacontroller images
+        uses: actions/download-artifact@v4
+        with:
+          name: metacontroller-lint-image
+      - name: Load metacontroller images
+        run: |
+          docker load --input metacontroller-lint.tar
+      - name: Trivy scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: "localhost/metacontroller:dev"
+          format: "table"
+          exit-code: "1"
+          ignore-unfixed: true
+          vuln-type: "os,library"
+          severity: "CRITICAL,HIGH"
   dockle-scan:
     runs-on: ubuntu-24.04
     needs: [docker-image-for-linting]
@@ -76,7 +76,7 @@ jobs:
       - name: Dockle scan
         uses: erzz/dockle-action@v1
         with:
-          image: 'localhost/metacontroller:dev'
+          image: "localhost/metacontroller:dev"
   documentation-test:
     runs-on: ubuntu-24.04
     container:
@@ -90,14 +90,14 @@ jobs:
   nancy-dependency-scan:
     runs-on: ubuntu-24.04
     steps:
-    - name: Check out code into the Go module directory
-      uses: actions/checkout@v4
-    - name: Set up Go 1.x in order to write go.list file
-      uses: actions/setup-go@v5
-      with:
-        go-version-file: 'go.mod'
-        cache: true
-    - name: WriteGoList
-      run: go list -deps -json ./... > go.list
-    - name: Nancy
-      uses: sonatype-nexus-community/nancy-github-action@main
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v4
+      - name: Set up Go 1.x in order to write go.list file
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: "go.mod"
+          cache: true
+      - name: WriteGoList
+        run: go list -deps -json ./... > go.list
+      - name: Nancy
+        uses: sonatype-nexus-community/nancy-github-action@main
