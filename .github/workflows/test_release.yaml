@@ -1,6 +1,12 @@
 ---
 name: Test / Release
-on: [ push, pull_request ]
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - "*"
 jobs:
   dockerbuild:
     name: Build local metacontroller images
@@ -9,13 +15,13 @@ jobs:
       fail-fast: false
       matrix:
         target:
-          - { name: 'dev', command: "image" }
-          - { name: 'debug', command: 'image_debug' }
+          - { name: "dev", command: "image" }
+          - { name: "debug", command: "image_debug" }
     steps:
       - name: checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: '5'
+          fetch-depth: "5"
       - uses: actions/setup-go@v5
         with:
           go-version-file: "go.mod"
@@ -48,7 +54,7 @@ jobs:
       - name: checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: '5'
+          fetch-depth: "5"
       - id: set-matrix
         name: setconfigmatrix
         # assume that kind-matrix-config.json is in ascending order and the latest version is the last element
@@ -70,17 +76,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: [ "unit-test", "integration-test" ]
+        target: ["unit-test", "integration-test"]
     name: Tests
     steps:
       - name: checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: '5'
+          fetch-depth: "5"
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version-file: 'go.mod'
+          go-version-file: "go.mod"
           cache: true
       - name: Prepare integration test environment
         shell: bash
@@ -112,7 +118,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: '5'
+          fetch-depth: "5"
       - name: Setup kind
         uses: helm/kind-action@v1.10.0
         with:
@@ -222,7 +228,7 @@ jobs:
     concurrency:
       group: ${{ github.ref }}
     runs-on: ubuntu-24.04
-    needs: [ 'tests', 'e2etests', 'helmtests' ]
+    needs: ["tests", "e2etests", "helmtests"]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -232,7 +238,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: "20"
       - name: Install dependencies
         run: npm install ci
       - uses: rlespinasse/github-slug-action@v5
@@ -256,7 +262,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version-file: 'go.mod'
+          go-version-file: "go.mod"
           cache: true
       - name: Install GoReleaser
         uses: goreleaser/goreleaser-action@v6
