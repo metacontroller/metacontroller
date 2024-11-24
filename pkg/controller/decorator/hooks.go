@@ -32,6 +32,9 @@ func (c *decoratorController) callHook(
 	if c.dc.Spec.Hooks == nil {
 		return nil, fmt.Errorf("no hooks defined")
 	}
+	// TODO use v1 or v2 depending on pc.finalizeHook.GetVersion
+	// and pc.syncHook.GetVersion()
+	// also return type needs to be changes to some common interface, to cover both v1.DecoratorHookResponse and v2.DecoratorHookResponse
 
 	requestBuilder := v1.NewRequestBuilder().
 		WithController(c.dc).
