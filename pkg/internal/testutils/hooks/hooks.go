@@ -56,6 +56,10 @@ func (h *hookExecutorStub) IsEnabled() bool {
 	return h.enabled
 }
 
+func (h *hookExecutorStub) GetVersion() v1alpha1.HookVersion {
+	return v1alpha1.HookVersionV2
+}
+
 func (h *hookExecutorStub) Call(request api.WebhookRequest, response interface{}) error {
 	if h.err != nil {
 		return h.err
@@ -110,6 +114,10 @@ type serializingHookExecutorStub struct {
 
 func (s serializingHookExecutorStub) IsEnabled() bool {
 	return true
+}
+
+func (s serializingHookExecutorStub) GetVersion() v1alpha1.HookVersion {
+	return v1alpha1.HookVersionV2
 }
 
 func (s serializingHookExecutorStub) Call(request api.WebhookRequest, response interface{}) error {

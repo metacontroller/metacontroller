@@ -140,6 +140,8 @@ func (rm *Manager) getCustomizeHookResponse(parent *unstructured.Unstructured) (
 	if found {
 		return cached, nil
 	} else {
+		// TODO use v1 or v2 depending on hook, however we have just v1 as no changes were done
+
 		var response v1.CustomizeHookResponse
 		request := &v1.CustomizeHookRequest{
 			Controller: rm.controller,
