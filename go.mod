@@ -12,10 +12,10 @@ require (
 	github.com/prometheus/client_golang v1.20.5
 	github.com/stretchr/testify v1.9.0 //test
 	go.uber.org/zap v1.27.0
-	k8s.io/api v0.31.1
+	k8s.io/api v0.31.4
 	k8s.io/apiextensions-apiserver v0.31.1
-	k8s.io/apimachinery v0.31.1
-	k8s.io/client-go v0.31.1
+	k8s.io/apimachinery v0.31.4
+	k8s.io/client-go v0.31.4
 	k8s.io/klog/v2 v2.130.1
 	k8s.io/utils v0.0.0-20240921022957-49e7df575cb6
 	sigs.k8s.io/controller-runtime v0.19.0
@@ -78,7 +78,7 @@ require (
 replace (
 	golang.org/x/net => golang.org/x/net v0.30.0
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.31.1
-	k8s.io/apimachinery => k8s.io/apimachinery v0.31.1
-	k8s.io/client-go => k8s.io/client-go v0.31.1
-	k8s.io/component-base => k8s.io/component-base v0.31.1
+	k8s.io/apimachinery => k8s.io/apimachinery v0.31.4
+	k8s.io/client-go => k8s.io/client-go v0.31.4
+	k8s.io/component-base => k8s.io/component-base v0.31.4
 )
