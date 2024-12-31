@@ -1,3 +1,16 @@
+## [4.11.22](https://github.com/metacontroller/metacontroller/compare/v4.11.21...v4.11.22) (2024-12-31)
+
+
+### Bug Fixes
+
+* **deps:** update alpine docker tag to v3.21.0 ([82616ab](https://github.com/metacontroller/metacontroller/commit/82616ab99a70c6e2f4d54971600953bf90ccacd1))
+* **deps:** update golang container image to 1.23.4 ([b270789](https://github.com/metacontroller/metacontroller/commit/b2707895bf9470846bfad4be390ab60f5d1f58ba))
+* **deps:** update k8s.io packages to v0.32.0 (minor) ([217bb88](https://github.com/metacontroller/metacontroller/commit/217bb888ffb1585d59ce1dafef766efd4dbff202))
+* **deps:** update k8s.io/utils digest to 24370be ([ded53a8](https://github.com/metacontroller/metacontroller/commit/ded53a8edccd669d28ad4e4ce40a62d6fd18c36e))
+* **deps:** update module github.com/stretchr/testify to v1.10.0 ([4de4edf](https://github.com/metacontroller/metacontroller/commit/4de4edf2a928deb92fab0bb314fa760b1ae1d7ab))
+* **deps:** update module golang.org/x/net to v0.33.0 ([e703248](https://github.com/metacontroller/metacontroller/commit/e70324828faa31c2314d69d19d4894b1c096848a))
+* **deps:** update module sigs.k8s.io/controller-runtime to v0.19.3 ([0d1348f](https://github.com/metacontroller/metacontroller/commit/0d1348f9862e8b4f80c559d4208418a1e9110058))
+
 ## [4.11.21](https://github.com/metacontroller/metacontroller/compare/v4.11.20...v4.11.21) (2024-11-20)
 
 
