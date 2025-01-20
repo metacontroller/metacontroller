@@ -184,7 +184,7 @@ jobs:
           python-version: "3.11.10"
 
       - name: Set up chart-testing
-        uses: helm/chart-testing-action@v2.6.1
+        uses: helm/chart-testing-action@v2.7.0
 
       - name: Setup kind
         uses: helm/kind-action@v1.12.0
