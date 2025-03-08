@@ -121,7 +121,10 @@ func New(configuration options.Configuration) (controllerruntime.Manager, error)
 	// mechanism for reads instead of hitting the API directly.
 	controllerContext.K8sClient = mgr.GetClient()
 
-	compositeReconciler := composite.NewMetacontroller(*controllerContext, mcClient, configuration.Workers, configuration.UseServerSideApply)
+	compositeReconciler := composite.NewMetacontroller(*controllerContext, mcClient, configuration.Workers, &common.ServerSideApplyOptions{
+		FieldManager: configuration.SsaFieldManager,
+		Enabled:      configuration.UseServerSideApply,
+	})
 	compositeCtrl, err := controller.New("composite-metacontroller", mgr, controller.Options{
 		Reconciler: compositeReconciler,
 	})

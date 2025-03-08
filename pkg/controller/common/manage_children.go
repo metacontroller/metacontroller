@@ -140,7 +140,7 @@ func ManageChildren(
 	dynClient *dynamicclientset.Clientset,
 	updateStrategy ChildUpdateStrategy,
 	parent *unstructured.Unstructured,
-	observedChildren, desiredChildren commonv2.UniformObjectMap, useServerSideApply bool) error {
+	observedChildren, desiredChildren commonv2.UniformObjectMap, ssaOptions *ServerSideApplyOptions) error {
 	// If some operations fail, keep trying others so, for example,
 	// we don't block recovery (create new Pod) on a failed delete.
 	var errs []error
@@ -166,7 +166,7 @@ func ManageChildren(
 			errs = append(errs, err)
 			continue
 		}
-		if err := updateChildren(client, updateStrategy, parent, observedChildren[key], objects, useServerSideApply); err != nil {
+		if err := updateChildren(client, updateStrategy, parent, observedChildren[key], objects, ssaOptions); err != nil {
 			errs = append(errs, err)
 			continue
 		}
@@ -231,11 +231,11 @@ func lastUpdateCacheKey(client *dynamicclientset.ResourceClient, obj *unstructur
 	return fmt.Sprintf("%s/%s/%s/%s", client.Group, client.Kind, obj.GetNamespace(), obj.GetName())
 }
 
-func updateChildren(client *dynamicclientset.ResourceClient, updateStrategy ChildUpdateStrategy, parent *unstructured.Unstructured, observed, desired map[string]*unstructured.Unstructured, useServerSideApply bool) error {
+func updateChildren(client *dynamicclientset.ResourceClient, updateStrategy ChildUpdateStrategy, parent *unstructured.Unstructured, observed, desired map[string]*unstructured.Unstructured, ssaOptions *ServerSideApplyOptions) error {
 	var errs []error
 
 	for name, obj := range desired {
-		if useServerSideApply {
+		if ssaOptions.Enabled {
 			data, err := json.Marshal(obj)
 			if err != nil {
 				errs = append(errs, err)
@@ -274,7 +274,7 @@ func updateChildren(client *dynamicclientset.ResourceClient, updateStrategy Chil
 			}
 
 			patched, err := client.Namespace(obj.GetNamespace()).Patch(context.TODO(), obj.GetName(), types.ApplyPatchType, data, metav1.PatchOptions{
-				FieldManager: "metacontroller",
+				FieldManager: ssaOptions.FieldManager,
 				Force:        ptr.To(true),
 			})
 

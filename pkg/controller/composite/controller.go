@@ -81,9 +81,9 @@ type parentController struct {
 	updateStrategy updateStrategyMap
 	childInformers common.InformerMap
 
-	numWorkers         int
-	useServerSideApply bool
-	eventRecorder      record.EventRecorder
+	numWorkers    int
+	ssaOptions    *common.ServerSideApplyOptions
+	eventRecorder record.EventRecorder
 
 	finalizer    *finalizer.Manager
 	customize    *customize.Manager
@@ -102,7 +102,7 @@ func newParentController(
 	revisionLister mclisters.ControllerRevisionLister,
 	cc *v1alpha1.CompositeController,
 	numWorkers int,
-	useServerSideApply bool,
+	ssaOptions *common.ServerSideApplyOptions,
 	logger logr.Logger,
 ) (pc *parentController, newErr error) {
 	// Make a dynamic client for the parent resource.
@@ -190,9 +190,9 @@ func newParentController(
 				Name: common.CompositeController.String() + "-" + cc.Name,
 			},
 		),
-		numWorkers:         numWorkers,
-		useServerSideApply: useServerSideApply,
-		eventRecorder:      eventRecorder,
+		numWorkers:    numWorkers,
+		ssaOptions:    ssaOptions,
+		eventRecorder: eventRecorder,
 		finalizer: finalizer.NewManager(
 			"metacontroller.io/compositecontroller-"+cc.Name,
 			cc.Spec.Hooks.Finalize != nil,
@@ -668,7 +668,7 @@ func (pc *parentController) syncParentObject(parent *unstructured.Unstructured) 
 	var manageErr error
 	if parent.GetDeletionTimestamp() == nil || pc.finalizer.ShouldFinalize(parent) {
 		// Reconcile children.
-		if err := common.ManageChildren(pc.dynClient, pc.updateStrategy, parent, observedChildren, desiredChildren, pc.useServerSideApply); err != nil {
+		if err := common.ManageChildren(pc.dynClient, pc.updateStrategy, parent, observedChildren, desiredChildren, pc.ssaOptions); err != nil {
 			manageErr = fmt.Errorf("can't reconcile children for %v %v/%v: %w", pc.parentResource.Kind, parent.GetNamespace(), parent.GetName(), err)
 		}
 	}

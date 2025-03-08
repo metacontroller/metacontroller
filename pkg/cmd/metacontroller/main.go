@@ -58,6 +58,7 @@ var (
 	healthProbeBindAddress     = flag.String("health-probe-bind-address", ":8081", "The address the health probes endpoint binds to")
 	targetLabelSelector        = flag.String("target-label-selector", "", "Label selector used to restrict an instance of metacontroller to manage specific Composite and Decorator controllers")
 	useServerSideApply         = flag.Bool("use-server-side-apply", false, "Use server-side apply for updating objects")
+	ssaFieldManager            = flag.String("ssa-field-manager", "metacontroller", "FieldManager to use for server-side apply")
 	version                    = "No version provided"
 )
 
@@ -101,6 +102,7 @@ func main() {
 		InformerRelist:     *informerRelist,
 		Workers:            *workers,
 		UseServerSideApply: *useServerSideApply,
+		SsaFieldManager:    *ssaFieldManager,
 		CorrelatorOptions: record.CorrelatorOptions{
 			BurstSize: *eventsBurst,
 			QPS:       float32(*eventsQPS),

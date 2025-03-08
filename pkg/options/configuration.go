@@ -36,4 +36,5 @@ type Configuration struct {
 	HealthProbeBindAddress string
 	TargetLabelSelector    string
 	UseServerSideApply     bool
+	SsaFieldManager        string
 }
