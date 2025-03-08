@@ -194,3 +194,8 @@ func HasStatusSubresource(crd *v1.CustomResourceDefinition, version string) bool
 	}
 	return false
 }
+
+type ServerSideApplyOptions struct {
+	FieldManager string
+	Enabled      bool
+}
