@@ -22,6 +22,7 @@ import (
 	"fmt"
 	commonv2 "metacontroller/pkg/controller/common/api/v2"
 	"metacontroller/pkg/logging"
+	"strings"
 	"sync"
 
 	"github.com/cespare/xxhash/v2"
@@ -263,8 +264,8 @@ func updateChildren(client *dynamicclientset.ResourceClient, updateStrategy Chil
 				if hasLastApplied {
 					//if observed object has has last applied annotation we need to remove it
 					//from the remote object to avoid conflicts
-					nullifyLastAppliedAnnotation(oldObj)
-					_, err := client.Namespace(obj.GetNamespace()).Update(context.TODO(), oldObj, metav1.UpdateOptions{})
+					annotationNameForJsonPatch := strings.ReplaceAll(strings.ReplaceAll(dynamicapply.LastAppliedAnnotation, "/", "~1"), ".", "~0")
+					_, err := client.Namespace(obj.GetNamespace()).Patch(context.TODO(), obj.GetName(), types.JSONPatchType, fmt.Appendf(nil, `[{"op": "remove", "path": "/metadata/annotations/%s"}]`, annotationNameForJsonPatch), metav1.PatchOptions{})
 					if err != nil {
 						logging.Logger.Error(err, "Failed to remove last applied annotation from observed object", "parent", parent, "child", obj)
 						errs = append(errs, err)
