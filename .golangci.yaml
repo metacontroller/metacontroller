@@ -3,6 +3,29 @@ issues:
     - pkg/client/generated
     - examples
 
+linters:
+  enable:
+    - errorlint
+    - gofmt
+    - goimports
+    - gosec
+    - whitespace
+    - bodyclose
+    - dogsled
+    - durationcheck
+    - errorlint
+    - exhaustive
+    - copyloopvar
+    - goconst
+    - gocritic
+    - gosec
+    - importas
+    - misspell
+    - nilerr
+
 linters-settings:
   exhaustive:
     default-signifies-exhaustive: true
+  gosec:
+    excludes:
+      - G108 
