@@ -1,3 +1,11 @@
+## [4.11.23](https://github.com/metacontroller/metacontroller/compare/v4.11.22...v4.11.23) (2025-03-15)
+
+
+### Bug Fixes
+
+* **deps:** update alpine docker tag to v3.21.3 ([4efacb5](https://github.com/metacontroller/metacontroller/commit/4efacb5f1160e9e4657d6618e8b2022292c5de58))
+* **security:** Update golang.org/x/net to v0.36.0 to fix CVE-2025-22870 ([6522e64](https://github.com/metacontroller/metacontroller/commit/6522e64402efbafa3210c4942b5827503f844f57))
+
 ## [4.11.22](https://github.com/metacontroller/metacontroller/compare/v4.11.21...v4.11.22) (2024-12-31)
 
 
