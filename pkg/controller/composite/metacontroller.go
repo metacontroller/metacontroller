@@ -66,11 +66,11 @@ type Metacontroller struct {
 	parentControllers map[string]*parentController
 
 	numWorkers int
-	ssaOptions *common.ServerSideApplyOptions
+	ssaOptions *common.ApplyOptions
 	logger     logr.Logger
 }
 
-func NewMetacontroller(controllerContext common.ControllerContext, mcClient mcclientset.Interface, numWorkers int, ssaOptions *common.ServerSideApplyOptions) *Metacontroller {
+func NewMetacontroller(controllerContext common.ControllerContext, mcClient mcclientset.Interface, numWorkers int, ssaOptions *common.ApplyOptions) *Metacontroller {
 	mc := &Metacontroller{
 		k8sClient:     controllerContext.K8sClient,
 		resources:     controllerContext.Resources,

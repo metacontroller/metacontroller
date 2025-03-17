@@ -82,7 +82,7 @@ type parentController struct {
 	childInformers common.InformerMap
 
 	numWorkers    int
-	ssaOptions    *common.ServerSideApplyOptions
+	ssaOptions    *common.ApplyOptions
 	eventRecorder record.EventRecorder
 
 	finalizer    *finalizer.Manager
@@ -102,7 +102,7 @@ func newParentController(
 	revisionLister mclisters.ControllerRevisionLister,
 	cc *v1alpha1.CompositeController,
 	numWorkers int,
-	ssaOptions *common.ServerSideApplyOptions,
+	ssaOptions *common.ApplyOptions,
 	logger logr.Logger,
 ) (pc *parentController, newErr error) {
 	// Make a dynamic client for the parent resource.

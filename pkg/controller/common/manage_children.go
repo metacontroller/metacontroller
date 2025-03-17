@@ -141,7 +141,7 @@ func ManageChildren(
 	dynClient *dynamicclientset.Clientset,
 	updateStrategy ChildUpdateStrategy,
 	parent *unstructured.Unstructured,
-	observedChildren, desiredChildren commonv2.UniformObjectMap, ssaOptions *ServerSideApplyOptions) error {
+	observedChildren, desiredChildren commonv2.UniformObjectMap, ssaOptions *ApplyOptions) error {
 	// If some operations fail, keep trying others so, for example,
 	// we don't block recovery (create new Pod) on a failed delete.
 	var errs []error
@@ -232,11 +232,11 @@ func lastUpdateCacheKey(client *dynamicclientset.ResourceClient, obj *unstructur
 	return fmt.Sprintf("%s/%s/%s/%s", client.Group, client.Kind, obj.GetNamespace(), obj.GetName())
 }
 
-func updateChildren(client *dynamicclientset.ResourceClient, updateStrategy ChildUpdateStrategy, parent *unstructured.Unstructured, observed, desired map[string]*unstructured.Unstructured, ssaOptions *ServerSideApplyOptions) error {
+func updateChildren(client *dynamicclientset.ResourceClient, updateStrategy ChildUpdateStrategy, parent *unstructured.Unstructured, observed, desired map[string]*unstructured.Unstructured, ssaOptions *ApplyOptions) error {
 	var errs []error
 
 	for name, obj := range desired {
-		if ssaOptions.Enabled {
+		if ssaOptions.Strategy == ApplyStrategyServerSideApply {
 			data, err := json.Marshal(obj)
 			if err != nil {
 				errs = append(errs, err)
