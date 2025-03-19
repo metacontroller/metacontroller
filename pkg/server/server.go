@@ -123,12 +123,12 @@ func New(configuration options.Configuration) (controllerruntime.Manager, error)
 
 	var strategy common.ApplyStrategy
 	switch configuration.ApplyStrategy {
-	case "dynamic-apply":
+	case "": 
+		fallthrough
+	case "dynamic-apply": // default
 		strategy = common.ApplyStrategyDynamicApply
-		break
 	case "server-side-apply":
 		strategy = common.ApplyStrategyServerSideApply
-		break
 	default:
 		return nil, fmt.Errorf("unknown apply strategy: %s", configuration.ApplyStrategy)
 	}
