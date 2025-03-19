@@ -1,6 +1,6 @@
 {
   "extends": [
-    "config:base"
+    "config:recommended"
   ],
   "semanticCommits": "enabled",
   "semanticCommitType": "fix",
@@ -15,16 +15,14 @@
       ],
       "allowedVersions": "/^v0\\.[0-9]+\\.[0-9]+/",
       "semanticCommitType": "fix",
-      "separateMinorPatch": "true",
-      "groupName": [
-        "k8s.io packages"
-      ],
+      "separateMinorPatch": true,
+      "groupName": "k8s.io packages",
       "extends": [
         "schedule:weekly"
       ]
     },
     {
-      "managers": [
+      "matchManagers": [
         "dockerfile",
         "gomod"
       ],
@@ -35,7 +33,7 @@
       ]
     },
     {
-      "matchFiles": [
+      "matchFileNames": [
         "test/integration/go.mod"
       ],
       "semanticCommitType": "test",
