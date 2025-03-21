@@ -1,3 +1,10 @@
+## [4.11.25](https://github.com/metacontroller/metacontroller/compare/v4.11.24...v4.11.25) (2025-03-21)
+
+
+### Bug Fixes
+
+* **config:** migrate config renovate.json ([3908a82](https://github.com/metacontroller/metacontroller/commit/3908a82839831fc4694da3b097ac3d60113cd854))
+
 ## [4.11.24](https://github.com/metacontroller/metacontroller/compare/v4.11.23...v4.11.24) (2025-03-15)
 
 
