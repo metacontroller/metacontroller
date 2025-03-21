@@ -66,10 +66,11 @@ type Metacontroller struct {
 	parentControllers map[string]*parentController
 
 	numWorkers int
+	ssaOptions *common.ApplyOptions
 	logger     logr.Logger
 }
 
-func NewMetacontroller(controllerContext common.ControllerContext, mcClient mcclientset.Interface, numWorkers int) *Metacontroller {
+func NewMetacontroller(controllerContext common.ControllerContext, mcClient mcclientset.Interface, numWorkers int, ssaOptions *common.ApplyOptions) *Metacontroller {
 	mc := &Metacontroller{
 		k8sClient:     controllerContext.K8sClient,
 		resources:     controllerContext.Resources,
@@ -85,6 +86,7 @@ func NewMetacontroller(controllerContext common.ControllerContext, mcClient mccl
 		parentControllers: make(map[string]*parentController),
 
 		numWorkers: numWorkers,
+		ssaOptions: ssaOptions,
 		logger:     logging.Logger.WithName("composite"),
 	}
 
@@ -175,6 +177,7 @@ func (mc *Metacontroller) reconcileCompositeController(cc *v1alpha1.CompositeCon
 		mc.revisionLister,
 		cc,
 		mc.numWorkers,
+		mc.ssaOptions,
 		mc.logger)
 	if err != nil {
 		mc.eventRecorder.Eventf(

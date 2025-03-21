@@ -57,6 +57,8 @@ var (
 	leaderElectionID           = flag.String("leader-election-id", "metacontroller", "Determines the name of the resource that leader election will use for holding the leader lock")
 	healthProbeBindAddress     = flag.String("health-probe-bind-address", ":8081", "The address the health probes endpoint binds to")
 	targetLabelSelector        = flag.String("target-label-selector", "", "Label selector used to restrict an instance of metacontroller to manage specific Composite and Decorator controllers")
+	applyStrategy              = flag.String("apply-strategy", "dynamic-apply", "Strategy to use for applying changes to objects")
+	ssaFieldManager            = flag.String("apply-strategy-ssa-field-manager", "metacontroller", "FieldManager to use for server-side apply")
 	version                    = "No version provided"
 )
 
@@ -99,6 +101,8 @@ func main() {
 		DiscoveryInterval: *discoveryInterval,
 		InformerRelist:    *informerRelist,
 		Workers:           *workers,
+		ApplyStrategy:     *applyStrategy,
+		SsaFieldManager:   *ssaFieldManager,
 		CorrelatorOptions: record.CorrelatorOptions{
 			BurstSize: *eventsBurst,
 			QPS:       float32(*eventsQPS),

@@ -121,7 +121,22 @@ func New(configuration options.Configuration) (controllerruntime.Manager, error)
 	// mechanism for reads instead of hitting the API directly.
 	controllerContext.K8sClient = mgr.GetClient()
 
-	compositeReconciler := composite.NewMetacontroller(*controllerContext, mcClient, configuration.Workers)
+	var strategy common.ApplyStrategy
+	switch configuration.ApplyStrategy {
+	case "":
+		fallthrough
+	case "dynamic-apply": // default
+		strategy = common.ApplyStrategyDynamicApply
+	case "server-side-apply":
+		strategy = common.ApplyStrategyServerSideApply
+	default:
+		return nil, fmt.Errorf("unknown apply strategy: %s", configuration.ApplyStrategy)
+	}
+
+	compositeReconciler := composite.NewMetacontroller(*controllerContext, mcClient, configuration.Workers, &common.ApplyOptions{
+		FieldManager: configuration.SsaFieldManager,
+		Strategy:     strategy,
+	})
 	compositeCtrl, err := controller.New("composite-metacontroller", mgr, controller.Options{
 		Reconciler: compositeReconciler,
 	})
