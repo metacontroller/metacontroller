@@ -123,7 +123,7 @@ func New(configuration options.Configuration) (controllerruntime.Manager, error)
 
 	var strategy common.ApplyStrategy
 	switch configuration.ApplyStrategy {
-	case "": 
+	case "":
 		fallthrough
 	case "dynamic-apply": // default
 		strategy = common.ApplyStrategyDynamicApply

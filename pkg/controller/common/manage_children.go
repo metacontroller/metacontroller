@@ -259,11 +259,11 @@ func updateChildren(client *dynamicclientset.ResourceClient, updateStrategy Chil
 					logging.Logger.Info("No cache entry found, updating", "name", lastUpdateCacheName)
 				}
 
-				//check if observed object hast last applied annotation
+				// check if observed object hast last applied annotation
 				_, hasLastApplied := oldObj.GetAnnotations()[dynamicapply.LastAppliedAnnotation]
 				if hasLastApplied {
-					//if observed object has has last applied annotation we need to remove it
-					//from the remote object to avoid conflicts
+					// if observed object has has last applied annotation we need to remove it
+					// from the remote object to avoid conflicts
 					annotationNameForJsonPatch := strings.ReplaceAll(strings.ReplaceAll(dynamicapply.LastAppliedAnnotation, "/", "~1"), ".", "~0")
 					_, err := client.Namespace(obj.GetNamespace()).Patch(context.TODO(), obj.GetName(), types.JSONPatchType, fmt.Appendf(nil, `[{"op": "remove", "path": "/metadata/annotations/%s"}]`, annotationNameForJsonPatch), metav1.PatchOptions{})
 					if err != nil {
@@ -299,7 +299,6 @@ func updateChildren(client *dynamicclientset.ResourceClient, updateStrategy Chil
 		}
 
 		if oldObj := observed[name]; oldObj != nil {
-
 			// Update
 			newObj, err := ApplyUpdate(oldObj, obj)
 			if err != nil {
