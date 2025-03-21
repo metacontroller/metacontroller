@@ -266,7 +266,7 @@ use case.
 
 ## Server-Side Apply
 
-Server-side apply (SSA) is a Kubernetes-native declarative update mechanism that allows clients (e.g., controllers) to send a full object definition to the API server, which then manages field ownership and performs merges.
+Server-side apply (SSA) is a Kubernetes-native declarative update mechanism that allows clients (e.g., controllers) to send a full object definition to the API server, which then manages field ownership and performs merges. Since SSA is a new feature for Metacontroller, it's advisable to use it with caution - especially in production environments - until you fully understand its implications and field ownership model.
 
 SSA provides several advantages over client-side apply:
 
@@ -320,7 +320,7 @@ To enable SSA in Metacontroller, configure the controller with:
 --apply-strategy=server-side-apply
 ```
 
-This setting ensures Metacontroller applies resources using Kubernetes-native SSA rather than dynamic apply.
+This setting ensures Metacontroller applies resources using Kubernetes-native [`server-side-apply`](kubernetes.io/docs/reference/using-api/server-side-apply) rather than dynamic apply.
 
 ## Future Direction
 
