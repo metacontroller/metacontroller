@@ -113,7 +113,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix: ${{fromJson(needs.setmatrix.outputs.matrix)}}
-    name: e2e test k8s ${{ matrix.configuration.version }}
+    name: e2e test k8s ${{ matrix.configuration.version }}-${{ matrix.configuration.variant }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -139,7 +139,7 @@ jobs:
 
       - name: Apply metacontroller manifests
         run: |
-          kubectl apply -k manifests/dev
+          kubectl apply -k manifests/${{ matrix.configuration.variant }}
           kubectl rollout status --watch --timeout=180s statefulset/metacontroller -n metacontroller || kubectl describe pod metacontroller-0 -n metacontroller
           kubectl get pods -n metacontroller
 
