@@ -1,5 +1,5 @@
 {
-  "configuration": [
+  "k8s": [
     {
       "version": "1.29",
       "kind": "v0.27.0",

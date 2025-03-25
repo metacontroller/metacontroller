@@ -60,7 +60,7 @@ jobs:
         # assume that kind-matrix-config.json is in ascending order and the latest version is the last element
         run: |
           full_json=$(cat ./.github/config/kind-matrix-config.json | jq -rc .)
-          latest_json=$(cat ./.github/config/kind-matrix-config.json  | jq -rc '.configuration |= [last]')
+          latest_json=$(cat ./.github/config/kind-matrix-config.json  | jq -rc '.k8s |= [last]')
           {
             echo 'matrix<<EOF'
             echo "${full_json}"
@@ -112,8 +112,16 @@ jobs:
     runs-on: ${{ matrix.configuration.runner }}
     strategy:
       fail-fast: false
-      matrix: ${{fromJson(needs.setmatrix.outputs.matrix)}}
-    name: e2e test k8s ${{ matrix.configuration.version }}
+      matrix: 
+        configuration: ${{fromJson(needs.setmatrix.outputs.matrix)}}
+        include:
+        - configuration:
+            version: ${{ fromJson(needs.setmatrix.outputs.matrix)[0].version }}
+            kind: ${{ fromJson(needs.setmatrix.outputs.matrix)[0].kind }}
+            image: ${{ fromJson(needs.setmatrix.outputs.matrix)[0].image }}
+            runner: ${{ fromJson(needs.setmatrix.outputs.matrix)[0].runner }}
+          kustomize-variant: 'dev'
+    name: e2e test k8s ${{ matrix.configuration.k8s.version }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -122,8 +130,8 @@ jobs:
       - name: Setup kind
         uses: helm/kind-action@v1.12.0
         with:
-          version: ${{ matrix.configuration.kind }}
-          node_image: ${{ matrix.configuration.image }}
+          version: ${{ matrix.configuration.k8s.kind }}
+          node_image: ${{ matrix.configuration.k8s.image }}
           cluster_name: kind
           wait: 120s
 
@@ -139,7 +147,7 @@ jobs:
 
       - name: Apply metacontroller manifests
         run: |
-          kubectl apply -k manifests/dev
+          kubectl apply -k manifests/${{ matrix.kustomize-variant }}
           kubectl rollout status --watch --timeout=180s statefulset/metacontroller -n metacontroller || kubectl describe pod metacontroller-0 -n metacontroller
           kubectl get pods -n metacontroller
 
@@ -151,7 +159,7 @@ jobs:
       - name: Archive production artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: logs-${{ matrix.configuration.version }}
+          name: logs-${{ matrix.configuration.k8s.version }}-${{ matrix.kustomize-variant }}
           path: |
             /tmp/metacontroller????/**
           retention-days: 5
