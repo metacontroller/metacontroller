@@ -148,9 +148,9 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="apply-semantics"><a class="header" href="#apply-semantics">Apply Semantics</a></h1>
-<p>This page describes how Metacontroller emulates <a href="https://kubernetes.io/docs/concepts/cluster-administration/manage-deployment/#kubectl-apply"><code>kubectl apply</code></a>.</p>
-<p>In most cases, you should be able to think of Metacontroller's apply semantics
-as being the same as <code>kubectl apply</code>, but there are some differences.</p>
+<p>This page describes how Metacontroller applies changes to managed resources. Historically, Metacontroller has used a dynamic apply approach, which emulates <a href="https://kubernetes.io/docs/reference/kubectl/generated/kubectl_apply/"><code>kubectl apply</code></a>, particularly for working with CRDs.</p>
+<p>Now, Metacontroller also supports Kubernetes server-side apply (SSA), which is the recommended approach for declarative resource management in Kubernetes. SSA enables better field ownership tracking and is the future of Kubernetes resource application.</p>
+<p>Below, we explain the motivation behind Metacontroller's apply mechanisms and describe both dynamic apply and server-side apply, including their use cases and trade-offs.</p>
 <ul>
 <li><a href="#motivation">Motivation</a></li>
 <li><a href="#dynamic-apply">Dynamic Apply</a>
@@ -159,6 +159,15 @@ as being the same as <code>kubectl apply</code>, but there are some differences.
 <li><a href="#limitations">Limitations</a></li>
 </ul>
 </li>
+<li><a href="#server-side-apply">Server-Side Apply</a>
+<ul>
+<li><a href="#how-metacontroller-uses-server-side-apply">How Metacontroller Uses Server-Side Apply</a></li>
+<li><a href="#example-of-server-side-apply">Example of Server-Side Apply</a></li>
+<li><a href="#comparison-dynamic-apply-vs-server-side-apply">Comparison: Dynamic Apply vs. Server-Side Apply</a></li>
+<li><a href="#enabling-server-side-apply">Enabling Server-Side Apply</a></li>
+</ul>
+</li>
+<li><a href="#future-direction">Future Direction</a></li>
 </ul>
 <h2 id="motivation"><a class="header" href="#motivation">Motivation</a></h2>
 <p>This section explains why Metacontroller uses <code>apply</code> semantics.</p>
@@ -172,8 +181,8 @@ metadata:
     app: my-app
 spec:
   containers:
-  - name: nginx
-    image: nginx
+    - name: nginx
+      image: nginx
 </code></pre>
 <p>If you then read back the Pod you created with <code>kubectl get pod my-pod -o yaml</code>,
 you'll see a lot of extra fields filled in that you never set:</p>
@@ -218,8 +227,8 @@ metadata:
     role: staging # added a label
 spec:
   containers:
-  - name: nginx
-    image: nginx
+    - name: nginx
+      image: nginx
 </code></pre>
 <p>If you try to <code>kubectl create -f</code> your updated file, it will fail because
 you can't create something that already exists.
@@ -258,11 +267,11 @@ spec:
         app: nginx
     spec:
       containers:
-      - name: nginx
-        image: nginx
-        ports:
-        - containerPort: 80
-          name: web
+        - name: nginx
+          image: nginx
+          ports:
+            - containerPort: 80
+              name: web
 </code></pre>
 <p>You create this with apply:</p>
 <pre><code class="language-sh">kubectl apply -f catset.yaml
@@ -281,13 +290,13 @@ spec:
         app: nginx
     spec:
       containers:
-      - name: nginx
-        image: nginx
-        ports:
-        - containerPort: 80
-          name: web
-      - name: sidecar
-        image: log-uploader # fake sidecar example
+        - name: nginx
+          image: nginx
+          ports:
+            - containerPort: 80
+              name: web
+        - name: sidecar
+          image: log-uploader # fake sidecar example
 </code></pre>
 <p>Now suppose you change something in your local file and reapply it:</p>
 <pre><code class="language-sh">kubectl apply -f catset.yaml
@@ -353,11 +362,6 @@ pick only one according to a fixed order.</li>
 <p>This allows Metacontroller to &quot;do the right thing&quot; in the majority of cases,
 without requiring advance knowledge about the resources it's working with --
 knowledge that's not available anywhere in the case of CRDs.</p>
-<p>In the future, Metacontroller will likely switch from this custom apply
-implementation to <a href="https://github.com/kubernetes/features/issues/555">server-side apply</a>, which is trying to solve the
-broader problem for all components that interact with the Kubernetes API.
-However, it's not yet clear whether that proposal will embrace schemaless
-CRDs and support apply semantics on them.</p>
 <h3 id="limitations"><a class="header" href="#limitations">Limitations</a></h3>
 <p>A convention-based approach is necessarily more limiting than
 the native apply implementation, which supports arbitrary per-field
@@ -394,6 +398,52 @@ scalar values were field names in an object.</li>
 </ul>
 </li>
 </ul>
+<h2 id="server-side-apply"><a class="header" href="#server-side-apply">Server-Side Apply</a></h2>
+<p>Server-side apply (SSA) is a Kubernetes-native declarative update mechanism that allows clients (e.g., controllers) to send a full object definition to the API server, which then manages field ownership and performs merges. Since SSA is a new feature for Metacontroller, it's advisable to use it with caution - especially in production environments - until you fully understand its implications and field ownership model.</p>
+<p>SSA provides several advantages over client-side apply:</p>
+<ul>
+<li><strong>Field Ownership Tracking</strong>: The Kubernetes API server tracks which controller or user modified each field, preventing unintended overwrites.</li>
+<li><strong>Strategic Merging</strong>: Unlike dynamic apply, SSA applies <strong>strategic merges</strong> even inside CRDs, similar to native Kubernetes resources.</li>
+<li><strong>Better Handling of Concurrent Updates</strong>: SSA provides better conflict resolution when multiple controllers modify the same resource.</li>
+</ul>
+<h3 id="how-metacontroller-uses-server-side-apply"><a class="header" href="#how-metacontroller-uses-server-side-apply">How Metacontroller Uses Server-Side Apply</a></h3>
+<p>When enabled, Metacontroller will:</p>
+<ul>
+<li>Use the <code>apply</code> verb with <code>server-side=true</code> when updating managed objects.</li>
+<li>Allow multiple controllers to modify different fields of the same resource without conflicts.</li>
+<li>Automatically merge updates to associative lists like <code>containers</code>, <code>volumes</code>, and <code>ports</code> without deleting unexpected changes.</li>
+</ul>
+<h3 id="example-of-server-side-apply"><a class="header" href="#example-of-server-side-apply">Example of Server-Side Apply</a></h3>
+<p>Instead of performing a full replacement, SSA updates only the fields specified:</p>
+<pre><code class="language-yaml">apiVersion: v1
+kind: Pod
+metadata:
+  name: my-pod
+  labels:
+    app: my-app
+    role: staging # added a label
+spec:
+  containers:
+    - name: nginx
+      image: nginx
+</code></pre>
+<p>When applied using SSA, Kubernetes ensures that fields like <code>resourceVersion</code>, <code>creationTimestamp</code>, and dynamically added containers (e.g., sidecars) <strong>remain untouched</strong>, unlike dynamic apply which would overwrite lists.</p>
+<h3 id="comparison-dynamic-apply-vs-server-side-apply"><a class="header" href="#comparison-dynamic-apply-vs-server-side-apply">Comparison: Dynamic Apply vs. Server-Side Apply</a></h3>
+<table><thead><tr><th>Feature</th><th>Dynamic Apply</th><th>Server-Side Apply (SSA)</th></tr></thead><tbody>
+<tr><td>Merging of CRD fields</td><td>Uses conventions (e.g., <code>name</code> key)</td><td>Full strategic merge support</td></tr>
+<tr><td>Field ownership</td><td>Not explicitly tracked</td><td>Kubernetes tracks field ownership</td></tr>
+<tr><td>Concurrent updates</td><td>Risk of overwriting fields</td><td>Controlled conflict resolution</td></tr>
+<tr><td>Associative lists</td><td>Convention-based merging</td><td>Kubernetes-native merging</td></tr>
+<tr><td>Performance</td><td>Fast (no API tracking)</td><td>Slightly higher API overhead</td></tr>
+</tbody></table>
+<h3 id="enabling-server-side-apply"><a class="header" href="#enabling-server-side-apply">Enabling Server-Side Apply</a></h3>
+<p>To enable SSA in Metacontroller, configure the controller with:</p>
+<pre><code class="language-sh">--apply-strategy=server-side-apply
+</code></pre>
+<p>This setting ensures Metacontroller applies resources using Kubernetes-native <a href="https://kubernetes.io/docs/reference/using-api/server-side-apply"><code>server-side-apply</code></a> rather than dynamic apply.</p>
+<h2 id="future-direction"><a class="header" href="#future-direction">Future Direction</a></h2>
+<p>Previously, Metacontroller relied solely on a custom <strong>dynamic apply</strong> implementation to handle strategic merges within CRDs. However, with the introduction of Kubernetes <strong>server-side apply (SSA)</strong>, Metacontroller now supports SSA as a preferred alternative.</p>
+<p>While <strong>dynamic apply</strong> remains available for compatibility, SSA is the recommended method for most use cases because it provides <strong>native field ownership tracking</strong>, <strong>strategic merging</strong>, and <strong>better concurrency handling</strong>.</p>
 
                     </main>
 

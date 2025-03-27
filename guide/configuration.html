@@ -189,6 +189,8 @@ in <code>manifests/metacontroller.yaml</code>):</p>
 <tr><td><code>--leader-election-id</code></td><td>Determines the name of the resource that leader election will use for holding the leader lock. For example, if the leader election id is <code>metacontroller</code> and the leader election resource lock is <code>leases</code>, then a resource of kind <code>leases</code> with metadata.name <code>metacontroller</code> will hold the leader lock. (default metacontroller, e.g., <code>--leader-election-id=metacontroller</code>)</td></tr>
 <tr><td><code>--health-probe-bind-address</code></td><td>The address the health probes endpoint binds to (default &quot;:8081&quot;, e.g., <code>--health-probe-bind-address=&quot;:8081&quot;</code>)</td></tr>
 <tr><td><code>--target-label-selector</code></td><td><a href="https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#label-selectors">Label selector</a> used to restrict an instance of metacontroller to manage specific Composite and Decorator controllers, which enables the ability to run multiple metacontroller instances on the same cluster (e.g. <code>--target-label-selector=controller-group=cicd&quot;</code>)</td></tr>
+<tr><td><code>--aply-strategy</code></td><td>Strategy to use for applying changes to objects (default <code>dynamic-apply</code>, e.g., <code>--apply-strategy=dynamic-apply</code>). Valid strategies are <code>server-side-apply</code>, <code>dynamic-apply</code></td></tr>
+<tr><td><code>--apply-strategy-ssa-field-manager</code></td><td>FieldManager to use for server-side apply (default <code>metacontroller</code>, e.g., <code>--apply-strategy-ssa-field-manager=metacontroller</code>)</td></tr>
 </tbody></table>
 <p>Logging flags are being set by <code>controller-runtime</code>, more on the meaning of them can be found <a href="https://sdk.operatorframework.io/docs/building-operators/golang/references/logging/#overview">here</a></p>
 <h2 id="running-multiple-instances"><a class="header" href="#running-multiple-instances">Running multiple instances</a></h2>
@@ -216,15 +218,15 @@ in <code>manifests/metacontroller.yaml</code>):</p>
 <h3 id="example"><a class="header" href="#example">Example</a></h3>
 <h4 id="1-configure-metacontroller"><a class="header" href="#1-configure-metacontroller">1. Configure Metacontroller</a></h4>
 <p>Add the <code>--target-label-selector</code> argument to Metacontroller binary arguments; below this is inside the Kubernetes deployment spec for Metacontroller:</p>
-<pre><code class="language-yaml">...
-    spec:
-      containers:
-      - args:
+<pre><code class="language-yaml">
+---
+spec:
+  containers:
+    - args:
         - --zap-devel
         - --zap-log-level=5
         - --discovery-interval=5s
         - --target-label-selector=controller-group=cicd
-...
 </code></pre>
 <p>You can also use the more advanced features like <a href="https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#equality-based-requirement">Equality-based requirement</a> and <a href="https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#set-based-requirement">Set-base requirement</a> when defining your target label selector.</p>
 <h4 id="2-specify-labels-on-the-controller"><a class="header" href="#2-specify-labels-on-the-controller">2. Specify labels on the Controller</a></h4>
@@ -237,11 +239,11 @@ metadata:
     controller-group: cicd
 spec:
   resources:
-  - apiVersion: v1
-    resource: pods
-    annotationSelector:
-      matchExpressions:
-      - {key: pod-name-label, operator: Exists}
+    - apiVersion: v1
+      resource: pods
+      annotationSelector:
+        matchExpressions:
+          - { key: pod-name-label, operator: Exists }
   hooks:
     sync:
       webhook:
