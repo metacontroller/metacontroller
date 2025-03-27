@@ -1,3 +1,10 @@
+# [4.12.0](https://github.com/metacontroller/metacontroller/compare/v4.11.25...v4.12.0) (2025-03-27)
+
+
+### Features
+
+* support server side apply ([9113e43](https://github.com/metacontroller/metacontroller/commit/9113e435dd38c9dce02346b422869a5d78e3a855))
+
 ## [4.11.25](https://github.com/metacontroller/metacontroller/compare/v4.11.24...v4.11.25) (2025-03-21)
 
 
