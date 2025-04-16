@@ -23,12 +23,13 @@ require (
 	zgo.at/zcache/v2 v2.1.0
 )
 
-require github.com/pkg/errors v0.9.1
+require (
+	github.com/cespare/xxhash/v2 v2.3.0
+	github.com/pkg/errors v0.9.1
+)
 
 require (
 	github.com/beorn7/perks v1.0.1 // indirect
-	github.com/cespare/xxhash v1.1.0 // indirect
-	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/emicklei/go-restful/v3 v3.11.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
@@ -58,9 +59,9 @@ require (
 	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56 // indirect
 	golang.org/x/net v0.30.0 // indirect
 	golang.org/x/oauth2 v0.23.0 // indirect
-	golang.org/x/sys v0.30.0 // indirect
-	golang.org/x/term v0.29.0 // indirect
-	golang.org/x/text v0.22.0 // indirect
+	golang.org/x/sys v0.31.0 // indirect
+	golang.org/x/term v0.30.0 // indirect
+	golang.org/x/text v0.23.0 // indirect
 	golang.org/x/time v0.7.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect
 	google.golang.org/protobuf v1.35.1 // indirect
@@ -73,7 +74,7 @@ require (
 )
 
 replace (
-	golang.org/x/net => golang.org/x/net v0.36.0
+	golang.org/x/net => golang.org/x/net v0.38.0
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.32.0
 	k8s.io/apimachinery => k8s.io/apimachinery v0.32.0
 	k8s.io/client-go => k8s.io/client-go v0.32.0
