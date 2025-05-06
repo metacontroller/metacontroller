@@ -264,8 +264,9 @@ func updateChildren(client *dynamicclientset.ResourceClient, updateStrategy Chil
 				if hasLastApplied {
 					// if observed object has has last applied annotation we need to remove it
 					// from the remote object to avoid conflicts
-					annotationNameForJsonPatch := strings.ReplaceAll(strings.ReplaceAll(dynamicapply.LastAppliedAnnotation, "/", "~1"), ".", "~0")
-					_, err := client.Namespace(obj.GetNamespace()).Patch(context.TODO(), obj.GetName(), types.JSONPatchType, fmt.Appendf(nil, `[{"op": "remove", "path": "/metadata/annotations/%s"}]`, annotationNameForJsonPatch), metav1.PatchOptions{})
+					annotationNameForJsonPatch := strings.ReplaceAll(strings.ReplaceAll(dynamicapply.LastAppliedAnnotation, "~", "~0"), "/", "~1")
+					patch := fmt.Sprintf(`[{"op": "remove", "path": "/metadata/annotations/%s"}]`, annotationNameForJsonPatch)
+					_, err := client.Namespace(obj.GetNamespace()).Patch(context.TODO(), obj.GetName(), types.JSONPatchType, []byte(patch), metav1.PatchOptions{})
 					if err != nil {
 						logging.Logger.Error(err, "Failed to remove last applied annotation from observed object", "parent", parent, "child", obj)
 						errs = append(errs, err)
