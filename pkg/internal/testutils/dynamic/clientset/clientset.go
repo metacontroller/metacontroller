@@ -19,7 +19,7 @@ package clientset
 import (
 	dynamicclientset "metacontroller/pkg/dynamic/clientset"
 	dynamicdiscovery "metacontroller/pkg/dynamic/discovery"
-	. "metacontroller/pkg/internal/testutils/common"
+	common "metacontroller/pkg/internal/testutils/common"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/dynamic"
@@ -28,7 +28,7 @@ import (
 )
 
 func NewFakeNewSimpleClientsetWithResources(apiResourceList []*metav1.APIResourceList) *fakeclientset.Clientset {
-	simpleClientset := fakeclientset.NewSimpleClientset(NewDefaultUnstructured())
+	simpleClientset := fakeclientset.NewSimpleClientset(common.NewDefaultUnstructured())
 	simpleClientset.Resources = apiResourceList
 	return simpleClientset
 }

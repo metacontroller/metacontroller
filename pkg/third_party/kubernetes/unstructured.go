@@ -28,7 +28,7 @@ import (
 func GetNestedFieldInto(out interface{}, obj map[string]interface{}, fields ...string) error {
 	objMap, found, err := unstructured.NestedFieldNoCopy(obj, fields...)
 	if err != nil {
-		return fmt.Errorf("can't get nested field %v: %v", strings.Join(fields, "."), err)
+		return fmt.Errorf("can't get nested field %v: %w", strings.Join(fields, "."), err)
 	}
 	if !found {
 		// If field has no value, leave `out` as is.
@@ -37,10 +37,10 @@ func GetNestedFieldInto(out interface{}, obj map[string]interface{}, fields ...s
 	// Decode into the requested output type.
 	data, err := json.Marshal(objMap)
 	if err != nil {
-		return fmt.Errorf("can't encode nested field %v: %v", strings.Join(fields, "."), err)
+		return fmt.Errorf("can't encode nested field %v: %w", strings.Join(fields, "."), err)
 	}
 	if err := json.Unmarshal(data, out); err != nil {
-		return fmt.Errorf("can't decode nested field %v into type %T: %v", strings.Join(fields, "."), out, err)
+		return fmt.Errorf("can't decode nested field %v into type %T: %w", strings.Join(fields, "."), out, err)
 	}
 	return nil
 }

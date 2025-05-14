@@ -1,31 +1,47 @@
-issues:
-  exclude-dirs:
-    - pkg/client/generated
-    - examples
-
+version: "2"
 linters:
   enable:
-    - errorlint
-    - gofmt
-    - goimports
-    - gosec
-    - whitespace
     - bodyclose
+    - copyloopvar
     - dogsled
     - durationcheck
     - errorlint
     - exhaustive
-    - copyloopvar
     - goconst
     - gocritic
     - gosec
     - importas
     - misspell
     - nilerr
-
-linters-settings:
-  exhaustive:
-    default-signifies-exhaustive: true
-  gosec:
-    excludes:
-      - G108 
+    - whitespace
+  settings:
+    exhaustive:
+      default-signifies-exhaustive: true
+    gosec:
+      excludes:
+        - G108
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    paths:
+      - pkg/client/generated
+      - examples
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  exclusions:
+    generated: lax
+    paths:
+      - pkg/client/generated
+      - examples
+      - third_party$
+      - builtin$
+      - examples$

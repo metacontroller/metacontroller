@@ -122,7 +122,7 @@ func RecheckDeletionTimestamp(getObject func() (metav1.Object, error)) func() er
 	return func() error {
 		obj, err := getObject()
 		if err != nil {
-			return fmt.Errorf("can't recheck DeletionTimestamp: %v", err)
+			return fmt.Errorf("can't recheck DeletionTimestamp: %w", err)
 		}
 		if obj.GetDeletionTimestamp() != nil {
 			return fmt.Errorf("%v/%v has just been deleted at %v", obj.GetNamespace(), obj.GetName(), obj.GetDeletionTimestamp())
