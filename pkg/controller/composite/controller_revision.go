@@ -327,8 +327,8 @@ func (pc *parentController) newControllerRevision(parent *unstructured.Unstructu
 	if labels == nil {
 		labels = make(map[string]string)
 	}
-	labels[labelKeyAPIGroup] = pc.parentResource.APIResource.Group
-	labels[labelKeyResource] = pc.parentResource.APIResource.Name
+	labels[labelKeyAPIGroup] = pc.parentResource.Group
+	labels[labelKeyResource] = pc.parentResource.Name
 
 	revision := &v1alpha1.ControllerRevision{
 		TypeMeta: metav1.TypeMeta{

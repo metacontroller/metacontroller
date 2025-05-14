@@ -321,7 +321,7 @@ func toSelector(labelSelector *metav1.LabelSelector) (labels.Selector, error) {
 
 func matchesRelatedRule(parentIsNamespaced bool, parent, related *unstructured.Unstructured, relatedRule *v1alpha1.RelatedResourceRule, relatedRuleKind string) (bool, error) {
 	// Ensure that the related resource matches the version and kind of the related rule.
-	if !(related.GetAPIVersion() == relatedRule.ResourceRule.APIVersion && related.GetKind() == relatedRuleKind) {
+	if related.GetAPIVersion() != relatedRule.APIVersion || related.GetKind() != relatedRuleKind {
 		return false, nil
 	}
 
