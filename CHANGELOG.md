@@ -1,3 +1,12 @@
+## [4.12.1](https://github.com/metacontroller/metacontroller/compare/v4.12.0...v4.12.1) (2025-05-15)
+
+
+### Bug Fixes
+
+* **crds:** regenerated crds to include missing field ignoreStatusChanges [#1089](https://github.com/metacontroller/metacontroller/issues/1089) ([7dc92ce](https://github.com/metacontroller/metacontroller/commit/7dc92cedf7c6bea86f845192ca14cb68645e0948))
+* **deps:** update latest batch of dependencies ([d743799](https://github.com/metacontroller/metacontroller/commit/d74379987990c8c45beee8472516b4520f1a0ee3))
+* escape json patch correctly for server side apply annotation removal ([ad845af](https://github.com/metacontroller/metacontroller/commit/ad845afc426360878eb29957933d00b55c8d1078))
+
 # [4.12.0](https://github.com/metacontroller/metacontroller/compare/v4.11.25...v4.12.0) (2025-03-27)
 
 
