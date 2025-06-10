@@ -336,7 +336,6 @@ func Test_parentController_sync(t *testing.T) {
 }
 
 func Test_parentController_sync_requeue_item_when_hook_throw_TooManyRequestError(t *testing.T) {
-	logging.InitLogging(&zap.Options{})
 	_, _, dynClient, parentClient, parentInformer := newDefaultControllerClientsAndInformers(ListFn, true)
 	pc := &parentController{
 		cc:             newDefaultCompositeController(),

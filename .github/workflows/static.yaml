@@ -54,7 +54,7 @@ jobs:
         run: |
           docker load --input metacontroller-lint.tar
       - name: Trivy scan
-        uses: aquasecurity/trivy-action@0.30.0
+        uses: aquasecurity/trivy-action@0.31.0
         with:
           image-ref: "localhost/metacontroller:dev"
           format: "table"
