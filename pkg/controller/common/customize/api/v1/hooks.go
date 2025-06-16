@@ -12,7 +12,7 @@ type CustomizeHookRequest struct {
 	Parent     *unstructured.Unstructured      `json:"parent"`
 }
 
-func (r *CustomizeHookRequest) GetRootObject() *unstructured.Unstructured {
+func (r *CustomizeHookRequest) GetParent() *unstructured.Unstructured {
 	return r.Parent
 }
 
