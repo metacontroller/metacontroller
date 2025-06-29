@@ -194,7 +194,7 @@ Within a set of `statusChecks`, each item in the `conditions` list has the follo
 
 By default, your [sync hook](#sync-hook) will only be called when
 something changes in one of the resources you're watching,
-or when the [local cache is flushed](../guide/install.md#configuration).
+or when the [local cache is flushed](../guide/configuration).
 
 Sometimes you may want to sync periodically even if nothing has
 changed in the Kubernetes API objects, either to simply observe the passage
