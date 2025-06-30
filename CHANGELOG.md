@@ -1,3 +1,11 @@
+## [4.12.3](https://github.com/metacontroller/metacontroller/compare/v4.12.2...v4.12.3) (2025-06-30)
+
+
+### Bug Fixes
+
+* **docker,security:** Update distroless bage image ([545be2e](https://github.com/metacontroller/metacontroller/commit/545be2e7055667703f506bfd4cf62a81e73ee037)), closes [#1114](https://github.com/metacontroller/metacontroller/issues/1114)
+* **docs:** [[#1087](https://github.com/metacontroller/metacontroller/issues/1087)] Fix documentation link: point cache flush reference to configuration guide ([f683f8a](https://github.com/metacontroller/metacontroller/commit/f683f8a6f7467c75c16cb2223974363d70678ae5))
+
 ## [4.12.2](https://github.com/metacontroller/metacontroller/compare/v4.12.1...v4.12.2) (2025-06-11)
 
 
