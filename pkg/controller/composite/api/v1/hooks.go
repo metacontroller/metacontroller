@@ -93,6 +93,6 @@ func (r *requestBuilder) Build() api.WebhookRequest {
 	}
 }
 
-func (r *CompositeHookRequest) GetRootObject() *unstructured.Unstructured {
+func (r *CompositeHookRequest) GetParent() *unstructured.Unstructured {
 	return r.Parent
 }
