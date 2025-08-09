@@ -21,6 +21,7 @@ import (
 	"crypto/sha1" // #nosec
 	"encoding/hex"
 	"fmt"
+	"metacontroller/pkg/controller/common/api"
 	commonv1 "metacontroller/pkg/controller/common/api/v1"
 	commonv2 "metacontroller/pkg/controller/common/api/v2"
 	v1 "metacontroller/pkg/controller/composite/api/v1"
@@ -77,7 +78,7 @@ func (pc *parentController) claimRevisions(parent *unstructured.Unstructured) ([
 	return revisions, nil
 }
 
-func (pc *parentController) syncRevisions(parent *unstructured.Unstructured, observedChildren, relatedObjects commonv2.UniformObjectMap) (*v1.CompositeHookResponse, error) {
+func (pc *parentController) syncRevisions(parent *unstructured.Unstructured, observedChildren, relatedObjects api.ObjectMap) (*v1.CompositeHookResponse, error) {
 	// If no child resources use rolling updates, just sync the latest parent.
 	// Also, if the parent object is being deleted and we don't have a finalizer,
 	// just sync the latest parent to get the status since we won't manage

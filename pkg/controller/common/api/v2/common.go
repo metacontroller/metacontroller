@@ -111,6 +111,25 @@ func (m UniformObjectMap) List() []*unstructured.Unstructured {
 	return list
 }
 
+// GetObjectsByGVK returns objects for a specific GroupVersionKind, or nil if not found
+func (m UniformObjectMap) GetObjectsByGVK(gvk schema.GroupVersionKind) map[string]*unstructured.Unstructured {
+	internalGvk := api.GroupVersionKind{GroupVersionKind: gvk}
+	return m[internalGvk]
+}
+
+// GetAllGVKs returns all GroupVersionKinds present in the map
+func (m UniformObjectMap) GetAllGVKs() []schema.GroupVersionKind {
+	if len(m) == 0 {
+		return nil // Avoid allocation for empty maps
+	}
+
+	gvks := make([]schema.GroupVersionKind, 0, len(m)) // Pre-allocate with known capacity
+	for gvk := range m {
+		gvks = append(gvks, gvk.GroupVersionKind)
+	}
+	return gvks
+}
+
 // Convert returns commonv1.RelativeObjectMap against given parent, removing non matching objects
 func (m UniformObjectMap) Convert(parent *unstructured.Unstructured) commonv1.RelativeObjectMap {
 	potentialChildren := m.List()

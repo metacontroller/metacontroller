@@ -56,6 +56,7 @@ type WebhookExecutor interface {
 // NewWebhookExecutor returns new WebhookExecutor
 func NewWebhookExecutor(
 	webhook *v1alpha1.Webhook,
+	hookVersion *v1alpha1.HookVersion,
 	controllerName string,
 	controllerType common.ControllerType,
 	hookType common.HookType) (WebhookExecutor, error) {
@@ -98,6 +99,7 @@ func NewWebhookExecutor(
 		client,
 		url,
 		hookType,
+		hookVersion,
 		webhook.ResponseUnmarshallMode,
 		abstract,
 		time.Now,
@@ -107,12 +109,14 @@ func NewWebhookExecutor(
 func newWebhookExecutor(client HttpClientInterface,
 	url string,
 	hookType common.HookType,
+	hookVersion *v1alpha1.HookVersion,
 	unmarshallMode *v1alpha1.ResponseUnmarshallMode,
 	abstract webhookAbstract,
 	now func() time.Time) *webhookExecutor {
 	return &webhookExecutor{
 		client:                 client,
 		url:                    url,
+		hookVersion:            hookVersion,
 		hookType:               hookType.String(),
 		webhookAbstract:        abstract,
 		responseUnmarshallMode: responseUnmarshallMode(unmarshallMode),
@@ -137,9 +141,18 @@ type webhookExecutor struct {
 	client                 HttpClientInterface
 	url                    string
 	hookType               string
+	hookVersion            *v1alpha1.HookVersion
 	webhookAbstract        webhookAbstract
 	responseUnmarshallMode v1alpha1.ResponseUnmarshallMode
 	now                    func() time.Time
+}
+
+// effectiveHookVersion returns the effective hook API version, defaulting to v1.
+func (w *webhookExecutor) effectiveHookVersion() v1alpha1.HookVersion {
+	if w.hookVersion != nil && *w.hookVersion != "" {
+		return *w.hookVersion
+	}
+	return v1alpha1.HookVersionV1 // Default to v1 if not specified
 }
 
 func (w *webhookExecutor) Call(webhookRequest api.WebhookRequest, webhookResponse interface{}) error {
@@ -148,9 +161,10 @@ func (w *webhookExecutor) Call(webhookRequest api.WebhookRequest, webhookRespons
 	if err != nil {
 		return fmt.Errorf("can't marshal request: %w", err)
 	}
+	requestAPIVersion := w.effectiveHookVersion()
 	if logging.Logger.V(6).Enabled() {
 		rawRequest := json.RawMessage(requestBody)
-		logging.Logger.V(6).Info("Webhook request", "type", w.hookType, "url", w.url, "body", rawRequest)
+		logging.Logger.V(6).Info("Webhook request", "version", requestAPIVersion, "type", w.hookType, "url", w.url, "body", rawRequest)
 	}
 	request, err := http.NewRequest("POST", w.url, bytes.NewReader(requestBody))
 	if err != nil {
@@ -184,7 +198,7 @@ func (w *webhookExecutor) Call(webhookRequest api.WebhookRequest, webhookRespons
 	}
 	if logging.Logger.V(6).Enabled() {
 		rawResponse := json.RawMessage(responseBody)
-		logging.Logger.V(6).Info("Webhook response", "type", w.hookType, "url", w.url, "body", rawResponse)
+		logging.Logger.V(6).Info("Webhook response", "version", requestAPIVersion, "type", w.hookType, "url", w.url, "body", rawResponse)
 	}
 
 	if !w.webhookAbstract.isStatusSupported(request, response) {
@@ -195,11 +209,27 @@ func (w *webhookExecutor) Call(webhookRequest api.WebhookRequest, webhookRespons
 	if err != nil {
 		return err
 	}
-	// Decode webhookResponse.
-	if strictErrors, err := kjson.UnmarshalStrict(responseBody, webhookResponse); err != nil {
-		return fmt.Errorf("can't unmarshal webhookResponse: %w", err)
-	} else if w.shouldReportStrictErrors() {
-		return fmt.Errorf("strict validation failed for webkookResponse: %w", utilerrors.NewAggregate(strictErrors))
+
+	// Decode webhookResponse, strictness handling depends on API version.
+	strictErrs, mainUnmarshalErr := kjson.UnmarshalStrict(responseBody, webhookResponse)
+
+	if mainUnmarshalErr != nil {
+		return fmt.Errorf("can't unmarshal webhookResponse (version: %s, type: %s): %w", requestAPIVersion, w.hookType, mainUnmarshalErr)
+	}
+
+	// mainUnmarshalErr is nil. Check strictErrs (unknown/duplicate fields).
+	strictAggregateErr := utilerrors.NewAggregate(strictErrs)
+
+	if strictAggregateErr != nil { // strictErrs was not empty
+		if requestAPIVersion == v1alpha1.HookVersionV2 {
+			// For V2, strict errors are always fatal.
+			return fmt.Errorf("strict validation failed for V2 webhookResponse (type: %s): %w", w.hookType, strictAggregateErr)
+		} else { // V1 or default
+			if w.shouldReportStrictErrors() { // For V1, respect configured mode
+				return fmt.Errorf("strict validation failed for V1 webhookResponse (type: %s, mode: %s): %w", w.hookType, w.responseUnmarshallMode, strictAggregateErr)
+			}
+			logging.Logger.V(4).Info("Webhook V1 response had non-fatal strict validation issues (due to loose mode)", "type", w.hookType, "url", w.url, "issues", strictAggregateErr.Error())
+		}
 	}
 	return nil
 }

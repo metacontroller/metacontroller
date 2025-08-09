@@ -24,7 +24,7 @@ import (
 )
 
 func TestNewHookExecutor_whenNilWebHook_returnNilWebhookExecutor(t *testing.T) {
-	executor, err := NewWebhookExecutor(nil, "", common.CompositeController, "")
+	executor, err := NewWebhookExecutor(nil, nil, "", common.CompositeController, "")
 
 	assert.NoError(t, err)
 
@@ -137,6 +137,7 @@ func Test_when_incorrectJsonResponseInLooseMode_deserializeToEmptyResponse(t *te
 		newHttpClientMockWithResponse(`{"some": "sother"}`),
 		"",
 		common.CustomizeHook,
+		nil, // hookVersion (defaults to v1)
 		nil,
 		&webhookExecutorPlain{},
 		time.Now,
@@ -147,12 +148,70 @@ func Test_when_incorrectJsonResponseInLooseMode_deserializeToEmptyResponse(t *te
 	assert.NoError(t, err)
 }
 
+func Test_when_incorrectJsonResponseInLooseMode_V1_deserializeToEmptyResponse(t *testing.T) {
+	logging.Logger = testr.New(t)
+	v1Version := v1alpha1.HookVersionV1
+	webhookExecutor := newWebhookExecutor(
+		newHttpClientMockWithResponse(`{"unknownField": "value"}`),
+		"http://localhost/v1loose",
+		common.CustomizeHook,
+		&v1Version,
+		toPointer(v1alpha1.ResponseUnmarshallModeLoose),
+		&webhookExecutorPlain{},
+		time.Now,
+	)
+
+	var response v1.CustomizeHookResponse // Simple structure without 'unknownField'
+	err := webhookExecutor.Call(nil, &response)
+	assert.NoError(t, err, "V1 loose mode should not error on unknown fields")
+}
+
+func Test_when_incorrectJsonResponseInStrictMode_V1_throwsError(t *testing.T) {
+	logging.Logger = testr.New(t)
+	v1Version := v1alpha1.HookVersionV1
+	webhookExecutor := newWebhookExecutor(
+		newHttpClientMockWithResponse(`{"unknownField": "value"}`),
+		"http://localhost/v1strict",
+		common.CustomizeHook,
+		&v1Version,
+		toPointer(v1alpha1.ResponseUnmarshallModeStrict),
+		&webhookExecutorPlain{},
+		time.Now,
+	)
+
+	var response v1.CustomizeHookResponse
+	err := webhookExecutor.Call(nil, &response)
+	assert.Error(t, err, "V1 strict mode should error on unknown fields")
+	assert.Contains(t, err.Error(), "strict validation failed for V1 webhookResponse", "Error message should indicate V1 strict failure")
+}
+
+func Test_when_incorrectJsonResponse_V2_alwaysThrowsError(t *testing.T) {
+	logging.Logger = testr.New(t)
+	v2Version := v1alpha1.HookVersionV2
+	// ResponseUnmarshallModeLoose should be ignored for V2
+	webhookExecutor := newWebhookExecutor(
+		newHttpClientMockWithResponse(`{"unknownField": "value"}`),
+		"http://localhost/v2strict",
+		common.CustomizeHook,
+		&v2Version,
+		toPointer(v1alpha1.ResponseUnmarshallModeLoose), // This mode should be ignored for v2
+		&webhookExecutorPlain{},
+		time.Now,
+	)
+
+	var response v1.CustomizeHookResponse
+	err := webhookExecutor.Call(nil, &response)
+	assert.Error(t, err, "V2 should always error on unknown fields regardless of ResponseUnmarshallMode")
+	assert.Contains(t, err.Error(), "strict validation failed for V2 webhookResponse", "Error message should indicate V2 strict failure")
+}
+
 func Test_when_incorrectJsonResponseInStrictMode_thrownError(t *testing.T) {
 	logging.Logger = testr.New(t)
 	webhookExecutor := newWebhookExecutor(
 		newHttpClientMockWithResponse(`{"some": "sother"}`),
 		"",
 		common.CustomizeHook,
+		nil, // hookVersion (defaults to v1)
 		toPointer(v1alpha1.ResponseUnmarshallModeStrict),
 		&webhookExecutorPlain{},
 		time.Now,
@@ -161,6 +220,33 @@ func Test_when_incorrectJsonResponseInStrictMode_thrownError(t *testing.T) {
 	var response v1.CustomizeHookResponse
 	err := webhookExecutor.Call(nil, &response)
 	assert.Error(t, err)
+}
+
+func TestWebhookExecutor_Call_WithDifferentVersions(t *testing.T) {
+	tests := []struct {
+		name            string
+		hookVersion     *v1alpha1.HookVersion
+		expectedVersion v1alpha1.HookVersion
+	}{
+		{"v1 version", ptr.To(v1alpha1.HookVersionV1), v1alpha1.HookVersionV1},
+		{"v2 version", ptr.To(v1alpha1.HookVersionV2), v1alpha1.HookVersionV2},
+		{"nil version (defaults to v1)", nil, v1alpha1.HookVersionV1},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockClient := newHttpClientMockWithResponse(`{}`) // Empty JSON response
+			executor := newWebhookExecutor(mockClient, "http://test.com", common.SyncHook, tt.hookVersion, nil, &webhookExecutorPlain{}, time.Now)
+
+			var respData map[string]interface{}
+			err := executor.Call(nil, &respData)
+			assert.NoError(t, err)
+
+			// Verify the effective version is calculated correctly
+			effectiveVersion := executor.effectiveHookVersion()
+			assert.Equal(t, tt.expectedVersion, effectiveVersion, "Effective hook version should match expected")
+		})
+	}
 }
 
 func Test429Response_thrown_TooManyRequestError(t *testing.T) {
@@ -187,6 +273,7 @@ func Test429Response_thrown_TooManyRequestError(t *testing.T) {
 				newHttpClientMockWith429(tt.retryAfter),
 				"",
 				common.CustomizeHook,
+				nil, // hookVersion
 				toPointer(v1alpha1.ResponseUnmarshallModeStrict),
 				&webhookExecutorPlain{},
 				func() time.Time {
