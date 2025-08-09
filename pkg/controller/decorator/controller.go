@@ -19,6 +19,7 @@ package decorator
 import (
 	"context"
 	"fmt"
+	"metacontroller/pkg/controller/common/api"
 	commonv2 "metacontroller/pkg/controller/common/api/v2"
 	"metacontroller/pkg/hooks"
 	"reflect"
@@ -698,7 +699,7 @@ func (c *decoratorController) syncParentObject(parent *unstructured.Unstructured
 	return manageErr
 }
 
-func (c *decoratorController) getChildren(parent *unstructured.Unstructured) (commonv2.UniformObjectMap, error) {
+func (c *decoratorController) getChildren(parent *unstructured.Unstructured) (api.ObjectMap, error) {
 	parentUID := parent.GetUID()
 	parentNamespace := parent.GetNamespace()
 	childMap := make(commonv2.UniformObjectMap)

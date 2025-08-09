@@ -20,7 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	commonv2 "metacontroller/pkg/controller/common/api/v2"
+	"metacontroller/pkg/controller/common/api"
 	"metacontroller/pkg/logging"
 	"strings"
 	"sync"
@@ -141,33 +141,48 @@ func ManageChildren(
 	dynClient *dynamicclientset.Clientset,
 	updateStrategy ChildUpdateStrategy,
 	parent *unstructured.Unstructured,
-	observedChildren, desiredChildren commonv2.UniformObjectMap, ssaOptions *ApplyOptions) error {
+	observedChildren, desiredChildren api.ObjectMap, ssaOptions *ApplyOptions) error {
 	// If some operations fail, keep trying others so, for example,
 	// we don't block recovery (create new Pod) on a failed delete.
 	var errs []error
 
 	// Delete observed, owned objects that are not desired.
-	for key, objects := range observedChildren {
-		client, err := dynClient.Kind(key.GroupVersion().String(), key.Kind)
+	for _, gvk := range observedChildren.GetAllGVKs() {
+		objects := observedChildren.GetObjectsByGVK(gvk)
+		if objects == nil {
+			// Skip if no objects exist for this GVK
+			continue
+		}
+
+		client, err := dynClient.Kind(gvk.GroupVersion().String(), gvk.Kind)
 		if err != nil {
 			errs = append(errs, err)
 			continue
 		}
 
-		if err := deleteChildren(client, parent, objects, desiredChildren[key]); err != nil {
+		desiredObjects := desiredChildren.GetObjectsByGVK(gvk)
+		if err := deleteChildren(client, parent, objects, desiredObjects); err != nil {
 			errs = append(errs, err)
 			continue
 		}
 	}
 
 	// Create or update desired objects.
-	for key, objects := range desiredChildren {
-		client, err := dynClient.Kind(key.GroupVersion().String(), key.Kind)
+	for _, gvk := range desiredChildren.GetAllGVKs() {
+		objects := desiredChildren.GetObjectsByGVK(gvk)
+		if objects == nil {
+			// Skip if no objects exist for this GVK
+			continue
+		}
+
+		client, err := dynClient.Kind(gvk.GroupVersion().String(), gvk.Kind)
 		if err != nil {
 			errs = append(errs, err)
 			continue
 		}
-		if err := updateChildren(client, updateStrategy, parent, observedChildren[key], objects, ssaOptions); err != nil {
+
+		observedObjects := observedChildren.GetObjectsByGVK(gvk)
+		if err := updateChildren(client, updateStrategy, parent, observedObjects, objects, ssaOptions); err != nil {
 			errs = append(errs, err)
 			continue
 		}

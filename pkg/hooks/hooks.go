@@ -35,7 +35,7 @@ func NewHook(
 	controllerType common.ControllerType,
 	hookType common.HookType) (Hook, error) {
 	if hook != nil {
-		executor, err := NewWebhookExecutor(hook.Webhook, controllerName, controllerType, hookType)
+		executor, err := NewWebhookExecutor(hook.Webhook, hook.Version, controllerName, controllerType, hookType)
 		if err != nil {
 			return nil, err
 		}
