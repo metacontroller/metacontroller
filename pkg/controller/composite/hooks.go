@@ -18,54 +18,140 @@ package composite
 
 import (
 	"fmt"
-	commonv2 "metacontroller/pkg/controller/common/api/v2"
+	"metacontroller/pkg/apis/metacontroller/v1alpha1"
+	"metacontroller/pkg/controller/common/api"
+	"metacontroller/pkg/controller/composite/api/common"
 	v1 "metacontroller/pkg/controller/composite/api/v1"
+	v2 "metacontroller/pkg/controller/composite/api/v2"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
+// hookCallInfo contains information about which hook to call and how
+type hookCallInfo struct {
+	version      v1alpha1.HookVersion
+	isFinalizing bool
+	hookType     string
+}
+
 func (pc *parentController) callHook(
 	parent *unstructured.Unstructured,
-	observedChildren, related commonv2.UniformObjectMap,
+	observedChildren, related api.ObjectMap,
 ) (*v1.CompositeHookResponse, error) {
-	requestBuilder := v1.NewRequestBuilder().
+	// Step 1: Determine which hook to call
+	hookInfo := pc.determineHookToCall(parent)
+	if hookInfo == nil {
+		return nil, nil
+	}
+
+	// Step 2: Build and execute the hook request
+	request := pc.buildHookRequest(hookInfo, parent, observedChildren, related)
+	return pc.executeHook(hookInfo, request, parent)
+}
+
+// determineHookToCall decides which hook should be called based on parent state
+func (pc *parentController) determineHookToCall(parent *unstructured.Unstructured) *hookCallInfo {
+	if pc.shouldCallFinalizeHook(parent) {
+		return &hookCallInfo{
+			version:      pc.finalizeHook.GetVersion(),
+			isFinalizing: true,
+			hookType:     "finalize",
+		}
+	}
+
+	if pc.syncHook.IsEnabled() {
+		return &hookCallInfo{
+			version:      pc.syncHook.GetVersion(),
+			isFinalizing: false,
+			hookType:     "sync",
+		}
+	}
+
+	return nil
+}
+
+// shouldCallFinalizeHook determines if finalize hook should be called
+func (pc *parentController) shouldCallFinalizeHook(parent *unstructured.Unstructured) bool {
+	return pc.finalizeHook.IsEnabled() &&
+		(parent.GetDeletionTimestamp() != nil || pc.doNotMatchLabels(parent.GetLabels()))
+}
+
+// buildHookRequest creates the appropriate webhook request based on hook version
+func (pc *parentController) buildHookRequest(
+	hookInfo *hookCallInfo,
+	parent *unstructured.Unstructured,
+	observedChildren, related api.ObjectMap,
+) api.WebhookRequest {
+	// Select appropriate builder based on hook version
+	var requestBuilder common.WebhookRequestBuilder
+	if hookInfo.version == v1alpha1.HookVersionV2 {
+		requestBuilder = v2.NewRequestBuilder()
+	} else {
+		requestBuilder = v1.NewRequestBuilder()
+	}
+
+	// Build request with correct format
+	requestBuilder = requestBuilder.
 		WithController(pc.cc).
 		WithParent(parent).
 		WithChildren(observedChildren).
 		WithRelatedObjects(related)
 
-	response := v1.CompositeHookResponse{Children: []*unstructured.Unstructured{}}
-	// First check if we should instead call the finalize hook,
-	// which has the same API as the sync hook except that it's
-	// called while the object is pending deletion.
-	//
-	// In addition to finalizing when the object is deleted, we also finalize
-	// when the object no longer matches our composite selector.
-	// This allows the composite to clean up after itself if the object has been
-	// updated to disable the functionality added by the decorator.
-	switch {
-	case pc.finalizeHook.IsEnabled() && (parent.GetDeletionTimestamp() != nil || pc.doNotMatchLabels(parent.GetLabels())):
-		// Finalize
-		if err := pc.finalizeHook.Call(requestBuilder.IsFinalizing().Build(), &response); err != nil {
-			return nil, fmt.Errorf("finalize hook failed: %w", err)
-		}
-
-	case pc.syncHook.IsEnabled():
-		// Sync
-		if err := pc.syncHook.Call(requestBuilder.Build(), &response); err != nil {
-			return nil, fmt.Errorf("sync hook failed: %w", err)
-		}
-
-	default:
-		// Neither of the hook's was called
-		return nil, nil
+	if hookInfo.isFinalizing {
+		requestBuilder = requestBuilder.IsFinalizing()
 	}
 
-	for _, child := range response.Children {
+	return requestBuilder.Build()
+}
+
+// executeHook handles both V1 and V2 hook execution and response conversion
+func (pc *parentController) executeHook(
+	hookInfo *hookCallInfo,
+	request api.WebhookRequest,
+	parent *unstructured.Unstructured,
+) (*v1.CompositeHookResponse, error) {
+	var v1Response *v1.CompositeHookResponse
+
+	if hookInfo.version == v1alpha1.HookVersionV2 {
+		var v2Response v2.CompositeHookResponse
+		if err := pc.callHookExecutor(hookInfo, request, &v2Response); err != nil {
+			return nil, fmt.Errorf("%s hook failed (version=v2): %w", hookInfo.hookType, err)
+		}
+		v1Response = pc.convertV2ToV1Response(v2Response)
+	} else {
+		v1Response = &v1.CompositeHookResponse{Children: []*unstructured.Unstructured{}}
+		if err := pc.callHookExecutor(hookInfo, request, v1Response); err != nil {
+			return nil, fmt.Errorf("%s hook failed (version=v1): %w", hookInfo.hookType, err)
+		}
+	}
+
+	pc.applyNamespaceDefaults(v1Response.Children, parent)
+	return v1Response, nil
+}
+
+// callHookExecutor performs the actual hook call (unified logic for both V1 and V2)
+func (pc *parentController) callHookExecutor(hookInfo *hookCallInfo, request api.WebhookRequest, response interface{}) error {
+	if hookInfo.isFinalizing {
+		return pc.finalizeHook.Call(request, response)
+	}
+	return pc.syncHook.Call(request, response)
+}
+
+// convertV2ToV1Response converts V2 response format to V1 for internal consistency
+func (pc *parentController) convertV2ToV1Response(v2Response v2.CompositeHookResponse) *v1.CompositeHookResponse {
+	return &v1.CompositeHookResponse{
+		Status:             v2Response.Status,
+		Children:           v2Response.Children,
+		ResyncAfterSeconds: v2Response.ResyncAfterSeconds,
+		Finalized:          v2Response.Finalized,
+	}
+}
+
+// applyNamespaceDefaults sets parent namespace on children that don't have one
+func (pc *parentController) applyNamespaceDefaults(children []*unstructured.Unstructured, parent *unstructured.Unstructured) {
+	for _, child := range children {
 		if child != nil && child.GetNamespace() == "" {
 			child.SetNamespace(parent.GetNamespace())
 		}
 	}
-
-	return &response, nil
 }

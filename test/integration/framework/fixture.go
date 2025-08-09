@@ -82,6 +82,11 @@ func (f *Fixture) Clientset() kubernetes.Interface {
 	return f.kubernetes
 }
 
+// MetacontrollerClient returns the Metacontroller client.
+func (f *Fixture) MetacontrollerClient() client.Client {
+	return f.metacontroller
+}
+
 // CreateNamespace creates a namespace that will be deleted after this test
 // finishes.
 func (f *Fixture) CreateNamespace(namespace string) *v1.Namespace {

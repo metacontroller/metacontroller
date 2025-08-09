@@ -23,8 +23,17 @@ will be a JSON object with the following fields:
 
 | Field | Description |
 | ----- | ----------- |
-| `controller` | The whole CompositeController object, like what you might get from `kubectl get compositecontroller <name> -o json`. |
-| `parent` | The parent object, like what you might get from `kubectl get <parent-resource> <parent-name> -o json`. |
+| `controller` | The whole controller object (CompositeController or DecoratorController). |
+| `parent` | The parent object (or target object for DecoratorController). |
+
+Metacontroller supports both `v1` and `v2` hook versions. 
+The version can be specified in the controller's `hooks.customize.version` field.
+The primary difference is the naming convention used for objects in the `sync` 
+and `finalize` hooks' `related` field (see 
+[CompositeController](./compositecontroller.md#hook-version-v2-uniformobjectmap) 
+and [DecoratorController](./decoratorcontroller.md#hook-version-v2-uniformobjectmap) 
+API references for details on `v2` naming).
+
 
 ## Customize Hook Response
 
@@ -43,18 +52,32 @@ Each `ResourceRule` object should be a JSON object with the following fields:
 | ----- | ----------- |
 | `apiVersion` | The API `<group>/<version>` of the parent resource, or just `<version>` for core APIs. (e.g. `v1`, `apps/v1`, `batch/v1`) |
 | `resource`   | The canonical, lowercase, plural name of the parent resource. (e.g. `deployments`, `replicasets`, `statefulsets`) |
-| `labelSelector` | A `v1.LabelSelector` object. Omit if not used (i.e. Namespace or Names should be used) |
-| `namespace` | Optional. The Namespace to select in |
-| `names` | Optional. A list of strings, representing individual objects to return |
+| `labelSelector` | A `v1.LabelSelector` object. Filters objects by their labels. |
+| `namespaceSelector` | A `v1.LabelSelector` object. Filters namespaces by their labels. If omitted and `namespace` is also omitted, searching is performed across all namespaces. **Warning:** Using `namespaceSelector` without a `labelSelector` will select **ALL** objects of the specified type in the matching namespaces, which can have a significant performance impact in large clusters. Additionally, selecting a large number of namespaces can be expensive as it requires separate list operations for each matching namespace. |
+| `namespace` | Optional. The specific Namespace to select in. |
+| `names` | Optional. A list of strings, representing individual objects to return. |
 
 
-**Important note**
-Please note that you can specify label selector or Namespace/Names, not both in the same `ResourceRule`.
+**Combined usage rules**
+
+*   `names` (explicit list) **cannot** be combined with any selector (`labelSelector` or `namespaceSelector`).
+*   `namespace` (explicit name) **cannot** be combined with `namespaceSelector`.
+*   `namespace` **can** be combined with `labelSelector` to find specific objects within one namespace.
+*   `namespaceSelector` **can** be combined with `labelSelector` to find specific objects across multiple namespaces. **It is highly recommended to provide a `labelSelector` when using `namespaceSelector` to avoid accidentally selecting all objects in the target namespaces.**
+*   If both `namespace` and `namespaceSelector` are omitted, `labelSelector` will search across **all** namespaces.
 
 If the parent resource is cluster scoped and the related resource is namespaced,
-the namespace may be used to restrict which objects to look at. If the parent
-resource is namespaced, the related resources must come from the same namespace.
-Specifying the namespace is optional, but if specified must match.
+the namespace may be used to restrict which objects to look at.
+
+If the parent resource is namespaced, the related resources must come from the
+same namespace **unless hook version `v2` is used**.
+
+In `v2`, a namespaced parent can access:
+- **Cluster-scoped** related objects.
+- **Namespaced** related objects from **any namespace**.
+
+Specifying the namespace is optional. In `v1`, if specified, it must match the 
+parent's namespace. In `v2`, it can be any namespace.
 
 Note that your webhook handler must return a response with a status code of `200`
 to be considered successful. Metacontroller will wait for a response for up to the

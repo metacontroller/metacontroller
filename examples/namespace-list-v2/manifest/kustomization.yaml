@@ -1,0 +1,7 @@
+resources:
+- controller.yaml
+configMapGenerator:
+- name: namespace-list-controller
+  namespace: metacontroller
+  files:
+  - sync.py

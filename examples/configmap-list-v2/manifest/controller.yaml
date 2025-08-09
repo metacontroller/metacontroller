@@ -1,0 +1,61 @@
+apiVersion: metacontroller.k8s.io/v1alpha1
+kind: CompositeController
+metadata:
+  name: configmap-list-controller
+spec:
+  generateSelector: true
+  parentResource:
+    apiVersion: examples.metacontroller.io/v1alpha1
+    resource: configmaplists
+  childResources:
+  - apiVersion: v1
+    resource: configmaps
+    updateStrategy:
+      method: InPlace
+  hooks:
+    sync:
+      version: v2
+      webhook:
+        url: http://configmap-list-controller.metacontroller/sync
+    customize:
+      version: v2
+      webhook:
+        url: http://configmap-list-controller.metacontroller/customize
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: configmap-list-controller
+  namespace: metacontroller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: configmap-list-controller
+  template:
+    metadata:
+      labels:
+        app: configmap-list-controller
+    spec:
+      containers:
+      - name: controller
+        image: python:3.11
+        command: ["python", "/hooks/sync.py"]
+        volumeMounts:
+        - name: hooks
+          mountPath: /hooks
+      volumes:
+      - name: hooks
+        configMap:
+          name: configmap-list-controller
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: configmap-list-controller
+  namespace: metacontroller
+spec:
+  selector:
+    app: configmap-list-controller
+  ports:
+  - port: 80

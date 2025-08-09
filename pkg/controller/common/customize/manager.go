@@ -18,8 +18,11 @@ package customize
 
 import (
 	"fmt"
+	"metacontroller/pkg/controller/common/api"
 	commonv2 "metacontroller/pkg/controller/common/api/v2"
+	customizecommon "metacontroller/pkg/controller/common/customize/api/common"
 	v1 "metacontroller/pkg/controller/common/customize/api/v1"
+	v2 "metacontroller/pkg/controller/common/customize/api/v2"
 	"metacontroller/pkg/hooks"
 	"time"
 
@@ -30,6 +33,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -44,9 +48,11 @@ import (
 type relatedObjectsSelectionType string
 
 const (
-	selectByLabels            relatedObjectsSelectionType = "Labels"
-	selectByNamespaceAndNames relatedObjectsSelectionType = "NamespacesAndNames"
-	invalid                   relatedObjectsSelectionType = "Invalid"
+	selectByLabels             relatedObjectsSelectionType = "Labels"
+	selectByNamespaceAndNames  relatedObjectsSelectionType = "NamespacesAndNames"
+	selectByNamespaceAndLabels relatedObjectsSelectionType = "NamespaceAndLabels"
+	selectByNamespaceSelector  relatedObjectsSelectionType = "NamespaceSelector"
+	invalid                    relatedObjectsSelectionType = "Invalid"
 )
 
 type Manager struct {
@@ -60,6 +66,7 @@ type Manager struct {
 	parentInformers common.InformerMap
 
 	relatedInformers common.InformerMap
+	nsInformer       *dynamicinformer.ResourceInformer
 	customizeCache   *cache.Cache[customizeKey, *v1.CustomizeHookResponse]
 
 	stopCh chan struct{}
@@ -101,6 +108,14 @@ func NewCustomizeManager(
 	} else {
 		hook = nil
 	}
+	var nsInformer *dynamicinformer.ResourceInformer
+	if dynInformers.IsInitialized() {
+		nsInformer, err = dynInformers.Resource("v1", "namespaces")
+		if err != nil {
+			return nil, fmt.Errorf("can't create namespace informer for customize manager: %w", err)
+		}
+	}
+
 	return &Manager{
 		name:             name,
 		controller:       controller,
@@ -110,6 +125,7 @@ func NewCustomizeManager(
 		dynInformers:     dynInformers,
 		parentInformers:  parentInformers,
 		relatedInformers: make(common.InformerMap),
+		nsInformer:       nsInformer,
 		enqueueParent:    enqueueParent,
 		customizeHook:    hook,
 		logger:           logger,
@@ -117,7 +133,7 @@ func NewCustomizeManager(
 }
 
 func (rm *Manager) IsEnabled() bool {
-	return rm.customizeHook != nil
+	return rm.customizeHook != nil && rm.customizeHook.IsEnabled()
 }
 
 func (rm *Manager) Start(stopCh chan struct{}) {
@@ -129,6 +145,9 @@ func (rm *Manager) Stop() {
 		informer.Informer().RemoveEventHandlers()
 		informer.Close()
 	}
+	if rm.nsInformer != nil {
+		rm.nsInformer.Close()
+	}
 }
 
 func (rm *Manager) getCachedCustomizeHookResponse(parent *unstructured.Unstructured) (*v1.CustomizeHookResponse, bool) {
@@ -136,21 +155,50 @@ func (rm *Manager) getCachedCustomizeHookResponse(parent *unstructured.Unstructu
 }
 
 func (rm *Manager) getCustomizeHookResponse(parent *unstructured.Unstructured) (*v1.CustomizeHookResponse, error) {
+	if !rm.IsEnabled() {
+		return nil, nil
+	}
 	cached, found := rm.getCachedCustomizeHookResponse(parent)
 	if found {
 		return cached, nil
+	}
+
+	hookVersion := rm.customizeHook.GetVersion()
+
+	var requestBuilder customizecommon.WebhookRequestBuilder
+	if hookVersion == v1alpha1.HookVersionV2 {
+		requestBuilder = v2.NewRequestBuilder()
 	} else {
-		var response v1.CustomizeHookResponse
-		request := &v1.CustomizeHookRequest{
-			Controller: rm.controller,
-			Parent:     parent,
-		}
-		if err := rm.customizeHook.Call(request, &response); err != nil {
+		requestBuilder = v1.NewRequestBuilder()
+	}
+
+	request := requestBuilder.
+		WithController(rm.controller).
+		WithParent(parent).
+		Build()
+
+	var v1Response *v1.CustomizeHookResponse
+	if hookVersion == v1alpha1.HookVersionV2 {
+		var v2Response v2.CustomizeHookResponse
+		if err := rm.customizeHook.Call(request, &v2Response); err != nil {
 			return nil, err
 		}
+		v1Response = rm.convertV2ToV1Response(v2Response)
+	} else {
+		v1Response = &v1.CustomizeHookResponse{}
+		if err := rm.customizeHook.Call(request, v1Response); err != nil {
+			return nil, err
+		}
+	}
+	v1Response.Version = hookVersion
 
-		rm.customizeCache.Set(customizeKey{parent.GetUID(), parent.GetGeneration()}, &response)
-		return &response, nil
+	rm.customizeCache.Set(customizeKey{parent.GetUID(), parent.GetGeneration()}, v1Response)
+	return v1Response, nil
+}
+
+func (rm *Manager) convertV2ToV1Response(v2Response v2.CustomizeHookResponse) *v1.CustomizeHookResponse {
+	return &v1.CustomizeHookResponse{
+		RelatedResourceRules: v2Response.RelatedResourceRules,
 	}
 }
 
@@ -274,7 +322,7 @@ func (rm *Manager) findRelatedParents(relatedSlice ...*unstructured.Unstructured
 						utilruntime.HandleError(fmt.Errorf("unknown related rule %v/%v", relatedRule.APIVersion, relatedRule.Resource))
 						continue
 					}
-					matches, err := matchesRelatedRule(parentResource.Namespaced, parent, related, relatedRule, relatedRuleClient.Kind)
+					matches, err := rm.matchesRelatedRule(customizeHookResponse.Version, parentResource.Namespaced, parent, related, relatedRule, relatedRuleClient.Kind)
 					if err != nil {
 						utilruntime.HandleError(err)
 						continue
@@ -292,11 +340,27 @@ func (rm *Manager) findRelatedParents(relatedSlice ...*unstructured.Unstructured
 
 func determineSelectionType(relatedRule *v1alpha1.RelatedResourceRule) (relatedObjectsSelectionType, error) {
 	hasLabelSelector := relatedRule.LabelSelector != nil
-	hasNamespaceOrNames := len(relatedRule.Namespace) != 0 || len(relatedRule.Names) != 0
-	if hasLabelSelector && hasNamespaceOrNames {
-		return invalid, fmt.Errorf("related rule cannot have both labelSelector and Namespace/Names specifcied : %#v", relatedRule)
+	hasNamespaceSelector := relatedRule.NamespaceSelector != nil
+	hasNamespace := len(relatedRule.Namespace) != 0
+	hasNames := len(relatedRule.Names) != 0
+
+	// Rule: Explicit list of names cannot be combined with any selector.
+	if hasNames && (hasLabelSelector || hasNamespaceSelector) {
+		return invalid, fmt.Errorf("related rule cannot have both names and labelSelector/namespaceSelector specified: %#v", relatedRule)
 	}
-	if hasNamespaceOrNames {
+
+	// Rule: Explicit namespace cannot be combined with namespaceSelector.
+	if hasNamespace && hasNamespaceSelector {
+		return invalid, fmt.Errorf("related rule cannot have both namespace and namespaceSelector specified: %#v", relatedRule)
+	}
+
+	if hasNamespaceSelector {
+		return selectByNamespaceSelector, nil
+	}
+	if hasLabelSelector && hasNamespace {
+		return selectByNamespaceAndLabels, nil
+	}
+	if hasNamespace || hasNames {
 		return selectByNamespaceAndNames, nil
 	}
 	return selectByLabels, nil
@@ -319,7 +383,7 @@ func toSelector(labelSelector *metav1.LabelSelector) (labels.Selector, error) {
 	}
 }
 
-func matchesRelatedRule(parentIsNamespaced bool, parent, related *unstructured.Unstructured, relatedRule *v1alpha1.RelatedResourceRule, relatedRuleKind string) (bool, error) {
+func (rm *Manager) matchesRelatedRule(hookVersion v1alpha1.HookVersion, parentIsNamespaced bool, parent, related *unstructured.Unstructured, relatedRule *v1alpha1.RelatedResourceRule, relatedRuleKind string) (bool, error) {
 	// Ensure that the related resource matches the version and kind of the related rule.
 	if related.GetAPIVersion() != relatedRule.APIVersion || related.GetKind() != relatedRuleKind {
 		return false, nil
@@ -333,17 +397,74 @@ func matchesRelatedRule(parentIsNamespaced bool, parent, related *unstructured.U
 		if err != nil {
 			return false, err
 		}
-		return selector.Matches(labels.Set(related.GetLabels())), nil
+		if !selector.Matches(labels.Set(related.GetLabels())) {
+			return false, nil
+		}
+		if hookVersion == v1alpha1.HookVersionV1 && parentIsNamespaced && related.GetNamespace() != "" && parent.GetNamespace() != related.GetNamespace() {
+			return false, nil
+		}
+		return true, nil
+	case selectByNamespaceAndLabels:
+		selector, err := toSelector(relatedRule.LabelSelector)
+		if err != nil {
+			return false, err
+		}
+		if !selector.Matches(labels.Set(related.GetLabels())) {
+			return false, nil
+		}
+		if related.GetNamespace() != relatedRule.Namespace {
+			return false, nil
+		}
+		return true, nil
+	case selectByNamespaceSelector:
+		selector, err := toSelector(relatedRule.LabelSelector)
+		if err != nil {
+			return false, err
+		}
+		if !selector.Matches(labels.Set(related.GetLabels())) {
+			return false, nil
+		}
+		// If the resource is cluster-scoped, it matches any namespaceSelector
+		// (though usually cluster-scoped resources don't have a namespace).
+		if related.GetNamespace() == "" {
+			return true, nil
+		}
+
+		// Check if the related object's namespace matches the namespaceSelector.
+		if rm.nsInformer == nil {
+			return false, fmt.Errorf("namespace informer is not initialized, cannot use namespaceSelector")
+		}
+		nsObj, err := rm.nsInformer.Lister().Get(related.GetNamespace())
+		if err != nil {
+			if errors.IsNotFound(err) {
+				return false, nil // Namespace not found, definitely no match.
+			}
+			return false, err
+		}
+		if nsObj == nil {
+			return false, nil
+		}
+
+		nsSelector, err := toSelector(relatedRule.NamespaceSelector)
+		if err != nil {
+			return false, err
+		}
+		if !nsSelector.Matches(labels.Set(nsObj.GetLabels())) {
+			return false, nil
+		}
+		return true, nil
 	case selectByNamespaceAndNames:
-		if parentIsNamespaced {
+		if hookVersion == v1alpha1.HookVersionV1 && parentIsNamespaced {
 			parentNamespace := parent.GetNamespace()
 			if len(relatedRule.Namespace) != 0 && parentNamespace != relatedRule.Namespace {
 				return false, fmt.Errorf("%s: Namespace of parent %s does not match with namespace %s of related rule for %s/%s", parent.GetKind(), parent.GetName(), relatedRule.Namespace, relatedRule.APIVersion, relatedRule.Resource)
 			}
-			if parentNamespace != related.GetNamespace() {
+			// If related object is namespaced, it must match parent namespace
+			if related.GetNamespace() != "" && parentNamespace != related.GetNamespace() {
 				return false, nil
 			}
 		} else if len(relatedRule.Namespace) != 0 && related.GetNamespace() != relatedRule.Namespace {
+			// v2 or cluster-scoped parent: objects from any namespace can match, but only if they match the rule
 			return false, nil
 		}
 		if len(relatedRule.Names) != 0 {
@@ -364,7 +485,7 @@ func listObjects(selector labels.Selector, namespace string, informer *dynamicin
 	return informer.Lister().List(selector)
 }
 
-func (rm *Manager) GetRelatedObjects(parent *unstructured.Unstructured) (commonv2.UniformObjectMap, error) {
+func (rm *Manager) GetRelatedObjects(parent *unstructured.Unstructured) (api.ObjectMap, error) {
 	childMap := make(commonv2.UniformObjectMap)
 	if !rm.IsEnabled() {
 		return childMap, nil
@@ -398,7 +519,7 @@ func (rm *Manager) GetRelatedObjects(parent *unstructured.Unstructured) (commonv
 				return nil, err
 			}
 			var all []*unstructured.Unstructured
-			if parentResource.Namespaced {
+			if customizeHookResponse.Version == v1alpha1.HookVersionV1 && parentResource.Namespaced && relatedClient.Namespaced {
 				all, err = informer.Lister().Namespace(parentNamespace).List(selector)
 			} else {
 				all, err = informer.Lister().List(selector)
@@ -409,8 +530,51 @@ func (rm *Manager) GetRelatedObjects(parent *unstructured.Unstructured) (commonv
 			childMap.InitGroup(relatedClient.GroupVersionKind())
 			childMap.InsertAll(parent, all)
 
+		case selectByNamespaceAndLabels:
+			selector, err := toSelector(relatedRule.LabelSelector)
+			if err != nil {
+				return nil, err
+			}
+			all, err := listObjects(selector, relatedRule.Namespace, informer)
+			if err != nil {
+				return nil, fmt.Errorf("can't list %v related objects: %w", relatedClient.Kind, err)
+			}
+			childMap.InitGroup(relatedClient.GroupVersionKind())
+			childMap.InsertAll(parent, all)
+
+		case selectByNamespaceSelector:
+			if rm.nsInformer == nil {
+				return nil, fmt.Errorf("namespace informer is not initialized, cannot use namespaceSelector")
+			}
+			nsSelector, err := toSelector(relatedRule.NamespaceSelector)
+			if err != nil {
+				return nil, err
+			}
+
+			matchingNamespaces, err := rm.nsInformer.Lister().List(nsSelector)
+			if err != nil {
+				return nil, fmt.Errorf("can't list namespaces for namespaceSelector: %w", err)
+			}
+
+			labelSelector, err := toSelector(relatedRule.LabelSelector)
+			if err != nil {
+				return nil, err
+			}
+			if relatedRule.LabelSelector == nil {
+				rm.logger.Info("RelatedResourceRule uses namespaceSelector without labelSelector. This will match ALL objects of the specified type in selected namespaces, which may be expensive.", "apiVersion", relatedRule.APIVersion, "resource", relatedRule.Resource)
+			}
+
+			childMap.InitGroup(relatedClient.GroupVersionKind())
+			for _, ns := range matchingNamespaces {
+				all, err := listObjects(labelSelector, ns.GetName(), informer)
+				if err != nil {
+					return nil, fmt.Errorf("can't list %v related objects in namespace %s: %w", relatedClient.Kind, ns.GetName(), err)
+				}
+				childMap.InsertAll(parent, all)
+			}
+
 		case selectByNamespaceAndNames:
-			if parentResource.Namespaced && len(relatedRule.Namespace) != 0 && parentNamespace != relatedRule.Namespace {
+			if customizeHookResponse.Version == v1alpha1.HookVersionV1 && parentResource.Namespaced && relatedClient.Namespaced && len(relatedRule.Namespace) != 0 && parentNamespace != relatedRule.Namespace {
 				return nil, fmt.Errorf("requested related object namespace %s differs from parent object namespace %s", relatedRule.Namespace, parentNamespace)
 			}
 			all, err := listObjects(labels.Everything(), relatedRule.Namespace, informer)

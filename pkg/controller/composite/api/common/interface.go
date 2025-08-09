@@ -19,7 +19,6 @@ package common
 import (
 	"metacontroller/pkg/apis/metacontroller/v1alpha1"
 	"metacontroller/pkg/controller/common/api"
-	commonv2 "metacontroller/pkg/controller/common/api/v2"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
@@ -27,8 +26,8 @@ import (
 type WebhookRequestBuilder interface {
 	WithController(controller *v1alpha1.CompositeController) WebhookRequestBuilder
 	WithParent(object *unstructured.Unstructured) WebhookRequestBuilder
-	WithChildren(children commonv2.UniformObjectMap) WebhookRequestBuilder
-	WithRelatedObjects(related commonv2.UniformObjectMap) WebhookRequestBuilder
+	WithChildren(children api.ObjectMap) WebhookRequestBuilder
+	WithRelatedObjects(related api.ObjectMap) WebhookRequestBuilder
 	IsFinalizing() WebhookRequestBuilder
 	Build() api.WebhookRequest
 }
