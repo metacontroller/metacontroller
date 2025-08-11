@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
     - name: checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
     - uses: actions/setup-go@v5
       with:
         go-version-file: 'go.mod'
@@ -35,7 +35,7 @@ jobs:
     needs: [docker-image-for-linting]
     steps:
     - name: checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
     - name: Download metacontroller images
       uses: actions/download-artifact@v5
       with:
@@ -64,7 +64,7 @@ jobs:
     needs: [docker-image-for-linting]
     steps:
     - name: checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
     - name: Download metacontroller images
       uses: actions/download-artifact@v5
       with:
