@@ -48,7 +48,7 @@ func (w *webhookExecutorEtag) getKeyFromObject(obj *unstructured.Unstructured) e
 }
 
 func (w *webhookExecutorEtag) enrichHeaders(request *http.Request, webhookRequest api.WebhookRequest) {
-	cacheKey := w.getKeyFromObject(webhookRequest.GetRootObject())
+	cacheKey := w.getKeyFromObject(webhookRequest.GetParent())
 	cacheEntry, cacheEntryExists := w.etagCache.Get(cacheKey)
 	if cacheEntryExists {
 		request.Header.Set(headerIfNoneMatch, cacheEntry.Etag)
@@ -63,7 +63,7 @@ func (w *webhookExecutorEtag) adjustResponse(
 	webhookRequest api.WebhookRequest,
 	responseBody []byte,
 	response *http.Response) ([]byte, error) {
-	cacheKey := w.getKeyFromObject(webhookRequest.GetRootObject())
+	cacheKey := w.getKeyFromObject(webhookRequest.GetParent())
 	if request.Header.Get(headerIfNoneMatch) != "" && (response.StatusCode == http.StatusNotModified || response.StatusCode == http.StatusPreconditionFailed) {
 		logging.Logger.Info("retrieving body from cache", "cacheKey", cacheKey)
 		cacheEntry, cacheEntryExists := w.etagCache.Get(cacheKey)
