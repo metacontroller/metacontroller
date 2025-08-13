@@ -19,8 +19,10 @@ package v2
 import (
 	"metacontroller/pkg/apis/metacontroller/v1alpha1"
 	"metacontroller/pkg/controller/common/api"
+	commonv1 "metacontroller/pkg/controller/common/api/v1"
 	v2 "metacontroller/pkg/controller/common/api/v2"
 	"metacontroller/pkg/controller/decorator/api/common"
+	"metacontroller/pkg/logging"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
@@ -54,8 +56,8 @@ type DecoratorHookResponse struct {
 type requestBuilder struct {
 	controller *v1alpha1.DecoratorController
 	parent     *unstructured.Unstructured
-	children   v2.UniformObjectMap
-	related    v2.UniformObjectMap
+	children   api.ObjectMap
+	related    api.ObjectMap
 	finalizing bool
 }
 
@@ -73,12 +75,12 @@ func (r *requestBuilder) WithParent(parent *unstructured.Unstructured) common.We
 	return r
 }
 
-func (r *requestBuilder) WithChildren(children v2.UniformObjectMap) common.WebhookRequestBuilder {
+func (r *requestBuilder) WithChildren(children api.ObjectMap) common.WebhookRequestBuilder {
 	r.children = children
 	return r
 }
 
-func (r *requestBuilder) WithRelatedObjects(related v2.UniformObjectMap) common.WebhookRequestBuilder {
+func (r *requestBuilder) WithRelatedObjects(related api.ObjectMap) common.WebhookRequestBuilder {
 	r.related = related
 	return r
 }
@@ -89,11 +91,44 @@ func (r *requestBuilder) IsFinalizing() common.WebhookRequestBuilder {
 }
 
 func (r *requestBuilder) Build() api.WebhookRequest {
+	// Convert to UniformObjectMap for v2 API
+	childrenUniform := r.toUniformObjectMap(r.children, "children")
+	relatedUniform := r.toUniformObjectMap(r.related, "related")
+
 	return &DecoratorHookRequest{
 		Controller: r.controller,
 		Parent:     r.parent,
-		Children:   r.children,
-		Related:    r.related,
+		Children:   childrenUniform,
+		Related:    relatedUniform,
 		Finalizing: r.finalizing,
+	}
+}
+
+// toUniformObjectMap safely converts an ObjectMap to UniformObjectMap with validation
+func (r *requestBuilder) toUniformObjectMap(objMap api.ObjectMap, fieldName string) v2.UniformObjectMap {
+	if objMap == nil {
+		return make(v2.UniformObjectMap)
+	}
+
+	// Validate parent context exists for uniform naming
+	if r.parent == nil {
+		// Log warning but continue with empty map rather than panicking
+		log.Printf("WARNING: Decorator v2 requestBuilder: parent context is nil when converting field '%s' to UniformObjectMap; returning empty map", fieldName)
+		// This maintains backward compatibility while highlighting the issue
+		return make(v2.UniformObjectMap)
+	}
+
+	// Handle conversion from different ObjectMap types
+	switch typed := objMap.(type) {
+	case v2.UniformObjectMap:
+		// Already in correct format
+		return typed
+	case commonv1.RelativeObjectMap:
+		// Convert from RelativeObjectMap - reconstruct uniform naming
+		return v2.MakeUniformObjectMap(r.parent, typed.List())
+	default:
+		// Fallback for any other ObjectMap implementation
+		// This preserves extensibility while providing safe conversion
+		return v2.MakeUniformObjectMap(r.parent, objMap.List())
 	}
 }

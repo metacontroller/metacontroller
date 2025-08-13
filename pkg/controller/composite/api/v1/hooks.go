@@ -22,6 +22,7 @@ import (
 	v1 "metacontroller/pkg/controller/common/api/v1"
 	v2 "metacontroller/pkg/controller/common/api/v2"
 	"metacontroller/pkg/controller/composite/api/common"
+	"metacontroller/pkg/logging"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
@@ -49,8 +50,8 @@ type CompositeHookResponse struct {
 type requestBuilder struct {
 	controller *v1alpha1.CompositeController
 	parent     *unstructured.Unstructured
-	children   v2.UniformObjectMap
-	related    v2.UniformObjectMap
+	children   api.ObjectMap
+	related    api.ObjectMap
 	finalizing bool
 }
 
@@ -68,12 +69,12 @@ func (r *requestBuilder) WithParent(parent *unstructured.Unstructured) common.We
 	return r
 }
 
-func (r *requestBuilder) WithChildren(children v2.UniformObjectMap) common.WebhookRequestBuilder {
+func (r *requestBuilder) WithChildren(children api.ObjectMap) common.WebhookRequestBuilder {
 	r.children = children
 	return r
 }
 
-func (r *requestBuilder) WithRelatedObjects(related v2.UniformObjectMap) common.WebhookRequestBuilder {
+func (r *requestBuilder) WithRelatedObjects(related api.ObjectMap) common.WebhookRequestBuilder {
 	r.related = related
 	return r
 }
@@ -84,12 +85,45 @@ func (r *requestBuilder) IsFinalizing() common.WebhookRequestBuilder {
 }
 
 func (r *requestBuilder) Build() api.WebhookRequest {
+	// Convert to RelativeObjectMap for v1 API compatibility
+	childrenRelative := r.toRelativeObjectMap(r.children, "children")
+	relatedRelative := r.toRelativeObjectMap(r.related, "related")
+
 	return &CompositeHookRequest{
 		Controller: r.controller,
 		Parent:     r.parent,
-		Children:   r.children.Convert(r.parent),
-		Related:    r.related.Convert(r.parent),
+		Children:   childrenRelative,
+		Related:    relatedRelative,
 		Finalizing: r.finalizing,
+	}
+}
+
+// toRelativeObjectMap safely converts an ObjectMap to RelativeObjectMap with validation
+func (r *requestBuilder) toRelativeObjectMap(objMap api.ObjectMap, fieldName string) v1.RelativeObjectMap {
+	if objMap == nil {
+		return make(v1.RelativeObjectMap)
+	}
+
+	// Validate parent context exists for relative naming
+	if r.parent == nil {
+		// Log warning but continue with empty map rather than panicking
+		logging.Logger.V(1).Info("Composite v1 requestBuilder: parent context is nil when converting field to RelativeObjectMap; returning empty map", "field", fieldName)
+		// This maintains backward compatibility while highlighting the issue
+		return make(v1.RelativeObjectMap)
+	}
+
+	// Handle conversion from different ObjectMap types
+	switch typed := objMap.(type) {
+	case v1.RelativeObjectMap:
+		// Already in correct format
+		return typed
+	case v2.UniformObjectMap:
+		// Use efficient direct conversion
+		return typed.Convert(r.parent)
+	default:
+		// Fallback for any other ObjectMap implementation
+		// This preserves extensibility while providing safe conversion
+		return v1.MakeRelativeObjectMap(r.parent, objMap.List())
 	}
 }
 

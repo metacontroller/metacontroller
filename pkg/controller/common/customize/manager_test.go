@@ -81,7 +81,7 @@ func TestGetRelatedObjects_whenHookDisabled_returnEmptyMap(t *testing.T) {
 		t.Errorf("Incorrect invocation, err should be nil, got: %v", err)
 	}
 
-	if len(relatedObjects) != 0 {
+	if len(relatedObjects.List()) != 0 {
 		t.Errorf("Expected empty map, got %v", relatedObjects)
 	}
 }

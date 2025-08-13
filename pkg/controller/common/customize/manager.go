@@ -18,6 +18,7 @@ package customize
 
 import (
 	"fmt"
+	"metacontroller/pkg/controller/common/api"
 	commonv2 "metacontroller/pkg/controller/common/api/v2"
 	v1 "metacontroller/pkg/controller/common/customize/api/v1"
 	"metacontroller/pkg/hooks"
@@ -364,7 +365,7 @@ func listObjects(selector labels.Selector, namespace string, informer *dynamicin
 	return informer.Lister().List(selector)
 }
 
-func (rm *Manager) GetRelatedObjects(parent *unstructured.Unstructured) (commonv2.UniformObjectMap, error) {
+func (rm *Manager) GetRelatedObjects(parent *unstructured.Unstructured) (api.ObjectMap, error) {
 	childMap := make(commonv2.UniformObjectMap)
 	if !rm.IsEnabled() {
 		return childMap, nil

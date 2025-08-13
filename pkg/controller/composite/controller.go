@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"metacontroller/pkg/controller/common/api"
 	commonv2 "metacontroller/pkg/controller/common/api/v2"
 	"metacontroller/pkg/hooks"
 	"metacontroller/pkg/logging"
@@ -739,7 +740,7 @@ func (pc *parentController) canAdoptFunc(parent *unstructured.Unstructured) func
 	})
 }
 
-func (pc *parentController) claimChildren(parent *unstructured.Unstructured) (commonv2.UniformObjectMap, error) {
+func (pc *parentController) claimChildren(parent *unstructured.Unstructured) (api.ObjectMap, error) {
 	// Set up values common to all child types.
 	parentNamespace := parent.GetNamespace()
 	parentGVK := pc.parentResource.GroupVersionKind()
