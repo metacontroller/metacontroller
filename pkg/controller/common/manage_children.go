@@ -246,35 +246,79 @@ func updateChildren(client *dynamicclientset.ResourceClient, updateStrategy Chil
 			hash := xxhash.Sum64(data)
 			lastUpdateCacheName := lastUpdateCacheKey(client, obj)
 			if oldObj := observed[name]; oldObj != nil {
-				cacheLock.RLock()
-				if lastUpdated, ok := lastUpdatedCache[lastUpdateCacheName]; ok {
-					cacheLock.RUnlock()
-					if lastUpdated.hash == hash && lastUpdated.resourcegeneration == oldObj.GetGeneration() {
-						logging.Logger.Info("Skipping update, no changes detected", "name", lastUpdateCacheName)
-						continue
-					}
-					logging.Logger.Info("Detected changes, updating", "name", lastUpdateCacheName)
-				} else {
-					cacheLock.RUnlock()
-					logging.Logger.Info("No cache entry found, updating", "name", lastUpdateCacheName)
+				if oldObj.GetDeletionTimestamp() != nil {
+					logging.Logger.Info("Not updating", "parent", parent, "child", obj, "reason", "Pending deletion of child object")
+					continue
 				}
 
-				// check if observed object hast last applied annotation
-				_, hasLastApplied := oldObj.GetAnnotations()[dynamicapply.LastAppliedAnnotation]
-				if hasLastApplied {
-					// if observed object has has last applied annotation we need to remove it
-					// from the remote object to avoid conflicts
-					annotationNameForJsonPatch := strings.ReplaceAll(strings.ReplaceAll(dynamicapply.LastAppliedAnnotation, "~", "~0"), "/", "~1")
-					patch := fmt.Sprintf(`[{"op": "remove", "path": "/metadata/annotations/%s"}]`, annotationNameForJsonPatch)
-					_, err := client.Namespace(obj.GetNamespace()).Patch(context.TODO(), obj.GetName(), types.JSONPatchType, []byte(patch), metav1.PatchOptions{})
+				// Check the update strategy for this child kind.
+				switch method := updateStrategy.GetMethod(client.Group, client.Kind); method {
+				case v1alpha1.ChildUpdateOnDelete, "":
+					// This means we don't try to update anything unless it gets deleted
+					// by someone else (we won't delete it ourselves).
+					logging.Logger.V(5).Info("Not updating", "parent", parent, "child", obj, "reason", "OnDelete update strategy selected")
+					continue
+				case v1alpha1.ChildUpdateRecreate, v1alpha1.ChildUpdateRollingRecreate:
+					// Delete the object (now) and recreate it (on the next sync).
+					logging.Logger.Info("Deleting for update", "parent", parent, "child", obj, "reason", "Recreate update strategy selected")
+					uid := oldObj.GetUID()
+					// Explicitly request deletion propagation, which is what users expect,
+					// since some objects default to orphaning for backwards compatibility.
+					propagation := metav1.DeletePropagationBackground
+					err := client.Namespace(obj.GetNamespace()).Delete(
+						context.TODO(),
+						obj.GetName(),
+						metav1.DeleteOptions{
+							Preconditions:     &metav1.Preconditions{UID: &uid},
+							PropagationPolicy: &propagation,
+						},
+					)
 					if err != nil {
-						logging.Logger.Error(err, "Failed to remove last applied annotation from observed object", "parent", parent, "child", obj)
-						errs = append(errs, err)
-						continue
+						if apierrors.IsNotFound(err) {
+							// Swallow the error since there's no point retrying if the child is gone.
+							logging.Logger.Info("Failed to delete child, child object has been deleted", "parent", parent, "child", obj)
+						} else {
+							errs = append(errs, err)
+						}
 					}
+
+					continue // always continue to recreate in the next loop
+				case v1alpha1.ChildUpdateInPlace, v1alpha1.ChildUpdateRollingInPlace:
+					cacheLock.RLock()
+					if lastUpdated, ok := lastUpdatedCache[lastUpdateCacheName]; ok {
+						cacheLock.RUnlock()
+						if lastUpdated.hash == hash && lastUpdated.resourcegeneration == oldObj.GetGeneration() {
+							logging.Logger.Info("Skipping update, no changes detected", "name", lastUpdateCacheName)
+							continue
+						}
+						logging.Logger.Info("Detected changes, updating", "name", lastUpdateCacheName)
+					} else {
+						cacheLock.RUnlock()
+						logging.Logger.Info("No cache entry found, updating", "name", lastUpdateCacheName)
+					}
+
+					// check if observed object hast last applied annotation
+					_, hasLastApplied := oldObj.GetAnnotations()[dynamicapply.LastAppliedAnnotation]
+					if hasLastApplied {
+						// if observed object has has last applied annotation we need to remove it
+						// from the remote object to avoid conflicts
+						annotationNameForJsonPatch := strings.ReplaceAll(strings.ReplaceAll(dynamicapply.LastAppliedAnnotation, "~", "~0"), "/", "~1")
+						patch := fmt.Sprintf(`[{"op": "remove", "path": "/metadata/annotations/%s"}]`, annotationNameForJsonPatch)
+						_, err := client.Namespace(obj.GetNamespace()).Patch(context.TODO(), obj.GetName(), types.JSONPatchType, []byte(patch), metav1.PatchOptions{})
+						if err != nil {
+							logging.Logger.Error(err, "Failed to remove last applied annotation from observed object", "parent", parent, "child", obj)
+							errs = append(errs, err)
+							continue
+						}
+					}
+				default:
+					errs = append(errs, fmt.Errorf("invalid update strategy for %v: unknown method %q", client.Kind, method))
+					continue
 				}
+
 			}
 
+			//create or update the object using server-side apply
 			patched, err := client.Namespace(obj.GetNamespace()).Patch(context.TODO(), obj.GetName(), types.ApplyPatchType, data, metav1.PatchOptions{
 				FieldManager: ssaOptions.FieldManager,
 				Force:        ptr.To(true),
