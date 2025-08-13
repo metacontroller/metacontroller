@@ -28,6 +28,10 @@ func (pc *parentController) callHook(
 	parent *unstructured.Unstructured,
 	observedChildren, related commonv2.UniformObjectMap,
 ) (*v1.CompositeHookResponse, error) {
+
+	// TODO use v1 or v2 depending on pc.finalizeHook.GetVersion
+	// and pc.syncHook.GetVersion()
+	// also return type needs to be changes to some common interface, to cover both v1.CompositeHookResponse and v2.CompositeHookResponse
 	requestBuilder := v1.NewRequestBuilder().
 		WithController(pc.cc).
 		WithParent(parent).
