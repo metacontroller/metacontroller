@@ -280,8 +280,9 @@ func updateChildren(client *dynamicclientset.ResourceClient, updateStrategy Chil
 						} else {
 							errs = append(errs, err)
 						}
-						continue
 					}
+
+					continue // always continue to recreate in the next loop
 				case v1alpha1.ChildUpdateInPlace, v1alpha1.ChildUpdateRollingInPlace:
 					cacheLock.RLock()
 					if lastUpdated, ok := lastUpdatedCache[lastUpdateCacheName]; ok {
