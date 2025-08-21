@@ -20,7 +20,7 @@ require (
 	k8s.io/utils v0.0.0-20250604170112-4c0f3b243397
 	sigs.k8s.io/controller-runtime v0.21.0
 	sigs.k8s.io/json v0.0.0-20241014173422-cfa47c3a1cc8
-	zgo.at/zcache/v2 v2.1.0
+	zgo.at/zcache/v2 v2.4.1
 )
 
 require (
