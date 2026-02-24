@@ -23,15 +23,15 @@ jobs:
           - { name: "debug", command: "image_debug" }
     steps:
       - name: checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: "5"
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
           go-version-file: "go.mod"
           cache: true
       - name: Install GoReleaser
-        uses: goreleaser/goreleaser-action@v6
+        uses: goreleaser/goreleaser-action@v7
         with:
           distribution: goreleaser
           version: latest
@@ -42,7 +42,7 @@ jobs:
       - name: Build metacontroller:${{ matrix.target.name }}
         run: |
           docker save --output metacontroller-${{ matrix.target.name }}.tar localhost/metacontroller:${{ matrix.target.name }}
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         name: Upload metacontroller images
         with:
           name: metacontroller-image-${{ matrix.target.name }}
@@ -56,7 +56,7 @@ jobs:
       latest_matrix: ${{ steps.set-matrix.outputs.latest_matrix }}
     steps:
       - name: checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: "5"
       - id: set-matrix
@@ -84,11 +84,11 @@ jobs:
     name: Tests
     steps:
       - name: checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: "5"
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version-file: "go.mod"
           cache: true
@@ -120,11 +120,11 @@ jobs:
     name: e2e test k8s ${{ matrix.configuration.version }}-${{ matrix.configuration.variant }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: "5"
       - name: Setup kind
-        uses: helm/kind-action@v1.12.0
+        uses: helm/kind-action@v1
         with:
           version: ${{ matrix.configuration.kind }}
           node_image: ${{ matrix.configuration.image }}
@@ -132,7 +132,7 @@ jobs:
           wait: 120s
 
       - name: Download metacontroller images
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v7
         with:
           name: metacontroller-image-dev
 
@@ -153,7 +153,7 @@ jobs:
           cd examples
           ./test.sh
       - name: Archive production artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: logs-${{ matrix.configuration.version }}-${{ matrix.configuration.variant }}
           path: |
@@ -174,24 +174,24 @@ jobs:
     name: helm test k8s ${{ matrix.configuration.version }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
       - name: Set up Helm
-        uses: azure/setup-helm@v4
+        uses: Azure/setup-helm@v4
         with:
           version: v3.8.1
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.13.5"
 
       - name: Set up chart-testing
-        uses: helm/chart-testing-action@v2.7.0
+        uses: helm/chart-testing-action@v2
 
       - name: Setup kind
-        uses: helm/kind-action@v1.12.0
+        uses: helm/kind-action@v1
         with:
           version: ${{ matrix.configuration.kind }}
           node_image: ${{ matrix.configuration.image }}
@@ -199,7 +199,7 @@ jobs:
           wait: 120s
 
       - name: Download metacontroller images
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v7
         with:
           pattern: metacontroller-image-*
           merge-multiple: true
@@ -235,12 +235,12 @@ jobs:
     needs: ["tests", "e2etests", "helmtests"]
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
           persist-credentials: false
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: "22"
       - name: Install dependencies
@@ -264,12 +264,12 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version-file: "go.mod"
           cache: true
       - name: Install GoReleaser
-        uses: goreleaser/goreleaser-action@v6
+        uses: goreleaser/goreleaser-action@v7
         with:
           distribution: goreleaser
           version: latest
