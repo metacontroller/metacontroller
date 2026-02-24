@@ -2,7 +2,7 @@ module metacontroller
 
 // This denotes the minimum supported language version and
 // should not include the patch version.
-go 1.24.4
+go 1.26.0
 
 require (
 	github.com/evanphx/json-patch/v5 v5.9.11
@@ -55,12 +55,12 @@ require (
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	golang.org/x/net v0.40.0 // indirect
+	golang.org/x/net v0.43.0 // indirect
 	golang.org/x/oauth2 v0.27.0 // indirect
-	golang.org/x/sync v0.15.0 // indirect
-	golang.org/x/sys v0.33.0 // indirect
-	golang.org/x/term v0.32.0 // indirect
-	golang.org/x/text v0.26.0 // indirect
+	golang.org/x/sync v0.17.0 // indirect
+	golang.org/x/sys v0.36.0 // indirect
+	golang.org/x/term v0.35.0 // indirect
+	golang.org/x/text v0.29.0 // indirect
 	golang.org/x/time v0.9.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect
 	google.golang.org/protobuf v1.36.5 // indirect
@@ -74,7 +74,7 @@ require (
 )
 
 replace (
-	golang.org/x/net => golang.org/x/net v0.41.0
+	golang.org/x/net => golang.org/x/net v0.45.0
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.33.1
 	k8s.io/apimachinery => k8s.io/apimachinery v0.33.1
 	k8s.io/client-go => k8s.io/client-go v0.33.1
