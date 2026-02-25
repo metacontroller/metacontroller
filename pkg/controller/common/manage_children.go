@@ -251,6 +251,21 @@ func updateChildren(client *dynamicclientset.ResourceClient, updateStrategy Chil
 					continue
 				}
 
+				cacheLock.RLock()
+				lastUpdated, ok := lastUpdatedCache[lastUpdateCacheName]
+				cacheLock.RUnlock()
+
+				if ok && lastUpdated.hash == hash && lastUpdated.resourcegeneration == oldObj.GetGeneration() {
+					logging.Logger.Info("Skipping update, no changes detected", "name", lastUpdateCacheName)
+					continue
+				}
+
+				if ok {
+					logging.Logger.Info("Detected changes, updating", "name", lastUpdateCacheName)
+				} else {
+					logging.Logger.Info("No cache entry found, updating", "name", lastUpdateCacheName)
+				}
+
 				// Check the update strategy for this child kind.
 				switch method := updateStrategy.GetMethod(client.Group, client.Kind); method {
 				case v1alpha1.ChildUpdateOnDelete, "":
@@ -284,19 +299,6 @@ func updateChildren(client *dynamicclientset.ResourceClient, updateStrategy Chil
 
 					continue // always continue to recreate in the next loop
 				case v1alpha1.ChildUpdateInPlace, v1alpha1.ChildUpdateRollingInPlace:
-					cacheLock.RLock()
-					if lastUpdated, ok := lastUpdatedCache[lastUpdateCacheName]; ok {
-						cacheLock.RUnlock()
-						if lastUpdated.hash == hash && lastUpdated.resourcegeneration == oldObj.GetGeneration() {
-							logging.Logger.Info("Skipping update, no changes detected", "name", lastUpdateCacheName)
-							continue
-						}
-						logging.Logger.Info("Detected changes, updating", "name", lastUpdateCacheName)
-					} else {
-						cacheLock.RUnlock()
-						logging.Logger.Info("No cache entry found, updating", "name", lastUpdateCacheName)
-					}
-
 					// check if observed object hast last applied annotation
 					_, hasLastApplied := oldObj.GetAnnotations()[dynamicapply.LastAppliedAnnotation]
 					if hasLastApplied {
@@ -315,10 +317,9 @@ func updateChildren(client *dynamicclientset.ResourceClient, updateStrategy Chil
 					errs = append(errs, fmt.Errorf("invalid update strategy for %v: unknown method %q", client.Kind, method))
 					continue
 				}
-
 			}
 
-			//create or update the object using server-side apply
+			// create or update the object using server-side apply
 			patched, err := client.Namespace(obj.GetNamespace()).Patch(context.TODO(), obj.GetName(), types.ApplyPatchType, data, metav1.PatchOptions{
 				FieldManager: ssaOptions.FieldManager,
 				Force:        ptr.To(true),
