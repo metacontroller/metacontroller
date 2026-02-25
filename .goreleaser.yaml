@@ -1,3 +1,4 @@
+version: 2
 project_name: metacontroller
 env:
   - REPOSITORY_OWNER={{ if index .Env "REPOSITORY_OWNER" }}{{ .Env.REPOSITORY_OWNER }}{{ else }}local{{ end }}
@@ -302,7 +303,7 @@ snapshot:
   name_template: "{{ incpatch .Version }}-next"
 release:
   mode: append
-  footer_template: |
+  footer: |
     ## Docker Images
     ### Github container registry
     - `ghcr.io/{{ .Env.REPOSITORY_OWNER }}/{{ .ProjectName }}:v{{ .Version }}`
