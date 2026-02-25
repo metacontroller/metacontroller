@@ -33,6 +33,8 @@ builds:
         goarch: s390x
       - goos: windows
         goarch: s390x
+      - goos: windows
+        goarch: arm
     ldflags:
       - -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}} -X main.builtBy=goreleaser {{ .Env.REMOVE_DEBUG_SYMBOLS }}
     gcflags:
