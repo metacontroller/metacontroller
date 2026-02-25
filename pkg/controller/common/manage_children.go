@@ -237,6 +237,21 @@ func updateChildren(client *dynamicclientset.ResourceClient, updateStrategy Chil
 
 	for name, obj := range desired {
 		if ssaOptions.Strategy == ApplyStrategyServerSideApply {
+			// We always claim everything we create/update.
+			controllerRef := MakeControllerRef(parent)
+			ownerRefs := obj.GetOwnerReferences()
+			hasControllerRef := false
+			for _, ref := range ownerRefs {
+				if ref.UID == controllerRef.UID {
+					hasControllerRef = true
+					break
+				}
+			}
+			if !hasControllerRef {
+				ownerRefs = append(ownerRefs, *controllerRef)
+				obj.SetOwnerReferences(ownerRefs)
+			}
+
 			data, err := json.Marshal(obj)
 			if err != nil {
 				errs = append(errs, err)
@@ -308,8 +323,13 @@ func updateChildren(client *dynamicclientset.ResourceClient, updateStrategy Chil
 						patch := fmt.Sprintf(`[{"op": "remove", "path": "/metadata/annotations/%s"}]`, annotationNameForJsonPatch)
 						_, err := client.Namespace(obj.GetNamespace()).Patch(context.TODO(), obj.GetName(), types.JSONPatchType, []byte(patch), metav1.PatchOptions{})
 						if err != nil {
-							logging.Logger.Error(err, "Failed to remove last applied annotation from observed object", "parent", parent, "child", obj)
-							errs = append(errs, err)
+							if apierrors.IsNotFound(err) {
+								// Swallow the error since there's no point retrying if the child is gone.
+								logging.Logger.Info("Failed to remove last applied annotation, child object has been deleted", "parent", parent, "child", obj)
+							} else {
+								logging.Logger.Error(err, "Failed to remove last applied annotation from observed object", "parent", parent, "child", obj)
+								errs = append(errs, err)
+							}
 							continue
 						}
 					}
@@ -326,8 +346,17 @@ func updateChildren(client *dynamicclientset.ResourceClient, updateStrategy Chil
 			})
 
 			if err != nil {
-				logging.Logger.Error(err, "Failed to apply server-side apply", "parent", parent, "child", obj)
-				errs = append(errs, err)
+				switch {
+				case apierrors.IsNotFound(err):
+					// Swallow the error since there's no point retrying if the child is gone.
+					logging.Logger.Info("Failed to apply server-side apply, child object has been deleted", "parent", parent, "child", obj)
+				case apierrors.IsConflict(err):
+					// it is possible that the object was modified after this sync was started, ignore conflict since we will reconcile again
+					logging.Logger.Info("Failed to apply server-side apply due to outdated resourceVersion", "parent", parent, "child", obj)
+				default:
+					logging.Logger.Error(err, "Failed to apply server-side apply", "parent", parent, "child", obj)
+					errs = append(errs, err)
+				}
 				continue
 			}
 
