@@ -213,7 +213,7 @@ jobs:
 
       - name: Copy default values.yaml to ci directory with dev image
         run: |
-          sed 's/tag: ""/tag: "dev"/g; s/ghcr.io\/metacontroller/localhost/' deploy/helm/metacontroller/values.yaml > deploy/helm/metacontroller/ci/default-values.yaml
+          sed 's/tag: ""/tag: "dev"/g; s/ghcr.io\/metacontroller\/metacontroller/localhost\/metacontroller/' deploy/helm/metacontroller/values.yaml > deploy/helm/metacontroller/ci/default-values.yaml
 
       - name: Run chart-testing (lint-and-install)
         run: |

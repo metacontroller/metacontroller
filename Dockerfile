@@ -1,5 +1,6 @@
 FROM alpine:3.23.3@sha256:25109184c71bdad752c8312a8623239686a9a2071e8825f20acb8f2198c3f659
-COPY metacontroller /usr/bin/metacontroller
+ARG TARGETPLATFORM
+COPY $TARGETPLATFORM/metacontroller /usr/bin/metacontroller
 RUN apk update && apk add --no-cache ca-certificates
 
 # Run container as nonroot, use the same uid and naming convention as distroless images

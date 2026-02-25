@@ -20,11 +20,11 @@ jobs:
           version: 3.8.0
       - name: login to ghcr.io using helm
         run: |
-          echo ${{ secrets.GITHUB_TOKEN }} | helm registry login ghcr.io/metacontroller/metacontroller-helm --username ${{ github.repository_owner }} --password-stdin
+          echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io/metacontroller/metacontroller-helm --username "${{ github.repository_owner }}" --password-stdin
       - name: save helm chart to local registry
         run: |
-          helm package ${{ github.workspace }}/deploy/helm/metacontroller/
+          helm package "${{ github.workspace }}/deploy/helm/metacontroller/"
       - name: publish chart to ghcr.io
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
-          helm push metacontroller-helm-${VERSION}.tgz oci://ghcr.io/metacontroller
+          helm push "metacontroller-helm-${VERSION}.tgz" oci://ghcr.io/metacontroller

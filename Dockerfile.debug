@@ -2,6 +2,7 @@ FROM golang:1.26.0-alpine3.23 AS build
 RUN go install github.com/go-delve/delve/cmd/dlv@latest
 
 FROM alpine:3.23.3@sha256:25109184c71bdad752c8312a8623239686a9a2071e8825f20acb8f2198c3f659
+ARG TARGETPLATFORM
 RUN apk update && apk add --no-cache ca-certificates
 COPY --from=build /go/bin/dlv /
 
@@ -10,6 +11,6 @@ COPY --from=build /go/bin/dlv /
 RUN addgroup -g 65532 -S nonroot && adduser -D -u 65532 -g nonroot -S nonroot -G nonroot
 USER nonroot:nonroot
 
-COPY metacontroller /usr/bin/metacontroller
+COPY $TARGETPLATFORM/metacontroller /usr/bin/metacontroller
 
 CMD ["/dlv", "--listen=:40000", "--headless=true", "--api-version=2", "exec", "/usr/bin/metacontroller"]

@@ -1,4 +1,5 @@
 FROM gcr.io/distroless/base-debian13:debug-nonroot
+ARG TARGETPLATFORM
 USER nonroot:nonroot
-COPY metacontroller /usr/bin/metacontroller
+COPY $TARGETPLATFORM/metacontroller /usr/bin/metacontroller
 CMD ["/usr/bin/metacontroller"]
