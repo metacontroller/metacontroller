@@ -18,9 +18,9 @@ limitations under the License.
 package internalclientset
 
 import (
-	"fmt"
+	fmt "fmt"
 	metacontrollerv1alpha1 "metacontroller/pkg/client/generated/clientset/internalclientset/typed/metacontroller/v1alpha1"
-	"net/http"
+	http "net/http"
 
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"

@@ -18,9 +18,9 @@ limitations under the License.
 package v1alpha1
 
 import (
-	v1alpha1 "metacontroller/pkg/apis/metacontroller/v1alpha1"
-	"metacontroller/pkg/client/generated/clientset/internalclientset/scheme"
-	"net/http"
+	metacontrollerv1alpha1 "metacontroller/pkg/apis/metacontroller/v1alpha1"
+	scheme "metacontroller/pkg/client/generated/clientset/internalclientset/scheme"
+	http "net/http"
 
 	rest "k8s.io/client-go/rest"
 )
@@ -44,9 +44,7 @@ func (c *MetacontrollerV1alpha1Client) ControllerRevisions(namespace string) Con
 // where httpClient was generated with rest.HTTPClientFor(c).
 func NewForConfig(c *rest.Config) (*MetacontrollerV1alpha1Client, error) {
 	config := *c
-	if err := setConfigDefaults(&config); err != nil {
-		return nil, err
-	}
+	setConfigDefaults(&config)
 	httpClient, err := rest.HTTPClientFor(&config)
 	if err != nil {
 		return nil, err
@@ -58,9 +56,7 @@ func NewForConfig(c *rest.Config) (*MetacontrollerV1alpha1Client, error) {
 // Note the http client provided takes precedence over the configured transport values.
 func NewForConfigAndClient(c *rest.Config, h *http.Client) (*MetacontrollerV1alpha1Client, error) {
 	config := *c
-	if err := setConfigDefaults(&config); err != nil {
-		return nil, err
-	}
+	setConfigDefaults(&config)
 	client, err := rest.RESTClientForConfigAndClient(&config, h)
 	if err != nil {
 		return nil, err
@@ -83,17 +79,15 @@ func New(c rest.Interface) *MetacontrollerV1alpha1Client {
 	return &MetacontrollerV1alpha1Client{c}
 }
 
-func setConfigDefaults(config *rest.Config) error {
-	gv := v1alpha1.SchemeGroupVersion
+func setConfigDefaults(config *rest.Config) {
+	gv := metacontrollerv1alpha1.SchemeGroupVersion
 	config.GroupVersion = &gv
 	config.APIPath = "/apis"
-	config.NegotiatedSerializer = scheme.Codecs.WithoutConversion()
+	config.NegotiatedSerializer = rest.CodecFactoryForGeneratedClient(scheme.Scheme, scheme.Codecs).WithoutConversion()
 
 	if config.UserAgent == "" {
 		config.UserAgent = rest.DefaultKubernetesUserAgent()
 	}
-
-	return nil
 }
 
 // RESTClient returns a RESTClient that is used to communicate

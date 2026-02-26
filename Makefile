@@ -10,7 +10,7 @@ API_GROUPS := metacontroller/v1alpha1
 export GO111MODULE=on
 export GOTESTSUM_FORMAT=pkgname
 
-CODE_GENERATOR_VERSION="v0.29.4"
+CODE_GENERATOR_VERSION="v0.35.0"
 
 PKGS = $(shell go list ./... | grep -v '/test/integration/\|/examples/')
 COVER_PKGS = $(shell echo ${PKGS} | tr " " ",")
@@ -71,10 +71,9 @@ deepcopy:
 	@go install k8s.io/code-generator/cmd/deepcopy-gen@"${CODE_GENERATOR_VERSION}"
 	@echo "+ Generating deepcopy funcs for $(API_GROUPS)"
 	@deepcopy-gen \
-		--input-dirs $(PKG)/pkg/apis/$(API_GROUPS) \
-		--output-base $(PWD)/.. \
 		--go-header-file ./hack/boilerplate.go.txt \
-		--output-file-base zz_generated.deepcopy
+		--output-file zz_generated.deepcopy.go \
+		./pkg/apis/$(API_GROUPS)
 
 # also builds vendored version of client-gen tool
 .PHONY: clientset
@@ -86,8 +85,9 @@ clientset:
 		--go-header-file ./hack/boilerplate.go.txt \
 		--input $(API_GROUPS) \
 		--input-base $(PKG)/pkg/apis \
-		--output-base $(PWD)/.. \
-		--clientset-path $(PKG)/pkg/client/generated/clientset
+		--output-dir $(PWD)/pkg/client/generated/clientset \
+		--output-pkg $(PKG)/pkg/client/generated/clientset \
+		--clientset-name internalclientset
 
 # also builds vendored version of lister-gen tool
 .PHONY: lister
@@ -95,10 +95,10 @@ lister:
 	@go install k8s.io/code-generator/cmd/lister-gen@"${CODE_GENERATOR_VERSION}"
 	@echo "+ Generating lister for $(API_GROUPS)"
 	@lister-gen \
-		--input-dirs $(PKG)/pkg/apis/$(API_GROUPS) \
 		--go-header-file ./hack/boilerplate.go.txt \
-		--output-base $(PWD)/.. \
-		--output-package $(PKG)/pkg/client/generated/lister
+		--output-dir $(PWD)/pkg/client/generated/lister \
+		--output-pkg $(PKG)/pkg/client/generated/lister \
+		./pkg/apis/$(API_GROUPS)
 
 # also builds vendored version of informer-gen tool
 .PHONY: informer
@@ -106,9 +106,9 @@ informer:
 	@go install k8s.io/code-generator/cmd/informer-gen@"${CODE_GENERATOR_VERSION}"
 	@echo "+ Generating informer for $(API_GROUPS)"
 	@informer-gen \
-		--input-dirs $(PKG)/pkg/apis/$(API_GROUPS) \
 		--go-header-file ./hack/boilerplate.go.txt \
-		--output-base $(PWD)/.. \
-		--output-package $(PKG)/pkg/client/generated/informer \
+		--output-dir $(PWD)/pkg/client/generated/informer \
+		--output-pkg $(PKG)/pkg/client/generated/informer \
 		--versioned-clientset-package $(PKG)/pkg/client/generated/clientset/internalclientset \
-		--listers-package $(PKG)/pkg/client/generated/lister
+		--listers-package $(PKG)/pkg/client/generated/lister \
+		./pkg/apis/$(API_GROUPS)

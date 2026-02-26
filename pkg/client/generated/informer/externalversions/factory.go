@@ -96,6 +96,7 @@ func NewSharedInformerFactory(client internalclientset.Interface, defaultResync 
 // NewFilteredSharedInformerFactory constructs a new instance of sharedInformerFactory.
 // Listers obtained via this SharedInformerFactory will be subject to the same filters
 // as specified here.
+//
 // Deprecated: Please use NewSharedInformerFactoryWithOptions instead
 func NewFilteredSharedInformerFactory(client internalclientset.Interface, defaultResync time.Duration, namespace string, tweakListOptions internalinterfaces.TweakListOptionsFunc) SharedInformerFactory {
 	return NewSharedInformerFactoryWithOptions(client, defaultResync, WithNamespace(namespace), WithTweakListOptions(tweakListOptions))
@@ -203,7 +204,7 @@ func (f *sharedInformerFactory) InformerFor(obj runtime.Object, newFunc internal
 //
 // It is typically used like this:
 //
-//	ctx, cancel := context.Background()
+//	ctx, cancel := context.WithCancel(context.Background())
 //	defer cancel()
 //	factory := NewSharedInformerFactory(client, resyncPeriod)
 //	defer factory.WaitForStop()    // Returns immediately if nothing was started.
@@ -227,6 +228,7 @@ type SharedInformerFactory interface {
 
 	// Start initializes all requested informers. They are handled in goroutines
 	// which run until the stop channel gets closed.
+	// Warning: Start does not block. When run in a go-routine, it will race with a later WaitForCacheSync.
 	Start(stopCh <-chan struct{})
 
 	// Shutdown marks a factory as shutting down. At that point no new

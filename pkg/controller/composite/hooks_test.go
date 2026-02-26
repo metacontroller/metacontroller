@@ -8,9 +8,9 @@ import (
 	"metacontroller/pkg/internal/testutils/hooks"
 	"testing"
 
-	corev1 "k8s.io/api/core/v1"
+	"github.com/stretchr/testify/assert"
 
-	"github.com/nsf/jsondiff"
+	corev1 "k8s.io/api/core/v1"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -21,9 +21,7 @@ func TestSyncHookRequest_MarshalJSON(t *testing.T) {
 	expected := `
 {
   "controller": {
-    "metadata": {
-      "creationTimestamp": null
-    },
+    "metadata": {},
     "spec": {
       "parentResource": {
         "apiVersion": "",
@@ -84,12 +82,7 @@ func TestSyncHookRequest_MarshalJSON(t *testing.T) {
 		t.Fail()
 	}
 
-	diffOpts := jsondiff.DefaultConsoleOptions()
-	res, diff := jsondiff.Compare([]byte(expected), output, &diffOpts)
-
-	if res != jsondiff.FullMatch {
-		t.Errorf("the expected result is not equal to actual: %s", diff)
-	}
+	assert.JSONEq(t, expected, string(output))
 }
 
 func TestWhenChildrenArrayIsNullThenDeserializeToEmptySlice(t *testing.T) {

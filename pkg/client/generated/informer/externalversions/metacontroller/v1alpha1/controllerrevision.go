@@ -18,11 +18,11 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"context"
-	metacontrollerv1alpha1 "metacontroller/pkg/apis/metacontroller/v1alpha1"
+	context "context"
+	apismetacontrollerv1alpha1 "metacontroller/pkg/apis/metacontroller/v1alpha1"
 	internalclientset "metacontroller/pkg/client/generated/clientset/internalclientset"
 	internalinterfaces "metacontroller/pkg/client/generated/informer/externalversions/internalinterfaces"
-	v1alpha1 "metacontroller/pkg/client/generated/lister/metacontroller/v1alpha1"
+	metacontrollerv1alpha1 "metacontroller/pkg/client/generated/lister/metacontroller/v1alpha1"
 	time "time"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -35,7 +35,7 @@ import (
 // ControllerRevisions.
 type ControllerRevisionInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1alpha1.ControllerRevisionLister
+	Lister() metacontrollerv1alpha1.ControllerRevisionLister
 }
 
 type controllerRevisionInformer struct {
@@ -56,21 +56,33 @@ func NewControllerRevisionInformer(client internalclientset.Interface, namespace
 // one. This reduces memory footprint and number of connections to the server.
 func NewFilteredControllerRevisionInformer(client internalclientset.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
 	return cache.NewSharedIndexInformer(
-		&cache.ListWatch{
+		cache.ToListWatcherWithWatchListSemantics(&cache.ListWatch{
 			ListFunc: func(options v1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.MetacontrollerV1alpha1().ControllerRevisions(namespace).List(context.TODO(), options)
+				return client.MetacontrollerV1alpha1().ControllerRevisions(namespace).List(context.Background(), options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.MetacontrollerV1alpha1().ControllerRevisions(namespace).Watch(context.TODO(), options)
+				return client.MetacontrollerV1alpha1().ControllerRevisions(namespace).Watch(context.Background(), options)
 			},
-		},
-		&metacontrollerv1alpha1.ControllerRevision{},
+			ListWithContextFunc: func(ctx context.Context, options v1.ListOptions) (runtime.Object, error) {
+				if tweakListOptions != nil {
+					tweakListOptions(&options)
+				}
+				return client.MetacontrollerV1alpha1().ControllerRevisions(namespace).List(ctx, options)
+			},
+			WatchFuncWithContext: func(ctx context.Context, options v1.ListOptions) (watch.Interface, error) {
+				if tweakListOptions != nil {
+					tweakListOptions(&options)
+				}
+				return client.MetacontrollerV1alpha1().ControllerRevisions(namespace).Watch(ctx, options)
+			},
+		}, client),
+		&apismetacontrollerv1alpha1.ControllerRevision{},
 		resyncPeriod,
 		indexers,
 	)
@@ -81,9 +93,9 @@ func (f *controllerRevisionInformer) defaultInformer(client internalclientset.In
 }
 
 func (f *controllerRevisionInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&metacontrollerv1alpha1.ControllerRevision{}, f.defaultInformer)
+	return f.factory.InformerFor(&apismetacontrollerv1alpha1.ControllerRevision{}, f.defaultInformer)
 }
 
-func (f *controllerRevisionInformer) Lister() v1alpha1.ControllerRevisionLister {
-	return v1alpha1.NewControllerRevisionLister(f.Informer().GetIndexer())
+func (f *controllerRevisionInformer) Lister() metacontrollerv1alpha1.ControllerRevisionLister {
+	return metacontrollerv1alpha1.NewControllerRevisionLister(f.Informer().GetIndexer())
 }

@@ -82,6 +82,7 @@ func (cs *Clientset) resource(apiResource *dynamicdiscovery.APIResource) *Resour
 		ResourceInterface: client,
 		APIResource:       apiResource,
 		rootClient:        client,
+		dc:                cs.dc,
 	}
 }
 
@@ -98,6 +99,18 @@ type ResourceClient struct {
 	*dynamicdiscovery.APIResource
 
 	rootClient dynamic.NamespaceableResourceInterface
+	dc         dynamic.Interface
+}
+
+// IsWatchListSemanticsUnSupported returns true if the underlying client explicitly does not support WatchList.
+func (rc *ResourceClient) IsWatchListSemanticsUnSupported() bool {
+	if rc.dc == nil {
+		return false
+	}
+	if s, ok := rc.dc.(interface{ IsWatchListSemanticsUnSupported() bool }); ok {
+		return s.IsWatchListSemanticsUnSupported()
+	}
+	return false
 }
 
 // Namespace returns a copy of the ResourceClient with the client namespace set.
@@ -119,6 +132,7 @@ func (rc *ResourceClient) Namespace(namespace string) *ResourceClient {
 		ResourceInterface: ri,
 		APIResource:       rc.APIResource,
 		rootClient:        rc.rootClient,
+		dc:                rc.dc,
 	}
 }
 
