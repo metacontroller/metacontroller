@@ -233,7 +233,7 @@ func lastUpdateCacheKey(client *dynamicclientset.ResourceClient, obj *unstructur
 	return fmt.Sprintf("%s/%s/%s/%s", client.Group, client.Kind, obj.GetNamespace(), obj.GetName())
 }
 
-type ApplyOperations struct {
+type ApplyOperation struct {
 	updateStrategy ChildUpdateStrategy
 	parent         *unstructured.Unstructured
 	observed       *unstructured.Unstructured
@@ -245,7 +245,7 @@ type ApplyHandler struct {
 	ssaOptions *ApplyOptions
 }
 
-func (h *ApplyHandler) Handle(operation *ApplyOperations) error {
+func (h *ApplyHandler) Handle(operation *ApplyOperation) error {
 	switch h.ssaOptions.Strategy {
 	case ApplyStrategyServerSideApply, "":
 		return h.updateChildrenWithServerSideApply(operation)
@@ -265,7 +265,7 @@ func updateChildren(client *dynamicclientset.ResourceClient, updateStrategy Chil
 	}
 
 	for name, obj := range desired {
-		operation := &ApplyOperations{
+		operation := &ApplyOperation{
 			updateStrategy: updateStrategy,
 			parent:         parent,
 			observed:       observed[name],
@@ -279,7 +279,7 @@ func updateChildren(client *dynamicclientset.ResourceClient, updateStrategy Chil
 	return utilerrors.NewAggregate(errs)
 }
 
-func (h *ApplyHandler) updateChildrenWithServerSideApply(op *ApplyOperations) error {
+func (h *ApplyHandler) updateChildrenWithServerSideApply(op *ApplyOperation) error {
 	// We always claim everything we create/update.
 	controllerRef := MakeControllerRef(op.parent)
 	ownerRefs := op.desired.GetOwnerReferences()
@@ -422,7 +422,7 @@ func (h *ApplyHandler) updateChildrenWithServerSideApply(op *ApplyOperations) er
 	return nil
 }
 
-func (h *ApplyHandler) updateChildrenWithDynamicApply(op *ApplyOperations) error {
+func (h *ApplyHandler) updateChildrenWithDynamicApply(op *ApplyOperation) error {
 	if oldObj := op.observed; oldObj != nil {
 		// Update
 		newObj, err := ApplyUpdate(oldObj, op.desired)
