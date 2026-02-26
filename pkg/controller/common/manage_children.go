@@ -232,258 +232,290 @@ func lastUpdateCacheKey(client *dynamicclientset.ResourceClient, obj *unstructur
 	return fmt.Sprintf("%s/%s/%s/%s", client.Group, client.Kind, obj.GetNamespace(), obj.GetName())
 }
 
+type ApplyOperations struct {
+	client         *dynamicclientset.ResourceClient
+	updateStrategy ChildUpdateStrategy
+
+	parent *unstructured.Unstructured
+
+	observed *unstructured.Unstructured
+	desired  *unstructured.Unstructured
+
+	ssaOptions *ApplyOptions
+}
+
+var operationHandlers = map[string]func(*ApplyOperations) error{
+	string(ApplyStrategyServerSideApply): updateChildrenWithServerSideApply,
+	string(ApplyStrategyDynamicApply):    updateChildrenWithDynamicApply,
+}
+
 func updateChildren(client *dynamicclientset.ResourceClient, updateStrategy ChildUpdateStrategy, parent *unstructured.Unstructured, observed, desired map[string]*unstructured.Unstructured, ssaOptions *ApplyOptions) error {
 	var errs []error
 
 	for name, obj := range desired {
-		if ssaOptions.Strategy == ApplyStrategyServerSideApply {
-			// We always claim everything we create/update.
-			controllerRef := MakeControllerRef(parent)
-			ownerRefs := obj.GetOwnerReferences()
-			hasControllerRef := false
-			for _, ref := range ownerRefs {
-				if ref.UID == controllerRef.UID {
-					hasControllerRef = true
-					break
-				}
-			}
-			if !hasControllerRef {
-				ownerRefs = append(ownerRefs, *controllerRef)
-				obj.SetOwnerReferences(ownerRefs)
-			}
-
-			data, err := json.Marshal(obj)
-			if err != nil {
-				errs = append(errs, err)
-				continue
-			}
-
-			hash := xxhash.Sum64(data)
-			lastUpdateCacheName := lastUpdateCacheKey(client, obj)
-			if oldObj := observed[name]; oldObj != nil {
-				if oldObj.GetDeletionTimestamp() != nil {
-					logging.Logger.Info("Not updating", "parent", parent, "child", obj, "reason", "Pending deletion of child object")
-					continue
-				}
-
-				cacheLock.RLock()
-				lastUpdated, ok := lastUpdatedCache[lastUpdateCacheName]
-				cacheLock.RUnlock()
-
-				if ok && lastUpdated.hash == hash && lastUpdated.resourcegeneration == oldObj.GetGeneration() {
-					logging.Logger.Info("Skipping update, no changes detected", "name", lastUpdateCacheName)
-					continue
-				}
-
-				if ok {
-					logging.Logger.Info("Detected changes, updating", "name", lastUpdateCacheName)
-				} else {
-					logging.Logger.Info("No cache entry found, updating", "name", lastUpdateCacheName)
-				}
-
-				// Check the update strategy for this child kind.
-				switch method := updateStrategy.GetMethod(client.Group, client.Kind); method {
-				case v1alpha1.ChildUpdateOnDelete, "":
-					// This means we don't try to update anything unless it gets deleted
-					// by someone else (we won't delete it ourselves).
-					logging.Logger.V(5).Info("Not updating", "parent", parent, "child", obj, "reason", "OnDelete update strategy selected")
-					continue
-				case v1alpha1.ChildUpdateRecreate, v1alpha1.ChildUpdateRollingRecreate:
-					// Delete the object (now) and recreate it (on the next sync).
-					logging.Logger.Info("Deleting for update", "parent", parent, "child", obj, "reason", "Recreate update strategy selected")
-					uid := oldObj.GetUID()
-					// Explicitly request deletion propagation, which is what users expect,
-					// since some objects default to orphaning for backwards compatibility.
-					propagation := metav1.DeletePropagationBackground
-					err := client.Namespace(obj.GetNamespace()).Delete(
-						context.TODO(),
-						obj.GetName(),
-						metav1.DeleteOptions{
-							Preconditions:     &metav1.Preconditions{UID: &uid},
-							PropagationPolicy: &propagation,
-						},
-					)
-					if err != nil {
-						if apierrors.IsNotFound(err) {
-							// Swallow the error since there's no point retrying if the child is gone.
-							logging.Logger.Info("Failed to delete child, child object has been deleted", "parent", parent, "child", obj)
-						} else {
-							errs = append(errs, err)
-						}
-					}
-
-					continue // always continue to recreate in the next loop
-				case v1alpha1.ChildUpdateInPlace, v1alpha1.ChildUpdateRollingInPlace:
-					// check if observed object hast last applied annotation
-					_, hasLastApplied := oldObj.GetAnnotations()[dynamicapply.LastAppliedAnnotation]
-					if hasLastApplied {
-						// if observed object has has last applied annotation we need to remove it
-						// from the remote object to avoid conflicts
-						annotationNameForJsonPatch := strings.ReplaceAll(strings.ReplaceAll(dynamicapply.LastAppliedAnnotation, "~", "~0"), "/", "~1")
-						patch := fmt.Sprintf(`[{"op": "remove", "path": "/metadata/annotations/%s"}]`, annotationNameForJsonPatch)
-						_, err := client.Namespace(obj.GetNamespace()).Patch(context.TODO(), obj.GetName(), types.JSONPatchType, []byte(patch), metav1.PatchOptions{})
-						if err != nil {
-							if apierrors.IsNotFound(err) {
-								// Swallow the error since there's no point retrying if the child is gone.
-								logging.Logger.Info("Failed to remove last applied annotation, child object has been deleted", "parent", parent, "child", obj)
-							} else {
-								logging.Logger.Error(err, "Failed to remove last applied annotation from observed object", "parent", parent, "child", obj)
-								errs = append(errs, err)
-							}
-							continue
-						}
-					}
-				default:
-					errs = append(errs, fmt.Errorf("invalid update strategy for %v: unknown method %q", client.Kind, method))
-					continue
-				}
-			}
-
-			// create or update the object using server-side apply
-			patched, err := client.Namespace(obj.GetNamespace()).Patch(context.TODO(), obj.GetName(), types.ApplyPatchType, data, metav1.PatchOptions{
-				FieldManager: ssaOptions.FieldManager,
-				Force:        ptr.To(true),
-			})
-
-			if err != nil {
-				switch {
-				case apierrors.IsNotFound(err):
-					// Swallow the error since there's no point retrying if the child is gone.
-					logging.Logger.Info("Failed to apply server-side apply, child object has been deleted", "parent", parent, "child", obj)
-				case apierrors.IsConflict(err):
-					// it is possible that the object was modified after this sync was started, ignore conflict since we will reconcile again
-					logging.Logger.Info("Failed to apply server-side apply due to outdated resourceVersion", "parent", parent, "child", obj)
-				default:
-					logging.Logger.Error(err, "Failed to apply server-side apply", "parent", parent, "child", obj)
-					errs = append(errs, err)
-				}
-				continue
-			}
-
-			cacheLock.Lock()
-			lastUpdatedCache[lastUpdateCacheName] = &lastUpdate{
-				hash:               hash,
-				resourcegeneration: patched.GetGeneration(),
-			}
-
-			logging.Logger.Info("Cache updated", "name", lastUpdateCacheName)
-
-			cacheLock.Unlock()
-
-			continue // skip the rest of the function, since we've already updated the object
+		operation := &ApplyOperations{
+			client:         client,
+			updateStrategy: updateStrategy,
+			parent:         parent,
+			observed:       observed[name],
+			desired:        obj,
+			ssaOptions:     ssaOptions,
 		}
 
-		if oldObj := observed[name]; oldObj != nil {
-			// Update
-			newObj, err := ApplyUpdate(oldObj, obj)
-			if err != nil {
+		if handler, ok := operationHandlers[string(ssaOptions.Strategy)]; ok {
+			if err := handler(operation); err != nil {
 				errs = append(errs, err)
-				continue
-			}
-
-			// Attempt an update, if the 3-way merge resulted in any changes.
-			if DeepEqual(newObj.UnstructuredContent(), oldObj.UnstructuredContent()) {
-				// Nothing changed.
-				continue
-			}
-
-			if logging.Logger.V(5).Enabled() {
-				mergePatch, err := JsonMergePatch(oldObj, newObj)
-				if err != nil {
-					logging.Logger.V(5).Error(err, "Cannot create merge patch to visualize diff")
-				} else {
-					rawMergePatch := json.RawMessage(mergePatch)
-					logging.Logger.V(5).Info("Diff between observed and desired", "mergePatch", rawMergePatch)
-				}
-			}
-
-			// Leave it alone if it's pending deletion.
-			if oldObj.GetDeletionTimestamp() != nil {
-				logging.Logger.Info("Not updating", "parent", parent, "child", obj, "reason", "Pending deletion of child object")
-				continue
-			}
-
-			// Check the update strategy for this child kind.
-			switch method := updateStrategy.GetMethod(client.Group, client.Kind); method {
-			case v1alpha1.ChildUpdateOnDelete, "":
-				// This means we don't try to update anything unless it gets deleted
-				// by someone else (we won't delete it ourselves).
-				logging.Logger.V(5).Info("Not updating", "parent", parent, "child", obj, "reason", "OnDelete update strategy selected")
-				continue
-			case v1alpha1.ChildUpdateRecreate, v1alpha1.ChildUpdateRollingRecreate:
-				// Delete the object (now) and recreate it (on the next sync).
-				logging.Logger.Info("Deleting for update", "parent", parent, "child", obj, "reason", "Recreate update strategy selected")
-				uid := oldObj.GetUID()
-				// Explicitly request deletion propagation, which is what users expect,
-				// since some objects default to orphaning for backwards compatibility.
-				propagation := metav1.DeletePropagationBackground
-				err := client.Namespace(obj.GetNamespace()).Delete(
-					context.TODO(),
-					obj.GetName(),
-					metav1.DeleteOptions{
-						Preconditions:     &metav1.Preconditions{UID: &uid},
-						PropagationPolicy: &propagation,
-					},
-				)
-				if err != nil {
-					if apierrors.IsNotFound(err) {
-						// Swallow the error since there's no point retrying if the child is gone.
-						logging.Logger.Info("Failed to delete child, child object has been deleted", "parent", parent, "child", obj)
-					} else {
-						errs = append(errs, err)
-					}
-					continue
-				}
-			case v1alpha1.ChildUpdateInPlace, v1alpha1.ChildUpdateRollingInPlace:
-				// Update the object in-place.
-				logging.Logger.Info("Updating", "parent", parent, "child", obj, "reason", "InPlace update strategy selected")
-				if _, err := client.Namespace(obj.GetNamespace()).Update(context.TODO(), newObj, metav1.UpdateOptions{}); err != nil {
-					switch {
-					case apierrors.IsNotFound(err):
-						// Swallow the error since there's no point retrying if the child is gone.
-						logging.Logger.Info("Failed to update child, child object has been deleted", "parent", parent, "child", obj)
-					case apierrors.IsConflict(err):
-						// it is possible that the object was modified after this sync was started, ignore conflict since we will reconcile again
-						logging.Logger.Info("Failed to update child due to outdated resourceVersion", "parent", parent, "child", obj)
-					default:
-						errs = append(errs, err)
-					}
-					continue
-				}
-			default:
-				errs = append(errs, fmt.Errorf("invalid update strategy for %v: unknown method %q", client.Kind, method))
-				continue
 			}
 		} else {
-			// Create
-			logging.Logger.Info("Creating", "parent", parent, "child", obj)
-
-			// The controller should return a partial object containing only the
-			// fields it cares about. We save this partial object so we can do
-			// a 3-way merge upon update, in the style of "kubectl apply".
-			//
-			// Make sure this happens before we add anything else to the object.
-			if err := dynamicapply.SetLastApplied(obj, obj.UnstructuredContent()); err != nil {
-				errs = append(errs, err)
-				continue
-			}
-
-			// We always claim everything we create.
-			controllerRef := MakeControllerRef(parent)
-			ownerRefs := obj.GetOwnerReferences()
-			ownerRefs = append(ownerRefs, *controllerRef)
-			obj.SetOwnerReferences(ownerRefs)
-
-			if _, err := client.Namespace(obj.GetNamespace()).Create(context.TODO(), obj, metav1.CreateOptions{}); err != nil {
-				if apierrors.IsAlreadyExists(err) {
-					// Swallow the error since there's no point retrying if the child already exists
-					logging.Logger.Info("Failed to create child, child object already exists", "parent", parent, "child", obj)
-				} else {
-					errs = append(errs, err)
-				}
-				continue
-			}
+			errs = append(errs, fmt.Errorf("invalid apply strategy: unknown strategy %q", ssaOptions.Strategy))
 		}
 	}
 	return utilerrors.NewAggregate(errs)
+}
+
+func updateChildrenWithServerSideApply(operation *ApplyOperations) error {
+	// We always claim everything we create/update.
+	controllerRef := MakeControllerRef(operation.parent)
+	ownerRefs := operation.desired.GetOwnerReferences()
+	hasControllerRef := false
+	for _, ref := range ownerRefs {
+		if ref.UID == controllerRef.UID {
+			hasControllerRef = true
+			break
+		}
+	}
+	if !hasControllerRef {
+		ownerRefs = append(ownerRefs, *controllerRef)
+		operation.desired.SetOwnerReferences(ownerRefs)
+	}
+
+	data, err := json.Marshal(operation.desired)
+	if err != nil {
+		return err
+	}
+
+	hash := xxhash.Sum64(data)
+	lastUpdateCacheName := lastUpdateCacheKey(operation.client, operation.desired)
+	if oldObj := operation.observed; oldObj != nil {
+		if oldObj.GetDeletionTimestamp() != nil {
+			logging.Logger.Info("Not updating", "parent", operation.parent, "child", operation.desired, "reason", "Pending deletion of child object")
+			return nil
+		}
+
+		cacheLock.RLock()
+		lastUpdated, ok := lastUpdatedCache[lastUpdateCacheName]
+		cacheLock.RUnlock()
+
+		if ok && lastUpdated.hash == hash && lastUpdated.resourcegeneration == oldObj.GetGeneration() {
+			logging.Logger.Info("Skipping update, no changes detected", "name", lastUpdateCacheName)
+			return nil
+		}
+
+		if ok {
+			logging.Logger.Info("Detected changes, updating", "name", lastUpdateCacheName)
+		} else {
+			logging.Logger.Info("No cache entry found, updating", "name", lastUpdateCacheName)
+		}
+
+		// Check the update strategy for this child kind.
+		switch method := operation.updateStrategy.GetMethod(operation.client.Group, operation.client.Kind); method {
+		case v1alpha1.ChildUpdateOnDelete, "":
+			// This means we don't try to update anything unless it gets deleted
+			// by someone else (we won't delete it ourselves).
+			logging.Logger.V(5).Info("Not updating", "parent", operation.parent, "child", operation.desired, "reason", "OnDelete update strategy selected")
+			return nil
+		case v1alpha1.ChildUpdateRecreate, v1alpha1.ChildUpdateRollingRecreate:
+			// Delete the object (now) and recreate it (on the next sync).
+			logging.Logger.Info("Deleting for update", "parent", operation.parent, "child", operation.desired, "reason", "Recreate update strategy selected")
+			uid := oldObj.GetUID()
+			// Explicitly request deletion propagation, which is what users expect,
+			// since some objects default to orphaning for backwards compatibility.
+			propagation := metav1.DeletePropagationBackground
+			err := operation.client.Namespace(operation.desired.GetNamespace()).Delete(
+				context.TODO(),
+				operation.desired.GetName(),
+				metav1.DeleteOptions{
+					Preconditions:     &metav1.Preconditions{UID: &uid},
+					PropagationPolicy: &propagation,
+				},
+			)
+			if err != nil {
+				if apierrors.IsNotFound(err) {
+					// Swallow the error since there's no point retrying if the child is gone.
+					logging.Logger.Info("Failed to delete child, child object has been deleted", "parent", operation.parent, "child", operation.desired)
+				} else {
+					return err
+				}
+			}
+
+			return nil // skip the rest of the function, since we'll recreate the object on the next sync
+		case v1alpha1.ChildUpdateInPlace, v1alpha1.ChildUpdateRollingInPlace:
+			// check if observed object hast last applied annotation
+			_, hasLastApplied := oldObj.GetAnnotations()[dynamicapply.LastAppliedAnnotation]
+			if hasLastApplied {
+				// if observed object has has last applied annotation we need to remove it
+				// from the remote object to avoid conflicts
+				annotationNameForJsonPatch := strings.ReplaceAll(strings.ReplaceAll(dynamicapply.LastAppliedAnnotation, "~", "~0"), "/", "~1")
+				patch := fmt.Sprintf(`[{"op": "remove", "path": "/metadata/annotations/%s"}]`, annotationNameForJsonPatch)
+				_, err := operation.client.Namespace(operation.desired.GetNamespace()).Patch(context.TODO(), operation.desired.GetName(), types.JSONPatchType, []byte(patch), metav1.PatchOptions{})
+				if err != nil {
+					if apierrors.IsNotFound(err) {
+						// Swallow the error since there's no point retrying if the child is gone.
+						logging.Logger.Info("Failed to remove last applied annotation, child object has been deleted", "parent", operation.parent, "child", operation.desired)
+					} else {
+						logging.Logger.Error(err, "Failed to remove last applied annotation from observed object", "parent", operation.parent, "child", operation.desired)
+						return err
+					}
+					return nil
+				}
+			}
+		default:
+			return fmt.Errorf("invalid update strategy for %v: unknown method %q", operation.client.Kind, method)
+		}
+	}
+
+	// create or update the object using server-side apply
+	patched, err := operation.client.Namespace(operation.desired.GetNamespace()).Patch(context.TODO(), operation.desired.GetName(), types.ApplyPatchType, data, metav1.PatchOptions{
+		FieldManager: operation.ssaOptions.FieldManager,
+		Force:        ptr.To(true),
+	})
+
+	if err != nil {
+		switch {
+		case apierrors.IsNotFound(err):
+			// Swallow the error since there's no point retrying if the child is gone.
+			logging.Logger.Info("Failed to apply server-side apply, child object has been deleted", "parent", operation.parent, "child", operation.desired)
+		case apierrors.IsConflict(err):
+			// it is possible that the object was modified after this sync was started, ignore conflict since we will reconcile again
+			logging.Logger.Info("Failed to apply server-side apply due to outdated resourceVersion", "parent", operation.parent, "child", operation.desired)
+		default:
+			logging.Logger.Error(err, "Failed to apply server-side apply", "parent", operation.parent, "child", operation.desired)
+			return err
+		}
+		return nil
+	}
+
+	cacheLock.Lock()
+	lastUpdatedCache[lastUpdateCacheName] = &lastUpdate{
+		hash:               hash,
+		resourcegeneration: patched.GetGeneration(),
+	}
+
+	logging.Logger.Info("Cache updated", "name", lastUpdateCacheName)
+
+	cacheLock.Unlock()
+	return nil
+}
+
+func updateChildrenWithDynamicApply(operation *ApplyOperations) error {
+	if oldObj := operation.observed; oldObj != nil {
+		// Update
+		newObj, err := ApplyUpdate(oldObj, operation.desired)
+		if err != nil {
+			return err
+		}
+
+		// Attempt an update, if the 3-way merge resulted in any changes.
+		if DeepEqual(newObj.UnstructuredContent(), oldObj.UnstructuredContent()) {
+			// Nothing changed.
+			return nil
+		}
+
+		if logging.Logger.V(5).Enabled() {
+			mergePatch, err := JsonMergePatch(oldObj, newObj)
+			if err != nil {
+				logging.Logger.V(5).Error(err, "Cannot create merge patch to visualize diff")
+			} else {
+				rawMergePatch := json.RawMessage(mergePatch)
+				logging.Logger.V(5).Info("Diff between observed and desired", "mergePatch", rawMergePatch)
+			}
+		}
+
+		// Leave it alone if it's pending deletion.
+		if oldObj.GetDeletionTimestamp() != nil {
+			logging.Logger.Info("Not updating", "parent", operation.parent, "child", operation.desired, "reason", "Pending deletion of child object")
+			return nil
+		}
+
+		// Check the update strategy for this child kind.
+		switch method := operation.updateStrategy.GetMethod(operation.client.Group, operation.client.Kind); method {
+		case v1alpha1.ChildUpdateOnDelete, "":
+			// This means we don't try to update anything unless it gets deleted
+			// by someone else (we won't delete it ourselves).
+			logging.Logger.V(5).Info("Not updating", "parent", operation.parent, "child", operation.desired, "reason", "OnDelete update strategy selected")
+			return nil
+		case v1alpha1.ChildUpdateRecreate, v1alpha1.ChildUpdateRollingRecreate:
+			// Delete the object (now) and recreate it (on the next sync).
+			logging.Logger.Info("Deleting for update", "parent", operation.parent, "child", operation.desired, "reason", "Recreate update strategy selected")
+			uid := oldObj.GetUID()
+			// Explicitly request deletion propagation, which is what users expect,
+			// since some objects default to orphaning for backwards compatibility.
+			propagation := metav1.DeletePropagationBackground
+			err := operation.client.Namespace(operation.desired.GetNamespace()).Delete(
+				context.TODO(),
+				operation.desired.GetName(),
+				metav1.DeleteOptions{
+					Preconditions:     &metav1.Preconditions{UID: &uid},
+					PropagationPolicy: &propagation,
+				},
+			)
+			if err != nil {
+				if apierrors.IsNotFound(err) {
+					// Swallow the error since there's no point retrying if the child is gone.
+					logging.Logger.Info("Failed to delete child, child object has been deleted", "parent", operation.parent, "child", operation.desired)
+				} else {
+					return err
+				}
+				return nil
+			}
+		case v1alpha1.ChildUpdateInPlace, v1alpha1.ChildUpdateRollingInPlace:
+			// Update the object in-place.
+			logging.Logger.Info("Updating", "parent", operation.parent, "child", operation.desired, "reason", "InPlace update strategy selected")
+			if _, err := operation.client.Namespace(operation.desired.GetNamespace()).Update(context.TODO(), newObj, metav1.UpdateOptions{}); err != nil {
+				switch {
+				case apierrors.IsNotFound(err):
+					// Swallow the error since there's no point retrying if the child is gone.
+					logging.Logger.Info("Failed to update child, child object has been deleted", "parent", operation.parent, "child", operation.desired)
+				case apierrors.IsConflict(err):
+					// it is possible that the object was modified after this sync was started, ignore conflict since we will reconcile again
+					logging.Logger.Info("Failed to update child due to outdated resourceVersion", "parent", operation.parent, "child", operation.desired)
+				default:
+					return err
+				}
+				return nil
+			}
+		default:
+			return fmt.Errorf("invalid update strategy for %v: unknown method %q", operation.client.Kind, method)
+
+		}
+	} else {
+		// Create
+		logging.Logger.Info("Creating", "parent", operation.parent, "child", operation.desired)
+
+		// The controller should return a partial object containing only the
+		// fields it cares about. We save this partial object so we can do
+		// a 3-way merge upon update, in the style of "kubectl apply".
+		//
+		// Make sure this happens before we add anything else to the object.
+		if err := dynamicapply.SetLastApplied(operation.desired, operation.desired.UnstructuredContent()); err != nil {
+			return err
+		}
+
+		// We always claim everything we create.
+		controllerRef := MakeControllerRef(operation.parent)
+		ownerRefs := operation.desired.GetOwnerReferences()
+		ownerRefs = append(ownerRefs, *controllerRef)
+		operation.desired.SetOwnerReferences(ownerRefs)
+
+		if _, err := operation.client.Namespace(operation.desired.GetNamespace()).Create(context.TODO(), operation.desired, metav1.CreateOptions{}); err != nil {
+			if apierrors.IsAlreadyExists(err) {
+				// Swallow the error since there's no point retrying if the child already exists
+				logging.Logger.Info("Failed to create child, child object already exists", "parent", operation.parent, "child", operation.desired)
+			} else {
+				return err
+			}
+		}
+	}
+
+	return nil
 }
