@@ -338,35 +338,9 @@ func (h *ApplyHandler) updateChildrenWithServerSideApply(op *ApplyOperation) err
 		// Check the update strategy for this child kind.
 		switch method := op.updateStrategy.GetMethod(h.client.Group, h.client.Kind); method {
 		case v1alpha1.ChildUpdateOnDelete, "":
-			// This means we don't try to update anything unless it gets deleted
-			// by someone else (we won't delete it ourselves).
-			logging.Logger.V(5).Info("Not updating", "parent", op.parent, "child", op.desired, "reason", "OnDelete update strategy selected")
-			return nil
+			return h.childUpdateOnDelete(op, oldObj)
 		case v1alpha1.ChildUpdateRecreate, v1alpha1.ChildUpdateRollingRecreate:
-			// Delete the object (now) and recreate it (on the next sync).
-			logging.Logger.Info("Deleting for update", "parent", op.parent, "child", op.desired, "reason", "Recreate update strategy selected")
-			uid := oldObj.GetUID()
-			// Explicitly request deletion propagation, which is what users expect,
-			// since some objects default to orphaning for backwards compatibility.
-			propagation := metav1.DeletePropagationBackground
-			err := h.client.Namespace(op.desired.GetNamespace()).Delete(
-				context.TODO(),
-				op.desired.GetName(),
-				metav1.DeleteOptions{
-					Preconditions:     &metav1.Preconditions{UID: &uid},
-					PropagationPolicy: &propagation,
-				},
-			)
-			if err != nil {
-				if apierrors.IsNotFound(err) {
-					// Swallow the error since there's no point retrying if the child is gone.
-					logging.Logger.Info("Failed to delete child, child object has been deleted", "parent", op.parent, "child", op.desired)
-				} else {
-					return err
-				}
-			}
-
-			return nil // skip the rest of the function, since we'll recreate the object on the next sync
+			return h.childUpdateRecreate(op, oldObj)
 		case v1alpha1.ChildUpdateInPlace, v1alpha1.ChildUpdateRollingInPlace:
 			// check if observed object hast last applied annotation
 			_, hasLastApplied := oldObj.GetAnnotations()[dynamicapply.LastAppliedAnnotation]
@@ -422,6 +396,41 @@ func (h *ApplyHandler) updateChildrenWithServerSideApply(op *ApplyOperation) err
 	return nil
 }
 
+func (h *ApplyHandler) childUpdateRecreate(op *ApplyOperation, oldObj metav1.Object) error {
+	// Delete the object (now) and recreate it (on the next sync).
+	logging.Logger.Info("Deleting for update", "parent", op.parent, "child", op.desired, "reason", "Recreate update strategy selected")
+	uid := oldObj.GetUID()
+	// Explicitly request deletion propagation, which is what users expect,
+	// since some objects default to orphaning for backwards compatibility.
+	propagation := metav1.DeletePropagationBackground
+	err := h.client.Namespace(op.desired.GetNamespace()).Delete(
+		context.TODO(),
+		op.desired.GetName(),
+		metav1.DeleteOptions{
+			Preconditions:     &metav1.Preconditions{UID: &uid},
+			PropagationPolicy: &propagation,
+		},
+	)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			// Swallow the error since there's no point retrying if the child is gone.
+			logging.Logger.Info("Failed to delete child, child object has been deleted", "parent", op.parent, "child", op.desired)
+		} else {
+			return err
+		}
+		return nil
+	}
+
+	return nil
+}
+
+func (h *ApplyHandler) childUpdateOnDelete(op *ApplyOperation, oldObj metav1.Object) error {
+	// This means we don't try to update anything unless it gets deleted
+	// by someone else (we won't delete it ourselves).
+	logging.Logger.V(5).Info("Not updating", "parent", op.parent, "child", op.desired, "reason", "OnDelete update strategy selected")
+	return nil
+}
+
 func (h *ApplyHandler) updateChildrenWithDynamicApply(op *ApplyOperation) error {
 	if oldObj := op.observed; oldObj != nil {
 		// Update
@@ -455,34 +464,9 @@ func (h *ApplyHandler) updateChildrenWithDynamicApply(op *ApplyOperation) error 
 		// Check the update strategy for this child kind.
 		switch method := op.updateStrategy.GetMethod(h.client.Group, h.client.Kind); method {
 		case v1alpha1.ChildUpdateOnDelete, "":
-			// This means we don't try to update anything unless it gets deleted
-			// by someone else (we won't delete it ourselves).
-			logging.Logger.V(5).Info("Not updating", "parent", op.parent, "child", op.desired, "reason", "OnDelete update strategy selected")
-			return nil
+			return h.childUpdateOnDelete(op, oldObj)
 		case v1alpha1.ChildUpdateRecreate, v1alpha1.ChildUpdateRollingRecreate:
-			// Delete the object (now) and recreate it (on the next sync).
-			logging.Logger.Info("Deleting for update", "parent", op.parent, "child", op.desired, "reason", "Recreate update strategy selected")
-			uid := oldObj.GetUID()
-			// Explicitly request deletion propagation, which is what users expect,
-			// since some objects default to orphaning for backwards compatibility.
-			propagation := metav1.DeletePropagationBackground
-			err := h.client.Namespace(op.desired.GetNamespace()).Delete(
-				context.TODO(),
-				op.desired.GetName(),
-				metav1.DeleteOptions{
-					Preconditions:     &metav1.Preconditions{UID: &uid},
-					PropagationPolicy: &propagation,
-				},
-			)
-			if err != nil {
-				if apierrors.IsNotFound(err) {
-					// Swallow the error since there's no point retrying if the child is gone.
-					logging.Logger.Info("Failed to delete child, child object has been deleted", "parent", op.parent, "child", op.desired)
-				} else {
-					return err
-				}
-				return nil
-			}
+			return h.childUpdateRecreate(op, oldObj)
 		case v1alpha1.ChildUpdateInPlace, v1alpha1.ChildUpdateRollingInPlace:
 			// Update the object in-place.
 			logging.Logger.Info("Updating", "parent", op.parent, "child", op.desired, "reason", "InPlace update strategy selected")
@@ -497,37 +481,37 @@ func (h *ApplyHandler) updateChildrenWithDynamicApply(op *ApplyOperation) error 
 				default:
 					return err
 				}
-				return nil
 			}
+			return nil // end of InPlace update case
 		default:
 			return fmt.Errorf("invalid update strategy for %v: unknown method %q", h.client.Kind, method)
 		}
-	} else {
-		// Create
-		logging.Logger.Info("Creating", "parent", op.parent, "child", op.desired)
+	}
 
-		// The controller should return a partial object containing only the
-		// fields it cares about. We save this partial object so we can do
-		// a 3-way merge upon update, in the style of "kubectl apply".
-		//
-		// Make sure this happens before we add anything else to the object.
-		if err := dynamicapply.SetLastApplied(op.desired, op.desired.UnstructuredContent()); err != nil {
+	// Create
+	logging.Logger.Info("Creating", "parent", op.parent, "child", op.desired)
+
+	// The controller should return a partial object containing only the
+	// fields it cares about. We save this partial object so we can do
+	// a 3-way merge upon update, in the style of "kubectl apply".
+	//
+	// Make sure this happens before we add anything else to the object.
+	if err := dynamicapply.SetLastApplied(op.desired, op.desired.UnstructuredContent()); err != nil {
+		return err
+	}
+
+	// We always claim everything we create.
+	controllerRef := MakeControllerRef(op.parent)
+	ownerRefs := op.desired.GetOwnerReferences()
+	ownerRefs = append(ownerRefs, *controllerRef)
+	op.desired.SetOwnerReferences(ownerRefs)
+
+	if _, err := h.client.Namespace(op.desired.GetNamespace()).Create(context.TODO(), op.desired, metav1.CreateOptions{}); err != nil {
+		if apierrors.IsAlreadyExists(err) {
+			// Swallow the error since there's no point retrying if the child already exists
+			logging.Logger.Info("Failed to create child, child object already exists", "parent", op.parent, "child", op.desired)
+		} else {
 			return err
-		}
-
-		// We always claim everything we create.
-		controllerRef := MakeControllerRef(op.parent)
-		ownerRefs := op.desired.GetOwnerReferences()
-		ownerRefs = append(ownerRefs, *controllerRef)
-		op.desired.SetOwnerReferences(ownerRefs)
-
-		if _, err := h.client.Namespace(op.desired.GetNamespace()).Create(context.TODO(), op.desired, metav1.CreateOptions{}); err != nil {
-			if apierrors.IsAlreadyExists(err) {
-				// Swallow the error since there's no point retrying if the child already exists
-				logging.Logger.Info("Failed to create child, child object already exists", "parent", op.parent, "child", op.desired)
-			} else {
-				return err
-			}
 		}
 	}
 
