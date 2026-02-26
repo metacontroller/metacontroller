@@ -242,11 +242,10 @@ type ApplyOperation struct {
 
 type baseApply struct {
 	client *dynamicclientset.ResourceClient
-	ctx    context.Context
 }
 
 type Applier interface {
-	Apply(operation *ApplyOperation) error
+	Apply(ctx context.Context, operation *ApplyOperation) error
 }
 
 type ServerSideApply struct {
@@ -260,14 +259,14 @@ type DynamicApply struct {
 
 func NewApplier(client *dynamicclientset.ResourceClient, ssaOptions *ApplyOptions) (Applier, error) {
 	switch ssaOptions.Strategy {
-	case ApplyStrategyServerSideApply, "":
-		return &ServerSideApply{
-			baseApply:  &baseApply{client: client, ctx: context.TODO()},
-			ssaOptions: ssaOptions,
-		}, nil
-	case ApplyStrategyDynamicApply:
+	case ApplyStrategyDynamicApply, "":
 		return &DynamicApply{
-			baseApply: &baseApply{client: client, ctx: context.TODO()},
+			baseApply: &baseApply{client: client},
+		}, nil
+	case ApplyStrategyServerSideApply:
+		return &ServerSideApply{
+			baseApply:  &baseApply{client: client},
+			ssaOptions: ssaOptions,
 		}, nil
 	default:
 		return nil, fmt.Errorf("invalid apply strategy: unknown strategy %q", ssaOptions.Strategy)
@@ -282,6 +281,8 @@ func updateChildren(client *dynamicclientset.ResourceClient, updateStrategy Chil
 		return err
 	}
 
+	ctx := context.TODO()
+
 	for name, obj := range desired {
 		operation := &ApplyOperation{
 			updateStrategy: updateStrategy,
@@ -290,14 +291,14 @@ func updateChildren(client *dynamicclientset.ResourceClient, updateStrategy Chil
 			desired:        obj,
 		}
 
-		if err := applier.Apply(operation); err != nil {
+		if err := applier.Apply(ctx, operation); err != nil {
 			errs = append(errs, err)
 		}
 	}
 	return utilerrors.NewAggregate(errs)
 }
 
-func (h *ServerSideApply) Apply(op *ApplyOperation) error {
+func (h *ServerSideApply) Apply(ctx context.Context, op *ApplyOperation) error {
 	h.claimOwnership(op)
 
 	// Remove metadata fields that are known to be read-only, system fields,
@@ -343,9 +344,9 @@ func (h *ServerSideApply) Apply(op *ApplyOperation) error {
 		// Check the update strategy for this child kind.
 		switch method := op.updateStrategy.GetMethod(h.client.Group, h.client.Kind); method {
 		case v1alpha1.ChildUpdateOnDelete, "":
-			return h.childUpdateOnDelete(op)
+			return h.childUpdateOnDelete(ctx, op)
 		case v1alpha1.ChildUpdateRecreate, v1alpha1.ChildUpdateRollingRecreate:
-			return h.childUpdateRecreate(op)
+			return h.childUpdateRecreate(ctx, op)
 		case v1alpha1.ChildUpdateInPlace, v1alpha1.ChildUpdateRollingInPlace:
 			// check if observed object hast last applied annotation
 			_, hasLastApplied := op.observed.GetAnnotations()[dynamicapply.LastAppliedAnnotation]
@@ -354,7 +355,7 @@ func (h *ServerSideApply) Apply(op *ApplyOperation) error {
 				// from the remote object to avoid conflicts
 				annotationNameForJsonPatch := strings.ReplaceAll(strings.ReplaceAll(dynamicapply.LastAppliedAnnotation, "~", "~0"), "/", "~1")
 				patch := fmt.Sprintf(`[{"op": "remove", "path": "/metadata/annotations/%s"}]`, annotationNameForJsonPatch)
-				_, err := h.client.Namespace(op.desired.GetNamespace()).Patch(h.ctx, op.desired.GetName(), types.JSONPatchType, []byte(patch), metav1.PatchOptions{})
+				_, err := h.client.Namespace(op.desired.GetNamespace()).Patch(ctx, op.desired.GetName(), types.JSONPatchType, []byte(patch), metav1.PatchOptions{})
 				if err != nil {
 					if apierrors.IsNotFound(err) {
 						// Swallow the error since there's no point retrying if the child is gone.
@@ -365,6 +366,7 @@ func (h *ServerSideApply) Apply(op *ApplyOperation) error {
 					}
 					return nil
 				}
+				// we intentionally fall through to the server-side apply below, which will update or create the object as needed
 			}
 		default:
 			return fmt.Errorf("invalid update strategy for %v: unknown method %q", h.client.Kind, method)
@@ -372,7 +374,7 @@ func (h *ServerSideApply) Apply(op *ApplyOperation) error {
 	}
 
 	// create or update the object using server-side apply
-	patched, err := h.client.Namespace(op.desired.GetNamespace()).Patch(h.ctx, op.desired.GetName(), types.ApplyPatchType, data, metav1.PatchOptions{
+	patched, err := h.client.Namespace(op.desired.GetNamespace()).Patch(ctx, op.desired.GetName(), types.ApplyPatchType, data, metav1.PatchOptions{
 		FieldManager: h.ssaOptions.FieldManager,
 		Force:        ptr.To(true),
 	})
@@ -390,14 +392,13 @@ func (h *ServerSideApply) Apply(op *ApplyOperation) error {
 	}
 
 	cacheLock.Lock()
+	defer cacheLock.Unlock()
 	lastUpdatedCache[lastUpdateCacheName] = &lastUpdate{
 		hash:               hash,
 		resourcegeneration: patched.GetGeneration(),
 	}
 
 	logging.Logger.Info("Cache updated", "name", lastUpdateCacheName)
-
-	cacheLock.Unlock()
 	return nil
 }
 
@@ -414,7 +415,7 @@ func (h *baseApply) claimOwnership(op *ApplyOperation) {
 	op.desired.SetOwnerReferences(ownerRefs)
 }
 
-func (h *baseApply) childUpdateRecreate(op *ApplyOperation) error {
+func (h *baseApply) childUpdateRecreate(ctx context.Context, op *ApplyOperation) error {
 	// Delete the object (now) and recreate it (on the next sync).
 	logging.Logger.Info("Deleting for update", "parent", op.parent, "child", op.desired, "reason", "Recreate update strategy selected")
 	uid := op.observed.GetUID()
@@ -422,7 +423,7 @@ func (h *baseApply) childUpdateRecreate(op *ApplyOperation) error {
 	// since some objects default to orphaning for backwards compatibility.
 	propagation := metav1.DeletePropagationBackground
 	err := h.client.Namespace(op.desired.GetNamespace()).Delete(
-		h.ctx,
+		ctx,
 		op.desired.GetName(),
 		metav1.DeleteOptions{
 			Preconditions:     &metav1.Preconditions{UID: &uid},
@@ -442,14 +443,14 @@ func (h *baseApply) childUpdateRecreate(op *ApplyOperation) error {
 	return nil
 }
 
-func (h *baseApply) childUpdateOnDelete(op *ApplyOperation) error {
+func (h *baseApply) childUpdateOnDelete(ctx context.Context, op *ApplyOperation) error {
 	// This means we don't try to update anything unless it gets deleted
 	// by someone else (we won't delete it ourselves).
 	logging.Logger.V(5).Info("Not updating", "parent", op.parent, "child", op.desired, "reason", "OnDelete update strategy selected")
 	return nil
 }
 
-func (h *DynamicApply) Apply(op *ApplyOperation) error {
+func (h *DynamicApply) Apply(ctx context.Context, op *ApplyOperation) error {
 	if op.observed != nil {
 		// Update
 		newObj, err := ApplyUpdate(op.observed, op.desired)
@@ -482,13 +483,13 @@ func (h *DynamicApply) Apply(op *ApplyOperation) error {
 		// Check the update strategy for this child kind.
 		switch method := op.updateStrategy.GetMethod(h.client.Group, h.client.Kind); method {
 		case v1alpha1.ChildUpdateOnDelete, "":
-			return h.childUpdateOnDelete(op)
+			return h.childUpdateOnDelete(ctx, op)
 		case v1alpha1.ChildUpdateRecreate, v1alpha1.ChildUpdateRollingRecreate:
-			return h.childUpdateRecreate(op)
+			return h.childUpdateRecreate(ctx, op)
 		case v1alpha1.ChildUpdateInPlace, v1alpha1.ChildUpdateRollingInPlace:
 			// Update the object in-place.
 			logging.Logger.Info("Updating", "parent", op.parent, "child", op.desired, "reason", "InPlace update strategy selected")
-			if _, err := h.client.Namespace(op.desired.GetNamespace()).Update(h.ctx, newObj, metav1.UpdateOptions{}); err != nil {
+			if _, err := h.client.Namespace(op.desired.GetNamespace()).Update(ctx, newObj, metav1.UpdateOptions{}); err != nil {
 				switch {
 				case apierrors.IsNotFound(err):
 					// Swallow the error since there's no point retrying if the child is gone.
@@ -520,7 +521,7 @@ func (h *DynamicApply) Apply(op *ApplyOperation) error {
 
 	h.claimOwnership(op)
 
-	if _, err := h.client.Namespace(op.desired.GetNamespace()).Create(h.ctx, op.desired, metav1.CreateOptions{}); err != nil {
+	if _, err := h.client.Namespace(op.desired.GetNamespace()).Create(ctx, op.desired, metav1.CreateOptions{}); err != nil {
 		if apierrors.IsAlreadyExists(err) {
 			// Swallow the error since there's no point retrying if the child already exists
 			logging.Logger.Info("Failed to create child, child object already exists", "parent", op.parent, "child", op.desired)
