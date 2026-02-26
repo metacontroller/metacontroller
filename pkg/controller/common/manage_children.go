@@ -240,7 +240,7 @@ type ApplyOperation struct {
 	desired        *unstructured.Unstructured
 }
 
-type baseApplier struct {
+type baseApply struct {
 	client *dynamicclientset.ResourceClient
 }
 
@@ -248,25 +248,25 @@ type Applier interface {
 	Apply(operation *ApplyOperation) error
 }
 
-type ServerSideApplier struct {
-	*baseApplier
+type ServerSideApply struct {
+	*baseApply
 	ssaOptions *ApplyOptions
 }
 
-type DynamicApplier struct {
-	*baseApplier
+type DynamicApply struct {
+	*baseApply
 }
 
 func NewApplier(client *dynamicclientset.ResourceClient, ssaOptions *ApplyOptions) (Applier, error) {
 	switch ssaOptions.Strategy {
 	case ApplyStrategyServerSideApply, "":
-		return &ServerSideApplier{
-			baseApplier: &baseApplier{client: client},
+		return &ServerSideApply{
+			baseApply: &baseApply{client: client},
 			ssaOptions:  ssaOptions,
 		}, nil
 	case ApplyStrategyDynamicApply:
-		return &DynamicApplier{
-			baseApplier: &baseApplier{client: client},
+		return &DynamicApply{
+			baseApply: &baseApply{client: client},
 		}, nil
 	default:
 		return nil, fmt.Errorf("invalid apply strategy: unknown strategy %q", ssaOptions.Strategy)
@@ -296,7 +296,7 @@ func updateChildren(client *dynamicclientset.ResourceClient, updateStrategy Chil
 	return utilerrors.NewAggregate(errs)
 }
 
-func (h *ServerSideApplier) Apply(op *ApplyOperation) error {
+func (h *ServerSideApply) Apply(op *ApplyOperation) error {
 	// We always claim everything we create/update.
 	controllerRef := MakeControllerRef(op.parent)
 	ownerRefs := op.desired.GetOwnerReferences()
@@ -413,7 +413,7 @@ func (h *ServerSideApplier) Apply(op *ApplyOperation) error {
 	return nil
 }
 
-func (h *baseApplier) childUpdateRecreate(op *ApplyOperation, oldObj metav1.Object) error {
+func (h *baseApply) childUpdateRecreate(op *ApplyOperation, oldObj metav1.Object) error {
 	// Delete the object (now) and recreate it (on the next sync).
 	logging.Logger.Info("Deleting for update", "parent", op.parent, "child", op.desired, "reason", "Recreate update strategy selected")
 	uid := oldObj.GetUID()
@@ -441,14 +441,14 @@ func (h *baseApplier) childUpdateRecreate(op *ApplyOperation, oldObj metav1.Obje
 	return nil
 }
 
-func (h *baseApplier) childUpdateOnDelete(op *ApplyOperation) error {
+func (h *baseApply) childUpdateOnDelete(op *ApplyOperation) error {
 	// This means we don't try to update anything unless it gets deleted
 	// by someone else (we won't delete it ourselves).
 	logging.Logger.V(5).Info("Not updating", "parent", op.parent, "child", op.desired, "reason", "OnDelete update strategy selected")
 	return nil
 }
 
-func (h *DynamicApplier) Apply(op *ApplyOperation) error {
+func (h *DynamicApply) Apply(op *ApplyOperation) error {
 	if oldObj := op.observed; oldObj != nil {
 		// Update
 		newObj, err := ApplyUpdate(oldObj, op.desired)
