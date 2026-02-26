@@ -242,6 +242,7 @@ type ApplyOperation struct {
 
 type baseApply struct {
 	client *dynamicclientset.ResourceClient
+	ctx    context.Context
 }
 
 type Applier interface {
@@ -261,12 +262,12 @@ func NewApplier(client *dynamicclientset.ResourceClient, ssaOptions *ApplyOption
 	switch ssaOptions.Strategy {
 	case ApplyStrategyServerSideApply, "":
 		return &ServerSideApply{
-			baseApply: &baseApply{client: client},
-			ssaOptions:  ssaOptions,
+			baseApply:  &baseApply{client: client, ctx: context.TODO()},
+			ssaOptions: ssaOptions,
 		}, nil
 	case ApplyStrategyDynamicApply:
 		return &DynamicApply{
-			baseApply: &baseApply{client: client},
+			baseApply: &baseApply{client: client, ctx: context.TODO()},
 		}, nil
 	default:
 		return nil, fmt.Errorf("invalid apply strategy: unknown strategy %q", ssaOptions.Strategy)
@@ -297,20 +298,7 @@ func updateChildren(client *dynamicclientset.ResourceClient, updateStrategy Chil
 }
 
 func (h *ServerSideApply) Apply(op *ApplyOperation) error {
-	// We always claim everything we create/update.
-	controllerRef := MakeControllerRef(op.parent)
-	ownerRefs := op.desired.GetOwnerReferences()
-	hasControllerRef := false
-	for _, ref := range ownerRefs {
-		if ref.UID == controllerRef.UID {
-			hasControllerRef = true
-			break
-		}
-	}
-	if !hasControllerRef {
-		ownerRefs = append(ownerRefs, *controllerRef)
-		op.desired.SetOwnerReferences(ownerRefs)
-	}
+	h.claimOwnership(op)
 
 	// Remove metadata fields that are known to be read-only, system fields,
 	// so that they don't cause cache misses or SSA conflicts.
@@ -331,8 +319,8 @@ func (h *ServerSideApply) Apply(op *ApplyOperation) error {
 
 	hash := xxhash.Sum64(data)
 	lastUpdateCacheName := lastUpdateCacheKey(h.client, op.desired)
-	if oldObj := op.observed; oldObj != nil {
-		if oldObj.GetDeletionTimestamp() != nil {
+	if op.observed != nil {
+		if op.observed.GetDeletionTimestamp() != nil {
 			logging.Logger.Info("Not updating", "parent", op.parent, "child", op.desired, "reason", "Pending deletion of child object")
 			return nil
 		}
@@ -341,7 +329,7 @@ func (h *ServerSideApply) Apply(op *ApplyOperation) error {
 		lastUpdated, ok := lastUpdatedCache[lastUpdateCacheName]
 		cacheLock.RUnlock()
 
-		if ok && lastUpdated.hash == hash && lastUpdated.resourcegeneration == oldObj.GetGeneration() {
+		if ok && lastUpdated.hash == hash && lastUpdated.resourcegeneration == op.observed.GetGeneration() {
 			logging.Logger.Info("Skipping update, no changes detected", "name", lastUpdateCacheName)
 			return nil
 		}
@@ -357,16 +345,16 @@ func (h *ServerSideApply) Apply(op *ApplyOperation) error {
 		case v1alpha1.ChildUpdateOnDelete, "":
 			return h.childUpdateOnDelete(op)
 		case v1alpha1.ChildUpdateRecreate, v1alpha1.ChildUpdateRollingRecreate:
-			return h.childUpdateRecreate(op, oldObj)
+			return h.childUpdateRecreate(op)
 		case v1alpha1.ChildUpdateInPlace, v1alpha1.ChildUpdateRollingInPlace:
 			// check if observed object hast last applied annotation
-			_, hasLastApplied := oldObj.GetAnnotations()[dynamicapply.LastAppliedAnnotation]
+			_, hasLastApplied := op.observed.GetAnnotations()[dynamicapply.LastAppliedAnnotation]
 			if hasLastApplied {
 				// if observed object has has last applied annotation we need to remove it
 				// from the remote object to avoid conflicts
 				annotationNameForJsonPatch := strings.ReplaceAll(strings.ReplaceAll(dynamicapply.LastAppliedAnnotation, "~", "~0"), "/", "~1")
 				patch := fmt.Sprintf(`[{"op": "remove", "path": "/metadata/annotations/%s"}]`, annotationNameForJsonPatch)
-				_, err := h.client.Namespace(op.desired.GetNamespace()).Patch(context.TODO(), op.desired.GetName(), types.JSONPatchType, []byte(patch), metav1.PatchOptions{})
+				_, err := h.client.Namespace(op.desired.GetNamespace()).Patch(h.ctx, op.desired.GetName(), types.JSONPatchType, []byte(patch), metav1.PatchOptions{})
 				if err != nil {
 					if apierrors.IsNotFound(err) {
 						// Swallow the error since there's no point retrying if the child is gone.
@@ -384,7 +372,7 @@ func (h *ServerSideApply) Apply(op *ApplyOperation) error {
 	}
 
 	// create or update the object using server-side apply
-	patched, err := h.client.Namespace(op.desired.GetNamespace()).Patch(context.TODO(), op.desired.GetName(), types.ApplyPatchType, data, metav1.PatchOptions{
+	patched, err := h.client.Namespace(op.desired.GetNamespace()).Patch(h.ctx, op.desired.GetName(), types.ApplyPatchType, data, metav1.PatchOptions{
 		FieldManager: h.ssaOptions.FieldManager,
 		Force:        ptr.To(true),
 	})
@@ -413,15 +401,28 @@ func (h *ServerSideApply) Apply(op *ApplyOperation) error {
 	return nil
 }
 
-func (h *baseApply) childUpdateRecreate(op *ApplyOperation, oldObj metav1.Object) error {
+func (h *baseApply) claimOwnership(op *ApplyOperation) {
+	// We always claim everything we create or update.
+	controllerRef := MakeControllerRef(op.parent)
+	ownerRefs := op.desired.GetOwnerReferences()
+	for _, ref := range ownerRefs {
+		if ref.UID == controllerRef.UID {
+			return // already owned
+		}
+	}
+	ownerRefs = append(ownerRefs, *controllerRef)
+	op.desired.SetOwnerReferences(ownerRefs)
+}
+
+func (h *baseApply) childUpdateRecreate(op *ApplyOperation) error {
 	// Delete the object (now) and recreate it (on the next sync).
 	logging.Logger.Info("Deleting for update", "parent", op.parent, "child", op.desired, "reason", "Recreate update strategy selected")
-	uid := oldObj.GetUID()
+	uid := op.observed.GetUID()
 	// Explicitly request deletion propagation, which is what users expect,
 	// since some objects default to orphaning for backwards compatibility.
 	propagation := metav1.DeletePropagationBackground
 	err := h.client.Namespace(op.desired.GetNamespace()).Delete(
-		context.TODO(),
+		h.ctx,
 		op.desired.GetName(),
 		metav1.DeleteOptions{
 			Preconditions:     &metav1.Preconditions{UID: &uid},
@@ -449,21 +450,21 @@ func (h *baseApply) childUpdateOnDelete(op *ApplyOperation) error {
 }
 
 func (h *DynamicApply) Apply(op *ApplyOperation) error {
-	if oldObj := op.observed; oldObj != nil {
+	if op.observed != nil {
 		// Update
-		newObj, err := ApplyUpdate(oldObj, op.desired)
+		newObj, err := ApplyUpdate(op.observed, op.desired)
 		if err != nil {
 			return err
 		}
 
 		// Attempt an update, if the 3-way merge resulted in any changes.
-		if DeepEqual(newObj.UnstructuredContent(), oldObj.UnstructuredContent()) {
+		if DeepEqual(newObj.UnstructuredContent(), op.observed.UnstructuredContent()) {
 			// Nothing changed.
 			return nil
 		}
 
 		if logging.Logger.V(5).Enabled() {
-			mergePatch, err := JsonMergePatch(oldObj, newObj)
+			mergePatch, err := JsonMergePatch(op.observed, newObj)
 			if err != nil {
 				logging.Logger.V(5).Error(err, "Cannot create merge patch to visualize diff")
 			} else {
@@ -473,7 +474,7 @@ func (h *DynamicApply) Apply(op *ApplyOperation) error {
 		}
 
 		// Leave it alone if it's pending deletion.
-		if oldObj.GetDeletionTimestamp() != nil {
+		if op.observed.GetDeletionTimestamp() != nil {
 			logging.Logger.Info("Not updating", "parent", op.parent, "child", op.desired, "reason", "Pending deletion of child object")
 			return nil
 		}
@@ -483,11 +484,11 @@ func (h *DynamicApply) Apply(op *ApplyOperation) error {
 		case v1alpha1.ChildUpdateOnDelete, "":
 			return h.childUpdateOnDelete(op)
 		case v1alpha1.ChildUpdateRecreate, v1alpha1.ChildUpdateRollingRecreate:
-			return h.childUpdateRecreate(op, oldObj)
+			return h.childUpdateRecreate(op)
 		case v1alpha1.ChildUpdateInPlace, v1alpha1.ChildUpdateRollingInPlace:
 			// Update the object in-place.
 			logging.Logger.Info("Updating", "parent", op.parent, "child", op.desired, "reason", "InPlace update strategy selected")
-			if _, err := h.client.Namespace(op.desired.GetNamespace()).Update(context.TODO(), newObj, metav1.UpdateOptions{}); err != nil {
+			if _, err := h.client.Namespace(op.desired.GetNamespace()).Update(h.ctx, newObj, metav1.UpdateOptions{}); err != nil {
 				switch {
 				case apierrors.IsNotFound(err):
 					// Swallow the error since there's no point retrying if the child is gone.
@@ -517,13 +518,9 @@ func (h *DynamicApply) Apply(op *ApplyOperation) error {
 		return err
 	}
 
-	// We always claim everything we create.
-	controllerRef := MakeControllerRef(op.parent)
-	ownerRefs := op.desired.GetOwnerReferences()
-	ownerRefs = append(ownerRefs, *controllerRef)
-	op.desired.SetOwnerReferences(ownerRefs)
+	h.claimOwnership(op)
 
-	if _, err := h.client.Namespace(op.desired.GetNamespace()).Create(context.TODO(), op.desired, metav1.CreateOptions{}); err != nil {
+	if _, err := h.client.Namespace(op.desired.GetNamespace()).Create(h.ctx, op.desired, metav1.CreateOptions{}); err != nil {
 		if apierrors.IsAlreadyExists(err) {
 			// Swallow the error since there's no point retrying if the child already exists
 			logging.Logger.Info("Failed to create child, child object already exists", "parent", op.parent, "child", op.desired)
