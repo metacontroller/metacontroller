@@ -27,8 +27,11 @@ and build all of Kubernetes into our test binary.
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/pem"
 	"fmt"
-	"io/ioutil"
 	"metacontroller/pkg/logging"
 	"os"
 	"os/exec"
@@ -37,62 +40,101 @@ import (
 
 	"k8s.io/client-go/rest"
 )
-
-var apiserverURL = ""
-
-const installApiserver = `
-Cannot find kube-apiserver, cannot run integration tests
-
-Please download kube-apiserver and ensure it is somewhere in the PATH.
-See hack/get-kube-binaries.sh
-
-`
-
-// getApiserverPath returns a path to a kube-apiserver executable.
-func getApiserverPath() (string, error) {
+ 
+ var apiserverURL = ""
+ var saKeyPath = ""
+ 
+ const installApiserver = `
+ Cannot find kube-apiserver, cannot run integration tests
+ 
+ See hack/get-kube-binaries.sh
+ 
+ `
+ 
+ // SAKeyPath returns the path to the service account key.
+ func SAKeyPath() string {
+	return saKeyPath
+ }
+ 
+ // getApiserverPath returns a path to a kube-apiserver executable.
+ func getApiserverPath() (string, error) {
 	return exec.LookPath(filepath.Join(binariesPath, "kube-apiserver"))
-}
-
-// startApiserver executes a kube-apiserver instance.
-// The returned function will signal the process and wait for it to exit.
-func startApiserver() (func(), error) {
+ }
+ 
+ func generateSAKey(keyPath string) error {
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		return err
+	}
+ 
+	keyOut, err := os.OpenFile(keyPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+	if err != nil {
+		return err
+	}
+	defer keyOut.Close()
+ 
+	if err := pem.Encode(keyOut, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(key)}); err != nil {
+		return err
+	}
+ 
+	return nil
+ }
+ 
+ func createTokenFile(tokenPath string) error {
+	content := "admin-token,admin,admin,system:masters\n"
+	return os.WriteFile(tokenPath, []byte(content), 0644)
+ }
+ 
+ // startApiserver executes a kube-apiserver instance.
+ // The returned function will signal the process and wait for it to exit.
+ func startApiserver() (func(), error) {
 	apiserverPath, err := getApiserverPath()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, installApiserver)
 		return nil, fmt.Errorf("could not find kube-apiserver in PATH: %v", err)
 	}
-	apiserverInsecurePort, err := getAvailablePort()
-	if err != nil {
-		return nil, fmt.Errorf("could not get a insecure port: %v", err)
-	}
 	apiserverSecurePort, err := getAvailablePort()
 	if err != nil {
 		return nil, fmt.Errorf("could not get a secure port: %v", err)
 	}
-	apiserverURL = fmt.Sprintf("http://127.0.0.1:%d", apiserverInsecurePort)
+	apiserverURL = fmt.Sprintf("https://127.0.0.1:%d", apiserverSecurePort)
 	logging.Logger.Info("Starting kube-apiserver", "url", apiserverURL)
-
-	apiserverDataDir, err := ioutil.TempDir(os.TempDir(), "integration_test_apiserver_data")
+ 
+	apiserverDataDir, err := os.MkdirTemp(os.TempDir(), "integration_test_apiserver_data")
 	if err != nil {
 		return nil, fmt.Errorf("unable to make temp kube-apiserver data dir: %v", err)
 	}
 	logging.Logger.Info("Storing kube-apiserver data", "data_directory", apiserverDataDir)
+
+	saKeyPath = filepath.Join(apiserverDataDir, "sa.key")
+	if err := generateSAKey(saKeyPath); err != nil {
+		return nil, fmt.Errorf("unable to generate service account key: %v", err)
+	}
+
+	tokenPath := filepath.Join(apiserverDataDir, "tokens.csv")
+	if err := createTokenFile(tokenPath); err != nil {
+		return nil, fmt.Errorf("unable to create token file: %v", err)
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cmd := exec.CommandContext(
 		ctx,
 		apiserverPath,
 		"--cert-dir", apiserverDataDir,
-		"--insecure-port", strconv.Itoa(apiserverInsecurePort),
 		"--secure-port", strconv.Itoa(apiserverSecurePort),
 		"--etcd-servers", etcdURL,
-		"--external-hostname", apiserverURL,
+		"--external-hostname", "localhost",
+		"--service-account-issuer", "https://kubernetes.default.svc.cluster.local",
+		"--service-account-key-file", saKeyPath,
+		"--service-account-signing-key-file", saKeyPath,
+		"--token-auth-file", tokenPath,
+		"--authorization-mode", "AlwaysAllow",
 	)
 
 	// Uncomment these to see kube-apiserver output in test logs.
 	// For Metacontroller tests, we generally don't expect problems at this level.
-	// cmd.Stdout = os.Stdout
-	// cmd.Stderr = os.Stderr
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
 
 	stop := func() {
 		cancel()
@@ -119,5 +161,9 @@ func ApiserverURL() string {
 func ApiserverConfig() *rest.Config {
 	return &rest.Config{
 		Host: ApiserverURL(),
+		TLSClientConfig: rest.TLSClientConfig{
+			Insecure: true,
+		},
+		BearerToken: "admin-token",
 	}
 }

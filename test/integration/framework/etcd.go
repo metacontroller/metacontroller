@@ -22,15 +22,14 @@ package framework
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"metacontroller/pkg/logging"
 	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
 )
-
-var etcdURL = ""
+ 
+ var etcdURL = ""
 
 const installEtcd = `
 Cannot find etcd, cannot run integration tests
@@ -72,7 +71,7 @@ func startEtcd() (func(), error) {
 	etcdURL = fmt.Sprintf("http://127.0.0.1:%d", etcdPort)
 	logging.Logger.Info("Starting etcd", "url", etcdURL)
 
-	etcdDataDir, err := ioutil.TempDir(os.TempDir(), "integration_test_etcd_data")
+	etcdDataDir, err := os.MkdirTemp(os.TempDir(), "integration_test_etcd_data")
 	if err != nil {
 		return nil, fmt.Errorf("unable to make temp etcd data dir: %v", err)
 	}

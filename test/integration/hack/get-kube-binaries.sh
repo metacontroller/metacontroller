@@ -12,12 +12,12 @@ set -u
 PWD="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
 # This is the kube-apiserver version to test against.
-KUBE_VERSION="${KUBE_VERSION:-v1.17.17}"
+KUBE_VERSION="${KUBE_VERSION:-v1.33.1}"
 KUBERNETES_RELEASE_URL="${KUBERNETES_RELEASE_URL:-https://dl.k8s.io}"
 
 # This should be the etcd version downloaded by kubernetes/hack/lib/etcd.sh
 # as of the above Kubernetes version.
-ETCD_VERSION="${ETCD_VERSION:-v3.4.3}"
+ETCD_VERSION="${ETCD_VERSION:-v3.5.21}"
 
 cd "${PWD}"
 
@@ -44,6 +44,16 @@ if [[ -f ./kube-apiserver ]] && ./kube-apiserver --version; then
 else
     wget -nv "${KUBERNETES_RELEASE_URL}/${KUBE_VERSION}/bin/linux/amd64/kube-apiserver"
     chmod +x kube-apiserver
+fi
+
+# Download kube-controller-manager if not found
+if [[ -f ./kube-controller-manager ]] && ./kube-controller-manager --version; then
+    echo ""
+    echo "+++ Above kube-controller-manager was installed previously"
+    echo ""
+else
+    wget -nv "${KUBERNETES_RELEASE_URL}/${KUBE_VERSION}/bin/linux/amd64/kube-controller-manager"
+    chmod +x kube-controller-manager
 fi
 
 # Download etcd if not found

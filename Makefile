@@ -37,6 +37,7 @@ integration-test: test-setup
 .PHONY: test-setup
 test-setup:
 	./test/integration/hack/setup.sh; \
+	./test/integration/hack/get-kube-binaries.sh; \
 	mkdir -p ./test/integration/hack/tmp; \
 
 .PHONY: image

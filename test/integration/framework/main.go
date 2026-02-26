@@ -114,6 +114,12 @@ func testMain(tests func() int, configuration options.Configuration) error {
 	}
 	defer stopApiserver()
 
+	stopControllerManager, err := startControllerManager()
+	if err != nil {
+		return fmt.Errorf("cannot run integration tests: unable to start kube-controller-manager: %v", err)
+	}
+	defer stopControllerManager()
+
 	logging.Logger.Info("Waiting for kube-apiserver to be ready...")
 	start := time.Now()
 	for {
@@ -142,9 +148,9 @@ func testMain(tests func() int, configuration options.Configuration) error {
 	if err := execKubectl("apply", "-f", path.Join(manifestDir, "metacontroller-crds-v1.yaml")); err != nil {
 		return fmt.Errorf("cannot install metacontroller CRDs: %v", err)
 	}
-
-	// Wait for CRDs to be created
-	if err := execKubectl("wait", "--for=condition=Established", "crd", "compositecontrollers.metacontroller.k8s.io"); err != nil {
+ 
+ 	// Wait for CRDs to be created
+ 	if err := execKubectl("wait", "--for=condition=Established", "crd", "compositecontrollers.metacontroller.k8s.io"); err != nil {
 		return fmt.Errorf("cannot install metacontroller CRDs: %v", err)
 	}
 	if err := execKubectl("wait", "--for=condition=Established", "crd", "decoratorcontrollers.metacontroller.k8s.io"); err != nil {
@@ -192,7 +198,7 @@ func execKubectl(args ...string) error {
 	if err != nil {
 		return fmt.Errorf("cannot exec kubectl: %v", err)
 	}
-	cmdline := append([]string{"--server", ApiserverURL()}, args...)
+	cmdline := append([]string{"--server", ApiserverURL(), "--insecure-skip-tls-verify", "--token", "admin-token"}, args...)
 	logging.Logger.Info("Executing command", "command", execPath, "arguments", cmdline)
 	cmd := exec.Command(execPath, cmdline...)
 	out, err := cmd.CombinedOutput()
