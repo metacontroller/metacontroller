@@ -289,6 +289,18 @@ func updateChildrenWithServerSideApply(operation *ApplyOperations) error {
 		operation.desired.SetOwnerReferences(ownerRefs)
 	}
 
+	// Remove metadata fields that are known to be read-only, system fields,
+	// so that they don't cause cache misses or SSA conflicts.
+	for _, fieldName := range objectMetaSystemFields {
+		unstructured.RemoveNestedField(operation.desired.Object, "metadata", fieldName)
+	}
+	// Remove status because we don't currently support a parent changing status of
+	// its children.
+	unstructured.RemoveNestedField(operation.desired.Object, "status")
+
+	// prevent setting last applied values in the new object
+	nullifyLastAppliedAnnotation(operation.desired)
+
 	data, err := json.Marshal(operation.desired)
 	if err != nil {
 		return err
