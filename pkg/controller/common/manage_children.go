@@ -240,28 +240,45 @@ type ApplyOperation struct {
 	desired        *unstructured.Unstructured
 }
 
-type ApplyHandler struct {
-	client     *dynamicclientset.ResourceClient
+type baseApplier struct {
+	client *dynamicclientset.ResourceClient
+}
+
+type Applier interface {
+	Apply(operation *ApplyOperation) error
+}
+
+type ServerSideApplier struct {
+	*baseApplier
 	ssaOptions *ApplyOptions
 }
 
-func (h *ApplyHandler) Handle(operation *ApplyOperation) error {
-	switch h.ssaOptions.Strategy {
+type DynamicApplier struct {
+	*baseApplier
+}
+
+func NewApplier(client *dynamicclientset.ResourceClient, ssaOptions *ApplyOptions) (Applier, error) {
+	switch ssaOptions.Strategy {
 	case ApplyStrategyServerSideApply, "":
-		return h.updateChildrenWithServerSideApply(operation)
+		return &ServerSideApplier{
+			baseApplier: &baseApplier{client: client},
+			ssaOptions:  ssaOptions,
+		}, nil
 	case ApplyStrategyDynamicApply:
-		return h.updateChildrenWithDynamicApply(operation)
+		return &DynamicApplier{
+			baseApplier: &baseApplier{client: client},
+		}, nil
 	default:
-		return fmt.Errorf("invalid apply strategy: unknown strategy %q", h.ssaOptions.Strategy)
+		return nil, fmt.Errorf("invalid apply strategy: unknown strategy %q", ssaOptions.Strategy)
 	}
 }
 
 func updateChildren(client *dynamicclientset.ResourceClient, updateStrategy ChildUpdateStrategy, parent *unstructured.Unstructured, observed, desired map[string]*unstructured.Unstructured, ssaOptions *ApplyOptions) error {
 	var errs []error
 
-	handler := &ApplyHandler{
-		client:     client,
-		ssaOptions: ssaOptions,
+	applier, err := NewApplier(client, ssaOptions)
+	if err != nil {
+		return err
 	}
 
 	for name, obj := range desired {
@@ -272,14 +289,14 @@ func updateChildren(client *dynamicclientset.ResourceClient, updateStrategy Chil
 			desired:        obj,
 		}
 
-		if err := handler.Handle(operation); err != nil {
+		if err := applier.Apply(operation); err != nil {
 			errs = append(errs, err)
 		}
 	}
 	return utilerrors.NewAggregate(errs)
 }
 
-func (h *ApplyHandler) updateChildrenWithServerSideApply(op *ApplyOperation) error {
+func (h *ServerSideApplier) Apply(op *ApplyOperation) error {
 	// We always claim everything we create/update.
 	controllerRef := MakeControllerRef(op.parent)
 	ownerRefs := op.desired.GetOwnerReferences()
@@ -338,7 +355,7 @@ func (h *ApplyHandler) updateChildrenWithServerSideApply(op *ApplyOperation) err
 		// Check the update strategy for this child kind.
 		switch method := op.updateStrategy.GetMethod(h.client.Group, h.client.Kind); method {
 		case v1alpha1.ChildUpdateOnDelete, "":
-			return h.childUpdateOnDelete(op, oldObj)
+			return h.childUpdateOnDelete(op)
 		case v1alpha1.ChildUpdateRecreate, v1alpha1.ChildUpdateRollingRecreate:
 			return h.childUpdateRecreate(op, oldObj)
 		case v1alpha1.ChildUpdateInPlace, v1alpha1.ChildUpdateRollingInPlace:
@@ -396,7 +413,7 @@ func (h *ApplyHandler) updateChildrenWithServerSideApply(op *ApplyOperation) err
 	return nil
 }
 
-func (h *ApplyHandler) childUpdateRecreate(op *ApplyOperation, oldObj metav1.Object) error {
+func (h *baseApplier) childUpdateRecreate(op *ApplyOperation, oldObj metav1.Object) error {
 	// Delete the object (now) and recreate it (on the next sync).
 	logging.Logger.Info("Deleting for update", "parent", op.parent, "child", op.desired, "reason", "Recreate update strategy selected")
 	uid := oldObj.GetUID()
@@ -424,14 +441,14 @@ func (h *ApplyHandler) childUpdateRecreate(op *ApplyOperation, oldObj metav1.Obj
 	return nil
 }
 
-func (h *ApplyHandler) childUpdateOnDelete(op *ApplyOperation, oldObj metav1.Object) error {
+func (h *baseApplier) childUpdateOnDelete(op *ApplyOperation) error {
 	// This means we don't try to update anything unless it gets deleted
 	// by someone else (we won't delete it ourselves).
 	logging.Logger.V(5).Info("Not updating", "parent", op.parent, "child", op.desired, "reason", "OnDelete update strategy selected")
 	return nil
 }
 
-func (h *ApplyHandler) updateChildrenWithDynamicApply(op *ApplyOperation) error {
+func (h *DynamicApplier) Apply(op *ApplyOperation) error {
 	if oldObj := op.observed; oldObj != nil {
 		// Update
 		newObj, err := ApplyUpdate(oldObj, op.desired)
@@ -464,7 +481,7 @@ func (h *ApplyHandler) updateChildrenWithDynamicApply(op *ApplyOperation) error 
 		// Check the update strategy for this child kind.
 		switch method := op.updateStrategy.GetMethod(h.client.Group, h.client.Kind); method {
 		case v1alpha1.ChildUpdateOnDelete, "":
-			return h.childUpdateOnDelete(op, oldObj)
+			return h.childUpdateOnDelete(op)
 		case v1alpha1.ChildUpdateRecreate, v1alpha1.ChildUpdateRollingRecreate:
 			return h.childUpdateRecreate(op, oldObj)
 		case v1alpha1.ChildUpdateInPlace, v1alpha1.ChildUpdateRollingInPlace:
