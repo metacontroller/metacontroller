@@ -85,6 +85,7 @@ var objectMetaSystemFields = []string{
 	"creationTimestamp",
 	"deletionTimestamp",
 	"deletionGracePeriodSeconds",
+	"managedFields",
 }
 
 // revertObjectMetaSystemFields overwrites the read-only, system-populated
@@ -495,7 +496,6 @@ func updateChildrenWithDynamicApply(operation *ApplyOperations) error {
 			}
 		default:
 			return fmt.Errorf("invalid update strategy for %v: unknown method %q", operation.client.Kind, method)
-
 		}
 	} else {
 		// Create
