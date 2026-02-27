@@ -164,39 +164,55 @@ func (rm *Manager) getRelatedClient(apiVersion, resource string) (*dynamicclient
 	}
 	groupVersion, _ := schema.ParseGroupVersion(apiVersion)
 	gvr := groupVersion.WithResource(resource)
-	informer := rm.relatedInformers.Get(gvr)
-	if informer == nil {
-		rm.relatedInformersMu.Lock()
-		defer rm.relatedInformersMu.Unlock()
 
-		// Double-check after acquiring the lock
-		informer = rm.relatedInformers.Get(gvr)
-		if informer == nil {
-			informer, err = rm.dynInformers.Resource(apiVersion, resource)
+	informer, err := rm.getOrCreateRelatedInformer(apiVersion, resource, gvr)
+	if err != nil {
+		return nil, nil, err
+	}
 
-			if err != nil {
-				return nil, nil, fmt.Errorf("can't create informer for related resource: %w", err)
-			}
+	if rm.stopCh == nil {
+		return nil, nil, fmt.Errorf("customize Manager not started")
+	}
 
-			_, err := informer.Informer().AddEventHandler(clientgo_cache.ResourceEventHandlerFuncs{
-				AddFunc:    rm.onRelatedAdd,
-				UpdateFunc: rm.onRelatedUpdate,
-				DeleteFunc: rm.onRelatedDelete,
-			})
-
-			if err != nil {
-				return nil, nil, fmt.Errorf("can't create informer for related resource: %w", err)
-			}
-
-			if !clientgo_cache.WaitForNamedCacheSync(rm.name, rm.stopCh, informer.Informer().HasSynced) {
-				rm.logger.Info("related Manager - cache sync never finished", "name", rm.name)
-			}
-
-			rm.relatedInformers.Set(gvr, informer)
-		}
+	if !clientgo_cache.WaitForNamedCacheSync(rm.name, rm.stopCh, informer.Informer().HasSynced) {
+		rm.logger.Info("related Manager - cache sync never finished", "name", rm.name)
 	}
 
 	return client, informer, nil
+}
+
+func (rm *Manager) getOrCreateRelatedInformer(apiVersion, resource string, gvr schema.GroupVersionResource) (*dynamicinformer.ResourceInformer, error) {
+	informer := rm.relatedInformers.Get(gvr)
+	if informer != nil {
+		return informer, nil
+	}
+
+	rm.relatedInformersMu.Lock()
+	defer rm.relatedInformersMu.Unlock()
+
+	// Double-check after acquiring the lock
+	informer = rm.relatedInformers.Get(gvr)
+	if informer != nil {
+		return informer, nil
+	}
+
+	informer, err := rm.dynInformers.Resource(apiVersion, resource)
+	if err != nil {
+		return nil, fmt.Errorf("can't create informer for related resource: %w", err)
+	}
+
+	_, err = informer.Informer().AddEventHandler(clientgo_cache.ResourceEventHandlerFuncs{
+		AddFunc:    rm.onRelatedAdd,
+		UpdateFunc: rm.onRelatedUpdate,
+		DeleteFunc: rm.onRelatedDelete,
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("can't create informer for related resource: %w", err)
+	}
+
+	rm.relatedInformers.Set(gvr, informer)
+	return informer, nil
 }
 
 func (rm *Manager) onRelatedAdd(obj interface{}) {

@@ -209,6 +209,8 @@ func (c *decoratorController) Start() {
 	c.stopCh = make(chan struct{})
 	c.doneCh = make(chan struct{})
 
+	c.customize.Start(c.stopCh)
+
 	// Install event handlers. DecoratorControllers can be created at any time,
 	// so we have to assume the shared informers are already running. We can't
 	// add event handlers in newParentController() since c might be incomplete.
