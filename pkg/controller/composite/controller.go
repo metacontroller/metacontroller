@@ -124,7 +124,7 @@ func newParentController(
 	}
 
 	// Create informers for all child resources.
-	childInformers := &common.InformerMap{}
+	childInformers := common.NewInformerMap()
 	defer func() {
 		if newErr != nil {
 			// If newParentController fails, Close() any informers we created
@@ -149,9 +149,9 @@ func newParentController(
 
 	parentGroupVersion := schema.GroupVersion{Group: parentResource.Group, Version: parentResource.Version}
 
-	parentResources := &common.GroupKindMap{}
+	parentResources := common.NewGroupKindMap()
 	parentResources.Set(schema.GroupKind{Group: parentGroupVersion.Group, Kind: parentResource.Kind}, parentResource)
-	parentInformers := &common.InformerMap{}
+	parentInformers := common.NewInformerMap()
 	parentInformers.Set(parentGroupVersion.WithResource(parentResource.Name), parentInformer)
 	if cc.Spec.Hooks == nil {
 		return nil, fmt.Errorf("no hooks defined")

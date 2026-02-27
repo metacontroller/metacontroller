@@ -156,12 +156,21 @@ func ParseAPIVersion(apiVersion string) (group, version string) {
 	return parts[0], parts[1]
 }
 
+func NewGroupKindMap() *GroupKindMap {
+	return &GroupKindMap{
+		m: make(map[schema.GroupKind]*dynamicdiscovery.APIResource),
+	}
+}
+
 type GroupKindMap struct {
 	mu sync.RWMutex
 	m  map[schema.GroupKind]*dynamicdiscovery.APIResource
 }
 
 func (m *GroupKindMap) Set(gk schema.GroupKind, resource *dynamicdiscovery.APIResource) {
+	if m == nil {
+		return
+	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if m.m == nil {
@@ -171,6 +180,9 @@ func (m *GroupKindMap) Set(gk schema.GroupKind, resource *dynamicdiscovery.APIRe
 }
 
 func (m *GroupKindMap) Get(gk schema.GroupKind) *dynamicdiscovery.APIResource {
+	if m == nil {
+		return nil
+	}
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	if m.m == nil {
@@ -180,6 +192,9 @@ func (m *GroupKindMap) Get(gk schema.GroupKind) *dynamicdiscovery.APIResource {
 }
 
 func (m *GroupKindMap) Len() int {
+	if m == nil {
+		return 0
+	}
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	if m.m == nil {
@@ -189,6 +204,9 @@ func (m *GroupKindMap) Len() int {
 }
 
 func (m *GroupKindMap) Range(f func(gk schema.GroupKind, resource *dynamicdiscovery.APIResource)) {
+	if m == nil {
+		return
+	}
 	m.mu.RLock()
 	if m.m == nil {
 		m.mu.RUnlock()
@@ -205,12 +223,21 @@ func (m *GroupKindMap) Range(f func(gk schema.GroupKind, resource *dynamicdiscov
 	}
 }
 
+func NewInformerMap() *InformerMap {
+	return &InformerMap{
+		m: make(map[schema.GroupVersionResource]*dynamicinformer.ResourceInformer),
+	}
+}
+
 type InformerMap struct {
 	mu sync.RWMutex
 	m  map[schema.GroupVersionResource]*dynamicinformer.ResourceInformer
 }
 
 func (m *InformerMap) Set(gvr schema.GroupVersionResource, informer *dynamicinformer.ResourceInformer) {
+	if m == nil {
+		return
+	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if m.m == nil {
@@ -220,6 +247,9 @@ func (m *InformerMap) Set(gvr schema.GroupVersionResource, informer *dynamicinfo
 }
 
 func (m *InformerMap) Get(gvr schema.GroupVersionResource) *dynamicinformer.ResourceInformer {
+	if m == nil {
+		return nil
+	}
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	if m.m == nil {
@@ -229,6 +259,9 @@ func (m *InformerMap) Get(gvr schema.GroupVersionResource) *dynamicinformer.Reso
 }
 
 func (m *InformerMap) Len() int {
+	if m == nil {
+		return 0
+	}
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	if m.m == nil {
@@ -238,6 +271,9 @@ func (m *InformerMap) Len() int {
 }
 
 func (m *InformerMap) Range(f func(gvr schema.GroupVersionResource, informer *dynamicinformer.ResourceInformer)) {
+	if m == nil {
+		return
+	}
 	m.mu.RLock()
 	if m.m == nil {
 		m.mu.RUnlock()
