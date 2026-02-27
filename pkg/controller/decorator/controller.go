@@ -108,9 +108,9 @@ func newDecoratorController(resources *dynamicdiscovery.ResourceMap, dynClient *
 		dc:              dc,
 		resources:       resources,
 		dynClient:       dynClient,
-		parentKinds:     &common.GroupKindMap{},
-		parentInformers: &common.InformerMap{},
-		childInformers:  &common.InformerMap{},
+		parentKinds:     common.NewGroupKindMap(),
+		parentInformers: common.NewInformerMap(),
+		childInformers:  common.NewInformerMap(),
 		queue: workqueue.NewTypedRateLimitingQueueWithConfig(
 			workqueue.DefaultTypedControllerRateLimiter[any](),
 			workqueue.TypedRateLimitingQueueConfig[any]{

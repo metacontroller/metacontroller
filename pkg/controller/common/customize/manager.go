@@ -103,6 +103,12 @@ func NewCustomizeManager(
 	} else {
 		hook = nil
 	}
+	if parentInformers == nil {
+		parentInformers = common.NewInformerMap()
+	}
+	if parentKinds == nil {
+		parentKinds = common.NewGroupKindMap()
+	}
 	return &Manager{
 		name:             name,
 		controller:       controller,
@@ -111,7 +117,7 @@ func NewCustomizeManager(
 		dynClient:        dynClient,
 		dynInformers:     dynInformers,
 		parentInformers:  parentInformers,
-		relatedInformers: &common.InformerMap{},
+		relatedInformers: common.NewInformerMap(),
 		enqueueParent:    enqueueParent,
 		customizeHook:    hook,
 		logger:           logger,

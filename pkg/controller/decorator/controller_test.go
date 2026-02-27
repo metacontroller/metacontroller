@@ -57,8 +57,8 @@ func defaultCustomizeManager() *customize.Manager {
 		&NilCustomizableController{},
 		&dynamicclientset.Clientset{},
 		&dynamicinformer.SharedInformerFactory{},
-		&common.InformerMap{},
-		&common.GroupKindMap{},
+		common.NewInformerMap(),
+		common.NewGroupKindMap(),
 		logging.Logger,
 		common.DecoratorController,
 	)
@@ -143,7 +143,7 @@ func newDefaultDecoratorController() *v1alpha1.DecoratorController {
 }
 
 var defaultGroupKindMap = func() *common.GroupKindMap {
-	m := &common.GroupKindMap{}
+	m := common.NewGroupKindMap()
 	m.Set(schema.GroupKind{Group: TestGroup, Kind: TestKind}, &DefaultApiResource)
 	return m
 }()
@@ -218,7 +218,7 @@ func Test_decoratorController_sync(t *testing.T) {
 				doneCh:         NewCh(),
 				queue:          NewDefaultWorkQueue(),
 				updateStrategy: nil,
-				childInformers: nil,
+				childInformers: common.NewInformerMap(),
 				numWorkers:     1,
 				eventRecorder:  NewFakeRecorder(),
 				finalizer:      DefaultFinalizerManager,
@@ -242,7 +242,7 @@ func Test_decoratorController_sync(t *testing.T) {
 				doneCh:         NewCh(),
 				queue:          NewDefaultWorkQueue(),
 				updateStrategy: nil,
-				childInformers: nil,
+				childInformers: common.NewInformerMap(),
 				numWorkers:     1,
 				eventRecorder:  NewFakeRecorder(),
 				finalizer:      DefaultFinalizerManager,
@@ -274,7 +274,7 @@ func Test_decoratorController_sync(t *testing.T) {
 				doneCh:         NewCh(),
 				queue:          NewDefaultWorkQueue(),
 				updateStrategy: nil,
-				childInformers: nil,
+				childInformers: common.NewInformerMap(),
 				numWorkers:     1,
 				eventRecorder:  NewFakeRecorder(),
 				finalizer:      DefaultFinalizerManager,
@@ -306,7 +306,7 @@ func Test_decoratorController_sync(t *testing.T) {
 				doneCh:         NewCh(),
 				queue:          NewDefaultWorkQueue(),
 				updateStrategy: nil,
-				childInformers: nil,
+				childInformers: common.NewInformerMap(),
 				numWorkers:     1,
 				eventRecorder:  NewFakeRecorder(),
 				finalizer:      DefaultFinalizerManager,
@@ -338,7 +338,7 @@ func Test_decoratorController_sync(t *testing.T) {
 				doneCh:         NewCh(),
 				queue:          NewDefaultWorkQueue(),
 				updateStrategy: nil,
-				childInformers: nil,
+				childInformers: common.NewInformerMap(),
 				numWorkers:     1,
 				eventRecorder:  NewFakeRecorder(),
 				finalizer:      DefaultFinalizerManager,
@@ -370,7 +370,7 @@ func Test_decoratorController_sync(t *testing.T) {
 				doneCh:         NewCh(),
 				queue:          NewDefaultWorkQueue(),
 				updateStrategy: nil,
-				childInformers: nil,
+				childInformers: common.NewInformerMap(),
 				numWorkers:     1,
 				eventRecorder:  NewFakeRecorder(),
 				finalizer:      DefaultFinalizerManager,
@@ -399,7 +399,7 @@ func Test_decoratorController_sync(t *testing.T) {
 				doneCh:         NewCh(),
 				queue:          NewDefaultWorkQueue(),
 				updateStrategy: nil,
-				childInformers: nil,
+				childInformers: common.NewInformerMap(),
 				numWorkers:     1,
 				eventRecorder:  NewFakeRecorder(),
 				finalizer:      DefaultFinalizerManager,
@@ -429,7 +429,7 @@ func Test_decoratorController_sync(t *testing.T) {
 				doneCh:         NewCh(),
 				queue:          NewDefaultWorkQueue(),
 				updateStrategy: nil,
-				childInformers: nil,
+				childInformers: common.NewInformerMap(),
 				numWorkers:     1,
 				eventRecorder:  NewFakeRecorder(),
 				finalizer:      DefaultFinalizerManager,
@@ -445,7 +445,7 @@ func Test_decoratorController_sync(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			_, resources, dynClient, _, parentInformersMap := tt.clientsAndInformers()
-			parentInformers := &common.InformerMap{}
+			parentInformers := common.NewInformerMap()
 			for gvr, informer := range parentInformersMap {
 				parentInformers.Set(gvr, informer)
 			}
