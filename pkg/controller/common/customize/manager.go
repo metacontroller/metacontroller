@@ -17,6 +17,7 @@ limitations under the License.
 package customize
 
 import (
+	"errors"
 	"fmt"
 	commonv2 "metacontroller/pkg/controller/common/api/v2"
 	v1 "metacontroller/pkg/controller/common/customize/api/v1"
@@ -162,6 +163,8 @@ func (rm *Manager) getCustomizeHookResponse(parent *unstructured.Unstructured) (
 	}
 }
 
+var ErrRelatedInformerNotSynced = errors.New("related informer not synced yet")
+
 func (rm *Manager) getRelatedClient(apiVersion, resource string) (*dynamicclientset.ResourceClient, *dynamicinformer.ResourceInformer, error) {
 	client, err := rm.dynClient.Resource(apiVersion, resource)
 
@@ -180,8 +183,8 @@ func (rm *Manager) getRelatedClient(apiVersion, resource string) (*dynamicclient
 		return nil, nil, fmt.Errorf("customize Manager not started")
 	}
 
-	if !clientgo_cache.WaitForNamedCacheSync(rm.name, rm.stopCh, informer.Informer().HasSynced) {
-		rm.logger.Info("related Manager - cache sync never finished", "name", rm.name)
+	if !informer.Informer().HasSynced() {
+		return nil, nil, ErrRelatedInformerNotSynced
 	}
 
 	return client, informer, nil

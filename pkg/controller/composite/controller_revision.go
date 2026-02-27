@@ -158,7 +158,8 @@ func (pc *parentController) syncRevisions(parent *unstructured.Unstructured, obs
 			defer wg.Done()
 			related, err := pc.customize.GetRelatedObjects(pr.parent)
 			if err != nil {
-				related = make(commonv2.UniformObjectMap)
+				pr.syncError = err
+				return
 			}
 			syncResult, err := pc.callHook(pr.parent, observedChildren, related)
 			if err != nil {

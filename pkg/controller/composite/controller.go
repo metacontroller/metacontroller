@@ -554,12 +554,17 @@ func (pc *parentController) sync(key string) error {
 	}
 	err = pc.syncParentObject(parent)
 	var tooManyRequestError *hooks.TooManyRequestError
-	if errors.As(err, &tooManyRequestError) {
+	switch {
+	case errors.As(err, &tooManyRequestError):
 		afterSec := tooManyRequestError.AfterSecond
 		pc.logger.Info("Resync due to too many request for sync hooks", "second", afterSec, "parent", parent)
 		pc.queue.AddAfter(key, time.Duration(afterSec)*time.Second)
 		return nil
-	} else if err != nil {
+	case errors.Is(err, customize.ErrRelatedInformerNotSynced):
+		pc.logger.V(4).Info("Transient error, requeueing parent object", "parent_kind", pc.parentResource.Kind, "object", klog.KRef(namespace, name), "err", err)
+		pc.queue.AddRateLimited(key)
+		return nil
+	case err != nil:
 		pc.eventRecorder.Eventf(
 			parent,
 			v1.EventTypeWarning,
