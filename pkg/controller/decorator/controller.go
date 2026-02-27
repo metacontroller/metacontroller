@@ -74,8 +74,8 @@ type decoratorController struct {
 
 	dynClient *dynamicclientset.Clientset
 
-	stopCh, doneCh chan struct{}
-	stopOnce       sync.Once
+	doneCh   chan struct{}
+	stopOnce sync.Once
 	queue          workqueue.TypedRateLimitingInterface[string]
 
 	updateStrategy updateStrategyMap
@@ -94,9 +94,12 @@ type decoratorController struct {
 	finalizeHook hooks.Hook
 
 	logger logr.Logger
+	ctx    context.Context
+	cancel context.CancelFunc
 }
 
 func newDecoratorController(
+	ctx context.Context,
 	resources *dynamicdiscovery.ResourceMap,
 	dynClient *dynamicclientset.Clientset,
 	dynInformers *dynamicinformer.SharedInformerFactory,
@@ -141,9 +144,11 @@ func newDecoratorController(
 		finalizeHook: finalizeHook,
 		logger:       logger.WithName(dc.Name),
 		ssaOptions:   ssaOptions,
+		ctx:          ctx,
 	}
 
 	customize, err := customize.NewCustomizeManager(
+		ctx,
 		dc.Name,
 		c.enqueueParentObject,
 		dc,
@@ -194,7 +199,7 @@ func newDecoratorController(
 	}()
 
 	for _, parent := range dc.Spec.Resources {
-		informer, err := dynInformers.Resource(parent.APIVersion, parent.Resource)
+		informer, err := dynInformers.Resource(ctx, parent.APIVersion, parent.Resource)
 		if err != nil {
 			return nil, fmt.Errorf("can't create informer for parent resource: %w", err)
 		}
@@ -206,7 +211,7 @@ func newDecoratorController(
 	}
 
 	for _, child := range dc.Spec.Attachments {
-		informer, err := dynInformers.Resource(child.APIVersion, child.Resource)
+		informer, err := dynInformers.Resource(ctx, child.APIVersion, child.Resource)
 		if err != nil {
 			return nil, fmt.Errorf("can't create informer for child resource: %w", err)
 		}
@@ -221,10 +226,10 @@ func newDecoratorController(
 }
 
 func (c *decoratorController) Start() {
-	c.stopCh = make(chan struct{})
+	c.ctx, c.cancel = context.WithCancel(c.ctx)
 	c.doneCh = make(chan struct{})
 
-	c.customize.Start(c.stopCh)
+	c.customize.Start(c.ctx)
 
 	// Install event handlers. DecoratorControllers can be created at any time,
 	// so we have to assume the shared informers are already running. We can't
@@ -285,7 +290,7 @@ func (c *decoratorController) Start() {
 		c.childInformers.ForEach(func(_ schema.GroupVersionResource, informer *dynamicinformer.ResourceInformer) {
 			syncFuncs = append(syncFuncs, informer.Informer().HasSynced)
 		})
-		if !cache.WaitForNamedCacheSync(c.dc.Name, c.stopCh, syncFuncs...) {
+		if !cache.WaitForNamedCacheSync(c.dc.Name, c.ctx.Done(), syncFuncs...) {
 			// We wait forever unless Stop() is called, so this isn't an error.
 			c.logger.Info("DecoratorController cache sync never finished", "controller", c.dc)
 			return
@@ -296,7 +301,7 @@ func (c *decoratorController) Start() {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				wait.Until(c.worker, time.Second, c.stopCh)
+				wait.Until(c.worker, time.Second, c.ctx.Done())
 			}()
 		}
 		wg.Wait()
@@ -305,7 +310,7 @@ func (c *decoratorController) Start() {
 
 func (c *decoratorController) Stop() {
 	c.stopOnce.Do(func() {
-		close(c.stopCh)
+		c.cancel()
 		c.queue.ShutDown()
 		<-c.doneCh
 
@@ -324,18 +329,18 @@ func (c *decoratorController) Stop() {
 }
 
 func (c *decoratorController) worker() {
-	for c.processNextWorkItem() {
+	for c.processNextWorkItem(c.ctx) {
 	}
 }
 
-func (c *decoratorController) processNextWorkItem() bool {
+func (c *decoratorController) processNextWorkItem(ctx context.Context) bool {
 	key, quit := c.queue.Get()
 	if quit {
 		return false
 	}
 	defer c.queue.Done(key)
 
-	if err := c.sync(key); err != nil {
+	if err := c.sync(ctx, key); err != nil {
 		var tooManyRequestError *hooks.TooManyRequestError
 		if errors.As(err, &tooManyRequestError) {
 			c.queue.AddAfter(key, time.Duration(tooManyRequestError.AfterSecond)*time.Second)
@@ -529,7 +534,7 @@ func (c *decoratorController) onChildDelete(obj interface{}) {
 	c.enqueueParentObject(parent)
 }
 
-func (c *decoratorController) sync(key string) error {
+func (c *decoratorController) sync(ctx context.Context, key string) error {
 	apiVersion, kind, namespace, name, err := splitParentQueueKey(key)
 	if err != nil {
 		return err
@@ -557,7 +562,7 @@ func (c *decoratorController) sync(key string) error {
 			return err
 		}
 	}
-	err = c.syncParentObject(parent)
+	err = c.syncParentObject(ctx, parent)
 	var tooManyRequestError *hooks.TooManyRequestError
 	switch {
 	case errors.As(err, &tooManyRequestError):
@@ -576,7 +581,7 @@ func (c *decoratorController) sync(key string) error {
 	return err
 }
 
-func (c *decoratorController) syncParentObject(parent *unstructured.Unstructured) error {
+func (c *decoratorController) syncParentObject(ctx context.Context, parent *unstructured.Unstructured) error {
 	// If it doesn't match our selector, and it doesn't have our finalizer, ignore it.
 	if !c.parentSelector.Matches(parent) && !controllerutil.ContainsFinalizer(parent, c.finalizer.Name) {
 		return nil
@@ -591,7 +596,7 @@ func (c *decoratorController) syncParentObject(parent *unstructured.Unstructured
 
 	// Before taking any other action, add our finalizer (if desired).
 	// This ensures we have a chance to clean up after any action we later take.
-	updatedParent, err := c.finalizer.SyncObject(parentClient, parent)
+	updatedParent, err := c.finalizer.SyncObject(ctx, parentClient, parent)
 	if err != nil {
 		// If we fail to do this, abort before doing anything else and requeue.
 		return fmt.Errorf("can't sync finalizer for %v %v/%v: %w", parent.GetKind(), parent.GetNamespace(), parent.GetName(), err)
@@ -610,13 +615,13 @@ func (c *decoratorController) syncParentObject(parent *unstructured.Unstructured
 		return err
 	}
 
-	relatedObjects, err := c.customize.GetRelatedObjects(parent)
+	relatedObjects, err := c.customize.GetRelatedObjects(ctx, parent)
 	if err != nil {
 		return err
 	}
 
 	// Call the sync hook to get the desired annotations and children.
-	syncResult, err := c.callHook(parent, observedChildren, relatedObjects)
+	syncResult, err := c.callHook(ctx, parent, observedChildren, relatedObjects)
 	if err != nil {
 		return err
 	}
@@ -663,7 +668,7 @@ func (c *decoratorController) syncParentObject(parent *unstructured.Unstructured
 
 		if statusChanged && parentClient.HasSubresource("status") {
 			// The regular Update below will ignore changes to .status so we do it separately.
-			result, err := parentClient.Namespace(parent.GetNamespace()).UpdateStatus(context.TODO(), updatedParent, metav1.UpdateOptions{})
+			result, err := parentClient.Namespace(parent.GetNamespace()).UpdateStatus(ctx, updatedParent, metav1.UpdateOptions{})
 			if err != nil {
 				switch {
 				case apierrors.IsNotFound(err):
@@ -687,7 +692,7 @@ func (c *decoratorController) syncParentObject(parent *unstructured.Unstructured
 		}
 
 		c.logger.V(4).Info("DecoratorController updating", "controller", c.dc, "parent", parent)
-		_, err = parentClient.Namespace(parent.GetNamespace()).Update(context.TODO(), updatedParent, metav1.UpdateOptions{})
+		_, err = parentClient.Namespace(parent.GetNamespace()).Update(ctx, updatedParent, metav1.UpdateOptions{})
 		if err != nil {
 			if apierrors.IsNotFound(err) {
 				// Swallow the error since there's no point retrying if the parent is gone.
@@ -726,7 +731,7 @@ func (c *decoratorController) syncParentObject(parent *unstructured.Unstructured
 	var manageErr error
 	if parent.GetDeletionTimestamp() == nil || c.finalizer.ShouldFinalize(parent) {
 		// Reconcile children.
-		if err := common.ManageChildren(c.dynClient, c.updateStrategy, parent, observedChildren, desiredChildren, c.ssaOptions); err != nil {
+		if err := common.ManageChildren(ctx, c.dynClient, c.updateStrategy, parent, observedChildren, desiredChildren, c.ssaOptions); err != nil {
 			manageErr = fmt.Errorf("can't reconcile children for %v %v/%v: %w", parent.GetKind(), parent.GetNamespace(), parent.GetName(), err)
 		}
 	}

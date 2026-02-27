@@ -17,6 +17,7 @@ limitations under the License.
 package discovery
 
 import (
+	"context"
 	dynamicdiscovery "metacontroller/pkg/dynamic/discovery"
 	"time"
 
@@ -27,7 +28,7 @@ import (
 func NewFakeResourceMap(simpleClientset *fakeclientset.Clientset) *dynamicdiscovery.ResourceMap {
 	fakeDiscovery := simpleClientset.Discovery().(*fakediscovery.FakeDiscovery)
 	resourceMap := dynamicdiscovery.NewResourceMap(fakeDiscovery)
-	resourceMap.Start(1 * time.Minute)
+	resourceMap.Start(context.Background(), 1*time.Minute)
 	for ok := false; !ok; ok = resourceMap.HasSynced() {
 		time.Sleep(1 * time.Second)
 	}

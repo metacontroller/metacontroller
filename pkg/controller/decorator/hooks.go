@@ -17,6 +17,7 @@ limitations under the License.
 package decorator
 
 import (
+	"context"
 	"fmt"
 	"metacontroller/pkg/apis/metacontroller/v1alpha1"
 	"metacontroller/pkg/controller/common/api"
@@ -35,6 +36,7 @@ type decoratorHookCallInfo struct {
 }
 
 func (c *decoratorController) callHook(
+	ctx context.Context,
 	parent *unstructured.Unstructured,
 	observedChildren,
 	related api.ObjectMap,
@@ -51,7 +53,7 @@ func (c *decoratorController) callHook(
 
 	// Step 2: Build and execute the hook request
 	request := c.buildHookRequest(hookInfo, parent, observedChildren, related)
-	return c.executeHook(hookInfo, request, parent)
+	return c.executeHook(ctx, hookInfo, request, parent)
 }
 
 // determineHookToCall decides which hook should be called based on parent state
@@ -111,6 +113,7 @@ func (c *decoratorController) buildHookRequest(
 
 // executeHook handles both V1 and V2 hook execution and response conversion
 func (c *decoratorController) executeHook(
+	ctx context.Context,
 	hookInfo *decoratorHookCallInfo,
 	request api.WebhookRequest,
 	parent *unstructured.Unstructured,
@@ -119,13 +122,13 @@ func (c *decoratorController) executeHook(
 
 	if hookInfo.version == v1alpha1.HookVersionV2 {
 		var v2Response v2.DecoratorHookResponse
-		if err := c.callHookExecutor(hookInfo, request, &v2Response); err != nil {
+		if err := c.callHookExecutor(ctx, hookInfo, request, &v2Response); err != nil {
 			return nil, fmt.Errorf("%s hook failed (version=v2): %w", hookInfo.hookType, err)
 		}
 		v1Response = c.convertV2ToV1Response(v2Response)
 	} else {
 		v1Response = &v1.DecoratorHookResponse{Attachments: []*unstructured.Unstructured{}}
-		if err := c.callHookExecutor(hookInfo, request, v1Response); err != nil {
+		if err := c.callHookExecutor(ctx, hookInfo, request, v1Response); err != nil {
 			return nil, fmt.Errorf("%s hook failed (version=v1): %w", hookInfo.hookType, err)
 		}
 	}
@@ -135,11 +138,11 @@ func (c *decoratorController) executeHook(
 }
 
 // callHookExecutor performs the actual hook call (unified logic for both V1 and V2)
-func (c *decoratorController) callHookExecutor(hookInfo *decoratorHookCallInfo, request api.WebhookRequest, response interface{}) error {
+func (c *decoratorController) callHookExecutor(ctx context.Context, hookInfo *decoratorHookCallInfo, request api.WebhookRequest, response interface{}) error {
 	if hookInfo.isFinalizing {
-		return c.finalizeHook.Call(request, response)
+		return c.finalizeHook.Call(ctx, request, response)
 	}
-	return c.syncHook.Call(request, response)
+	return c.syncHook.Call(ctx, request, response)
 }
 
 // convertV2ToV1Response converts V2 response format to V1 for internal consistency

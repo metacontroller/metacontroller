@@ -5,14 +5,11 @@ import (
 	"metacontroller/pkg/logging"
 	"net/http"
 	_ "net/http/pprof" //nolint:gosec
-	"os"
-	"os/signal"
 	"sync"
-	"syscall"
 	"time"
 )
 
-func EnablePprof(address string) <-chan struct{} {
+func EnablePprof(ctx context.Context, address string) <-chan struct{} {
 	// when controller runtime implements serving pprof data, this can be replaced.
 	// feature request: https://github.com/kubernetes-sigs/controller-runtime/issues/1779
 
@@ -45,15 +42,13 @@ func EnablePprof(address string) <-chan struct{} {
 	var closeOnce sync.Once
 
 	go func() {
-		stop := make(chan os.Signal, 1)
-		signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
-		<-stop
+		<-ctx.Done()
 
 		// We received a signal, shut down.
 		logging.Logger.Info("Shutting down pprof server...")
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		if err := server.Shutdown(ctx); err != nil {
+		if err := server.Shutdown(shutdownCtx); err != nil {
 			// Error from closing listeners, or context timeout:
 			logging.Logger.Error(err, "pprof server shutdown")
 		}

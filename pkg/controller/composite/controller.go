@@ -77,9 +77,9 @@ type parentController struct {
 
 	revisionLister mclisters.ControllerRevisionLister
 
-	stopCh, doneCh chan struct{}
-	stopOnce       sync.Once
-	queue          workqueue.TypedRateLimitingInterface[string]
+	doneCh   chan struct{}
+	stopOnce sync.Once
+	queue    workqueue.TypedRateLimitingInterface[string]
 
 	updateStrategy updateStrategyMap
 	childInformers *common.InformerMap
@@ -94,9 +94,12 @@ type parentController struct {
 	finalizeHook hooks.Hook
 
 	logger logr.Logger
+	ctx    context.Context
+	cancel context.CancelFunc
 }
 
 func newParentController(
+	ctx context.Context,
 	resources *dynamicdiscovery.ResourceMap,
 	dynClient *dynamicclientset.Clientset,
 	dynInformers *dynamicinformer.SharedInformerFactory,
@@ -121,7 +124,7 @@ func newParentController(
 	}
 
 	// Create informer for the parent resource.
-	parentInformer, err := dynInformers.Resource(cc.Spec.ParentResource.APIVersion, cc.Spec.ParentResource.Resource)
+	parentInformer, err := dynInformers.Resource(ctx, cc.Spec.ParentResource.APIVersion, cc.Spec.ParentResource.Resource)
 	if err != nil {
 		return nil, fmt.Errorf("can't create informer for parent resource: %w", err)
 	}
@@ -139,7 +142,7 @@ func newParentController(
 		}
 	}()
 	for _, child := range cc.Spec.ChildResources {
-		childInformer, err := dynInformers.Resource(child.APIVersion, child.Resource)
+		childInformer, err := dynInformers.Resource(ctx, child.APIVersion, child.Resource)
 		if err != nil {
 			return nil, fmt.Errorf("can't create informer for child resource: %w", err)
 		}
@@ -203,9 +206,11 @@ func newParentController(
 		syncHook:     syncHook,
 		finalizeHook: finalizeHook,
 		logger:       logger.WithName(cc.Name),
+		ctx:          ctx,
 	}
 
 	pc.customize, err = customize.NewCustomizeManager(
+		ctx,
 		cc.Name,
 		pc.enqueueParentObject,
 		cc,
@@ -224,10 +229,10 @@ func newParentController(
 }
 
 func (pc *parentController) Start() {
-	pc.stopCh = make(chan struct{})
+	pc.ctx, pc.cancel = context.WithCancel(pc.ctx)
 	pc.doneCh = make(chan struct{})
 
-	pc.customize.Start(pc.stopCh)
+	pc.customize.Start(pc.ctx)
 
 	// Install event handlers. CompositeControllers can be created at any time,
 	// so we have to assume the shared informers are already running. We can't
@@ -281,7 +286,7 @@ func (pc *parentController) Start() {
 		pc.childInformers.ForEach(func(_ schema.GroupVersionResource, childInformer *dynamicinformer.ResourceInformer) {
 			syncFuncs = append(syncFuncs, childInformer.Informer().HasSynced)
 		})
-		if !cache.WaitForNamedCacheSync(pc.parentResource.Kind, pc.stopCh, syncFuncs...) {
+		if !cache.WaitForNamedCacheSync(pc.parentResource.Kind, pc.ctx.Done(), syncFuncs...) {
 			// We wait forever unless Stop() is called, so this isn't an error.
 			pc.logger.Info("CompositeController cache sync never finished", "controller", pc.cc)
 			return
@@ -292,7 +297,7 @@ func (pc *parentController) Start() {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				wait.Until(pc.worker, time.Second, pc.stopCh)
+				wait.Until(pc.worker, time.Second, pc.ctx.Done())
 			}()
 		}
 		wg.Wait()
@@ -301,7 +306,7 @@ func (pc *parentController) Start() {
 
 func (pc *parentController) Stop() {
 	pc.stopOnce.Do(func() {
-		close(pc.stopCh)
+		pc.cancel()
 		pc.queue.ShutDown()
 		<-pc.doneCh
 
@@ -318,18 +323,18 @@ func (pc *parentController) Stop() {
 }
 
 func (pc *parentController) worker() {
-	for pc.processNextWorkItem() {
+	for pc.processNextWorkItem(pc.ctx) {
 	}
 }
 
-func (pc *parentController) processNextWorkItem() bool {
+func (pc *parentController) processNextWorkItem(ctx context.Context) bool {
 	key, quit := pc.queue.Get()
 	if quit {
 		return false
 	}
 	defer pc.queue.Done(key)
 
-	if err := pc.sync(key); err != nil {
+	if err := pc.sync(ctx, key); err != nil {
 		var tooManyRequestError *hooks.TooManyRequestError
 		if errors.As(err, &tooManyRequestError) {
 			pc.queue.AddAfter(key, time.Duration(tooManyRequestError.AfterSecond)*time.Second)
@@ -548,7 +553,7 @@ func (pc *parentController) findPotentialParents(child *unstructured.Unstructure
 	return matchingParents
 }
 
-func (pc *parentController) sync(key string) error {
+func (pc *parentController) sync(ctx context.Context, key string) error {
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
 		return err
@@ -566,7 +571,7 @@ func (pc *parentController) sync(key string) error {
 			return err
 		}
 	}
-	err = pc.syncParentObject(parent)
+	err = pc.syncParentObject(ctx, parent)
 	var tooManyRequestError *hooks.TooManyRequestError
 	switch {
 	case errors.As(err, &tooManyRequestError):
@@ -585,7 +590,7 @@ func (pc *parentController) sync(key string) error {
 	return err
 }
 
-func (pc *parentController) syncParentObject(parent *unstructured.Unstructured) error {
+func (pc *parentController) syncParentObject(ctx context.Context, parent *unstructured.Unstructured) error {
 	// If the parent doesn't match our selector, and it doesn't have our
 	// finalizer, we don't care about it.
 	if !controllerutil.ContainsFinalizer(parent, pc.finalizer.Name) && pc.doNotMatchLabels(parent.GetLabels()) {
@@ -594,7 +599,7 @@ func (pc *parentController) syncParentObject(parent *unstructured.Unstructured) 
 
 	// Before taking any other action, add our finalizer (if desired).
 	// This ensures we have a chance to clean up after any action we later take.
-	updatedParent, err := pc.finalizer.SyncObject(pc.parentClient, parent)
+	updatedParent, err := pc.finalizer.SyncObject(ctx, pc.parentClient, parent)
 	if err != nil {
 		// If we fail to do this, abort before doing anything else and requeue.
 		return fmt.Errorf("can't sync finalizer for %v %v/%v: %w", parent.GetKind(), parent.GetNamespace(), parent.GetName(), err)
@@ -607,12 +612,12 @@ func (pc *parentController) syncParentObject(parent *unstructured.Unstructured) 
 	}
 
 	// Claim all matching child resources, including orphan/adopt as necessary.
-	observedChildren, err := pc.claimChildren(parent)
+	observedChildren, err := pc.claimChildren(ctx, parent)
 	if err != nil {
 		return err
 	}
 
-	relatedObjects, err := pc.customize.GetRelatedObjects(parent)
+	relatedObjects, err := pc.customize.GetRelatedObjects(ctx, parent)
 	if err != nil {
 		return err
 	}
@@ -620,7 +625,7 @@ func (pc *parentController) syncParentObject(parent *unstructured.Unstructured) 
 	// Reconcile ControllerRevisions belonging to this parent.
 	// Call the sync hook for each revision, then compute the overall status and
 	// desired children, accounting for any rollout in progress.
-	syncResult, err := pc.syncRevisions(parent, observedChildren, relatedObjects)
+	syncResult, err := pc.syncRevisions(ctx, parent, observedChildren, relatedObjects)
 	if err != nil {
 		return err
 	}
@@ -637,7 +642,7 @@ func (pc *parentController) syncParentObject(parent *unstructured.Unstructured) 
 	// If all revisions agree that they've finished finalizing,
 	// remove our finalizer.
 	if syncResult.Finalized {
-		updatedParent, err := pc.parentClient.Namespace(parent.GetNamespace()).RemoveFinalizer(parent, pc.finalizer.Name)
+		updatedParent, err := pc.parentClient.Namespace(parent.GetNamespace()).RemoveFinalizer(ctx, parent, pc.finalizer.Name)
 		if err != nil {
 			return fmt.Errorf("can't remove finalizer for %v %v/%v: %w", parent.GetKind(), parent.GetNamespace(), parent.GetName(), err)
 		}
@@ -684,14 +689,14 @@ func (pc *parentController) syncParentObject(parent *unstructured.Unstructured) 
 	var manageErr error
 	if parent.GetDeletionTimestamp() == nil || pc.finalizer.ShouldFinalize(parent) {
 		// Reconcile children.
-		if err := common.ManageChildren(pc.dynClient, pc.updateStrategy, parent, observedChildren, desiredChildren, pc.ssaOptions); err != nil {
+		if err := common.ManageChildren(ctx, pc.dynClient, pc.updateStrategy, parent, observedChildren, desiredChildren, pc.ssaOptions); err != nil {
 			manageErr = fmt.Errorf("can't reconcile children for %v %v/%v: %w", pc.parentResource.Kind, parent.GetNamespace(), parent.GetName(), err)
 		}
 	}
 
 	// Update parent status.
 	// We'll want to make sure this happens after manageChildren once we support observedGeneration.
-	if _, err := pc.updateParentStatus(parent, syncResult.Status); err != nil {
+	if _, err := pc.updateParentStatus(ctx, parent, syncResult.Status); err != nil {
 		if apierrors.IsNotFound(err) {
 			// Swallow the error since there's no point retrying if the parent is gone.
 			pc.logger.V(4).Info("Parent object has been deleted", "parent_kind", pc.parentResource.Kind, "object", klog.KRef(parent.GetNamespace(), parent.GetName()))
@@ -741,10 +746,10 @@ func (pc *parentController) makeSelector(parent *unstructured.Unstructured, extr
 	return selector, nil
 }
 
-func (pc *parentController) canAdoptFunc(parent *unstructured.Unstructured) func() error {
+func (pc *parentController) canAdoptFunc(ctx context.Context, parent *unstructured.Unstructured) func() error {
 	return k8s.RecheckDeletionTimestamp(func() (metav1.Object, error) {
 		// Make sure this is always an uncached read.
-		fresh, err := pc.parentClient.Namespace(parent.GetNamespace()).Get(context.TODO(), parent.GetName(), metav1.GetOptions{})
+		fresh, err := pc.parentClient.Namespace(parent.GetNamespace()).Get(ctx, parent.GetName(), metav1.GetOptions{})
 		if err != nil {
 			return nil, err
 		}
@@ -755,7 +760,7 @@ func (pc *parentController) canAdoptFunc(parent *unstructured.Unstructured) func
 	})
 }
 
-func (pc *parentController) claimChildren(parent *unstructured.Unstructured) (api.ObjectMap, error) {
+func (pc *parentController) claimChildren(ctx context.Context, parent *unstructured.Unstructured) (api.ObjectMap, error) {
 	// Set up values common to all child types.
 	parentNamespace := parent.GetNamespace()
 	parentGVK := pc.parentResource.GroupVersionKind()
@@ -763,7 +768,7 @@ func (pc *parentController) claimChildren(parent *unstructured.Unstructured) (ap
 	if err != nil {
 		return nil, err
 	}
-	canAdoptFunc := pc.canAdoptFunc(parent)
+	canAdoptFunc := pc.canAdoptFunc(ctx, parent)
 
 	// Claim all child types.
 	childMap := make(commonv2.UniformObjectMap)
@@ -824,7 +829,7 @@ func (pc *parentController) claimChildren(parent *unstructured.Unstructured) (ap
 
 		// Handle orphan/adopt and filter by owner+selector.
 		crm := dynamiccontrollerref.NewUnstructuredManager(childClient, parent, selector, parentGVK, childClient.GroupVersionKind(), canAdoptFunc)
-		children, err := crm.ClaimChildren(all)
+		children, err := crm.ClaimChildren(ctx, all)
 		if err != nil {
 			return nil, fmt.Errorf("can't claim %v children: %w", childClient.Kind, err)
 		}
@@ -838,7 +843,7 @@ func (pc *parentController) claimChildren(parent *unstructured.Unstructured) (ap
 	return childMap, nil
 }
 
-func (pc *parentController) updateParentStatus(parent *unstructured.Unstructured, status map[string]interface{}) (*unstructured.Unstructured, error) {
+func (pc *parentController) updateParentStatus(ctx context.Context, parent *unstructured.Unstructured, status map[string]interface{}) (*unstructured.Unstructured, error) {
 	// Inject ObservedGeneration before comparing with old status,
 	// so we're comparing against the final form we desire.
 	if status == nil {
@@ -848,7 +853,7 @@ func (pc *parentController) updateParentStatus(parent *unstructured.Unstructured
 
 	// Overwrite .status field of parent object without touching other parts.
 	// We can't use Patch() because we need to ensure that the UID matches.
-	return pc.parentClient.Namespace(parent.GetNamespace()).AtomicStatusUpdate(parent, func(obj *unstructured.Unstructured) bool {
+	return pc.parentClient.Namespace(parent.GetNamespace()).AtomicStatusUpdate(ctx, parent, func(obj *unstructured.Unstructured) bool {
 		oldStatus := obj.UnstructuredContent()["status"]
 		if common.DeepEqual(oldStatus, status) {
 			// Nothing to do.

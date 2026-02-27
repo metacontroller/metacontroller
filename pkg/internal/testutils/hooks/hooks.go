@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"metacontroller/pkg/apis/metacontroller/v1alpha1"
 	"metacontroller/pkg/controller/common/api"
@@ -60,7 +61,7 @@ func (h *hookExecutorStub) GetVersion() v1alpha1.HookVersion {
 	return v1alpha1.HookVersionV1
 }
 
-func (h *hookExecutorStub) Call(request api.WebhookRequest, response interface{}) error {
+func (h *hookExecutorStub) Call(ctx context.Context, request api.WebhookRequest, response interface{}) error {
 	if h.err != nil {
 		return h.err
 	}
@@ -120,7 +121,7 @@ func (s serializingHookExecutorStub) GetVersion() v1alpha1.HookVersion {
 	return v1alpha1.HookVersionV1
 }
 
-func (s serializingHookExecutorStub) Call(request api.WebhookRequest, response interface{}) error {
+func (s serializingHookExecutorStub) Call(ctx context.Context, request api.WebhookRequest, response interface{}) error {
 	err := k8sjson.Unmarshal([]byte(s.response), response)
 	if err != nil {
 		return err

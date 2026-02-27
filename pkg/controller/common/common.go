@@ -17,6 +17,7 @@ limitations under the License.
 package common
 
 import (
+	"context"
 	"fmt"
 	"metacontroller/pkg/logging"
 	"metacontroller/pkg/options"
@@ -131,12 +132,10 @@ func NewControllerContext(configuration options.Configuration, mcClient *mcclien
 
 // Start starts all informers created up to that point.
 // Informers created after Start is called will not be automatically started
-func (controllerContext ControllerContext) Start() {
-	// We don't care about stopping this cleanly since it has no external effects.
-	controllerContext.Resources.Start(controllerContext.configuration.DiscoveryInterval)
+func (controllerContext ControllerContext) Start(ctx context.Context) {
+	controllerContext.Resources.Start(ctx, controllerContext.configuration.DiscoveryInterval)
 	// Start all requested informers.
-	// We don't care about stopping this cleanly since it has no external effects.
-	controllerContext.McInformerFactory.Start(nil)
+	controllerContext.McInformerFactory.Start(ctx.Done())
 }
 
 // describeObject returns a human-readable string to identify a given object.

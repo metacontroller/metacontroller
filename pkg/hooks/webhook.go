@@ -18,6 +18,7 @@ package hooks
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -50,7 +51,7 @@ type HttpClientInterface interface {
 
 // WebhookExecutor executes a call to a webhook
 type WebhookExecutor interface {
-	Call(request api.WebhookRequest, response interface{}) error
+	Call(ctx context.Context, request api.WebhookRequest, response interface{}) error
 	GetVersion() v1alpha1.HookVersion
 }
 
@@ -163,7 +164,7 @@ func (w *webhookExecutor) GetVersion() v1alpha1.HookVersion {
 	return w.effectiveHookVersion()
 }
 
-func (w *webhookExecutor) Call(webhookRequest api.WebhookRequest, webhookResponse interface{}) error {
+func (w *webhookExecutor) Call(ctx context.Context, webhookRequest api.WebhookRequest, webhookResponse interface{}) error {
 	// Encode webhookRequest.
 	requestBody, err := k8sjson.Marshal(webhookRequest)
 	if err != nil {
@@ -174,7 +175,7 @@ func (w *webhookExecutor) Call(webhookRequest api.WebhookRequest, webhookRespons
 		rawRequest := json.RawMessage(requestBody)
 		logging.Logger.V(6).Info("Webhook request", "version", requestAPIVersion, "type", w.hookType, "url", w.url, "body", rawRequest)
 	}
-	request, err := http.NewRequest("POST", w.url, bytes.NewReader(requestBody))
+	request, err := http.NewRequestWithContext(ctx, "POST", w.url, bytes.NewReader(requestBody))
 	if err != nil {
 		return err
 	}
