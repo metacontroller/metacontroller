@@ -47,7 +47,7 @@ const (
 	labelKeyResource = "metacontroller.k8s.io/resource"
 )
 
-func (pc *parentController) claimRevisions(parent *unstructured.Unstructured) ([]*v1alpha1.ControllerRevision, error) {
+func (pc *parentController) claimRevisions(ctx context.Context, parent *unstructured.Unstructured) ([]*v1alpha1.ControllerRevision, error) {
 	parentGVK := pc.parentResource.GroupVersionKind()
 
 	// Add labels to prevent accidental overlap between different parent types.
@@ -59,7 +59,7 @@ func (pc *parentController) claimRevisions(parent *unstructured.Unstructured) ([
 	if err != nil {
 		return nil, err
 	}
-	canAdoptFunc := pc.canAdoptFunc(parent)
+	canAdoptFunc := pc.canAdoptFunc(ctx, parent)
 
 	// List all ControllerRevisions in the parent object's namespace.
 	all, err := pc.revisionLister.ControllerRevisions(parent.GetNamespace()).List(labels.Everything())
@@ -70,21 +70,21 @@ func (pc *parentController) claimRevisions(parent *unstructured.Unstructured) ([
 	// Handle orphan/adopt and filter by owner+selector.
 	client := pc.mcClient.MetacontrollerV1alpha1().ControllerRevisions(parent.GetNamespace())
 	crm := dynamiccontrollerref.NewControllerRevisionManager(client, parent, selector, parentGVK, canAdoptFunc)
-	revisions, err := crm.ClaimControllerRevisions(all)
+	revisions, err := crm.ClaimControllerRevisions(ctx, all)
 	if err != nil {
 		return nil, fmt.Errorf("can't claim ControllerRevisions: %w", err)
 	}
 	return revisions, nil
 }
 
-func (pc *parentController) syncRevisions(parent *unstructured.Unstructured, observedChildren, relatedObjects api.ObjectMap) (*v1.CompositeHookResponse, error) {
+func (pc *parentController) syncRevisions(ctx context.Context, parent *unstructured.Unstructured, observedChildren, relatedObjects api.ObjectMap) (*v1.CompositeHookResponse, error) {
 	// If no child resources use rolling updates, just sync the latest parent.
 	// Also, if the parent object is being deleted and we don't have a finalizer,
 	// just sync the latest parent to get the status since we won't manage
 	// children anyway.
 	if !pc.updateStrategy.anyRolling() ||
 		(parent.GetDeletionTimestamp() != nil && !pc.finalizer.ShouldFinalize(parent)) {
-		syncResult, err := pc.callHook(parent, observedChildren, relatedObjects)
+		syncResult, err := pc.callHook(ctx, parent, observedChildren, relatedObjects)
 		if err != nil {
 			return nil, fmt.Errorf("sync hook failed for %v %v/%v: %w", pc.parentResource.Kind, parent.GetNamespace(), parent.GetName(), err)
 		}
@@ -95,7 +95,7 @@ func (pc *parentController) syncRevisions(parent *unstructured.Unstructured, obs
 	}
 
 	// Claim all matching ControllerRevisions for the parent.
-	observedRevisions, err := pc.claimRevisions(parent)
+	observedRevisions, err := pc.claimRevisions(ctx, parent)
 	if err != nil {
 		return nil, err
 	}
@@ -156,12 +156,12 @@ func (pc *parentController) syncRevisions(parent *unstructured.Unstructured, obs
 		wg.Add(1)
 		go func(pr *parentRevision) {
 			defer wg.Done()
-			related, err := pc.customize.GetRelatedObjects(pr.parent)
+			related, err := pc.customize.GetRelatedObjects(ctx, pr.parent)
 			if err != nil {
 				pr.syncError = err
 				return
 			}
-			syncResult, err := pc.callHook(pr.parent, observedChildren, related)
+			syncResult, err := pc.callHook(ctx, pr.parent, observedChildren, related)
 			if err != nil {
 				pr.syncError = err
 				return
@@ -200,7 +200,7 @@ func (pc *parentController) syncRevisions(parent *unstructured.Unstructured, obs
 			desiredRevisions = append(desiredRevisions, pr.revision)
 		}
 	}
-	if err := pc.manageRevisions(parent, observedRevisions, desiredRevisions); err != nil {
+	if err := pc.manageRevisions(ctx, parent, observedRevisions, desiredRevisions); err != nil {
 		return nil, fmt.Errorf("%v %v/%v: can't reconcile ControllerRevisions: %w", pc.parentResource.Kind, parent.GetNamespace(), parent.GetName(), err)
 	}
 
@@ -251,7 +251,7 @@ func (pc *parentController) syncRevisions(parent *unstructured.Unstructured, obs
 	return syncResult, nil
 }
 
-func (pc *parentController) manageRevisions(parent *unstructured.Unstructured, observedRevisions, desiredRevisions []*v1alpha1.ControllerRevision) error {
+func (pc *parentController) manageRevisions(ctx context.Context, parent *unstructured.Unstructured, observedRevisions, desiredRevisions []*v1alpha1.ControllerRevision) error {
 	client := pc.mcClient.MetacontrollerV1alpha1().ControllerRevisions(parent.GetNamespace())
 
 	// Build maps for convenient lookup by object name.
@@ -271,7 +271,7 @@ func (pc *parentController) manageRevisions(parent *unstructured.Unstructured, o
 				Preconditions: &metav1.Preconditions{UID: &uid},
 			}
 			logging.Logger.Info("Deleting ControllerRevision", "parent_kind", parent.GetKind(), "parent", parent, "name", revision.GetName())
-			if err := client.Delete(context.TODO(), revision.Name, opts); err != nil {
+			if err := client.Delete(ctx, revision.Name, opts); err != nil {
 				return fmt.Errorf("can't delete ControllerRevision %v for %v %v/%v: %w", revision.Name, pc.parentResource.Kind, parent.GetNamespace(), parent.GetName(), err)
 			}
 		}
@@ -289,7 +289,7 @@ func (pc *parentController) manageRevisions(parent *unstructured.Unstructured, o
 				revision.SetResourceVersion(oldObj.GetResourceVersion())
 				logging.Logger.V(6).Info("ControllerRevision's resource version updated", "old", oldObj.GetObjectMeta().GetResourceVersion(), "new", revision.GetObjectMeta().GetResourceVersion())
 			}
-			updated, err := client.Update(context.TODO(), revision, metav1.UpdateOptions{})
+			updated, err := client.Update(ctx, revision, metav1.UpdateOptions{})
 			if err != nil {
 				return fmt.Errorf("can't update ControllerRevision %v for %v %v/%v: %w", revision.Name, pc.parentResource.Kind, parent.GetNamespace(), parent.GetName(), err)
 			}
@@ -297,7 +297,7 @@ func (pc *parentController) manageRevisions(parent *unstructured.Unstructured, o
 		} else {
 			// Create
 			logging.Logger.Info("Creating ControllerRevision", "parent_kind", parent.GetKind(), "parent", parent, "name", revision.GetName())
-			if _, err := client.Create(context.TODO(), revision, metav1.CreateOptions{}); err != nil {
+			if _, err := client.Create(ctx, revision, metav1.CreateOptions{}); err != nil {
 				return fmt.Errorf("can't create ControllerRevision %v for %v %v/%v: %w", revision.Name, pc.parentResource.Kind, parent.GetNamespace(), parent.GetName(), err)
 			}
 		}

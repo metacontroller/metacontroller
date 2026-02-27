@@ -17,6 +17,7 @@ limitations under the License.
 package controllerref
 
 import (
+	"context"
 	"fmt"
 	"metacontroller/pkg/logging"
 
@@ -51,7 +52,7 @@ func NewControllerRevisionManager(client client.ControllerRevisionInterface, par
 	}
 }
 
-func (m *ControllerRevisionManager) ClaimControllerRevisions(children []*v1alpha1.ControllerRevision) ([]*v1alpha1.ControllerRevision, error) {
+func (m *ControllerRevisionManager) ClaimControllerRevisions(ctx context.Context, children []*v1alpha1.ControllerRevision) ([]*v1alpha1.ControllerRevision, error) {
 	var claimed []*v1alpha1.ControllerRevision
 	var errlist []error
 
@@ -59,10 +60,10 @@ func (m *ControllerRevisionManager) ClaimControllerRevisions(children []*v1alpha
 		return m.Selector.Matches(labels.Set(obj.GetLabels()))
 	}
 	adopt := func(obj metav1.Object) error {
-		return m.adoptControllerRevision(obj.(*v1alpha1.ControllerRevision))
+		return m.adoptControllerRevision(ctx, obj.(*v1alpha1.ControllerRevision))
 	}
 	release := func(obj metav1.Object) error {
-		return m.releaseControllerRevision(obj.(*v1alpha1.ControllerRevision))
+		return m.releaseControllerRevision(ctx, obj.(*v1alpha1.ControllerRevision))
 	}
 
 	for _, child := range children {
@@ -78,7 +79,7 @@ func (m *ControllerRevisionManager) ClaimControllerRevisions(children []*v1alpha
 	return claimed, utilerrors.NewAggregate(errlist)
 }
 
-func (m *ControllerRevisionManager) adoptControllerRevision(obj *v1alpha1.ControllerRevision) error {
+func (m *ControllerRevisionManager) adoptControllerRevision(ctx context.Context, obj *v1alpha1.ControllerRevision) error {
 	if err := m.CanAdopt(); err != nil {
 		return fmt.Errorf("can't adopt ControllerRevision %v/%v (%v): %w", obj.GetNamespace(), obj.GetName(), obj.GetUID(), err)
 	}
@@ -96,7 +97,7 @@ func (m *ControllerRevisionManager) adoptControllerRevision(obj *v1alpha1.Contro
 	// We can't use merge patch because that would replace the whole list.
 	// We can't use JSON patch ops because that wouldn't be idempotent.
 	// The only option is GET/PUT with ResourceVersion.
-	_, err := m.client.UpdateWithRetries(obj, func(obj *v1alpha1.ControllerRevision) bool {
+	_, err := m.client.UpdateWithRetries(ctx, obj, func(obj *v1alpha1.ControllerRevision) bool {
 		ownerRefs := addOwnerReference(obj.GetOwnerReferences(), controllerRef)
 		obj.SetOwnerReferences(ownerRefs)
 		return true
@@ -104,9 +105,9 @@ func (m *ControllerRevisionManager) adoptControllerRevision(obj *v1alpha1.Contro
 	return err
 }
 
-func (m *ControllerRevisionManager) releaseControllerRevision(obj *v1alpha1.ControllerRevision) error {
+func (m *ControllerRevisionManager) releaseControllerRevision(ctx context.Context, obj *v1alpha1.ControllerRevision) error {
 	logging.Logger.Info("Releasing ControllerRevision", "parent", m.Controller, "child", obj)
-	_, err := m.client.UpdateWithRetries(obj, func(obj *v1alpha1.ControllerRevision) bool {
+	_, err := m.client.UpdateWithRetries(ctx, obj, func(obj *v1alpha1.ControllerRevision) bool {
 		ownerRefs := removeOwnerReference(obj.GetOwnerReferences(), m.Controller.GetUID())
 		obj.SetOwnerReferences(ownerRefs)
 		return true

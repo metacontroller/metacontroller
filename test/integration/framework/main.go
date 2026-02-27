@@ -148,9 +148,8 @@ func testMain(tests func() int, configuration options.Configuration) error {
 	if err := execKubectl("apply", "-f", path.Join(manifestDir, "metacontroller-crds-v1.yaml")); err != nil {
 		return fmt.Errorf("cannot install metacontroller CRDs: %v", err)
 	}
- 
- 	// Wait for CRDs to be created
- 	if err := execKubectl("wait", "--for=condition=Established", "crd", "compositecontrollers.metacontroller.k8s.io"); err != nil {
+	// Wait for CRDs to be created
+	if err := execKubectl("wait", "--for=condition=Established", "crd", "compositecontrollers.metacontroller.k8s.io"); err != nil {
 		return fmt.Errorf("cannot install metacontroller CRDs: %v", err)
 	}
 	if err := execKubectl("wait", "--for=condition=Established", "crd", "decoratorcontrollers.metacontroller.k8s.io"); err != nil {
@@ -168,13 +167,14 @@ func testMain(tests func() int, configuration options.Configuration) error {
 	configuration.MetricsEndpoint = ":" + strconv.Itoa(port)
 	configuration.RestConfig = ApiserverConfig()
 
-	mgr, err := server.New(configuration)
+	ctx := signals.SetupSignalHandler()
+
+	mgr, err := server.New(ctx, configuration)
 	if err != nil {
 		return fmt.Errorf("cannot create a metacontroller server: %v", err)
 	}
-	mgrStopChan := signals.SetupSignalHandler()
 	go func() {
-		if err := mgr.Start(mgrStopChan); err != nil {
+		if err := mgr.Start(ctx); err != nil {
 			logging.Logger.Error(err, "Terminating")
 			os.Exit(1)
 		}
@@ -184,7 +184,7 @@ func testMain(tests func() int, configuration options.Configuration) error {
 	discoveryClient := discovery.NewDiscoveryClientForConfigOrDie(ApiserverConfig())
 	resourceMap = dynamicdiscovery.NewResourceMap(discoveryClient)
 	// We don't care about stopping this cleanly since it has no external effects.
-	resourceMap.Start(500 * time.Millisecond)
+	resourceMap.Start(ctx, 500*time.Millisecond)
 
 	// Now actually run the tests.
 	if exitCode := tests(); exitCode != 0 {
