@@ -79,7 +79,7 @@ type parentController struct {
 	queue          workqueue.TypedRateLimitingInterface[any]
 
 	updateStrategy updateStrategyMap
-	childInformers common.InformerMap
+	childInformers *common.InformerMap
 
 	numWorkers    int
 	ssaOptions    *common.ApplyOptions
@@ -124,14 +124,14 @@ func newParentController(
 	}
 
 	// Create informers for all child resources.
-	childInformers := make(common.InformerMap)
+	childInformers := &common.InformerMap{}
 	defer func() {
 		if newErr != nil {
 			// If newParentController fails, Close() any informers we created
 			// since Stop() will never be called.
-			for _, childInformer := range childInformers {
-				childInformer.Close()
-			}
+			childInformers.Range(func(_ schema.GroupVersionResource, informer *dynamicinformer.ResourceInformer) {
+				informer.Close()
+			})
 			parentInformer.Close()
 		}
 	}()
@@ -149,9 +149,9 @@ func newParentController(
 
 	parentGroupVersion := schema.GroupVersion{Group: parentResource.Group, Version: parentResource.Version}
 
-	parentResources := make(common.GroupKindMap)
+	parentResources := &common.GroupKindMap{}
 	parentResources.Set(schema.GroupKind{Group: parentGroupVersion.Group, Kind: parentResource.Kind}, parentResource)
-	parentInformers := make(common.InformerMap)
+	parentInformers := &common.InformerMap{}
 	parentInformers.Set(parentGroupVersion.WithResource(parentResource.Name), parentInformer)
 	if cc.Spec.Hooks == nil {
 		return nil, fmt.Errorf("no hooks defined")
@@ -251,7 +251,7 @@ func (pc *parentController) Start() {
 			pc.logger.Error(err, "Unable to AddEventHandler Informer to Parent Informer", "controller", pc.cc.Name)
 		}
 	}
-	for _, childInformer := range pc.childInformers {
+	pc.childInformers.Range(func(_ schema.GroupVersionResource, childInformer *dynamicinformer.ResourceInformer) {
 		_, err := childInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 			AddFunc:    pc.onChildAdd,
 			UpdateFunc: pc.onChildUpdate,
@@ -260,7 +260,7 @@ func (pc *parentController) Start() {
 		if err != nil {
 			pc.logger.Error(err, "Unable to AddEventHandler Informer to Child Informer", "controller", pc.cc.Name)
 		}
-	}
+	})
 
 	go func() {
 		defer close(pc.doneCh)
@@ -273,11 +273,11 @@ func (pc *parentController) Start() {
 
 		// Wait for dynamic client and all informers.
 		pc.logger.Info("Waiting for CompositeController caches to sync", "controller", pc.cc)
-		syncFuncs := make([]cache.InformerSynced, 0, 2+len(pc.cc.Spec.ChildResources))
+		syncFuncs := make([]cache.InformerSynced, 0, 2+pc.childInformers.Len())
 		syncFuncs = append(syncFuncs, pc.dynClient.HasSynced, pc.parentInformer.Informer().HasSynced)
-		for _, childInformer := range pc.childInformers {
+		pc.childInformers.Range(func(_ schema.GroupVersionResource, childInformer *dynamicinformer.ResourceInformer) {
 			syncFuncs = append(syncFuncs, childInformer.Informer().HasSynced)
-		}
+		})
 		if !cache.WaitForNamedCacheSync(pc.parentResource.Kind, pc.stopCh, syncFuncs...) {
 			// We wait forever unless Stop() is called, so this isn't an error.
 			pc.logger.Info("CompositeController cache sync never finished", "controller", pc.cc)
@@ -302,10 +302,10 @@ func (pc *parentController) Stop() {
 	<-pc.doneCh
 
 	// Remove event handlers and close informers for all child resources.
-	for _, informer := range pc.childInformers {
+	pc.childInformers.Range(func(_ schema.GroupVersionResource, informer *dynamicinformer.ResourceInformer) {
 		informer.Informer().RemoveEventHandlers()
 		informer.Close()
-	}
+	})
 	// Remove event handlers and close informer for the parent resource.
 	pc.parentInformer.Informer().RemoveEventHandlers()
 	pc.parentInformer.Close()

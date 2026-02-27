@@ -67,7 +67,7 @@ type decoratorController struct {
 
 	resources *dynamicdiscovery.ResourceMap
 
-	parentKinds    common.GroupKindMap
+	parentKinds    *common.GroupKindMap
 	parentSelector *decoratorSelector
 
 	dynClient *dynamicclientset.Clientset
@@ -77,8 +77,8 @@ type decoratorController struct {
 
 	updateStrategy updateStrategyMap
 
-	parentInformers common.InformerMap
-	childInformers  common.InformerMap
+	parentInformers *common.InformerMap
+	childInformers  *common.InformerMap
 
 	numWorkers    int
 	eventRecorder record.EventRecorder
@@ -108,9 +108,9 @@ func newDecoratorController(resources *dynamicdiscovery.ResourceMap, dynClient *
 		dc:              dc,
 		resources:       resources,
 		dynClient:       dynClient,
-		parentKinds:     make(common.GroupKindMap),
-		parentInformers: make(common.InformerMap),
-		childInformers:  make(common.InformerMap),
+		parentKinds:     &common.GroupKindMap{},
+		parentInformers: &common.InformerMap{},
+		childInformers:  &common.InformerMap{},
 		queue: workqueue.NewTypedRateLimitingQueueWithConfig(
 			workqueue.DefaultTypedControllerRateLimiter[any](),
 			workqueue.TypedRateLimitingQueueConfig[any]{
@@ -137,7 +137,7 @@ func newDecoratorController(resources *dynamicdiscovery.ResourceMap, dynClient *
 		c.parentInformers,
 		c.parentKinds,
 		c.logger,
-		common.CompositeController,
+		common.DecoratorController,
 	)
 	if err != nil {
 		return nil, err
@@ -169,12 +169,12 @@ func newDecoratorController(resources *dynamicdiscovery.ResourceMap, dynClient *
 		if newErr != nil {
 			// If newDecoratorController fails, Close() any informers we created
 			// since Stop() will never be called.
-			for _, informer := range c.childInformers {
+			c.childInformers.Range(func(_ schema.GroupVersionResource, informer *dynamicinformer.ResourceInformer) {
 				informer.Close()
-			}
-			for _, informer := range c.parentInformers {
+			})
+			c.parentInformers.Range(func(_ schema.GroupVersionResource, informer *dynamicinformer.ResourceInformer) {
 				informer.Close()
-			}
+			})
 		}
 	}()
 
@@ -226,7 +226,7 @@ func (c *decoratorController) Start() {
 			resyncPeriod = time.Second
 		}
 	}
-	for _, informer := range c.parentInformers {
+	c.parentInformers.Range(func(_ schema.GroupVersionResource, informer *dynamicinformer.ResourceInformer) {
 		if resyncPeriod != 0 {
 			_, err := informer.Informer().AddEventHandlerWithResyncPeriod(parentHandlers, resyncPeriod)
 			if err != nil {
@@ -238,8 +238,8 @@ func (c *decoratorController) Start() {
 				c.logger.Error(err, "Unable to AddEventHandler Parent Informer to Informer", "controller", c.dc.Name)
 			}
 		}
-	}
-	for _, informer := range c.childInformers {
+	})
+	c.childInformers.Range(func(_ schema.GroupVersionResource, informer *dynamicinformer.ResourceInformer) {
 		_, err := informer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 			AddFunc:    c.onChildAdd,
 			UpdateFunc: c.onChildUpdate,
@@ -248,7 +248,7 @@ func (c *decoratorController) Start() {
 		if err != nil {
 			c.logger.Error(err, "Unable to AddEventHandler Child Informer to Informer", "controller", c.dc.Name)
 		}
-	}
+	})
 
 	go func() {
 		defer close(c.doneCh)
@@ -261,13 +261,13 @@ func (c *decoratorController) Start() {
 
 		// Wait for dynamic client and all informers.
 		c.logger.Info("Waiting for DecoratorController caches to sync", "controller", c.dc)
-		syncFuncs := make([]cache.InformerSynced, 0, 1+len(c.dc.Spec.Resources)+len(c.dc.Spec.Attachments))
-		for _, informer := range c.parentInformers {
+		syncFuncs := make([]cache.InformerSynced, 0, 1+c.parentInformers.Len()+c.childInformers.Len())
+		c.parentInformers.Range(func(_ schema.GroupVersionResource, informer *dynamicinformer.ResourceInformer) {
 			syncFuncs = append(syncFuncs, informer.Informer().HasSynced)
-		}
-		for _, informer := range c.childInformers {
+		})
+		c.childInformers.Range(func(_ schema.GroupVersionResource, informer *dynamicinformer.ResourceInformer) {
 			syncFuncs = append(syncFuncs, informer.Informer().HasSynced)
-		}
+		})
 		if !cache.WaitForNamedCacheSync(c.dc.Name, c.stopCh, syncFuncs...) {
 			// We wait forever unless Stop() is called, so this isn't an error.
 			c.logger.Info("DecoratorController cache sync never finished", "controller", c.dc)
@@ -292,15 +292,15 @@ func (c *decoratorController) Stop() {
 	<-c.doneCh
 
 	// Remove event handlers and close informers for all child resources.
-	for _, informer := range c.childInformers {
+	c.childInformers.Range(func(_ schema.GroupVersionResource, informer *dynamicinformer.ResourceInformer) {
 		informer.Informer().RemoveEventHandlers()
 		informer.Close()
-	}
+	})
 	// Remove event handlers and close informer for all parent resources.
-	for _, informer := range c.parentInformers {
+	c.parentInformers.Range(func(_ schema.GroupVersionResource, informer *dynamicinformer.ResourceInformer) {
 		informer.Informer().RemoveEventHandlers()
 		informer.Close()
-	}
+	})
 	c.customize.Stop()
 }
 

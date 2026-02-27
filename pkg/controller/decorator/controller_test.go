@@ -57,8 +57,8 @@ func defaultCustomizeManager() *customize.Manager {
 		&NilCustomizableController{},
 		&dynamicclientset.Clientset{},
 		&dynamicinformer.SharedInformerFactory{},
-		make(common.InformerMap),
-		make(common.GroupKindMap),
+		&common.InformerMap{},
+		&common.GroupKindMap{},
 		logging.Logger,
 		common.DecoratorController,
 	)
@@ -142,9 +142,11 @@ func newDefaultDecoratorController() *v1alpha1.DecoratorController {
 	}
 }
 
-var defaultGroupKindMap = map[schema.GroupKind]*dynamicdiscovery.APIResource{
-	{Group: TestGroup, Kind: TestKind}: &DefaultApiResource,
-}
+var defaultGroupKindMap = func() *common.GroupKindMap {
+	m := &common.GroupKindMap{}
+	m.Set(schema.GroupKind{Group: TestGroup, Kind: TestKind}, &DefaultApiResource)
+	return m
+}()
 
 var defaultSelectorKey = fmt.Sprintf("%s.%s", TestKind, TestGroup)
 var defaultLabels = map[string]string{"key": "val"}
@@ -167,13 +169,13 @@ func Test_decoratorController_sync(t *testing.T) {
 	logging.InitLogging(&zap.Options{})
 	type fields struct {
 		dc             *v1alpha1.DecoratorController
-		parentKinds    common.GroupKindMap
+		parentKinds    *common.GroupKindMap
 		parentSelector *decoratorSelector
 		stopCh         chan struct{}
 		doneCh         chan struct{}
 		queue          workqueue.TypedRateLimitingInterface[any]
 		updateStrategy updateStrategyMap
-		childInformers common.InformerMap
+		childInformers *common.InformerMap
 		numWorkers     int
 		eventRecorder  record.EventRecorder
 		finalizer      *finalizer.Manager
@@ -442,7 +444,11 @@ func Test_decoratorController_sync(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, resources, dynClient, _, parentInformers := tt.clientsAndInformers()
+			_, resources, dynClient, _, parentInformersMap := tt.clientsAndInformers()
+			parentInformers := &common.InformerMap{}
+			for gvr, informer := range parentInformersMap {
+				parentInformers.Set(gvr, informer)
+			}
 			c := &decoratorController{
 				dc:              tt.fields.dc,
 				resources:       resources,

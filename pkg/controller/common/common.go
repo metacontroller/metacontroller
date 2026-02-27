@@ -21,6 +21,7 @@ import (
 	"metacontroller/pkg/logging"
 	"metacontroller/pkg/options"
 	"strings"
+	"sync"
 
 	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 
@@ -155,24 +156,102 @@ func ParseAPIVersion(apiVersion string) (group, version string) {
 	return parts[0], parts[1]
 }
 
-type GroupKindMap map[schema.GroupKind]*dynamicdiscovery.APIResource
-
-func (m GroupKindMap) Set(gk schema.GroupKind, resource *dynamicdiscovery.APIResource) {
-	m[gk] = resource
+type GroupKindMap struct {
+	mu sync.RWMutex
+	m  map[schema.GroupKind]*dynamicdiscovery.APIResource
 }
 
-func (m GroupKindMap) Get(gk schema.GroupKind) *dynamicdiscovery.APIResource {
-	return m[gk]
+func (m *GroupKindMap) Set(gk schema.GroupKind, resource *dynamicdiscovery.APIResource) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.m == nil {
+		m.m = make(map[schema.GroupKind]*dynamicdiscovery.APIResource)
+	}
+	m.m[gk] = resource
 }
 
-type InformerMap map[schema.GroupVersionResource]*dynamicinformer.ResourceInformer
-
-func (m InformerMap) Set(gvr schema.GroupVersionResource, informer *dynamicinformer.ResourceInformer) {
-	m[gvr] = informer
+func (m *GroupKindMap) Get(gk schema.GroupKind) *dynamicdiscovery.APIResource {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	if m.m == nil {
+		return nil
+	}
+	return m.m[gk]
 }
 
-func (m InformerMap) Get(gvr schema.GroupVersionResource) *dynamicinformer.ResourceInformer {
-	return m[gvr]
+func (m *GroupKindMap) Len() int {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	if m.m == nil {
+		return 0
+	}
+	return len(m.m)
+}
+
+func (m *GroupKindMap) Range(f func(gk schema.GroupKind, resource *dynamicdiscovery.APIResource)) {
+	m.mu.RLock()
+	if m.m == nil {
+		m.mu.RUnlock()
+		return
+	}
+	snapshot := make(map[schema.GroupKind]*dynamicdiscovery.APIResource, len(m.m))
+	for k, v := range m.m {
+		snapshot[k] = v
+	}
+	m.mu.RUnlock()
+
+	for k, v := range snapshot {
+		f(k, v)
+	}
+}
+
+type InformerMap struct {
+	mu sync.RWMutex
+	m  map[schema.GroupVersionResource]*dynamicinformer.ResourceInformer
+}
+
+func (m *InformerMap) Set(gvr schema.GroupVersionResource, informer *dynamicinformer.ResourceInformer) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.m == nil {
+		m.m = make(map[schema.GroupVersionResource]*dynamicinformer.ResourceInformer)
+	}
+	m.m[gvr] = informer
+}
+
+func (m *InformerMap) Get(gvr schema.GroupVersionResource) *dynamicinformer.ResourceInformer {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	if m.m == nil {
+		return nil
+	}
+	return m.m[gvr]
+}
+
+func (m *InformerMap) Len() int {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	if m.m == nil {
+		return 0
+	}
+	return len(m.m)
+}
+
+func (m *InformerMap) Range(f func(gvr schema.GroupVersionResource, informer *dynamicinformer.ResourceInformer)) {
+	m.mu.RLock()
+	if m.m == nil {
+		m.mu.RUnlock()
+		return
+	}
+	snapshot := make(map[schema.GroupVersionResource]*dynamicinformer.ResourceInformer, len(m.m))
+	for k, v := range m.m {
+		snapshot[k] = v
+	}
+	m.mu.RUnlock()
+
+	for k, v := range snapshot {
+		f(k, v)
+	}
 }
 
 // GetObject return object via Lister from given informer, namespaced or not.
