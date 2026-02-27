@@ -8,7 +8,7 @@ require (
 	github.com/evanphx/json-patch/v5 v5.9.11
 	github.com/go-logr/logr v1.4.3
 	github.com/google/go-cmp v0.7.0
-	github.com/nsf/jsondiff v0.0.0-20230430225905-43f6cf3098c1 // test
+	github.com/nsf/jsondiff v0.0.0-20260207060731-8e8d90c4c0ac // test
 	github.com/prometheus/client_golang v1.22.0
 	github.com/stretchr/testify v1.10.0 //test
 	go.uber.org/zap v1.27.0
