@@ -18,6 +18,7 @@ package decorator
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	commonv2 "metacontroller/pkg/controller/common/api/v2"
 	"metacontroller/pkg/hooks"
@@ -532,7 +533,12 @@ func (c *decoratorController) sync(key string) error {
 		}
 	}
 	err = c.syncParentObject(parent)
-	if err != nil {
+	switch {
+	case errors.Is(err, customize.ErrRelatedInformerNotSynced):
+		c.logger.V(4).Info("Transient error, requeueing parent object", "kind", kind, "object", klog.KRef(namespace, name), "err", err)
+		c.queue.AddRateLimited(key)
+		return nil
+	case err != nil:
 		c.eventRecorder.Eventf(
 			parent,
 			corev1.EventTypeWarning,
