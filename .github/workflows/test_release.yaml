@@ -42,7 +42,7 @@ jobs:
       - name: Build metacontroller:${{ matrix.target.name }}
         run: |
           docker save --output metacontroller-${{ matrix.target.name }}.tar localhost/metacontroller:${{ matrix.target.name }}
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         name: Upload metacontroller images
         with:
           name: metacontroller-image-${{ matrix.target.name }}
@@ -132,7 +132,7 @@ jobs:
           wait: 120s
 
       - name: Download metacontroller images
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: metacontroller-image-dev
 
@@ -153,7 +153,7 @@ jobs:
           cd examples
           ./test.sh
       - name: Archive production artifacts
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: logs-${{ matrix.configuration.version }}-${{ matrix.configuration.variant }}
           path: |
@@ -199,7 +199,7 @@ jobs:
           wait: 120s
 
       - name: Download metacontroller images
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           pattern: metacontroller-image-*
           merge-multiple: true
