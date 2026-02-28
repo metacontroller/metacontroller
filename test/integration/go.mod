@@ -3,10 +3,10 @@ module metacontroller/test/integration
 go 1.26.0
 
 require (
-	k8s.io/api v0.35.0
-	k8s.io/apiextensions-apiserver v0.35.0
-	k8s.io/apimachinery v0.35.0
-	k8s.io/client-go v0.35.0
+	k8s.io/api v0.35.2
+	k8s.io/apiextensions-apiserver v0.35.2
+	k8s.io/apimachinery v0.35.2
+	k8s.io/client-go v0.35.2
 	k8s.io/utils v0.0.0-20260210185600-b8788abfbbc2
 	metacontroller v0.0.0-00010101000000-000000000000
 	sigs.k8s.io/controller-runtime v0.23.1
@@ -69,8 +69,8 @@ require (
 
 replace (
 	golang.org/x/net => golang.org/x/net v0.45.0
-	k8s.io/api => k8s.io/api v0.35.0
-	k8s.io/apimachinery => k8s.io/apimachinery v0.35.0
-	k8s.io/client-go => k8s.io/client-go v0.35.0
+	k8s.io/api => k8s.io/api v0.35.2
+	k8s.io/apimachinery => k8s.io/apimachinery v0.35.2
+	k8s.io/client-go => k8s.io/client-go v0.35.2
 	metacontroller => ../..
 )
