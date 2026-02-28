@@ -12,7 +12,7 @@ set -u
 PWD="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
 # This is the kube-apiserver version to test against.
-KUBE_VERSION="${KUBE_VERSION:-v1.33.1}"
+KUBE_VERSION="${KUBE_VERSION:-v1.35.0}"
 KUBERNETES_RELEASE_URL="${KUBERNETES_RELEASE_URL:-https://dl.k8s.io}"
 
 # This should be the etcd version downloaded by kubernetes/hack/lib/etcd.sh
