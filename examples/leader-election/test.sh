@@ -13,8 +13,8 @@ trap cleanup EXIT
 
 set -euo
 
-success_msg='successfully acquired lease'
-attempt_msg='attempting to acquire leader lease'
+success_msg='Successfully acquired lease'
+attempt_msg='Attempting to acquire leader lease'
 
 previous_replicas=$(kubectl get statefulset metacontroller -n metacontroller -o=jsonpath='{.spec.replicas}')
 kubectl apply -k ./manifest
