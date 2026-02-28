@@ -94,7 +94,7 @@ func newDefaultControllerClientsAndInformers(fakeDynamicClientFn func(client *fa
 		apiResourceList = NewDefaultAPIResourceList()
 	}
 
-	simpleClientset := NewFakeNewSimpleClientsetWithResources(apiResourceList)
+	simpleClientset := NewFakeClientsetWithResources(apiResourceList)
 	resourceMap := NewFakeResourceMap(simpleClientset)
 	restConfig := NewDefaultRestConfig()
 	testClientset := NewClientset(restConfig, resourceMap, simpleDynClient)

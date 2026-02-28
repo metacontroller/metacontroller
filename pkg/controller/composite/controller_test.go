@@ -81,7 +81,7 @@ func newDefaultControllerClientsAndInformers(fakeDynamicClientFn func(client *fa
 
 	simpleDynClient := fake.NewSimpleDynamicClientWithCustomListKinds(runtime.NewScheme(), gvrToListKind, NewDefaultUnstructured())
 	fakeDynamicClientFn(simpleDynClient)
-	simpleClientset := NewFakeNewSimpleClientsetWithResources(NewDefaultAPIResourceList())
+	simpleClientset := NewFakeClientsetWithResources(NewDefaultAPIResourceList())
 	resourceMap := NewFakeResourceMap(simpleClientset)
 	restConfig := NewDefaultRestConfig()
 	testClientset := NewClientset(restConfig, resourceMap, simpleDynClient)

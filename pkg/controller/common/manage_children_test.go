@@ -124,7 +124,7 @@ func TestManageChildren(t *testing.T) {
 
 	unstructuredDefault := NewDefaultUnstructured()
 	unstructuredDefaultList := []*unstructured.Unstructured{unstructuredDefault}
-	simpleClientset := NewFakeNewSimpleClientsetWithResources(NewDefaultAPIResourceList())
+	simpleClientset := NewFakeClientsetWithResources(NewDefaultAPIResourceList())
 	testResourceMap := NewFakeResourceMap(simpleClientset)
 	testRestConfig := NewDefaultRestConfig()
 

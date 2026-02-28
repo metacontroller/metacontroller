@@ -27,8 +27,8 @@ import (
 	"k8s.io/client-go/rest"
 )
 
-func NewFakeNewSimpleClientsetWithResources(apiResourceList []*metav1.APIResourceList) *fakeclientset.Clientset {
-	simpleClientset := fakeclientset.NewSimpleClientset(common.NewDefaultUnstructured())
+func NewFakeClientsetWithResources(apiResourceList []*metav1.APIResourceList) *fakeclientset.Clientset {
+	simpleClientset := fakeclientset.NewClientset(common.NewDefaultUnstructured())
 	simpleClientset.Resources = apiResourceList
 	return simpleClientset
 }
