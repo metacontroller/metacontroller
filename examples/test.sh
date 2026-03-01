@@ -103,8 +103,9 @@ for test in */test.sh; do
   kubectl logs metacontroller-0 --follow -n metacontroller > "${metacontrollerLogFile}" &
   serverPID=$!
   testLogFile="${logdir}/${test}.txt"
+  start=$SECONDS
   if ! (cd "$(dirname "${test}")" && timeout --signal=SIGTERM 5m ./test.sh v1 > "${testLogFile}" 2>&1); then
-    echo "FAILED"
+    echo "FAILED ($(( SECONDS - start ))s)"
     cat "${testLogFile}"
     echo "Test ${test} failed!"
     cat "${metacontrollerLogFile}"
@@ -118,5 +119,5 @@ for test in */test.sh; do
   else
     echo "Skip logs removal in CI_MODE"
   fi
-  echo "PASSED"
+  echo "PASSED ($(( SECONDS - start ))s)"
 done
