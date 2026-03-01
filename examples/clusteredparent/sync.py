@@ -15,6 +15,7 @@
 # limitations under the License.
 
 from http.server import BaseHTTPRequestHandler, HTTPServer
+import io
 import json
 
 def new_rolebinding(name):

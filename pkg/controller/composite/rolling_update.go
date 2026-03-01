@@ -19,7 +19,7 @@ package composite
 import (
 	"fmt"
 	"metacontroller/pkg/controller/common"
-	v2 "metacontroller/pkg/controller/common/api/v2"
+	"metacontroller/pkg/controller/common/api"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
@@ -30,7 +30,7 @@ import (
 	dynamicobject "metacontroller/pkg/dynamic/object"
 )
 
-func (pc *parentController) syncRollingUpdate(parentRevisions []*parentRevision, observedChildren v2.UniformObjectMap) error {
+func (pc *parentController) syncRollingUpdate(parentRevisions []*parentRevision, observedChildren api.ObjectMap) error {
 	// Reconcile the set of existing child claims in ControllerRevisions.
 	claimed := pc.syncRevisionClaims(parentRevisions)
 
@@ -156,7 +156,7 @@ func (pc *parentController) syncRollingUpdate(parentRevisions []*parentRevision,
 	return nil
 }
 
-func (pc *parentController) shouldContinueRolling(latest *parentRevision, observedChildren v2.UniformObjectMap) error {
+func (pc *parentController) shouldContinueRolling(latest *parentRevision, observedChildren api.ObjectMap) error {
 	// We continue rolling only if all children claimed by the latest revision
 	// are updated and were observed in a "happy" state, according to the
 	// user-supplied, resource-specific status checks.

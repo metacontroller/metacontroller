@@ -115,6 +115,10 @@ func (f *SharedInformerFactory) Resource(apiVersion, resource string) (*Resource
 	return newResourceInformer(sharedInformer), nil
 }
 
+func (f *SharedInformerFactory) IsInitialized() bool {
+	return f != nil && f.clientset != nil
+}
+
 func resourceKey(apiVersion, resource string) string {
 	return fmt.Sprintf("%s.%s", resource, apiVersion)
 }
