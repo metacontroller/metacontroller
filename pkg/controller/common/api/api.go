@@ -18,6 +18,7 @@ package api
 
 import (
 	"fmt"
+	v2 "metacontroller/pkg/controller/common/api/v2"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -25,7 +26,10 @@ import (
 )
 
 type WebhookRequest interface {
-	GetRootObject() *unstructured.Unstructured
+	GetParent() *unstructured.Unstructured
+	GetChildren() v2.UniformObjectMap
+	GetRelated() v2.UniformObjectMap
+	IsFinalizing() bool
 }
 
 // GroupVersionKind is metacontroller wrapper around schema.GroupVersionKind
