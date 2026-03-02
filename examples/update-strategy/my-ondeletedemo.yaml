@@ -1,0 +1,6 @@
+apiVersion: ctl.example.com/v1
+kind: OnDeleteDemo
+metadata:
+  name: odd-instance
+spec:
+  configData: "v1"
