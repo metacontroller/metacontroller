@@ -358,8 +358,8 @@ func (h *ServerSideApply) Apply(ctx context.Context, op *ApplyOperation) error {
 			defer storeState(op.observed.GetGeneration())
 			return h.childUpdateOnDelete(ctx, op)
 		case v1alpha1.ChildUpdateRecreate, v1alpha1.ChildUpdateRollingRecreate:
-			// run a dry run with server-side apply to check if the update would cause any changes. If it doesn't cause any changes, we can skip the delete and recreate process 
-			// which can be disruptive for some resources like Jobs and Pods. If it does cause changes, we will proceed with the delete and recreate process as before. 
+			// run a dry run with server-side apply to check if the update would cause any changes. If it doesn't cause any changes, we can skip the delete and recreate process
+			// which can be disruptive for some resources like Jobs and Pods. If it does cause changes, we will proceed with the delete and recreate process as before.
 			dryRunPatched, err := h.client.Namespace(op.desired.GetNamespace()).Patch(ctx, op.desired.GetName(), types.ApplyPatchType, data, metav1.PatchOptions{
 				FieldManager: h.ssaOptions.FieldManager,
 				Force:        ptr.To(true),
@@ -419,7 +419,7 @@ func (h *ServerSideApply) Apply(ctx context.Context, op *ApplyOperation) error {
 	}
 
 	storeState(patched.GetGeneration())
-	
+
 	return nil
 }
 
