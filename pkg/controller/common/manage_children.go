@@ -318,8 +318,19 @@ func (h *ServerSideApply) Apply(ctx context.Context, op *ApplyOperation) error {
 		return err
 	}
 
-	hash := xxhash.Sum64(data)
+	desiredHash := xxhash.Sum64(data)
 	lastUpdateCacheName := lastUpdateCacheKey(h.client, op.desired)
+
+	storeState := func(generation int64) {
+		cacheLock.Lock()
+		defer cacheLock.Unlock()
+		lastUpdatedCache[lastUpdateCacheName] = &lastUpdate{
+			hash:               desiredHash,
+			resourcegeneration: generation,
+		}
+		logging.Logger.Info("Cache updated", "name", lastUpdateCacheName)
+	}
+
 	if op.observed != nil {
 		if op.observed.GetDeletionTimestamp() != nil {
 			logging.Logger.Info("Not updating", "parent", op.parent, "child", op.desired, "reason", "Pending deletion of child object")
@@ -330,7 +341,7 @@ func (h *ServerSideApply) Apply(ctx context.Context, op *ApplyOperation) error {
 		lastUpdated, ok := lastUpdatedCache[lastUpdateCacheName]
 		cacheLock.RUnlock()
 
-		if ok && lastUpdated.hash == hash && lastUpdated.resourcegeneration == op.observed.GetGeneration() {
+		if ok && lastUpdated.hash == desiredHash && lastUpdated.resourcegeneration == op.observed.GetGeneration() {
 			logging.Logger.Info("Skipping update, no changes detected", "name", lastUpdateCacheName)
 			return nil
 		}
@@ -344,8 +355,24 @@ func (h *ServerSideApply) Apply(ctx context.Context, op *ApplyOperation) error {
 		// Check the update strategy for this child kind.
 		switch method := op.updateStrategy.GetMethod(h.client.Group, h.client.Kind); method {
 		case v1alpha1.ChildUpdateOnDelete, "":
+			defer storeState(op.observed.GetGeneration())
 			return h.childUpdateOnDelete(ctx, op)
 		case v1alpha1.ChildUpdateRecreate, v1alpha1.ChildUpdateRollingRecreate:
+			// run a dry run with server-side apply to check if the update would cause any changes. If it doesn't cause any changes, we can skip the delete and recreate process 
+			// which can be disruptive for some resources like Jobs and Pods. If it does cause changes, we will proceed with the delete and recreate process as before. 
+			dryRunPatched, err := h.client.Namespace(op.desired.GetNamespace()).Patch(ctx, op.desired.GetName(), types.ApplyPatchType, data, metav1.PatchOptions{
+				FieldManager: h.ssaOptions.FieldManager,
+				Force:        ptr.To(true),
+				DryRun:       []string{metav1.DryRunAll},
+			})
+			if err != nil {
+				return fmt.Errorf("dry run failed for server-side apply: %w", err)
+			}
+			if DeepEqual(dryRunPatched.UnstructuredContent(), op.observed.UnstructuredContent()) {
+				logging.Logger.Info("Skipping delete and recreate, no changes detected in dry run", "parent", op.parent, "child", op.desired)
+				storeState(op.observed.GetGeneration())
+				return nil
+			}
 			return h.childUpdateRecreate(ctx, op)
 		case v1alpha1.ChildUpdateInPlace, v1alpha1.ChildUpdateRollingInPlace:
 			// check if observed object hast last applied annotation
@@ -366,8 +393,8 @@ func (h *ServerSideApply) Apply(ctx context.Context, op *ApplyOperation) error {
 					}
 					return nil
 				}
-				// we intentionally fall through to the server-side apply below, which will update or create the object as needed
 			}
+			// we intentionally fall through to the server-side apply below, which will update or create the object as needed
 		default:
 			return fmt.Errorf("invalid update strategy for %v: unknown method %q", h.client.Kind, method)
 		}
@@ -391,14 +418,8 @@ func (h *ServerSideApply) Apply(ctx context.Context, op *ApplyOperation) error {
 		return nil
 	}
 
-	cacheLock.Lock()
-	defer cacheLock.Unlock()
-	lastUpdatedCache[lastUpdateCacheName] = &lastUpdate{
-		hash:               hash,
-		resourcegeneration: patched.GetGeneration(),
-	}
-
-	logging.Logger.Info("Cache updated", "name", lastUpdateCacheName)
+	storeState(patched.GetGeneration())
+	
 	return nil
 }
 

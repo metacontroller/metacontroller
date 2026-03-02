@@ -1,0 +1,66 @@
+---
+# CRD for OnDelete update strategy demo
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: ondeletedemos.ctl.example.com
+spec:
+  group: ctl.example.com
+  names:
+    kind: OnDeleteDemo
+    plural: ondeletedemos
+    shortNames:
+      - odd
+  scope: Namespaced
+  versions:
+    - name: v1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                configData:
+                  type: string
+                  default: "initial"
+            status:
+              type: object
+              x-kubernetes-preserve-unknown-fields: true
+      subresources:
+        status: {}
+---
+# CRD for Recreate update strategy demo
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: recreatedemos.ctl.example.com
+spec:
+  group: ctl.example.com
+  names:
+    kind: RecreateDemo
+    plural: recreatedemos
+    shortNames:
+      - rcd
+  scope: Namespaced
+  versions:
+    - name: v1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                configData:
+                  type: string
+                  default: "initial"
+            status:
+              type: object
+              x-kubernetes-preserve-unknown-fields: true
+      subresources:
+        status: {}
