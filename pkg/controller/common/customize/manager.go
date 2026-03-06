@@ -22,7 +22,6 @@ import (
 	commonv2 "metacontroller/pkg/controller/common/api/v2"
 	v1 "metacontroller/pkg/controller/common/customize/api/v1"
 	"metacontroller/pkg/hooks"
-	"sync"
 	"time"
 
 	"k8s.io/apimachinery/pkg/types"
@@ -61,9 +60,8 @@ type Manager struct {
 	dynInformers    *dynamicinformer.SharedInformerFactory
 	parentInformers *common.InformerMap
 
-	relatedInformers   *common.InformerMap
-	relatedInformersMu sync.Mutex
-	customizeCache     *cache.Cache[customizeKey, *v1.CustomizeHookResponse]
+	relatedInformers *common.InformerMap
+	customizeCache   *cache.Cache[customizeKey, *v1.CustomizeHookResponse]
 
 	stopCh chan struct{}
 
@@ -196,32 +194,34 @@ func (rm *Manager) getOrCreateRelatedInformer(apiVersion, resource string, gvr s
 		return informer, nil
 	}
 
-	rm.relatedInformersMu.Lock()
-	defer rm.relatedInformersMu.Unlock()
-
-	// Double-check after acquiring the lock
-	informer = rm.relatedInformers.Get(gvr)
-	if informer != nil {
-		return informer, nil
-	}
-
 	informer, err := rm.dynInformers.Resource(apiVersion, resource)
 	if err != nil {
 		return nil, fmt.Errorf("can't create informer for related resource: %w", err)
 	}
 
-	_, err = informer.Informer().AddEventHandler(clientgo_cache.ResourceEventHandlerFuncs{
+	actual, loaded := rm.relatedInformers.GetOrCreate(gvr, informer)
+	if loaded {
+		// If we lost the race, clean up the informer we just created.
+		informer.Close()
+		return actual, nil
+	}
+
+	// We won the race, add event handlers once.
+	_, err = actual.Informer().AddEventHandler(clientgo_cache.ResourceEventHandlerFuncs{
 		AddFunc:    rm.onRelatedAdd,
 		UpdateFunc: rm.onRelatedUpdate,
 		DeleteFunc: rm.onRelatedDelete,
 	})
 
 	if err != nil {
-		return nil, fmt.Errorf("can't create informer for related resource: %w", err)
+		// If we fail to add event handlers, we should probably remove the informer from the map
+		// and close it so we don't leave a "broken" informer.
+		rm.relatedInformers.Delete(gvr)
+		actual.Close()
+		return nil, fmt.Errorf("can't add event handlers for related resource: %w", err)
 	}
 
-	rm.relatedInformers.Set(gvr, informer)
-	return informer, nil
+	return actual, nil
 }
 
 func (rm *Manager) onRelatedAdd(obj interface{}) {

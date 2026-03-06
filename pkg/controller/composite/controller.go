@@ -76,7 +76,7 @@ type parentController struct {
 	revisionLister mclisters.ControllerRevisionLister
 
 	stopCh, doneCh chan struct{}
-	queue          workqueue.TypedRateLimitingInterface[any]
+	queue          workqueue.TypedRateLimitingInterface[string]
 
 	updateStrategy updateStrategyMap
 	childInformers *common.InformerMap
@@ -185,8 +185,8 @@ func newParentController(
 		revisionLister: revisionLister,
 		updateStrategy: updateStrategy,
 		queue: workqueue.NewTypedRateLimitingQueueWithConfig(
-			workqueue.DefaultTypedControllerRateLimiter[any](),
-			workqueue.TypedRateLimitingQueueConfig[any]{
+			workqueue.DefaultTypedControllerRateLimiter[string](),
+			workqueue.TypedRateLimitingQueueConfig[string]{
 				Name: common.CompositeController.String() + "-" + cc.Name,
 			},
 		),
@@ -324,7 +324,16 @@ func (pc *parentController) processNextWorkItem() bool {
 	}
 	defer pc.queue.Done(key)
 
-	if err := pc.sync(key.(string)); err != nil {
+	if err := pc.sync(key); err != nil {
+		var tooManyRequestError *hooks.TooManyRequestError
+		if errors.As(err, &tooManyRequestError) {
+			pc.queue.AddAfter(key, time.Duration(tooManyRequestError.AfterSecond)*time.Second)
+			return true
+		}
+		if errors.Is(err, customize.ErrRelatedInformerNotSynced) {
+			pc.queue.AddRateLimited(key)
+			return true
+		}
 		utilruntime.HandleError(fmt.Errorf("failed to sync %v '%v': %w", pc.parentResource.Kind, key, err))
 		pc.queue.AddRateLimited(key)
 		return true
@@ -556,14 +565,11 @@ func (pc *parentController) sync(key string) error {
 	var tooManyRequestError *hooks.TooManyRequestError
 	switch {
 	case errors.As(err, &tooManyRequestError):
-		afterSec := tooManyRequestError.AfterSecond
-		pc.logger.Info("Resync due to too many request for sync hooks", "second", afterSec, "parent", parent)
-		pc.queue.AddAfter(key, time.Duration(afterSec)*time.Second)
-		return nil
+		pc.logger.Info("Resync due to too many request for sync hooks", "second", tooManyRequestError.AfterSecond, "parent", parent)
+		return err
 	case errors.Is(err, customize.ErrRelatedInformerNotSynced):
 		pc.logger.V(4).Info("Transient error, requeueing parent object", "parent_kind", pc.parentResource.Kind, "object", klog.KRef(namespace, name), "err", err)
-		pc.queue.AddRateLimited(key)
-		return nil
+		return err
 	case err != nil:
 		pc.eventRecorder.Eventf(
 			parent,

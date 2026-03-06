@@ -74,7 +74,7 @@ type decoratorController struct {
 	dynClient *dynamicclientset.Clientset
 
 	stopCh, doneCh chan struct{}
-	queue          workqueue.TypedRateLimitingInterface[any]
+	queue          workqueue.TypedRateLimitingInterface[string]
 
 	updateStrategy updateStrategyMap
 
@@ -113,8 +113,8 @@ func newDecoratorController(resources *dynamicdiscovery.ResourceMap, dynClient *
 		parentInformers: common.NewInformerMap(),
 		childInformers:  common.NewInformerMap(),
 		queue: workqueue.NewTypedRateLimitingQueueWithConfig(
-			workqueue.DefaultTypedControllerRateLimiter[any](),
-			workqueue.TypedRateLimitingQueueConfig[any]{
+			workqueue.DefaultTypedControllerRateLimiter[string](),
+			workqueue.TypedRateLimitingQueueConfig[string]{
 				Name: common.DecoratorController.String() + "-" + dc.Name,
 			},
 		),
@@ -319,7 +319,16 @@ func (c *decoratorController) processNextWorkItem() bool {
 	}
 	defer c.queue.Done(key)
 
-	if err := c.sync(key.(string)); err != nil {
+	if err := c.sync(key); err != nil {
+		var tooManyRequestError *hooks.TooManyRequestError
+		if errors.As(err, &tooManyRequestError) {
+			c.queue.AddAfter(key, time.Duration(tooManyRequestError.AfterSecond)*time.Second)
+			return true
+		}
+		if errors.Is(err, customize.ErrRelatedInformerNotSynced) {
+			c.queue.AddRateLimited(key)
+			return true
+		}
 		utilruntime.HandleError(fmt.Errorf("failed to sync %v '%v': %w", c.dc.Name, key, err))
 		c.queue.AddRateLimited(key)
 		return true
@@ -533,11 +542,14 @@ func (c *decoratorController) sync(key string) error {
 		}
 	}
 	err = c.syncParentObject(parent)
+	var tooManyRequestError *hooks.TooManyRequestError
 	switch {
+	case errors.As(err, &tooManyRequestError):
+		c.logger.Info("Resync due to too many request for sync hooks", "second", tooManyRequestError.AfterSecond, "parent", parent)
+		return err
 	case errors.Is(err, customize.ErrRelatedInformerNotSynced):
 		c.logger.V(4).Info("Transient error, requeueing parent object", "kind", kind, "object", klog.KRef(namespace, name), "err", err)
-		c.queue.AddRateLimited(key)
-		return nil
+		return err
 	case err != nil:
 		c.eventRecorder.Eventf(
 			parent,

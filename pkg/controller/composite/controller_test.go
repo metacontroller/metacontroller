@@ -137,7 +137,7 @@ func Test_parentController_sync(t *testing.T) {
 		revisionLister mclisters.ControllerRevisionLister
 		stopCh         chan struct{}
 		doneCh         chan struct{}
-		queue          workqueue.TypedRateLimitingInterface[any]
+		queue          workqueue.TypedRateLimitingInterface[string]
 		updateStrategy updateStrategyMap
 		childInformers *common.InformerMap
 		numWorkers     int
@@ -361,7 +361,7 @@ func Test_parentController_sync_requeue_item_when_hook_throw_TooManyRequestError
 		logger:         logging.Logger,
 	}
 
-	err := pc.sync(defaultTestKey)
-	assert.Nil(t, err)
+	pc.queue.Add(defaultTestKey)
+	pc.processNextWorkItem()
 	assert.Equal(t, 1, pc.queue.Len())
 }

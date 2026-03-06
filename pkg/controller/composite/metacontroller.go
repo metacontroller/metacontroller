@@ -18,6 +18,7 @@ package composite
 
 import (
 	"context"
+
 	"metacontroller/pkg/logging"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -63,7 +64,7 @@ type Metacontroller struct {
 	revisionLister   mclisters.ControllerRevisionLister
 	revisionInformer cache.SharedIndexInformer
 
-	parentControllers map[string]*parentController
+	parentControllers common.SyncMap[string, *parentController]
 
 	numWorkers int
 	ssaOptions *common.ApplyOptions
@@ -83,8 +84,6 @@ func NewMetacontroller(controllerContext common.ControllerContext, mcClient mccl
 		revisionLister:   controllerContext.McInformerFactory.Metacontroller().V1alpha1().ControllerRevisions().Lister(),
 		revisionInformer: controllerContext.McInformerFactory.Metacontroller().V1alpha1().ControllerRevisions().Informer(),
 
-		parentControllers: make(map[string]*parentController),
-
 		numWorkers: numWorkers,
 		ssaOptions: ssaOptions,
 		logger:     logging.Logger.WithName("composite"),
@@ -102,14 +101,14 @@ func (mc *Metacontroller) Reconcile(ctx context.Context, request reconcile.Reque
 	if apierrors.IsNotFound(err) {
 		mc.logger.Info("CompositeController has been deleted", "name", compositeControllerName)
 		// Stop and remove the controller if it exists.
-		if pc, ok := mc.parentControllers[compositeControllerName]; ok {
+		if pc, ok := mc.parentControllers.Load(compositeControllerName); ok {
 			pc.Stop()
 			defer pc.eventRecorder.Eventf(
 				pc.cc,
 				v1.EventTypeNormal,
 				events.ReasonStopped,
 				"Stopped controller: %s", pc.cc.Name)
-			delete(mc.parentControllers, compositeControllerName)
+			mc.parentControllers.Delete(compositeControllerName)
 		}
 		return reconcile.Result{}, nil
 	}
@@ -156,7 +155,7 @@ func (mc *Metacontroller) Reconcile(ctx context.Context, request reconcile.Reque
 }
 
 func (mc *Metacontroller) reconcileCompositeController(cc *v1alpha1.CompositeController) error {
-	if pc, ok := mc.parentControllers[cc.Name]; ok {
+	if pc, ok := mc.parentControllers.Load(cc.Name); ok {
 		// The controller was already started.
 		if apiequality.Semantic.DeepEqual(cc.Spec, pc.cc.Spec) {
 			// Nothing has changed.
@@ -165,7 +164,7 @@ func (mc *Metacontroller) reconcileCompositeController(cc *v1alpha1.CompositeCon
 		// Stop and remove the controller so it can be recreated.
 		pc.Stop()
 		mc.eventRecorder.Eventf(cc, v1.EventTypeNormal, events.ReasonStopped, "Stopped controller: %s", cc.Name)
-		delete(mc.parentControllers, cc.Name)
+		mc.parentControllers.Delete(cc.Name)
 	}
 
 	pc, err := newParentController(
@@ -189,6 +188,6 @@ func (mc *Metacontroller) reconcileCompositeController(cc *v1alpha1.CompositeCon
 	}
 	pc.Start()
 	mc.eventRecorder.Eventf(cc, v1.EventTypeNormal, events.ReasonStarted, "Started controller: %s", cc.Name)
-	mc.parentControllers[cc.Name] = pc
+	mc.parentControllers.Store(cc.Name, pc)
 	return nil
 }

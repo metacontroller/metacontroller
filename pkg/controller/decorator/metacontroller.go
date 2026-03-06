@@ -18,6 +18,7 @@ package decorator
 
 import (
 	"context"
+
 	"metacontroller/pkg/logging"
 
 	"github.com/go-logr/logr"
@@ -51,7 +52,7 @@ type Metacontroller struct {
 
 	eventRecorder record.EventRecorder
 
-	decoratorControllers map[string]*decoratorController
+	decoratorControllers common.SyncMap[string, *decoratorController]
 
 	numWorkers int
 
@@ -65,8 +66,6 @@ func NewMetacontroller(controllerContext common.ControllerContext, numWorkers in
 		dynClient:     controllerContext.DynClient,
 		dynInformers:  controllerContext.DynInformers,
 		eventRecorder: controllerContext.EventRecorder,
-
-		decoratorControllers: make(map[string]*decoratorController),
 
 		numWorkers: numWorkers,
 
@@ -85,14 +84,14 @@ func (mc *Metacontroller) Reconcile(ctx context.Context, request reconcile.Reque
 	if apierrors.IsNotFound(err) {
 		mc.logger.V(4).Info("DecoratorController has been deleted", "name", decoratorControllerName)
 		// Stop and remove the controller if it exists.
-		if c, ok := mc.decoratorControllers[decoratorControllerName]; ok {
+		if c, ok := mc.decoratorControllers.Load(decoratorControllerName); ok {
 			c.Stop()
 			defer c.eventRecorder.Eventf(
 				c.dc,
 				v1.EventTypeNormal,
 				events.ReasonStopped,
 				"Stopped controller: %s", c.dc.Name)
-			delete(mc.decoratorControllers, decoratorControllerName)
+			mc.decoratorControllers.Delete(decoratorControllerName)
 		}
 		return reconcile.Result{}, nil
 	}
@@ -110,7 +109,7 @@ func (mc *Metacontroller) Reconcile(ctx context.Context, request reconcile.Reque
 }
 
 func (mc *Metacontroller) reconcileDecoratorController(dc *v1alpha1.DecoratorController) error {
-	if c, ok := mc.decoratorControllers[dc.Name]; ok {
+	if c, ok := mc.decoratorControllers.Load(dc.Name); ok {
 		// The controller was already started.
 		if apiequality.Semantic.DeepEqual(dc.Spec, c.dc.Spec) {
 			// Nothing has changed.
@@ -123,7 +122,7 @@ func (mc *Metacontroller) reconcileDecoratorController(dc *v1alpha1.DecoratorCon
 			v1.EventTypeNormal,
 			events.ReasonStopped,
 			"Stopped controller: %s", dc.Name)
-		delete(mc.decoratorControllers, dc.Name)
+		mc.decoratorControllers.Delete(dc.Name)
 	}
 
 	c, err := newDecoratorController(
@@ -149,6 +148,6 @@ func (mc *Metacontroller) reconcileDecoratorController(dc *v1alpha1.DecoratorCon
 		v1.EventTypeNormal,
 		events.ReasonStarted,
 		"Started controller: %s", dc.Name)
-	mc.decoratorControllers[dc.Name] = c
+	mc.decoratorControllers.Store(dc.Name, c)
 	return nil
 }
