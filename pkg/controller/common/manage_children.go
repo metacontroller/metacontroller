@@ -23,7 +23,6 @@ import (
 	commonv2 "metacontroller/pkg/controller/common/api/v2"
 	"metacontroller/pkg/logging"
 	"strings"
-	"sync"
 
 	"github.com/cespare/xxhash/v2"
 	"k8s.io/utils/ptr"
@@ -210,7 +209,7 @@ func deleteChildren(client *dynamicclientset.ResourceClient, parent *unstructure
 				continue
 			}
 
-			lastUpdateName := buildLastUpdatedCacheKey(client, obj)
+			lastUpdateName := lastUpdateCacheKey(client, obj)
 			lastUpdatedCache.Delete(lastUpdateName)
 		}
 	}
@@ -224,47 +223,31 @@ type lastUpdate struct {
 	uid                types.UID
 }
 
-var (
-	lastUpdatedCache = NewLastUpdateCache()
-)
-
 type LastUpdateCache struct {
-	cache map[string]*lastUpdate
-	lock  *sync.RWMutex
-}
-
-func NewLastUpdateCache() *LastUpdateCache {
-	return &LastUpdateCache{
-		cache: make(map[string]*lastUpdate),
-		lock:  &sync.RWMutex{},
-	}
-}
-
-func (c *LastUpdateCache) Get(key string) (*lastUpdate, bool) {
-	c.lock.RLock()
-	defer c.lock.RUnlock()
-	lastUpdate, ok := c.cache[key]
-	return lastUpdate, ok
+	SyncMap[string, *lastUpdate]
 }
 
 func (c *LastUpdateCache) Set(key string, hash uint64, generation int64, resourceVersion string, uid types.UID) {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-	c.cache[key] = &lastUpdate{
+	if c == nil {
+		return
+	}
+	c.Store(key, &lastUpdate{
 		hash:               hash,
 		resourcegeneration: generation,
 		resourceversion:    resourceVersion,
 		uid:                uid,
-	}
+	})
 }
 
-func (c *LastUpdateCache) Delete(key string) {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-	delete(c.cache, key)
+func NewLastUpdateCache() *LastUpdateCache {
+	return &LastUpdateCache{}
 }
 
-func buildLastUpdatedCacheKey(client *dynamicclientset.ResourceClient, obj *unstructured.Unstructured) string {
+var (
+	lastUpdatedCache = NewLastUpdateCache()
+)
+
+func lastUpdateCacheKey(client *dynamicclientset.ResourceClient, obj *unstructured.Unstructured) string {
 	return fmt.Sprintf("%s/%s/%s/%s", client.Group, client.Kind, obj.GetNamespace(), obj.GetName())
 }
 
@@ -352,7 +335,7 @@ func updateChildren(client *dynamicclientset.ResourceClient, updateStrategy Chil
 }
 
 func isCacheInvalid(cache *LastUpdateCache, cacheKeyName string, observed *unstructured.Unstructured, desiredHash uint64) bool {
-	lastUpdated, ok := cache.Get(cacheKeyName)
+	lastUpdated, ok := cache.Load(cacheKeyName)
 	switch {
 	case !ok:
 		logging.Logger.Info("No cache entry found for observed object", "name", cacheKeyName)
@@ -388,7 +371,7 @@ func (h *ServerSideApply) Apply(ctx context.Context, op *ApplyOperation) error {
 	}
 
 	desiredHash := xxhash.Sum64(data)
-	cacheKeyName := buildLastUpdatedCacheKey(h.client, op.desired)
+	cacheKeyName := lastUpdateCacheKey(h.client, op.desired)
 
 	storeState := func(generation int64, resourceVersion string, uid types.UID) {
 		lastUpdatedCache.Set(cacheKeyName, desiredHash, generation, resourceVersion, uid)
@@ -396,6 +379,11 @@ func (h *ServerSideApply) Apply(ctx context.Context, op *ApplyOperation) error {
 	}
 
 	if op.observed != nil {
+		if op.observed.GetDeletionTimestamp() != nil {
+			logging.Logger.Info("Not updating", "parent", op.parent, "child", op.desired, "reason", "Pending deletion of child object")
+			return nil
+		}
+
 		if !isCacheInvalid(lastUpdatedCache, cacheKeyName, op.observed, desiredHash) {
 			// Cache is valid, no need to apply server-side apply since there are no changes detected, we can skip the update to avoid unnecessary API calls and potential conflicts
 			return nil
@@ -489,7 +477,6 @@ func (h *ServerSideApply) Apply(ctx context.Context, op *ApplyOperation) error {
 	}
 
 	storeState(patched.GetGeneration(), patched.GetResourceVersion(), patched.GetUID())
-
 	return nil
 }
 
