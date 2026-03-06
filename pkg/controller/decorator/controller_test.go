@@ -150,13 +150,16 @@ var defaultGroupKindMap = func() *common.GroupKindMap {
 
 var defaultSelectorKey = fmt.Sprintf("%s.%s", TestKind, TestGroup)
 var defaultLabels = map[string]string{"key": "val"}
-var defaultSelector = map[string]labels.Selector{
-	defaultSelectorKey: labels.SelectorFromSet(defaultLabels),
-}
-var defaultParentSelector = &decoratorSelector{
-	labelSelectors:      defaultSelector,
-	annotationSelectors: defaultSelector,
-}
+var defaultSelector = labels.SelectorFromSet(defaultLabels)
+var defaultParentSelector = func() *decoratorSelector {
+	ds := &decoratorSelector{
+		labelSelectors:      *common.NewSyncMap[string, labels.Selector](),
+		annotationSelectors: *common.NewSyncMap[string, labels.Selector](),
+	}
+	ds.labelSelectors.Store(defaultSelectorKey, defaultSelector)
+	ds.annotationSelectors.Store(defaultSelectorKey, defaultSelector)
+	return ds
+}()
 
 func newUnstructuredWithSelectors() *unstructured.Unstructured {
 	defaultUnstructured := NewDefaultUnstructured()

@@ -22,7 +22,6 @@ import (
 	commonv2 "metacontroller/pkg/controller/common/api/v2"
 	v1 "metacontroller/pkg/controller/common/customize/api/v1"
 	"metacontroller/pkg/hooks"
-	"sync"
 	"time"
 
 	"k8s.io/apimachinery/pkg/types"
@@ -61,9 +60,8 @@ type Manager struct {
 	dynInformers    *dynamicinformer.SharedInformerFactory
 	parentInformers *common.InformerMap
 
-	relatedInformers   *common.InformerMap
-	relatedInformersMu sync.Mutex
-	customizeCache     *cache.Cache[customizeKey, *v1.CustomizeHookResponse]
+	relatedInformers *common.InformerMap
+	customizeCache   *cache.Cache[customizeKey, *v1.CustomizeHookResponse]
 
 	stopCh chan struct{}
 
@@ -196,15 +194,6 @@ func (rm *Manager) getOrCreateRelatedInformer(apiVersion, resource string, gvr s
 		return informer, nil
 	}
 
-	rm.relatedInformersMu.Lock()
-	defer rm.relatedInformersMu.Unlock()
-
-	// Double-check after acquiring the lock
-	informer = rm.relatedInformers.Get(gvr)
-	if informer != nil {
-		return informer, nil
-	}
-
 	informer, err := rm.dynInformers.Resource(apiVersion, resource)
 	if err != nil {
 		return nil, fmt.Errorf("can't create informer for related resource: %w", err)
@@ -220,8 +209,8 @@ func (rm *Manager) getOrCreateRelatedInformer(apiVersion, resource string, gvr s
 		return nil, fmt.Errorf("can't create informer for related resource: %w", err)
 	}
 
-	rm.relatedInformers.Set(gvr, informer)
-	return informer, nil
+	actual, _ := rm.relatedInformers.GetOrCreate(gvr, informer)
+	return actual, nil
 }
 
 func (rm *Manager) onRelatedAdd(obj interface{}) {
