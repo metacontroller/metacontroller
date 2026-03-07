@@ -52,8 +52,8 @@ var customizeManagerWithNilController, _ = NewCustomizeManager(
 	&NilCustomizableController{},
 	&dynClient,
 	&dynInformers,
-	make(common.InformerMap),
-	make(common.GroupKindMap),
+	common.NewInformerMap(),
+	common.NewGroupKindMap(),
 	fakeLogger,
 	common.CompositeController,
 )
@@ -64,8 +64,8 @@ var customizeManagerWithFakeController, _ = NewCustomizeManager(
 	&FakeCustomizableController{},
 	&dynClient,
 	&dynInformers,
-	make(common.InformerMap),
-	make(common.GroupKindMap),
+	common.NewInformerMap(),
+	common.NewGroupKindMap(),
 	fakeLogger,
 	common.DecoratorController,
 )

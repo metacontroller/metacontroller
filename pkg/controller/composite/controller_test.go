@@ -59,8 +59,8 @@ func defaultCustomizeManager() *customize.Manager {
 		&NilCustomizableController{},
 		&dynamicclientset.Clientset{},
 		&dynamicinformer.SharedInformerFactory{},
-		make(common.InformerMap),
-		make(common.GroupKindMap),
+		common.NewInformerMap(),
+		common.NewGroupKindMap(),
 		logging.Logger,
 		common.CompositeController,
 	)
@@ -139,7 +139,7 @@ func Test_parentController_sync(t *testing.T) {
 		doneCh         chan struct{}
 		queue          workqueue.TypedRateLimitingInterface[any]
 		updateStrategy updateStrategyMap
-		childInformers common.InformerMap
+		childInformers *common.InformerMap
 		numWorkers     int
 		eventRecorder  record.EventRecorder
 		finalizer      *finalizer.Manager
@@ -172,7 +172,7 @@ func Test_parentController_sync(t *testing.T) {
 				doneCh:         NewCh(),
 				queue:          NewDefaultWorkQueue(),
 				updateStrategy: nil,
-				childInformers: nil,
+				childInformers: common.NewInformerMap(),
 				numWorkers:     1,
 				eventRecorder:  NewFakeRecorder(),
 				finalizer:      DefaultFinalizerManager,
@@ -197,7 +197,7 @@ func Test_parentController_sync(t *testing.T) {
 				doneCh:         NewCh(),
 				queue:          NewDefaultWorkQueue(),
 				updateStrategy: nil,
-				childInformers: nil,
+				childInformers: common.NewInformerMap(),
 				numWorkers:     1,
 				eventRecorder:  NewFakeRecorder(),
 				finalizer:      DefaultFinalizerManager,
@@ -230,7 +230,7 @@ func Test_parentController_sync(t *testing.T) {
 				doneCh:         NewCh(),
 				queue:          NewDefaultWorkQueue(),
 				updateStrategy: nil,
-				childInformers: nil,
+				childInformers: common.NewInformerMap(),
 				numWorkers:     1,
 				eventRecorder:  NewFakeRecorder(),
 				finalizer:      DefaultFinalizerManager,
@@ -263,7 +263,7 @@ func Test_parentController_sync(t *testing.T) {
 				doneCh:         NewCh(),
 				queue:          NewDefaultWorkQueue(),
 				updateStrategy: nil,
-				childInformers: nil,
+				childInformers: common.NewInformerMap(),
 				numWorkers:     1,
 				eventRecorder:  NewFakeRecorder(),
 				finalizer:      DefaultFinalizerManager,
@@ -293,7 +293,7 @@ func Test_parentController_sync(t *testing.T) {
 				doneCh:         NewCh(),
 				queue:          NewDefaultWorkQueue(),
 				updateStrategy: nil,
-				childInformers: nil,
+				childInformers: common.NewInformerMap(),
 				numWorkers:     1,
 				eventRecorder:  NewFakeRecorder(),
 				finalizer:      DefaultFinalizerManager,
@@ -351,7 +351,7 @@ func Test_parentController_sync_requeue_item_when_hook_throw_TooManyRequestError
 		doneCh:         NewCh(),
 		queue:          NewDefaultWorkQueue(),
 		updateStrategy: nil,
-		childInformers: nil,
+		childInformers: common.NewInformerMap(),
 		numWorkers:     1,
 		eventRecorder:  NewFakeRecorder(),
 		finalizer:      DefaultFinalizerManager,

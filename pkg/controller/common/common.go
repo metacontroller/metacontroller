@@ -21,6 +21,7 @@ import (
 	"metacontroller/pkg/logging"
 	"metacontroller/pkg/options"
 	"strings"
+	"sync"
 
 	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 
@@ -155,24 +156,169 @@ func ParseAPIVersion(apiVersion string) (group, version string) {
 	return parts[0], parts[1]
 }
 
-type GroupKindMap map[schema.GroupKind]*dynamicdiscovery.APIResource
-
-func (m GroupKindMap) Set(gk schema.GroupKind, resource *dynamicdiscovery.APIResource) {
-	m[gk] = resource
+// SyncMap is a generic wrapper around sync.Map that provides type safety.
+type SyncMap[K comparable, V any] struct {
+	m sync.Map
 }
 
-func (m GroupKindMap) Get(gk schema.GroupKind) *dynamicdiscovery.APIResource {
-	return m[gk]
+// NewSyncMap returns a new SyncMap.
+func NewSyncMap[K comparable, V any]() *SyncMap[K, V] {
+	return &SyncMap[K, V]{}
 }
 
-type InformerMap map[schema.GroupVersionResource]*dynamicinformer.ResourceInformer
-
-func (m InformerMap) Set(gvr schema.GroupVersionResource, informer *dynamicinformer.ResourceInformer) {
-	m[gvr] = informer
+// Load returns the value stored in the map for a key, or nil if no value is present.
+// The ok result indicates whether value was found in the map.
+func (m *SyncMap[K, V]) Load(key K) (V, bool) {
+	v, ok := m.m.Load(key)
+	if !ok {
+		var zero V
+		return zero, false
+	}
+	return v.(V), true
 }
 
-func (m InformerMap) Get(gvr schema.GroupVersionResource) *dynamicinformer.ResourceInformer {
-	return m[gvr]
+// LoadOrStore returns the existing value for the key if present.
+// Otherwise, it stores and returns the given value.
+// The loaded result is true if the value was loaded, false if stored.
+func (m *SyncMap[K, V]) LoadOrStore(key K, val V) (actual V, loaded bool) {
+	v, ok := m.m.LoadOrStore(key, val)
+	return v.(V), ok
+}
+
+// LoadAndDelete deletes the value for a key, returning the previous value if any.
+// The loaded result reports whether the key was present.
+func (m *SyncMap[K, V]) LoadAndDelete(key K) (value V, loaded bool) {
+	v, ok := m.m.LoadAndDelete(key)
+	if !ok {
+		var zero V
+		return zero, false
+	}
+	return v.(V), true
+}
+
+// Store sets the value for a key.
+func (m *SyncMap[K, V]) Store(key K, val V) {
+	m.m.Store(key, val)
+}
+
+// Delete deletes the value for a key.
+func (m *SyncMap[K, V]) Delete(key K) {
+	m.m.Delete(key)
+}
+
+// Range calls f sequentially for each key and value present in the map.
+// If f returns false, range stops the iteration.
+func (m *SyncMap[K, V]) Range(f func(key K, value V) bool) {
+	m.m.Range(func(key, value interface{}) bool {
+		return f(key.(K), value.(V))
+	})
+}
+
+func NewGroupKindMap() *GroupKindMap {
+	return &GroupKindMap{
+		m: *NewSyncMap[schema.GroupKind, *dynamicdiscovery.APIResource](),
+	}
+}
+
+type GroupKindMap struct {
+	m SyncMap[schema.GroupKind, *dynamicdiscovery.APIResource]
+}
+
+func (m *GroupKindMap) Set(gk schema.GroupKind, resource *dynamicdiscovery.APIResource) {
+	if m == nil {
+		return
+	}
+	m.m.Store(gk, resource)
+}
+
+func (m *GroupKindMap) Get(gk schema.GroupKind) *dynamicdiscovery.APIResource {
+	if m == nil {
+		return nil
+	}
+	val, ok := m.m.Load(gk)
+	if !ok {
+		return nil
+	}
+	return val
+}
+
+func (m *GroupKindMap) Len() int {
+	if m == nil {
+		return 0
+	}
+	length := 0
+	m.m.Range(func(_ schema.GroupKind, _ *dynamicdiscovery.APIResource) bool {
+		length++
+		return true
+	})
+	return length
+}
+
+func (m *GroupKindMap) Range(f func(gk schema.GroupKind, resource *dynamicdiscovery.APIResource)) {
+	if m == nil {
+		return
+	}
+	m.m.Range(func(key schema.GroupKind, value *dynamicdiscovery.APIResource) bool {
+		f(key, value)
+		return true
+	})
+}
+
+func NewInformerMap() *InformerMap {
+	return &InformerMap{
+		m: *NewSyncMap[schema.GroupVersionResource, *dynamicinformer.ResourceInformer](),
+	}
+}
+
+type InformerMap struct {
+	m SyncMap[schema.GroupVersionResource, *dynamicinformer.ResourceInformer]
+}
+
+func (m *InformerMap) Set(gvr schema.GroupVersionResource, informer *dynamicinformer.ResourceInformer) {
+	if m == nil {
+		return
+	}
+	m.m.Store(gvr, informer)
+}
+
+func (m *InformerMap) Get(gvr schema.GroupVersionResource) *dynamicinformer.ResourceInformer {
+	if m == nil {
+		return nil
+	}
+	val, ok := m.m.Load(gvr)
+	if !ok {
+		return nil
+	}
+	return val
+}
+
+func (m *InformerMap) GetOrCreate(gvr schema.GroupVersionResource, informer *dynamicinformer.ResourceInformer) (*dynamicinformer.ResourceInformer, bool) {
+	if m == nil {
+		return nil, false
+	}
+	return m.m.LoadOrStore(gvr, informer)
+}
+
+func (m *InformerMap) Len() int {
+	if m == nil {
+		return 0
+	}
+	length := 0
+	m.m.Range(func(_ schema.GroupVersionResource, _ *dynamicinformer.ResourceInformer) bool {
+		length++
+		return true
+	})
+	return length
+}
+
+func (m *InformerMap) Range(f func(gvr schema.GroupVersionResource, informer *dynamicinformer.ResourceInformer)) {
+	if m == nil {
+		return
+	}
+	m.m.Range(func(key schema.GroupVersionResource, value *dynamicinformer.ResourceInformer) bool {
+		f(key, value)
+		return true
+	})
 }
 
 // GetObject return object via Lister from given informer, namespaced or not.

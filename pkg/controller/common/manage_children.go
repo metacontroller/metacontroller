@@ -23,7 +23,6 @@ import (
 	commonv2 "metacontroller/pkg/controller/common/api/v2"
 	"metacontroller/pkg/logging"
 	"strings"
-	"sync"
 
 	"github.com/cespare/xxhash/v2"
 	"k8s.io/utils/ptr"
@@ -211,9 +210,7 @@ func deleteChildren(client *dynamicclientset.ResourceClient, parent *unstructure
 			}
 
 			lastUpdateName := lastUpdateCacheKey(client, obj)
-			cacheLock.Lock()
-			delete(lastUpdatedCache, lastUpdateName)
-			cacheLock.Unlock()
+			lastUpdatedCache.Delete(lastUpdateName)
 		}
 	}
 	return utilerrors.NewAggregate(errs)
@@ -225,8 +222,7 @@ type lastUpdate struct {
 }
 
 var (
-	lastUpdatedCache = make(map[string]*lastUpdate)
-	cacheLock        = &sync.RWMutex{}
+	lastUpdatedCache = NewSyncMap[string, *lastUpdate]()
 )
 
 func lastUpdateCacheKey(client *dynamicclientset.ResourceClient, obj *unstructured.Unstructured) string {
@@ -326,9 +322,7 @@ func (h *ServerSideApply) Apply(ctx context.Context, op *ApplyOperation) error {
 			return nil
 		}
 
-		cacheLock.RLock()
-		lastUpdated, ok := lastUpdatedCache[lastUpdateCacheName]
-		cacheLock.RUnlock()
+		lastUpdated, ok := lastUpdatedCache.Load(lastUpdateCacheName)
 
 		if ok && lastUpdated.hash == hash && lastUpdated.resourcegeneration == op.observed.GetGeneration() {
 			logging.Logger.Info("Skipping update, no changes detected", "name", lastUpdateCacheName)
@@ -391,12 +385,10 @@ func (h *ServerSideApply) Apply(ctx context.Context, op *ApplyOperation) error {
 		return nil
 	}
 
-	cacheLock.Lock()
-	defer cacheLock.Unlock()
-	lastUpdatedCache[lastUpdateCacheName] = &lastUpdate{
+	lastUpdatedCache.Store(lastUpdateCacheName, &lastUpdate{
 		hash:               hash,
 		resourcegeneration: patched.GetGeneration(),
-	}
+	})
 
 	logging.Logger.Info("Cache updated", "name", lastUpdateCacheName)
 	return nil

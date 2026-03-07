@@ -29,16 +29,12 @@ import (
 )
 
 type decoratorSelector struct {
-	labelSelectors      map[string]labels.Selector
-	annotationSelectors map[string]labels.Selector
+	labelSelectors      common.SyncMap[string, labels.Selector]
+	annotationSelectors common.SyncMap[string, labels.Selector]
 }
 
 func newDecoratorSelector(resources *dynamicdiscovery.ResourceMap, dc *v1alpha1.DecoratorController) (*decoratorSelector, error) {
-	ds := &decoratorSelector{
-		labelSelectors:      make(map[string]labels.Selector),
-		annotationSelectors: make(map[string]labels.Selector),
-	}
-	var err error
+	ds := &decoratorSelector{}
 
 	for _, parent := range dc.Spec.Resources {
 		// Keep the map by Group and Kind. Ignore Version.
@@ -50,14 +46,15 @@ func newDecoratorSelector(resources *dynamicdiscovery.ResourceMap, dc *v1alpha1.
 
 		// Convert the label selector to the internal form.
 		if parent.LabelSelector != nil {
-			ds.labelSelectors[key], err = metav1.LabelSelectorAsSelector(parent.LabelSelector)
+			selector, err := metav1.LabelSelectorAsSelector(parent.LabelSelector)
 			if err != nil {
 				return nil, fmt.Errorf("can't convert label selector for parent resource %q in apiVersion %q: %w", parent.Resource, parent.APIVersion, err)
 			}
+			ds.labelSelectors.Store(key, selector)
 		} else {
 			// Add an explicit selector so we can tell the difference between
 			// missing (not a type we care about) and empty (select everything).
-			ds.labelSelectors[key] = labels.Everything()
+			ds.labelSelectors.Store(key, labels.Everything())
 		}
 
 		// Convert the annotation selector to a label selector, then to internal form.
@@ -66,14 +63,15 @@ func newDecoratorSelector(resources *dynamicdiscovery.ResourceMap, dc *v1alpha1.
 				MatchLabels:      parent.AnnotationSelector.MatchAnnotations,
 				MatchExpressions: parent.AnnotationSelector.MatchExpressions,
 			}
-			ds.annotationSelectors[key], err = metav1.LabelSelectorAsSelector(labelSelector)
+			selector, err := metav1.LabelSelectorAsSelector(labelSelector)
 			if err != nil {
 				return nil, fmt.Errorf("can't convert annotation selector for parent resource %q in apiVersion %q: %w", parent.Resource, parent.APIVersion, err)
 			}
+			ds.annotationSelectors.Store(key, selector)
 		} else {
 			// Add an explicit selector so we can tell the difference between
 			// missing (not a type we care about) and empty (select everything).
-			ds.annotationSelectors[key] = labels.Everything()
+			ds.annotationSelectors.Store(key, labels.Everything())
 		}
 	}
 
@@ -86,9 +84,9 @@ func (ds *decoratorSelector) Matches(obj *unstructured.Unstructured) bool {
 	apiGroup, _ := common.ParseAPIVersion(obj.GetAPIVersion())
 	key := selectorMapKey(apiGroup, obj.GetKind())
 
-	labelSelector := ds.labelSelectors[key]
-	annotationSelector := ds.annotationSelectors[key]
-	if labelSelector == nil || annotationSelector == nil {
+	labelSelector, okL := ds.labelSelectors.Load(key)
+	annotationSelector, okA := ds.annotationSelectors.Load(key)
+	if !okL || !okA {
 		// This object is not a kind we care about, so it doesn't match.
 		return false
 	}

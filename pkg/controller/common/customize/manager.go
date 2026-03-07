@@ -17,6 +17,7 @@ limitations under the License.
 package customize
 
 import (
+	"errors"
 	"fmt"
 	commonv2 "metacontroller/pkg/controller/common/api/v2"
 	v1 "metacontroller/pkg/controller/common/customize/api/v1"
@@ -53,13 +54,13 @@ type Manager struct {
 	name       string
 	controller v1alpha1.CustomizableController
 
-	parentKinds common.GroupKindMap
+	parentKinds *common.GroupKindMap
 
 	dynClient       *dynamicclientset.Clientset
 	dynInformers    *dynamicinformer.SharedInformerFactory
-	parentInformers common.InformerMap
+	parentInformers *common.InformerMap
 
-	relatedInformers common.InformerMap
+	relatedInformers *common.InformerMap
 	customizeCache   *cache.Cache[customizeKey, *v1.CustomizeHookResponse]
 
 	stopCh chan struct{}
@@ -87,8 +88,8 @@ func NewCustomizeManager(
 	controller v1alpha1.CustomizableController,
 	dynClient *dynamicclientset.Clientset,
 	dynInformers *dynamicinformer.SharedInformerFactory,
-	parentInformers common.InformerMap,
-	parentKinds common.GroupKindMap,
+	parentInformers *common.InformerMap,
+	parentKinds *common.GroupKindMap,
 	logger logr.Logger,
 	controllerType common.ControllerType) (*Manager, error) {
 	var hook hooks.Hook
@@ -101,6 +102,12 @@ func NewCustomizeManager(
 	} else {
 		hook = nil
 	}
+	if parentInformers == nil {
+		parentInformers = common.NewInformerMap()
+	}
+	if parentKinds == nil {
+		parentKinds = common.NewGroupKindMap()
+	}
 	return &Manager{
 		name:             name,
 		controller:       controller,
@@ -109,7 +116,7 @@ func NewCustomizeManager(
 		dynClient:        dynClient,
 		dynInformers:     dynInformers,
 		parentInformers:  parentInformers,
-		relatedInformers: make(common.InformerMap),
+		relatedInformers: common.NewInformerMap(),
 		enqueueParent:    enqueueParent,
 		customizeHook:    hook,
 		logger:           logger,
@@ -125,10 +132,10 @@ func (rm *Manager) Start(stopCh chan struct{}) {
 }
 
 func (rm *Manager) Stop() {
-	for _, informer := range rm.relatedInformers {
+	rm.relatedInformers.Range(func(_ schema.GroupVersionResource, informer *dynamicinformer.ResourceInformer) {
 		informer.Informer().RemoveEventHandlers()
 		informer.Close()
-	}
+	})
 }
 
 func (rm *Manager) getCachedCustomizeHookResponse(parent *unstructured.Unstructured) (*v1.CustomizeHookResponse, bool) {
@@ -154,6 +161,8 @@ func (rm *Manager) getCustomizeHookResponse(parent *unstructured.Unstructured) (
 	}
 }
 
+var ErrRelatedInformerNotSynced = errors.New("related informer not synced yet")
+
 func (rm *Manager) getRelatedClient(apiVersion, resource string) (*dynamicclientset.ResourceClient, *dynamicinformer.ResourceInformer, error) {
 	client, err := rm.dynClient.Resource(apiVersion, resource)
 
@@ -161,33 +170,47 @@ func (rm *Manager) getRelatedClient(apiVersion, resource string) (*dynamicclient
 		return nil, nil, err
 	}
 	groupVersion, _ := schema.ParseGroupVersion(apiVersion)
-	informer := rm.relatedInformers.Get(groupVersion.WithResource(resource))
-	if informer == nil {
-		informer, err = rm.dynInformers.Resource(apiVersion, resource)
+	gvr := groupVersion.WithResource(resource)
 
-		if err != nil {
-			return nil, nil, fmt.Errorf("can't create informer for related resource: %w", err)
-		}
+	informer, err := rm.getOrCreateRelatedInformer(apiVersion, resource, gvr)
+	if err != nil {
+		return nil, nil, err
+	}
 
-		_, err := informer.Informer().AddEventHandler(clientgo_cache.ResourceEventHandlerFuncs{
-			AddFunc:    rm.onRelatedAdd,
-			UpdateFunc: rm.onRelatedUpdate,
-			DeleteFunc: rm.onRelatedDelete,
-		})
+	if rm.stopCh == nil {
+		return nil, nil, fmt.Errorf("customize Manager not started")
+	}
 
-		if err != nil {
-			return nil, nil, fmt.Errorf("can't create informer for related resource: %w", err)
-		}
-
-		if !clientgo_cache.WaitForNamedCacheSync(rm.name, rm.stopCh, informer.Informer().HasSynced) {
-			rm.logger.Info("related Manager - cache sync never finished", "name", rm.name)
-		}
-
-		groupVersion, _ := schema.ParseGroupVersion(apiVersion)
-		rm.relatedInformers.Set(groupVersion.WithResource(resource), informer)
+	if !informer.Informer().HasSynced() {
+		return nil, nil, ErrRelatedInformerNotSynced
 	}
 
 	return client, informer, nil
+}
+
+func (rm *Manager) getOrCreateRelatedInformer(apiVersion, resource string, gvr schema.GroupVersionResource) (*dynamicinformer.ResourceInformer, error) {
+	informer := rm.relatedInformers.Get(gvr)
+	if informer != nil {
+		return informer, nil
+	}
+
+	informer, err := rm.dynInformers.Resource(apiVersion, resource)
+	if err != nil {
+		return nil, fmt.Errorf("can't create informer for related resource: %w", err)
+	}
+
+	_, err = informer.Informer().AddEventHandler(clientgo_cache.ResourceEventHandlerFuncs{
+		AddFunc:    rm.onRelatedAdd,
+		UpdateFunc: rm.onRelatedUpdate,
+		DeleteFunc: rm.onRelatedDelete,
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("can't create informer for related resource: %w", err)
+	}
+
+	actual, _ := rm.relatedInformers.GetOrCreate(gvr, informer)
+	return actual, nil
 }
 
 func (rm *Manager) onRelatedAdd(obj interface{}) {
@@ -247,10 +270,10 @@ func (rm *Manager) notifyRelatedParents(related ...*unstructured.Unstructured) {
 func (rm *Manager) findRelatedParents(relatedSlice ...*unstructured.Unstructured) []*unstructured.Unstructured {
 	var matchingParents []*unstructured.Unstructured
 
-	for _, parentInformer := range rm.parentInformers {
+	rm.parentInformers.Range(func(_ schema.GroupVersionResource, parentInformer *dynamicinformer.ResourceInformer) {
 		parents, err := parentInformer.Lister().List(labels.Everything())
 		if err != nil {
-			return nil
+			return
 		}
 
 	MATCHPARENTS:
@@ -286,7 +309,7 @@ func (rm *Manager) findRelatedParents(relatedSlice ...*unstructured.Unstructured
 				}
 			}
 		}
-	}
+	})
 	return matchingParents
 }
 
