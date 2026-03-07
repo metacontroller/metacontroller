@@ -211,9 +211,7 @@ func deleteChildren(client *dynamicclientset.ResourceClient, parent *unstructure
 			}
 
 			lastUpdateName := lastUpdateCacheKey(client, obj)
-			cacheLock.Lock()
-			delete(lastUpdatedCache, lastUpdateName)
-			cacheLock.Unlock()
+			lastUpdatedCache.Delete(lastUpdateName)
 		}
 	}
 	return utilerrors.NewAggregate(errs)
@@ -225,9 +223,39 @@ type lastUpdate struct {
 }
 
 var (
-	lastUpdatedCache = make(map[string]*lastUpdate)
-	cacheLock        = &sync.RWMutex{}
+	lastUpdatedCache = NewLastUpdateCache()
 )
+
+type LastUpdateCache struct {
+	cache map[string]*lastUpdate
+	lock  *sync.RWMutex
+}
+
+func NewLastUpdateCache() *LastUpdateCache {
+	return &LastUpdateCache{
+		cache: make(map[string]*lastUpdate),
+		lock:  &sync.RWMutex{},
+	}
+}
+
+func (c *LastUpdateCache) Get(key string) (*lastUpdate, bool) {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+	lastUpdate, ok := c.cache[key]
+	return lastUpdate, ok
+}
+
+func (c *LastUpdateCache) Set(key string, value *lastUpdate) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	c.cache[key] = value
+}
+
+func (c *LastUpdateCache) Delete(key string) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	delete(c.cache, key)
+}
 
 func lastUpdateCacheKey(client *dynamicclientset.ResourceClient, obj *unstructured.Unstructured) string {
 	return fmt.Sprintf("%s/%s/%s/%s", client.Group, client.Kind, obj.GetNamespace(), obj.GetName())
@@ -330,12 +358,10 @@ func (h *ServerSideApply) Apply(ctx context.Context, op *ApplyOperation) error {
 	lastUpdateCacheName := lastUpdateCacheKey(h.client, op.desired)
 
 	storeState := func(generation int64) {
-		cacheLock.Lock()
-		defer cacheLock.Unlock()
-		lastUpdatedCache[lastUpdateCacheName] = &lastUpdate{
+		lastUpdatedCache.Set(lastUpdateCacheName, &lastUpdate{
 			hash:               desiredHash,
 			resourcegeneration: generation,
-		}
+		})
 		logging.Logger.Info("Cache updated", "name", lastUpdateCacheName)
 	}
 
@@ -345,9 +371,7 @@ func (h *ServerSideApply) Apply(ctx context.Context, op *ApplyOperation) error {
 			return nil
 		}
 
-		cacheLock.RLock()
-		lastUpdated, ok := lastUpdatedCache[lastUpdateCacheName]
-		cacheLock.RUnlock()
+		lastUpdated, ok := lastUpdatedCache.Get(lastUpdateCacheName)
 
 		if ok && lastUpdated.hash == desiredHash && lastUpdated.resourcegeneration == op.observed.GetGeneration() {
 			logging.Logger.Info("Skipping update, no changes detected", "name", lastUpdateCacheName)
