@@ -368,12 +368,27 @@ func (h *ServerSideApply) Apply(ctx context.Context, op *ApplyOperation) error {
 			if err != nil {
 				return fmt.Errorf("dry run failed for server-side apply: %w", err)
 			}
+
+			// check if the generation has changed, if it has changed, it means the object was updated after we read it, we should log that as error
+			// and retry on next reconciliation loop since it is possible that we
+			// we would recreate the object, even though we shouldn't
+			if op.observed.GetGeneration() != dryRunPatched.GetGeneration() {
+				return fmt.Errorf("generation changed during dry run for server-side apply, expected generation %d but got %d, this likely means the object was updated after we read it, retrying on next reconciliation loop to avoid unnecessary delete and recreate", op.observed.GetGeneration(), dryRunPatched.GetGeneration())
+			}
+
 			if DeepEqual(dryRunPatched.UnstructuredContent(), op.observed.UnstructuredContent()) {
 				logging.Logger.Info("Skipping delete and recreate, no changes detected in dry run", "parent", op.parent, "child", op.desired)
 				storeState(op.observed.GetGeneration())
 				return nil
 			}
-			return h.childUpdateRecreate(ctx, op)
+
+			err = h.childUpdateRecreate(ctx, op)
+			if err != nil {
+				return err
+			}
+			storeState(op.observed.GetGeneration())
+			return nil
+
 		case v1alpha1.ChildUpdateInPlace, v1alpha1.ChildUpdateRollingInPlace:
 			// check if observed object hast last applied annotation
 			_, hasLastApplied := op.observed.GetAnnotations()[dynamicapply.LastAppliedAnnotation]
