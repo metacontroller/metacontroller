@@ -273,6 +273,24 @@ func NewApplier(client *dynamicclientset.ResourceClient, ssaOptions *ApplyOption
 	}
 }
 
+func sanitizeForSSACompare(obj *unstructured.Unstructured) *unstructured.Unstructured {
+	c := obj.DeepCopy()
+
+	// Remove metadata fields that are known to be read-only, system fields,
+	// so that they don't cause cache misses or SSA conflicts.
+	for _, fieldName := range objectMetaSystemFields {
+		unstructured.RemoveNestedField(c.Object, "metadata", fieldName)
+	}
+	// Remove status because we don't currently support a parent changing status of
+	// its children.
+	unstructured.RemoveNestedField(c.Object, "status")
+
+	// prevent setting last applied values in the new object
+	nullifyLastAppliedAnnotation(c)
+
+	return c
+}
+
 func updateChildren(client *dynamicclientset.ResourceClient, updateStrategy ChildUpdateStrategy, parent *unstructured.Unstructured, observed, desired map[string]*unstructured.Unstructured, ssaOptions *ApplyOptions) error {
 	var errs []error
 
@@ -301,17 +319,7 @@ func updateChildren(client *dynamicclientset.ResourceClient, updateStrategy Chil
 func (h *ServerSideApply) Apply(ctx context.Context, op *ApplyOperation) error {
 	h.claimOwnership(op)
 
-	// Remove metadata fields that are known to be read-only, system fields,
-	// so that they don't cause cache misses or SSA conflicts.
-	for _, fieldName := range objectMetaSystemFields {
-		unstructured.RemoveNestedField(op.desired.Object, "metadata", fieldName)
-	}
-	// Remove status because we don't currently support a parent changing status of
-	// its children.
-	unstructured.RemoveNestedField(op.desired.Object, "status")
-
-	// prevent setting last applied values in the new object
-	nullifyLastAppliedAnnotation(op.desired)
+	op.desired = sanitizeForSSACompare(op.desired)
 
 	data, err := json.Marshal(op.desired)
 	if err != nil {
@@ -366,6 +374,12 @@ func (h *ServerSideApply) Apply(ctx context.Context, op *ApplyOperation) error {
 				DryRun:       []string{metav1.DryRunAll},
 			})
 			if err != nil {
+				if apierrors.IsBadRequest(err) || apierrors.IsForbidden(err) {
+					logging.Logger.Error(err, "Dry run failed due to bad request or forbidden error, this likely means the desired object is invalid or would be rejected by admission controllers, skipping update to avoid potential delete of existing child", "parent", op.parent, "child", op.desired)
+					storeState(op.observed.GetGeneration())
+					return nil
+				}
+				logging.Logger.Error(err, "Dry run failed for server-side apply, retrying on next reconciliation loop to avoid potential delete of existing child if the error is transient", "parent", op.parent, "child", op.desired)
 				return fmt.Errorf("dry run failed for server-side apply: %w", err)
 			}
 
@@ -376,7 +390,7 @@ func (h *ServerSideApply) Apply(ctx context.Context, op *ApplyOperation) error {
 				return fmt.Errorf("generation changed during dry run for server-side apply, expected generation %d but got %d, this likely means the object was updated after we read it, retrying on next reconciliation loop to avoid unnecessary delete and recreate", op.observed.GetGeneration(), dryRunPatched.GetGeneration())
 			}
 
-			if DeepEqual(dryRunPatched.UnstructuredContent(), op.observed.UnstructuredContent()) {
+			if DeepEqual(sanitizeForSSACompare(dryRunPatched).UnstructuredContent(), sanitizeForSSACompare(op.observed).UnstructuredContent()) {
 				logging.Logger.Info("Skipping delete and recreate, no changes detected in dry run", "parent", op.parent, "child", op.desired)
 				storeState(op.observed.GetGeneration())
 				return nil
