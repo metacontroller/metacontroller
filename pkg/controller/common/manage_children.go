@@ -210,7 +210,7 @@ func deleteChildren(client *dynamicclientset.ResourceClient, parent *unstructure
 				continue
 			}
 
-			lastUpdateName := lastUpdateCacheKey(client, obj)
+			lastUpdateName := buildLastUpdatedCacheKey(client, obj)
 			lastUpdatedCache.Delete(lastUpdateName)
 		}
 	}
@@ -245,10 +245,13 @@ func (c *LastUpdateCache) Get(key string) (*lastUpdate, bool) {
 	return lastUpdate, ok
 }
 
-func (c *LastUpdateCache) Set(key string, value *lastUpdate) {
+func (c *LastUpdateCache) Set(key string, hash uint64, generation int64) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
-	c.cache[key] = value
+	c.cache[key] = &lastUpdate{
+		hash:               hash,
+		resourcegeneration: generation,
+	}
 }
 
 func (c *LastUpdateCache) Delete(key string) {
@@ -257,7 +260,7 @@ func (c *LastUpdateCache) Delete(key string) {
 	delete(c.cache, key)
 }
 
-func lastUpdateCacheKey(client *dynamicclientset.ResourceClient, obj *unstructured.Unstructured) string {
+func buildLastUpdatedCacheKey(client *dynamicclientset.ResourceClient, obj *unstructured.Unstructured) string {
 	return fmt.Sprintf("%s/%s/%s/%s", client.Group, client.Kind, obj.GetNamespace(), obj.GetName())
 }
 
@@ -345,6 +348,12 @@ func updateChildren(client *dynamicclientset.ResourceClient, updateStrategy Chil
 }
 
 func (h *ServerSideApply) Apply(ctx context.Context, op *ApplyOperation) error {
+	if op.observed != nil && op.observed.GetDeletionTimestamp() != nil {
+		// in case the observed object is pending deletion we should simply wait for it to be deleted
+		logging.Logger.Info("Not updating", "parent", op.parent, "child", op.desired, "reason", "Pending deletion of child object")
+		return nil
+	}
+
 	h.claimOwnership(op)
 
 	op.desired = sanitizeForSSACompare(op.desired)
@@ -355,33 +364,26 @@ func (h *ServerSideApply) Apply(ctx context.Context, op *ApplyOperation) error {
 	}
 
 	desiredHash := xxhash.Sum64(data)
-	lastUpdateCacheName := lastUpdateCacheKey(h.client, op.desired)
+	cacheKeyName := buildLastUpdatedCacheKey(h.client, op.desired)
 
 	storeState := func(generation int64) {
-		lastUpdatedCache.Set(lastUpdateCacheName, &lastUpdate{
-			hash:               desiredHash,
-			resourcegeneration: generation,
-		})
-		logging.Logger.Info("Cache updated", "name", lastUpdateCacheName)
+		lastUpdatedCache.Set(cacheKeyName, desiredHash, generation)
+		logging.Logger.Info("Cache updated", "name", cacheKeyName)
 	}
 
 	if op.observed != nil {
-		if op.observed.GetDeletionTimestamp() != nil {
-			logging.Logger.Info("Not updating", "parent", op.parent, "child", op.desired, "reason", "Pending deletion of child object")
+		lastUpdated, ok := lastUpdatedCache.Get(cacheKeyName)
+
+		switch {
+		case !ok:
+			logging.Logger.Info("No cache entry found for observed object", "name", cacheKeyName)
+		case lastUpdated.resourcegeneration != op.observed.GetGeneration():
+			logging.Logger.Info("Observed generation has changed since last update, invalidating cache", "name", cacheKeyName, "observedGeneration", op.observed.GetGeneration(), "cachedGeneration", lastUpdated.resourcegeneration)
+		case lastUpdated.hash != desiredHash:
+			logging.Logger.Info("Observed object has changed since last update, invalidating cache", "name", cacheKeyName)
+		default:
+			logging.Logger.Info("Cache hit for observed object with no changes detected", "name", cacheKeyName)
 			return nil
-		}
-
-		lastUpdated, ok := lastUpdatedCache.Get(lastUpdateCacheName)
-
-		if ok && lastUpdated.hash == desiredHash && lastUpdated.resourcegeneration == op.observed.GetGeneration() {
-			logging.Logger.Info("Skipping update, no changes detected", "name", lastUpdateCacheName)
-			return nil
-		}
-
-		if ok {
-			logging.Logger.Info("Detected changes, updating", "name", lastUpdateCacheName)
-		} else {
-			logging.Logger.Info("No cache entry found, updating", "name", lastUpdateCacheName)
 		}
 
 		// Check the update strategy for this child kind.
@@ -424,7 +426,7 @@ func (h *ServerSideApply) Apply(ctx context.Context, op *ApplyOperation) error {
 			if err != nil {
 				return err
 			}
-			storeState(op.observed.GetGeneration())
+			lastUpdatedCache.Delete(cacheKeyName) // we delete from the cache as we are recreating the object, so the previous generation and hash will no longer be valid
 			return nil
 
 		case v1alpha1.ChildUpdateInPlace, v1alpha1.ChildUpdateRollingInPlace:
@@ -508,10 +510,10 @@ func (h *baseApply) childUpdateRecreate(ctx context.Context, op *ApplyOperation)
 		if apierrors.IsNotFound(err) {
 			// Swallow the error since there's no point retrying if the child is gone.
 			logging.Logger.Info("Failed to delete child, child object has been deleted", "parent", op.parent, "child", op.desired)
+			return nil
 		} else {
 			return err
 		}
-		return nil
 	}
 
 	return nil
