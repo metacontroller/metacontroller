@@ -210,10 +210,8 @@ func deleteChildren(client *dynamicclientset.ResourceClient, parent *unstructure
 				continue
 			}
 
-			lastUpdateName := lastUpdateCacheKey(client, obj)
-			cacheLock.Lock()
-			delete(lastUpdatedCache, lastUpdateName)
-			cacheLock.Unlock()
+			lastUpdateName := buildLastUpdatedCacheKey(client, obj)
+			lastUpdatedCache.Delete(lastUpdateName)
 		}
 	}
 	return utilerrors.NewAggregate(errs)
@@ -225,11 +223,44 @@ type lastUpdate struct {
 }
 
 var (
-	lastUpdatedCache = make(map[string]*lastUpdate)
-	cacheLock        = &sync.RWMutex{}
+	lastUpdatedCache = NewLastUpdateCache()
 )
 
-func lastUpdateCacheKey(client *dynamicclientset.ResourceClient, obj *unstructured.Unstructured) string {
+type LastUpdateCache struct {
+	cache map[string]*lastUpdate
+	lock  *sync.RWMutex
+}
+
+func NewLastUpdateCache() *LastUpdateCache {
+	return &LastUpdateCache{
+		cache: make(map[string]*lastUpdate),
+		lock:  &sync.RWMutex{},
+	}
+}
+
+func (c *LastUpdateCache) Get(key string) (*lastUpdate, bool) {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+	lastUpdate, ok := c.cache[key]
+	return lastUpdate, ok
+}
+
+func (c *LastUpdateCache) Set(key string, hash uint64, generation int64) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	c.cache[key] = &lastUpdate{
+		hash:               hash,
+		resourcegeneration: generation,
+	}
+}
+
+func (c *LastUpdateCache) Delete(key string) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	delete(c.cache, key)
+}
+
+func buildLastUpdatedCacheKey(client *dynamicclientset.ResourceClient, obj *unstructured.Unstructured) string {
 	return fmt.Sprintf("%s/%s/%s/%s", client.Group, client.Kind, obj.GetNamespace(), obj.GetName())
 }
 
@@ -273,6 +304,24 @@ func NewApplier(client *dynamicclientset.ResourceClient, ssaOptions *ApplyOption
 	}
 }
 
+func sanitizeForSSACompare(obj *unstructured.Unstructured) *unstructured.Unstructured {
+	c := obj.DeepCopy()
+
+	// Remove metadata fields that are known to be read-only, system fields,
+	// so that they don't cause cache misses or SSA conflicts.
+	for _, fieldName := range objectMetaSystemFields {
+		unstructured.RemoveNestedField(c.Object, "metadata", fieldName)
+	}
+	// Remove status because we don't currently support a parent changing status of
+	// its children.
+	unstructured.RemoveNestedField(c.Object, "status")
+
+	// prevent setting last applied values in the new object
+	nullifyLastAppliedAnnotation(c)
+
+	return c
+}
+
 func updateChildren(client *dynamicclientset.ResourceClient, updateStrategy ChildUpdateStrategy, parent *unstructured.Unstructured, observed, desired map[string]*unstructured.Unstructured, ssaOptions *ApplyOptions) error {
 	var errs []error
 
@@ -299,54 +348,84 @@ func updateChildren(client *dynamicclientset.ResourceClient, updateStrategy Chil
 }
 
 func (h *ServerSideApply) Apply(ctx context.Context, op *ApplyOperation) error {
+	if op.observed != nil && op.observed.GetDeletionTimestamp() != nil {
+		// in case the observed object is pending deletion we should simply wait for it to be deleted
+		logging.Logger.Info("Not updating", "parent", op.parent, "child", op.desired, "reason", "Pending deletion of child object")
+		return nil
+	}
+
 	h.claimOwnership(op)
 
-	// Remove metadata fields that are known to be read-only, system fields,
-	// so that they don't cause cache misses or SSA conflicts.
-	for _, fieldName := range objectMetaSystemFields {
-		unstructured.RemoveNestedField(op.desired.Object, "metadata", fieldName)
-	}
-	// Remove status because we don't currently support a parent changing status of
-	// its children.
-	unstructured.RemoveNestedField(op.desired.Object, "status")
-
-	// prevent setting last applied values in the new object
-	nullifyLastAppliedAnnotation(op.desired)
+	op.desired = sanitizeForSSACompare(op.desired)
 
 	data, err := json.Marshal(op.desired)
 	if err != nil {
 		return err
 	}
 
-	hash := xxhash.Sum64(data)
-	lastUpdateCacheName := lastUpdateCacheKey(h.client, op.desired)
+	desiredHash := xxhash.Sum64(data)
+	cacheKeyName := buildLastUpdatedCacheKey(h.client, op.desired)
+
+	storeState := func(generation int64) {
+		lastUpdatedCache.Set(cacheKeyName, desiredHash, generation)
+		logging.Logger.Info("Cache updated", "name", cacheKeyName)
+	}
+
 	if op.observed != nil {
-		if op.observed.GetDeletionTimestamp() != nil {
-			logging.Logger.Info("Not updating", "parent", op.parent, "child", op.desired, "reason", "Pending deletion of child object")
+		lastUpdated, ok := lastUpdatedCache.Get(cacheKeyName)
+
+		if ok && lastUpdated.hash == desiredHash && lastUpdated.resourcegeneration == op.observed.GetGeneration() {
+			logging.Logger.Info("Skipping update, no changes detected", "name", cacheKeyName)
 			return nil
-		}
-
-		cacheLock.RLock()
-		lastUpdated, ok := lastUpdatedCache[lastUpdateCacheName]
-		cacheLock.RUnlock()
-
-		if ok && lastUpdated.hash == hash && lastUpdated.resourcegeneration == op.observed.GetGeneration() {
-			logging.Logger.Info("Skipping update, no changes detected", "name", lastUpdateCacheName)
-			return nil
-		}
-
-		if ok {
-			logging.Logger.Info("Detected changes, updating", "name", lastUpdateCacheName)
+		} else if ok {
+			logging.Logger.Info("Detected changes, updating", "name", cacheKeyName)
 		} else {
-			logging.Logger.Info("No cache entry found, updating", "name", lastUpdateCacheName)
+			logging.Logger.Info("No cache entry found, updating", "name", cacheKeyName)
 		}
 
 		// Check the update strategy for this child kind.
 		switch method := op.updateStrategy.GetMethod(h.client.Group, h.client.Kind); method {
 		case v1alpha1.ChildUpdateOnDelete, "":
+			defer storeState(op.observed.GetGeneration())
 			return h.childUpdateOnDelete(ctx, op)
 		case v1alpha1.ChildUpdateRecreate, v1alpha1.ChildUpdateRollingRecreate:
-			return h.childUpdateRecreate(ctx, op)
+			// run a dry run with server-side apply to check if the update would cause any changes. If it doesn't cause any changes, we can skip the delete and recreate process
+			// which can be disruptive for some resources like Jobs and Pods. If it does cause changes, we will proceed with the delete and recreate process as before.
+			dryRunPatched, err := h.client.Namespace(op.desired.GetNamespace()).Patch(ctx, op.desired.GetName(), types.ApplyPatchType, data, metav1.PatchOptions{
+				FieldManager: h.ssaOptions.FieldManager,
+				Force:        ptr.To(true),
+				DryRun:       []string{metav1.DryRunAll},
+			})
+			if err != nil {
+				if apierrors.IsBadRequest(err) || apierrors.IsForbidden(err) {
+					logging.Logger.Error(err, "Dry run failed due to bad request or forbidden error, this likely means the desired object is invalid or would be rejected by admission controllers, skipping update to avoid potential delete of existing child", "parent", op.parent, "child", op.desired)
+					storeState(op.observed.GetGeneration())
+					return nil
+				}
+				logging.Logger.Error(err, "Dry run failed for server-side apply, retrying on next reconciliation loop to avoid potential delete of existing child if the error is transient", "parent", op.parent, "child", op.desired)
+				return fmt.Errorf("dry run failed for server-side apply: %w", err)
+			}
+
+			// check if the generation has changed, if it has changed, it means the object was updated after we read it, we should log that as error
+			// and retry on next reconciliation loop since it is possible that we
+			// we would recreate the object, even though we shouldn't
+			if op.observed.GetGeneration() != dryRunPatched.GetGeneration() {
+				return fmt.Errorf("generation changed during dry run for server-side apply, expected generation %d but got %d, this likely means the object was updated after we read it, retrying on next reconciliation loop to avoid unnecessary delete and recreate", op.observed.GetGeneration(), dryRunPatched.GetGeneration())
+			}
+
+			if DeepEqual(sanitizeForSSACompare(dryRunPatched).UnstructuredContent(), sanitizeForSSACompare(op.observed).UnstructuredContent()) {
+				logging.Logger.Info("Skipping delete and recreate, no changes detected in dry run", "parent", op.parent, "child", op.desired)
+				storeState(op.observed.GetGeneration())
+				return nil
+			}
+
+			err = h.childUpdateRecreate(ctx, op)
+			if err != nil {
+				return err
+			}
+			lastUpdatedCache.Delete(cacheKeyName) // we delete from the cache as we are recreating the object, so the previous generation and hash will no longer be valid
+			return nil
+
 		case v1alpha1.ChildUpdateInPlace, v1alpha1.ChildUpdateRollingInPlace:
 			// check if observed object hast last applied annotation
 			_, hasLastApplied := op.observed.GetAnnotations()[dynamicapply.LastAppliedAnnotation]
@@ -366,8 +445,8 @@ func (h *ServerSideApply) Apply(ctx context.Context, op *ApplyOperation) error {
 					}
 					return nil
 				}
-				// we intentionally fall through to the server-side apply below, which will update or create the object as needed
 			}
+			// we intentionally fall through to the server-side apply below, which will update or create the object as needed
 		default:
 			return fmt.Errorf("invalid update strategy for %v: unknown method %q", h.client.Kind, method)
 		}
@@ -391,14 +470,8 @@ func (h *ServerSideApply) Apply(ctx context.Context, op *ApplyOperation) error {
 		return nil
 	}
 
-	cacheLock.Lock()
-	defer cacheLock.Unlock()
-	lastUpdatedCache[lastUpdateCacheName] = &lastUpdate{
-		hash:               hash,
-		resourcegeneration: patched.GetGeneration(),
-	}
+	storeState(patched.GetGeneration())
 
-	logging.Logger.Info("Cache updated", "name", lastUpdateCacheName)
 	return nil
 }
 
@@ -434,10 +507,10 @@ func (h *baseApply) childUpdateRecreate(ctx context.Context, op *ApplyOperation)
 		if apierrors.IsNotFound(err) {
 			// Swallow the error since there's no point retrying if the child is gone.
 			logging.Logger.Info("Failed to delete child, child object has been deleted", "parent", op.parent, "child", op.desired)
+			return nil
 		} else {
 			return err
 		}
-		return nil
 	}
 
 	return nil

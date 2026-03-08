@@ -1,0 +1,134 @@
+---
+# CompositeController for OnDelete strategy
+apiVersion: metacontroller.k8s.io/v1alpha1
+kind: CompositeController
+metadata:
+  name: on-delete-demo-controller
+spec:
+  generateSelector: true
+  parentResource:
+    apiVersion: ctl.example.com/v1
+    resource: ondeletedemos
+  childResources:
+    - apiVersion: v1
+      resource: configmaps
+      updateStrategy:
+        method: OnDelete
+  hooks:
+    sync:
+      webhook:
+        url: http://update-strategy-controller.metacontroller/sync
+---
+# CompositeController for Recreate strategy
+apiVersion: metacontroller.k8s.io/v1alpha1
+kind: CompositeController
+metadata:
+  name: recreate-demo-controller
+spec:
+  generateSelector: true
+  parentResource:
+    apiVersion: ctl.example.com/v1
+    resource: recreatedemos
+  childResources:
+    - apiVersion: v1
+      resource: configmaps
+      updateStrategy:
+        method: Recreate
+  hooks:
+    sync:
+      webhook:
+        url: http://update-strategy-controller.metacontroller/sync
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: update-strategy-controller
+  namespace: metacontroller
+data:
+  sync.py: |
+    #!/usr/bin/env python3
+
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+    import json
+    import logging
+
+    logging.basicConfig(level=logging.DEBUG)
+    LOGGER = logging.getLogger(__name__)
+
+
+    class Controller(BaseHTTPRequestHandler):
+        def sync(self, parent, children):
+            config_data = parent.get('spec', {}).get('configData', 'initial')
+            name = parent['metadata']['name']
+            LOGGER.info("Syncing %s with configData=%s", name, config_data)
+
+            desired_cm = {
+                'apiVersion': 'v1',
+                'kind': 'ConfigMap',
+                'metadata': {
+                    'name': f'{name}-data',
+                },
+                'data': {
+                    'value': config_data,
+                }
+            }
+
+            return {
+                'status': {
+                    'observedConfigData': config_data,
+                },
+                'children': [desired_cm],
+            }
+
+        def do_POST(self):
+            observed = json.loads(self.rfile.read(int(self.headers.get('content-length'))))
+            desired = self.sync(observed['parent'], observed['children'])
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps(desired).encode('utf-8'))
+
+        def log_message(self, format, *args):
+            LOGGER.info(format, *args)
+
+
+    HTTPServer(('', 80), Controller).serve_forever()
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: update-strategy-controller
+  namespace: metacontroller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: update-strategy-controller
+  template:
+    metadata:
+      labels:
+        app: update-strategy-controller
+    spec:
+      containers:
+        - name: controller
+          image: python:3.11-slim
+          command: ["python", "/hooks/sync.py"]
+          volumeMounts:
+            - name: hooks
+              mountPath: /hooks
+      volumes:
+        - name: hooks
+          configMap:
+            name: update-strategy-controller
+            defaultMode: 0755
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: update-strategy-controller
+  namespace: metacontroller
+spec:
+  selector:
+    app: update-strategy-controller
+  ports:
+    - port: 80
