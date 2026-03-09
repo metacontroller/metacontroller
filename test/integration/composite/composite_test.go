@@ -21,6 +21,7 @@ import (
 	customizeV1 "metacontroller/pkg/controller/common/customize/api/v1"
 	v1 "metacontroller/pkg/controller/composite/api/v1"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -397,5 +398,144 @@ func TestFailIfNoStatusSubresourceInParentCRD(t *testing.T) {
 	})
 	if err != nil {
 		t.Errorf("didn't find expected event: %v", err)
+	}
+}
+
+// TestClaimAndOrphanChildren verifies the two halves of the child-ownership
+// lifecycle that rely on the OwnerUID and Orphan informer indexes:
+//
+//  1. Adoption – a pre-existing orphan whose labels match the parent's selector
+//     gets its ownerReference set by the controller (claimed).
+//
+//  2. Release – once the child's labels no longer match the parent selector the
+//     controller removes the ownerReference (orphaned again).
+func TestClaimAndOrphanChildren(t *testing.T) {
+	ns := "test-claim-orphan-children"
+	matchingLabels := map[string]string{"test": "test-claim-orphan-children"}
+	nonMatchingLabels := map[string]string{"test": "no-match"}
+	childName := "pre-existing-child"
+
+	f := framework.NewFixture(t)
+	defer f.TearDown()
+
+	f.CreateNamespace(ns)
+	parentCRD, parentClient := f.CreateCRD("TestClaimOrphanParent", apiextensions.NamespaceScoped)
+	childCRD, childClient := f.CreateCRD("TestClaimOrphanChild", apiextensions.NamespaceScoped)
+
+	// releaseMode controls whether the sync hook returns children.
+	// While false the hook echoes the child back so manageChildren keeps it.
+	// While true the hook returns nothing, letting the controller release it.
+	var releaseMode atomic.Bool
+
+	hook := f.ServeWebhook(func(body []byte) ([]byte, error) {
+		req := v1.CompositeHookRequest{}
+		if err := json.Unmarshal(body, &req); err != nil {
+			return nil, err
+		}
+		resp := v1.CompositeHookResponse{}
+		if !releaseMode.Load() {
+			// Return the child as desired so manageChildren keeps it alive.
+			child := framework.UnstructuredCRD(childCRD, childName)
+			child.SetLabels(matchingLabels)
+			resp.Children = []*unstructured.Unstructured{child}
+		}
+		// When releaseMode is true we return no desired children, which allows
+		// manageChildren to leave the (now-ownerless) orphan alone.
+		return json.Marshal(resp)
+	})
+
+	f.CreateCompositeController(
+		"test-claim-orphan-children",
+		hook.URL, "",
+		framework.CRDResourceRule(parentCRD),
+		framework.CRDResourceRule(childCRD),
+		nil,
+	)
+
+	// --- Phase 1: pre-create an orphan child --------------------------------
+	//
+	// The child exists before the parent does. Its labels match the selector
+	// that the parent will declare, so the controller should adopt it.
+
+	orphan := framework.UnstructuredCRD(childCRD, childName)
+	orphan.SetLabels(matchingLabels)
+	orphan.SetNamespace(ns)
+	if _, err := childClient.Namespace(ns).Create(context.TODO(), orphan, metav1.CreateOptions{}); err != nil {
+		t.Fatal(err)
+	}
+
+	// Create the parent and declare the matching label selector.
+	parent := framework.UnstructuredCRD(parentCRD, "test-claim-orphan-children")
+	unstructured.SetNestedStringMap(parent.Object, matchingLabels, "spec", "selector", "matchLabels")
+	if _, err := parentClient.Namespace(ns).Create(context.TODO(), parent, metav1.CreateOptions{}); err != nil {
+		t.Fatal(err)
+	}
+
+	// Wait until the orphan has been adopted: ownerReferences must contain an
+	// entry pointing at the parent.
+	t.Logf("Waiting for orphan child to be adopted (ownerReference set)...")
+	err := f.Wait(func() (bool, error) {
+		obj, err := childClient.Namespace(ns).Get(context.TODO(), childName, metav1.GetOptions{})
+		if err != nil {
+			return false, err
+		}
+		for _, ref := range obj.GetOwnerReferences() {
+			if ref.Controller != nil && *ref.Controller {
+				t.Logf("Child adopted by %q (uid=%s)", ref.Name, ref.UID)
+				return true, nil
+			}
+		}
+		return false, nil
+	})
+	if err != nil {
+		t.Fatalf("orphan child was never adopted: %v", err)
+	}
+
+	// --- Phase 2: release the child by changing its labels ------------------
+	//
+	// We update the child's labels so they no longer satisfy the parent's
+	// selector. The controller must detect this via the OwnerUID index
+	// (ListByOwnerUID), determine the selector no longer matches, and remove
+	// the ownerReference.
+
+	// Switch the hook to return no desired children before we break the labels,
+	// so that manageChildren does not re-create the child.
+	releaseMode.Store(true)
+
+	t.Logf("Updating child labels to break selector match; expecting controller to release it...")
+	err = f.Wait(func() (bool, error) {
+		obj, err := childClient.Namespace(ns).Get(context.TODO(), childName, metav1.GetOptions{})
+		if err != nil {
+			return false, err
+		}
+		// Only patch if it still has an owner (idempotent retry-safe).
+		if len(obj.GetOwnerReferences()) == 0 {
+			return true, nil // already released on a previous iteration
+		}
+		obj.SetLabels(nonMatchingLabels)
+		if _, err := childClient.Namespace(ns).Update(context.TODO(), obj, metav1.UpdateOptions{}); err != nil {
+			return false, err // conflict → retry
+		}
+		return false, nil
+	})
+	if err != nil {
+		t.Fatalf("could not update child labels: %v", err)
+	}
+
+	// Now wait for the controller to notice and strip the ownerReference.
+	t.Logf("Waiting for child to be released (ownerReference removed)...")
+	err = f.Wait(func() (bool, error) {
+		obj, err := childClient.Namespace(ns).Get(context.TODO(), childName, metav1.GetOptions{})
+		if err != nil {
+			return false, err
+		}
+		if len(obj.GetOwnerReferences()) == 0 {
+			t.Logf("Child has no ownerReferences – successfully released")
+			return true, nil
+		}
+		return false, nil
+	})
+	if err != nil {
+		t.Errorf("child was never released (ownerReference still present): %v", err)
 	}
 }

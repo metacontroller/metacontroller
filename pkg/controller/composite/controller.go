@@ -44,6 +44,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/cache"
@@ -774,14 +775,44 @@ func (pc *parentController) claimChildren(parent *unstructured.Unstructured) (co
 		if informer == nil {
 			return nil, fmt.Errorf("no informer for resource %q in apiVersion %q", child.Resource, child.APIVersion)
 		}
-		var all []*unstructured.Unstructured
+
+		namespace := ""
 		if pc.parentResource.Namespaced {
-			all, err = informer.Lister().Namespace(parentNamespace).List(labels.Everything())
-		} else {
-			all, err = informer.Lister().List(labels.Everything())
+			namespace = parentNamespace
 		}
+
+		// Build the candidate set from two O(k) indexed lookups instead of an
+		// O(n) full-cache scan:
+		//
+		//  1. Already-owned children (OwnerUID index) — needed regardless of
+		//     selector match, because a drifted child must still be released.
+		//  2. Orphans which do not belong to any parent —
+		//     the only objects that could be adopted; objects owned by a different
+		//     controller are not adoption candidates and never need to be visited.
+		//
+		// This completely avoids iterating over children that belong to other
+		// parents, which is the dominant population in a busy cluster.
+		ownedByParent, err := informer.ListByOwnerUID(parent.GetUID(), namespace)
 		if err != nil {
-			return nil, fmt.Errorf("can't list %v children: %w", childClient.Kind, err)
+			return nil, fmt.Errorf("can't list owned %v children: %w", childClient.Kind, err)
+		}
+
+		orphans, err := informer.ListOrphans(namespace)
+		if err != nil {
+			return nil, fmt.Errorf("can't list orphan %v children: %w", childClient.Kind, err)
+		}
+		// Merge owned + orphans, deduplicating by UID (an object cannot be both,
+		// but guard against any edge case).
+		seen := make(map[types.UID]struct{}, len(ownedByParent)+len(orphans))
+		all := make([]*unstructured.Unstructured, 0, len(ownedByParent)+len(orphans))
+		for _, list := range [...][]*unstructured.Unstructured{ownedByParent, orphans} {
+			for _, obj := range list {
+				uid := obj.GetUID()
+				if _, dup := seen[uid]; !dup {
+					seen[uid] = struct{}{}
+					all = append(all, obj)
+				}
+			}
 		}
 
 		// Always include the requested groups, even if there are no entries.

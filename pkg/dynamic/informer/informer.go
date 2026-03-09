@@ -28,6 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/tools/cache"
 
@@ -35,6 +36,56 @@ import (
 
 	"k8s.io/client-go/dynamic/dynamiclister"
 )
+
+// orphanIndexSentinel is the fixed key under which all controller-ownerless
+// objects are stored in the OrphanIndex.
+const orphanIndexSentinel = "true"
+
+// OwnerUIDIndex is the name of the informer index that maps controller-owner
+// UID → owned objects. It is registered for every child-resource informer so
+// that claimChildren can retrieve already-owned objects in O(k) instead of
+// scanning the whole cache.
+const OwnerUIDIndex = "ownerUID"
+
+// ownerUIDIndexFunc returns the controller-owner UIDs for an object (i.e. the
+// UID of every owner reference where Controller==true).
+func ownerUIDIndexFunc(obj interface{}) ([]string, error) {
+	object, ok := obj.(metav1.Object)
+	if !ok {
+		return nil, nil
+	}
+	var uids []string
+	for _, ref := range object.GetOwnerReferences() {
+		if ref.Controller != nil && *ref.Controller {
+			uids = append(uids, string(ref.UID))
+		}
+	}
+	return uids, nil
+}
+
+// OrphanIndex is the name of the informer index that contains all objects that
+// have no controller owner reference. All such objects are stored under the
+// single key orphanIndexSentinel ("true").
+//
+// Indexing orphans allows claimChildren to limit its adoption scan to the
+// (typically small) orphan set, rather than scanning the full object cache.
+const OrphanIndex = "orphan"
+
+// orphanIndexFunc returns [orphanIndexSentinel] if the object has no
+// controller owner, so it appears in the OrphanIndex.
+func orphanIndexFunc(obj interface{}) ([]string, error) {
+	object, ok := obj.(metav1.Object)
+	if !ok {
+		return nil, nil
+	}
+	for _, ref := range object.GetOwnerReferences() {
+		if ref.Controller != nil && *ref.Controller {
+			// Has a controller owner — not an orphan.
+			return nil, nil
+		}
+	}
+	return []string{orphanIndexSentinel}, nil
+}
 
 // SharedIndexInformer is an extension of the standard interface of the same
 // name, adding the ability to remove event handlers that you added.
@@ -89,6 +140,48 @@ func (ri *ResourceInformer) Lister() dynamiclister.Lister {
 	return ri.sharedResourceInformer.lister
 }
 
+// ListByOwnerUID returns all cached objects whose controller-owner UID equals
+// the given uid. It uses the OwnerUIDIndex for an O(k) lookup instead of a
+// full cache scan, where k is the number of objects owned by that controller.
+//
+// We require filtering by namespace as well, since the same UID could be reused in different
+// namespaces and we don't want to return objects from other namespaces, to prevent possible
+// security issues.
+func (ri *ResourceInformer) ListByOwnerUID(uid types.UID, namespace string) ([]*unstructured.Unstructured, error) {
+	return ri.byIndexAndNamespace(OwnerUIDIndex, string(uid), namespace)
+}
+
+// ListOrphans returns cached objects that have no controller owner reference
+// and that match the given namespace and label selector.
+//
+// It uses the OrphanIndex for an O(k_orphan) lookup — only orphaned objects
+// are examined, not the full cache. namespace may be empty to match all
+// namespaces.
+func (ri *ResourceInformer) ListOrphans(namespace string) ([]*unstructured.Unstructured, error) {
+	return ri.byIndexAndNamespace(OrphanIndex, orphanIndexSentinel, namespace)
+}
+
+// byIndex is a shared helper that retrieves unstructured objects from a named
+// index by key.
+func (ri *ResourceInformer) byIndexAndNamespace(indexName, key string, namespace string) ([]*unstructured.Unstructured, error) {
+	items, err := ri.sharedResourceInformer.informer.GetIndexer().ByIndex(indexName, key)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]*unstructured.Unstructured, 0, len(items))
+	for _, item := range items {
+		u, ok := item.(*unstructured.Unstructured)
+		if !ok {
+			continue
+		}
+		if namespace != "" && u.GetNamespace() != namespace {
+			continue
+		}
+		result = append(result, u)
+	}
+	return result, nil
+}
+
 // Close marks this ResourceInformer as unused, allowing the underlying shared
 // informer to be stopped when no users are left.
 // You should call this when you no longer need the informer, so the watches
@@ -129,6 +222,8 @@ func newSharedResourceInformer(client *dynamicclientset.ResourceClient, defaultR
 		defaultResyncPeriod,
 		cache.Indexers{
 			cache.NamespaceIndex: cache.MetaNamespaceIndexFunc,
+			OwnerUIDIndex:        ownerUIDIndexFunc,
+			OrphanIndex:          orphanIndexFunc,
 		},
 	)
 	sri := &sharedResourceInformer{
