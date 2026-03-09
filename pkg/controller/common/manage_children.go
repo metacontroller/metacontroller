@@ -220,6 +220,7 @@ func deleteChildren(client *dynamicclientset.ResourceClient, parent *unstructure
 type lastUpdate struct {
 	hash               uint64
 	resourcegeneration int64
+	resourceversion    string
 	uid                types.UID
 }
 
@@ -246,12 +247,13 @@ func (c *LastUpdateCache) Get(key string) (*lastUpdate, bool) {
 	return lastUpdate, ok
 }
 
-func (c *LastUpdateCache) Set(key string, hash uint64, generation int64, uid types.UID) {
+func (c *LastUpdateCache) Set(key string, hash uint64, generation int64, resourceVersion string, uid types.UID) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	c.cache[key] = &lastUpdate{
 		hash:               hash,
 		resourcegeneration: generation,
+		resourceversion:    resourceVersion,
 		uid:                uid,
 	}
 }
@@ -368,8 +370,8 @@ func (h *ServerSideApply) Apply(ctx context.Context, op *ApplyOperation) error {
 	desiredHash := xxhash.Sum64(data)
 	cacheKeyName := buildLastUpdatedCacheKey(h.client, op.desired)
 
-	storeState := func(generation int64, uid types.UID) {
-		lastUpdatedCache.Set(cacheKeyName, desiredHash, generation, uid)
+	storeState := func(generation int64, resourceVersion string, uid types.UID) {
+		lastUpdatedCache.Set(cacheKeyName, desiredHash, generation, resourceVersion, uid)
 		logging.Logger.Info("Cache updated", "name", cacheKeyName)
 	}
 
@@ -379,14 +381,14 @@ func (h *ServerSideApply) Apply(ctx context.Context, op *ApplyOperation) error {
 		switch {
 		case !ok:
 			logging.Logger.Info("No cache entry found for observed object", "name", cacheKeyName)
-		case op.observed.GetGeneration() == 0:
-			logging.Logger.Info("Observed generation is 0, cache cannot be used reliably for drift detection", "name", cacheKeyName)
-		case lastUpdated.resourcegeneration != op.observed.GetGeneration():
-			logging.Logger.Info("Observed generation has changed since last update, invalidating cache", "name", cacheKeyName, "observedGeneration", op.observed.GetGeneration(), "cachedGeneration", lastUpdated.resourcegeneration)
 		case lastUpdated.uid != op.observed.GetUID():
 			logging.Logger.Info("Observed UID has changed since last update, invalidating cache", "name", cacheKeyName, "observedUID", op.observed.GetUID(), "cachedUID", lastUpdated.uid)
 		case lastUpdated.hash != desiredHash:
 			logging.Logger.Info("Observed object has changed since last update, invalidating cache", "name", cacheKeyName)
+		case op.observed.GetGeneration() == 0 && op.observed.GetResourceVersion() != lastUpdated.resourceversion:
+			logging.Logger.Info("Observed generation is 0, using resourceVersion for cache validation. Observed object has changed since last update, invalidating cache", "name", cacheKeyName, "observedResourceVersion", op.observed.GetResourceVersion(), "cachedResourceVersion", lastUpdated.resourceversion)
+		case lastUpdated.resourcegeneration != op.observed.GetGeneration():
+			logging.Logger.Info("Observed generation has changed since last update, invalidating cache", "name", cacheKeyName, "observedGeneration", op.observed.GetGeneration(), "cachedGeneration", lastUpdated.resourcegeneration)
 		default:
 			logging.Logger.Info("Cache hit for observed object with no changes detected", "name", cacheKeyName)
 			return nil
@@ -395,7 +397,7 @@ func (h *ServerSideApply) Apply(ctx context.Context, op *ApplyOperation) error {
 		// Check the update strategy for this child kind.
 		switch method := op.updateStrategy.GetMethod(h.client.Group, h.client.Kind); method {
 		case v1alpha1.ChildUpdateOnDelete, "":
-			defer storeState(op.observed.GetGeneration(), op.observed.GetUID())
+			defer storeState(op.observed.GetGeneration(), op.observed.GetResourceVersion(), op.observed.GetUID())
 			return h.childUpdateOnDelete(ctx, op)
 		case v1alpha1.ChildUpdateRecreate, v1alpha1.ChildUpdateRollingRecreate:
 			// run a dry run with server-side apply to check if the update would cause any changes. If it doesn't cause any changes, we can skip the delete and recreate process
@@ -408,7 +410,7 @@ func (h *ServerSideApply) Apply(ctx context.Context, op *ApplyOperation) error {
 			if err != nil {
 				if apierrors.IsBadRequest(err) || apierrors.IsForbidden(err) {
 					logging.Logger.Error(err, "Dry run failed due to bad request or forbidden error, this likely means the desired object is invalid or would be rejected by admission controllers, skipping update to avoid potential delete of existing child", "parent", op.parent, "child", op.desired)
-					storeState(op.observed.GetGeneration(), op.observed.GetUID())
+					storeState(op.observed.GetGeneration(), op.observed.GetResourceVersion(), op.observed.GetUID())
 					return nil
 				}
 				logging.Logger.Error(err, "Dry run failed for server-side apply, retrying on next reconciliation loop to avoid potential delete of existing child if the error is transient", "parent", op.parent, "child", op.desired)
@@ -424,7 +426,7 @@ func (h *ServerSideApply) Apply(ctx context.Context, op *ApplyOperation) error {
 
 			if DeepEqual(sanitizeForSSACompare(dryRunPatched).UnstructuredContent(), sanitizeForSSACompare(op.observed).UnstructuredContent()) {
 				logging.Logger.Info("Skipping delete and recreate, no changes detected in dry run", "parent", op.parent, "child", op.desired)
-				storeState(op.observed.GetGeneration(), op.observed.GetUID())
+				storeState(op.observed.GetGeneration(), op.observed.GetResourceVersion(), op.observed.GetUID())
 				return nil
 			}
 
@@ -479,7 +481,7 @@ func (h *ServerSideApply) Apply(ctx context.Context, op *ApplyOperation) error {
 		return nil
 	}
 
-	storeState(patched.GetGeneration(), patched.GetUID())
+	storeState(patched.GetGeneration(), patched.GetResourceVersion(), patched.GetUID())
 
 	return nil
 }
