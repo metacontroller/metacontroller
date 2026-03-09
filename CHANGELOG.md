@@ -1,3 +1,12 @@
+## [4.12.12](https://github.com/metacontroller/metacontroller/compare/v4.12.11...v4.12.12) (2026-03-09)
+
+
+### Bug Fixes
+
+* **deps:** Update dependencies ([9b28dbd](https://github.com/metacontroller/metacontroller/commit/9b28dbd5c8aa45a2b96959431043b388adc39b6c))
+* **deps:** update golang docker tag to v1.26.1 ([2f1806b](https://github.com/metacontroller/metacontroller/commit/2f1806b57528a0fdb42ba834273ef1fee0026e7c))
+* **ssa:** don't recreate all over again ([29ae9a0](https://github.com/metacontroller/metacontroller/commit/29ae9a0ab9940353c2fe3b9a927a8eed8b7e1c70))
+
 ## [4.12.11](https://github.com/metacontroller/metacontroller/compare/v4.12.10...v4.12.11) (2026-02-28)
 
 
