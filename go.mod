@@ -15,9 +15,9 @@ require (
 	k8s.io/apiextensions-apiserver v0.35.2
 	k8s.io/apimachinery v0.35.2
 	k8s.io/client-go v0.35.2
-	k8s.io/klog/v2 v2.130.1
+	k8s.io/klog/v2 v2.140.0
 	k8s.io/utils v0.0.0-20260210185600-b8788abfbbc2
-	sigs.k8s.io/controller-runtime v0.23.1
+	sigs.k8s.io/controller-runtime v0.23.3
 	sigs.k8s.io/json v0.0.0-20250730193827-2d320260d730
 	zgo.at/zcache/v2 v2.4.1
 )
@@ -57,10 +57,10 @@ require (
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/net v0.47.0 // indirect
 	golang.org/x/oauth2 v0.30.0 // indirect
-	golang.org/x/sync v0.18.0 // indirect
-	golang.org/x/sys v0.38.0 // indirect
-	golang.org/x/term v0.37.0 // indirect
-	golang.org/x/text v0.31.0 // indirect
+	golang.org/x/sync v0.19.0 // indirect
+	golang.org/x/sys v0.41.0 // indirect
+	golang.org/x/term v0.40.0 // indirect
+	golang.org/x/text v0.34.0 // indirect
 	golang.org/x/time v0.9.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect
 	google.golang.org/protobuf v1.36.8 // indirect
@@ -74,7 +74,7 @@ require (
 )
 
 replace (
-	golang.org/x/net => golang.org/x/net v0.45.0
+	golang.org/x/net => golang.org/x/net v0.51.0
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.35.2
 	k8s.io/apimachinery => k8s.io/apimachinery v0.35.2
 	k8s.io/client-go => k8s.io/client-go v0.35.2
