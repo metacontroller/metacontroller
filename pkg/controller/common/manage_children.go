@@ -351,6 +351,26 @@ func updateChildren(client *dynamicclientset.ResourceClient, updateStrategy Chil
 	return utilerrors.NewAggregate(errs)
 }
 
+func isCacheInvalid(cache *LastUpdateCache, cacheKeyName string, observed *unstructured.Unstructured, desiredHash uint64) bool {
+	lastUpdated, ok := cache.Get(cacheKeyName)
+	switch {
+	case !ok:
+		logging.Logger.Info("No cache entry found for observed object", "name", cacheKeyName)
+	case lastUpdated.uid != observed.GetUID():
+		logging.Logger.Info("Observed UID has changed since last update, invalidating cache", "name", cacheKeyName, "observedUID", observed.GetUID(), "cachedUID", lastUpdated.uid)
+	case lastUpdated.hash != desiredHash:
+		logging.Logger.Info("Observed object has changed since last update, invalidating cache", "name", cacheKeyName)
+	case observed.GetGeneration() == 0 && observed.GetResourceVersion() != lastUpdated.resourceversion:
+		logging.Logger.Info("Observed generation is 0, using resourceVersion for cache validation. Observed object has changed since last update, invalidating cache", "name", cacheKeyName, "observedResourceVersion", observed.GetResourceVersion(), "cachedResourceVersion", lastUpdated.resourceversion)
+	case lastUpdated.resourcegeneration != observed.GetGeneration():
+		logging.Logger.Info("Observed generation has changed since last update, invalidating cache", "name", cacheKeyName, "observedGeneration", observed.GetGeneration(), "cachedGeneration", lastUpdated.resourcegeneration)
+	default:
+		logging.Logger.Info("Cache hit for observed object with no changes detected", "name", cacheKeyName)
+		return false
+	}
+	return true
+}
+
 func (h *ServerSideApply) Apply(ctx context.Context, op *ApplyOperation) error {
 	if op.observed != nil && op.observed.GetDeletionTimestamp() != nil {
 		// in case the observed object is pending deletion we should simply wait for it to be deleted
@@ -376,21 +396,8 @@ func (h *ServerSideApply) Apply(ctx context.Context, op *ApplyOperation) error {
 	}
 
 	if op.observed != nil {
-		lastUpdated, ok := lastUpdatedCache.Get(cacheKeyName)
-
-		switch {
-		case !ok:
-			logging.Logger.Info("No cache entry found for observed object", "name", cacheKeyName)
-		case lastUpdated.uid != op.observed.GetUID():
-			logging.Logger.Info("Observed UID has changed since last update, invalidating cache", "name", cacheKeyName, "observedUID", op.observed.GetUID(), "cachedUID", lastUpdated.uid)
-		case lastUpdated.hash != desiredHash:
-			logging.Logger.Info("Observed object has changed since last update, invalidating cache", "name", cacheKeyName)
-		case op.observed.GetGeneration() == 0 && op.observed.GetResourceVersion() != lastUpdated.resourceversion:
-			logging.Logger.Info("Observed generation is 0, using resourceVersion for cache validation. Observed object has changed since last update, invalidating cache", "name", cacheKeyName, "observedResourceVersion", op.observed.GetResourceVersion(), "cachedResourceVersion", lastUpdated.resourceversion)
-		case lastUpdated.resourcegeneration != op.observed.GetGeneration():
-			logging.Logger.Info("Observed generation has changed since last update, invalidating cache", "name", cacheKeyName, "observedGeneration", op.observed.GetGeneration(), "cachedGeneration", lastUpdated.resourcegeneration)
-		default:
-			logging.Logger.Info("Cache hit for observed object with no changes detected", "name", cacheKeyName)
+		if !isCacheInvalid(lastUpdatedCache, cacheKeyName, op.observed, desiredHash) {
+			// Cache is valid, no need to apply server-side apply since there are no changes detected, we can skip the update to avoid unnecessary API calls and potential conflicts
 			return nil
 		}
 
