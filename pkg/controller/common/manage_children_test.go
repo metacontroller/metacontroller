@@ -32,6 +32,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/json"
 	"k8s.io/client-go/dynamic/fake"
 	clientgotesting "k8s.io/client-go/testing"
@@ -109,6 +110,139 @@ func TestRevertObjectMetaSystemFields(t *testing.T) {
 	if got := newObj; !reflect.DeepEqual(got, want) {
 		t.Logf("reflect diff: a=got, b=want:\n%s", cmp.Diff(got, want))
 		t.Fatalf("revertObjectMetaSystemFields() = %#v, want %#v", got, want)
+	}
+}
+
+func TestIsCacheInvalid(t *testing.T) {
+	logging.InitLogging(&zap.Options{})
+
+	const cacheKey = "testgroup/TestKind/testns/testname"
+	const someHash uint64 = 12345
+	const someUID = "uid-abc"
+	const someResourceVersion = "rv-1"
+	const someGeneration int64 = 3
+
+	makeObserved := func(uid string, generation int64, resourceVersion string) *unstructured.Unstructured {
+		obj := NewDefaultUnstructured()
+		obj.SetUID(types.UID(uid))
+		obj.SetGeneration(generation)
+		obj.SetResourceVersion(resourceVersion)
+		return obj
+	}
+
+	matchingCache := &lastUpdate{
+		hash:               someHash,
+		resourcegeneration: someGeneration,
+		resourceversion:    someResourceVersion,
+		uid:                someUID,
+	}
+
+	tests := []struct {
+		name        string
+		cachedEntry *lastUpdate // nil means no cache entry
+		observed    *unstructured.Unstructured
+		desiredHash uint64
+		wantInvalid bool
+	}{
+		{
+			name:        "no cache entry → invalid",
+			cachedEntry: nil,
+			observed:    makeObserved(someUID, someGeneration, someResourceVersion),
+			desiredHash: someHash,
+			wantInvalid: true,
+		},
+		{
+			name: "UID changed → invalid",
+			cachedEntry: &lastUpdate{
+				hash:               someHash,
+				resourcegeneration: someGeneration,
+				resourceversion:    someResourceVersion,
+				uid:                "old-uid",
+			},
+			observed:    makeObserved(someUID, someGeneration, someResourceVersion),
+			desiredHash: someHash,
+			wantInvalid: true,
+		},
+		{
+			name: "desired hash changed → invalid",
+			cachedEntry: &lastUpdate{
+				hash:               99999,
+				resourcegeneration: someGeneration,
+				resourceversion:    someResourceVersion,
+				uid:                someUID,
+			},
+			observed:    makeObserved(someUID, someGeneration, someResourceVersion),
+			desiredHash: someHash,
+			wantInvalid: true,
+		},
+		{
+			name: "generation is 0 and resourceVersion changed → invalid",
+			cachedEntry: &lastUpdate{
+				hash:               someHash,
+				resourcegeneration: 0,
+				resourceversion:    "rv-old",
+				uid:                someUID,
+			},
+			observed:    makeObserved(someUID, 0, someResourceVersion),
+			desiredHash: someHash,
+			wantInvalid: true,
+		},
+		{
+			name: "generation changed → invalid",
+			cachedEntry: &lastUpdate{
+				hash:               someHash,
+				resourcegeneration: 1,
+				resourceversion:    someResourceVersion,
+				uid:                someUID,
+			},
+			observed:    makeObserved(someUID, someGeneration, someResourceVersion),
+			desiredHash: someHash,
+			wantInvalid: true,
+		},
+		{
+			name:        "all fields match (generation > 0) → valid cache hit",
+			cachedEntry: matchingCache,
+			observed:    makeObserved(someUID, someGeneration, someResourceVersion),
+			desiredHash: someHash,
+			wantInvalid: false,
+		},
+		{
+			name: "generation is 0 and resourceVersion matches → valid cache hit",
+			cachedEntry: &lastUpdate{
+				hash:               someHash,
+				resourcegeneration: 0,
+				resourceversion:    someResourceVersion,
+				uid:                someUID,
+			},
+			observed:    makeObserved(someUID, 0, someResourceVersion),
+			desiredHash: someHash,
+			wantInvalid: false,
+		},
+		{
+			name: "generation is not changed, but resourceVersion changed → valid cache hit",
+			cachedEntry: &lastUpdate{
+				hash:               someHash,
+				resourcegeneration: someGeneration,
+				resourceversion:    "rv-old",
+				uid:                someUID,
+			},
+			observed:    makeObserved(someUID, someGeneration, someResourceVersion),
+			desiredHash: someHash,
+			wantInvalid: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cache := NewLastUpdateCache()
+			if tt.cachedEntry != nil {
+				cache.Set(cacheKey, tt.cachedEntry.hash, tt.cachedEntry.resourcegeneration, tt.cachedEntry.resourceversion, tt.cachedEntry.uid)
+			}
+			got := isCacheInvalid(cache, cacheKey, tt.observed, tt.desiredHash)
+			if got != tt.wantInvalid {
+				t.Errorf("isCacheInvalid() = %v, want %v", got, tt.wantInvalid)
+			}
+		})
 	}
 }
 
