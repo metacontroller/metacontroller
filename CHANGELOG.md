@@ -1,3 +1,10 @@
+## [4.12.13](https://github.com/metacontroller/metacontroller/compare/v4.12.12...v4.12.13) (2026-03-10)
+
+
+### Bug Fixes
+
+* fallback to resourceversion for ssa cache ([95545a9](https://github.com/metacontroller/metacontroller/commit/95545a97f4bb880f765916d3e18eec3ee1fd30fe))
+
 ## [4.12.12](https://github.com/metacontroller/metacontroller/compare/v4.12.11...v4.12.12) (2026-03-09)
 
 
