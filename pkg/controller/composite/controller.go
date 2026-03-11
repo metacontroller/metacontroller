@@ -129,7 +129,7 @@ func newParentController(
 		if newErr != nil {
 			// If newParentController fails, Close() any informers we created
 			// since Stop() will never be called.
-			childInformers.Range(func(_ schema.GroupVersionResource, informer *dynamicinformer.ResourceInformer) {
+			childInformers.ForEach(func(_ schema.GroupVersionResource, informer *dynamicinformer.ResourceInformer) {
 				informer.Close()
 			})
 			parentInformer.Close()
@@ -251,7 +251,7 @@ func (pc *parentController) Start() {
 			pc.logger.Error(err, "Unable to AddEventHandler Informer to Parent Informer", "controller", pc.cc.Name)
 		}
 	}
-	pc.childInformers.Range(func(_ schema.GroupVersionResource, childInformer *dynamicinformer.ResourceInformer) {
+	pc.childInformers.ForEach(func(_ schema.GroupVersionResource, childInformer *dynamicinformer.ResourceInformer) {
 		_, err := childInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 			AddFunc:    pc.onChildAdd,
 			UpdateFunc: pc.onChildUpdate,
@@ -275,7 +275,7 @@ func (pc *parentController) Start() {
 		pc.logger.Info("Waiting for CompositeController caches to sync", "controller", pc.cc)
 		syncFuncs := make([]cache.InformerSynced, 0, 2+pc.childInformers.Len())
 		syncFuncs = append(syncFuncs, pc.dynClient.HasSynced, pc.parentInformer.Informer().HasSynced)
-		pc.childInformers.Range(func(_ schema.GroupVersionResource, childInformer *dynamicinformer.ResourceInformer) {
+		pc.childInformers.ForEach(func(_ schema.GroupVersionResource, childInformer *dynamicinformer.ResourceInformer) {
 			syncFuncs = append(syncFuncs, childInformer.Informer().HasSynced)
 		})
 		if !cache.WaitForNamedCacheSync(pc.parentResource.Kind, pc.stopCh, syncFuncs...) {
@@ -302,7 +302,7 @@ func (pc *parentController) Stop() {
 	<-pc.doneCh
 
 	// Remove event handlers and close informers for all child resources.
-	pc.childInformers.Range(func(_ schema.GroupVersionResource, informer *dynamicinformer.ResourceInformer) {
+	pc.childInformers.ForEach(func(_ schema.GroupVersionResource, informer *dynamicinformer.ResourceInformer) {
 		informer.Informer().RemoveEventHandlers()
 		informer.Close()
 	})
