@@ -1,0 +1,37 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: namespacelists.examples.metacontroller.io
+spec:
+  group: examples.metacontroller.io
+  names:
+    kind: NamespaceList
+    listKind: NamespaceListList
+    plural: namespacelists
+    singular: namespacelist
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            type: object
+            properties:
+              labelSelector:
+                type: object
+                x-kubernetes-preserve-unknown-fields: true
+          status:
+            type: object
+            properties:
+              count:
+                type: integer
+              observedGeneration:
+                type: integer
+        required:
+        - spec
+    served: true
+    storage: true
+    subresources:
+      status: {}

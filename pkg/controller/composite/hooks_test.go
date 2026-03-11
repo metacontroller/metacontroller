@@ -5,6 +5,7 @@ import (
 	commonv1 "metacontroller/pkg/controller/common/api/v1"
 	commonv2 "metacontroller/pkg/controller/common/api/v2"
 	composite "metacontroller/pkg/controller/composite/api/v1"
+	v2 "metacontroller/pkg/controller/composite/api/v2"
 	"metacontroller/pkg/internal/testutils/hooks"
 	"testing"
 
@@ -154,4 +155,33 @@ func TestWhenChildrenArrayHasInvalidJSONValueShouldFail(t *testing.T) {
 	if response != nil {
 		t.Error("Response should be nil due to error raised")
 	}
+}
+
+func TestConvertV2ToV1Response(t *testing.T) {
+	pc := &parentController{}
+	v2Response := v2.CompositeHookResponse{
+		Status: map[string]interface{}{
+			"foo": "bar",
+		},
+		Children: []*unstructured.Unstructured{
+			{
+				Object: map[string]interface{}{
+					"apiVersion": "v1",
+					"kind":       "Pod",
+					"metadata": map[string]interface{}{
+						"name": "child",
+					},
+				},
+			},
+		},
+		ResyncAfterSeconds: 10.5,
+		Finalized:          true,
+	}
+
+	v1Response := pc.convertV2ToV1Response(v2Response)
+
+	assert.Equal(t, v2Response.Status, v1Response.Status)
+	assert.Equal(t, v2Response.Children, v1Response.Children)
+	assert.Equal(t, v2Response.ResyncAfterSeconds, v1Response.ResyncAfterSeconds)
+	assert.Equal(t, v2Response.Finalized, v1Response.Finalized)
 }

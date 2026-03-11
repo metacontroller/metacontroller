@@ -7,7 +7,8 @@ has the following fields:
 
 | Field | Description |
 | ----- | ----------- |
-| [webhook](#webhook) | Specify how to invoke this hook over HTTP(S). |
+| `version` | The version of the hook API to use. Can be `v1` or `v2`. Defaults to `v1`. |
+| [`webhook`](#webhook) | Specify how to invoke this hook over HTTP(S). |
 
 [[_TOC_]]
 
@@ -29,6 +30,7 @@ Each Webhook has the following fields:
 | timeout                      | A duration (in the format of Go's time.Duration) indicating the time that Metacontroller should wait for a resserviceponse. If the webhook takes longer than this time, the webhook call is aborted and retried later. Defaults to 10s. |
 | path                         | A path to be appended to the accompanying `service` to reach this hook (e.g. `/hook`). Ignored if full `url` is specified.                                                                                                              |
 | [service](#service-reference) | A reference to a Kubernetes Service through which this hook can be reached.                                                                                                                                                             |
+| responseUnMarshallMode | Sets the JSON unmarshall mode. One of `loose` or `strict`. In `strict` mode, additional checks are performed to detect unknown and duplicated fields. **Default:** `loose` for `v1` hooks, `strict` for `v2` hooks. |
 
 ### Service Reference
 

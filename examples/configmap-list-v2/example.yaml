@@ -1,0 +1,50 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: source-ns
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cm-1
+  namespace: source-ns
+  labels:
+    app: my-app
+data:
+  key: value1
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cm-2
+  namespace: source-ns
+  labels:
+    app: my-app
+data:
+  key: value2
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: other-cm
+  namespace: source-ns
+  labels:
+    app: other-app
+data:
+  key: value3
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: target-ns
+---
+apiVersion: examples.metacontroller.io/v1alpha1
+kind: ConfigMapList
+metadata:
+  name: my-config-list
+  namespace: target-ns
+spec:
+  sourceNamespace: source-ns
+  sourceLabels:
+    app: my-app
