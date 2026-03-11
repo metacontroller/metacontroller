@@ -26,13 +26,13 @@ func EnablePprof(address string) <-chan struct{} {
 	// In addition, by default pprof is not enabled. This is only intended to be enabled
 	// temporarily while gathering profiling information to help troubleshoot
 
-	pprofMux := http.DefaultServeMux
-	http.DefaultServeMux = http.NewServeMux()
-
 	if address == "0" {
 		logging.Logger.V(5).Info("pprof address is set to 0, pprof will not be enabled")
 		return nil
 	}
+
+	pprofMux := http.DefaultServeMux
+	http.DefaultServeMux = http.NewServeMux()
 
 	logging.Logger.V(4).Info("enabling pprof", "address", address)
 	server := &http.Server{

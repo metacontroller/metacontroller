@@ -38,21 +38,23 @@ class Controller(BaseHTTPRequestHandler):
         }
 
     def customize(self, parent):
-        source_ns = parent['spec']['sourceNamespace']
         source_labels = parent['spec']['sourceLabels']
         
-        # Use RelatedResourceRule to request ConfigMaps from another namespace
-        # This is a v2-specific capability for namespaced parents
+        rule = {
+            'apiVersion': 'v1',
+            'resource': 'configmaps',
+            'labelSelector': {
+                'matchLabels': source_labels
+            }
+        }
+        
+        # In v2, a namespaced parent can look into a specific other namespace
+        # or ALL namespaces (by omitting the 'namespace' field in the rule).
+        if 'sourceNamespace' in parent['spec']:
+            rule['namespace'] = parent['spec']['sourceNamespace']
+            
         return {
-            'relatedResources': [
-                {
-                    'apiVersion': 'v1',
-                    'resource': 'configmaps',
-                    'labelSelector': {
-                        'matchLabels': source_labels
-                    }
-                }
-            ]
+            'relatedResources': [rule]
         }
 
     def do_POST(self):
