@@ -320,9 +320,12 @@ because it does conversion for you as needed, so your hook doesn't need
 to know how to convert between different versions of a given resource.
 
 Within each child type (e.g. in `children['Pod.v1']`), there is another
-associative array that maps from the child's path relative to the parent
-to the JSON representation, like what you might get from
-`kubectl get <child-resource> <child-name> -o json`.
+associative array that maps from the child's path to the JSON representation, 
+like what you might get from `kubectl get <child-resource> <child-name> -o json`.
+
+The format of the keys in this associative array depends on the hook `version`:
+
+##### Hook Version v1 (RelativeObjectMap)
 
 If the parent and child are of the same scope - both cluster or both namespace -
 then the key is only the child's `.metadata.name`. If the parent is
@@ -331,14 +334,25 @@ form `{.metadata.namespace}/{.metadata.name}`. This is to disambiguate between
 two children with the same name in different namespaces. A parent may never be
 namespace scoped while a child is cluster scoped.
 
+##### Hook Version v2 (UniformObjectMap)
+
+In v2, a uniform naming convention is used regardless of the parent's scope.
+If the child resource is namespaced, the key will always be of the form 
+`{.metadata.namespace}/{.metadata.name}`. If the child resource is 
+cluster scoped, the key is only the child's `.metadata.name`.
+
 For example, a Pod named `my-pod` in the `my-namespace` namespace could be
-accessed as follows if the parent is also in `my-namespace`:
+accessed as follows:
 
 ```js
+// v1 (if parent is also in 'my-namespace')
 request.children['Pod.v1']['my-pod']
+
+// v2 (always)
+request.children['Pod.v1']['my-namespace/my-pod']
 ```
 
-Alternatively, if the parent resource is cluster scoped, the Pod could be
+Alternatively, if the parent resource is cluster scoped, the Pod in v1 would be
 accessed as:
 
 ```js

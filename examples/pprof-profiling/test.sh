@@ -14,9 +14,9 @@ trap cleanup EXIT
 set -euo
 
 kubectl apply -f manifest/service.yaml
-sleep 2
+sleep 5
 set +e -x # do not fail because we expect an error when pprof is not enabled
-kubectl run pprof-should-fail -it --image=golang:alpine --restart=Never --rm -n metacontroller -- go tool pprof -top 20 http://metacontroller.metacontroller:6060/debug/pprof/heap
+kubectl run pprof-should-fail -i --image=golang:alpine --restart=Never --rm -n metacontroller -- go tool pprof -top 20 http://metacontroller:6060/debug/pprof/heap
 if ((!$?)); then
   echo "Expected failure sending request to disabled pprof"
   exit 1
@@ -28,5 +28,5 @@ kubectl apply -k ./manifest
 kubectl rollout status --watch --timeout=180s statefulset/metacontroller -n metacontroller
 
 echo "Test profiling metacontroller..."
-sleep 2
-kubectl run pprof-should-pass -it --image=golang:alpine --restart=Never --rm -n metacontroller -- go tool pprof -top 20 http://metacontroller.metacontroller:6060/debug/pprof/heap
+sleep 5
+kubectl run pprof-should-pass -i --image=golang:alpine --restart=Never --rm -n metacontroller -- go tool pprof -top 20 http://metacontroller:6060/debug/pprof/heap

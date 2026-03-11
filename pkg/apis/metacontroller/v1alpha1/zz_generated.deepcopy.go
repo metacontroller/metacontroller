@@ -668,6 +668,11 @@ func (in *RelatedResourceRule) DeepCopyInto(out *RelatedResourceRule) {
 		*out = new(v1.LabelSelector)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.NamespaceSelector != nil {
+		in, out := &in.NamespaceSelector, &out.NamespaceSelector
+		*out = new(v1.LabelSelector)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.Names != nil {
 		in, out := &in.Names, &out.Names
 		*out = make([]string, len(*in))
