@@ -170,10 +170,10 @@ func newDecoratorController(resources *dynamicdiscovery.ResourceMap, dynClient *
 		if newErr != nil {
 			// If newDecoratorController fails, Close() any informers we created
 			// since Stop() will never be called.
-			c.childInformers.Range(func(_ schema.GroupVersionResource, informer *dynamicinformer.ResourceInformer) {
+			c.childInformers.ForEach(func(_ schema.GroupVersionResource, informer *dynamicinformer.ResourceInformer) {
 				informer.Close()
 			})
-			c.parentInformers.Range(func(_ schema.GroupVersionResource, informer *dynamicinformer.ResourceInformer) {
+			c.parentInformers.ForEach(func(_ schema.GroupVersionResource, informer *dynamicinformer.ResourceInformer) {
 				informer.Close()
 			})
 		}
@@ -229,7 +229,7 @@ func (c *decoratorController) Start() {
 			resyncPeriod = time.Second
 		}
 	}
-	c.parentInformers.Range(func(_ schema.GroupVersionResource, informer *dynamicinformer.ResourceInformer) {
+	c.parentInformers.ForEach(func(_ schema.GroupVersionResource, informer *dynamicinformer.ResourceInformer) {
 		if resyncPeriod != 0 {
 			_, err := informer.Informer().AddEventHandlerWithResyncPeriod(parentHandlers, resyncPeriod)
 			if err != nil {
@@ -242,7 +242,7 @@ func (c *decoratorController) Start() {
 			}
 		}
 	})
-	c.childInformers.Range(func(_ schema.GroupVersionResource, informer *dynamicinformer.ResourceInformer) {
+	c.childInformers.ForEach(func(_ schema.GroupVersionResource, informer *dynamicinformer.ResourceInformer) {
 		_, err := informer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 			AddFunc:    c.onChildAdd,
 			UpdateFunc: c.onChildUpdate,
@@ -265,10 +265,10 @@ func (c *decoratorController) Start() {
 		// Wait for dynamic client and all informers.
 		c.logger.Info("Waiting for DecoratorController caches to sync", "controller", c.dc)
 		syncFuncs := make([]cache.InformerSynced, 0, 1+c.parentInformers.Len()+c.childInformers.Len())
-		c.parentInformers.Range(func(_ schema.GroupVersionResource, informer *dynamicinformer.ResourceInformer) {
+		c.parentInformers.ForEach(func(_ schema.GroupVersionResource, informer *dynamicinformer.ResourceInformer) {
 			syncFuncs = append(syncFuncs, informer.Informer().HasSynced)
 		})
-		c.childInformers.Range(func(_ schema.GroupVersionResource, informer *dynamicinformer.ResourceInformer) {
+		c.childInformers.ForEach(func(_ schema.GroupVersionResource, informer *dynamicinformer.ResourceInformer) {
 			syncFuncs = append(syncFuncs, informer.Informer().HasSynced)
 		})
 		if !cache.WaitForNamedCacheSync(c.dc.Name, c.stopCh, syncFuncs...) {
@@ -295,12 +295,12 @@ func (c *decoratorController) Stop() {
 	<-c.doneCh
 
 	// Remove event handlers and close informers for all child resources.
-	c.childInformers.Range(func(_ schema.GroupVersionResource, informer *dynamicinformer.ResourceInformer) {
+	c.childInformers.ForEach(func(_ schema.GroupVersionResource, informer *dynamicinformer.ResourceInformer) {
 		informer.Informer().RemoveEventHandlers()
 		informer.Close()
 	})
 	// Remove event handlers and close informer for all parent resources.
-	c.parentInformers.Range(func(_ schema.GroupVersionResource, informer *dynamicinformer.ResourceInformer) {
+	c.parentInformers.ForEach(func(_ schema.GroupVersionResource, informer *dynamicinformer.ResourceInformer) {
 		informer.Informer().RemoveEventHandlers()
 		informer.Close()
 	})

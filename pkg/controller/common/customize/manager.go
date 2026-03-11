@@ -132,7 +132,7 @@ func (rm *Manager) Start(stopCh chan struct{}) {
 }
 
 func (rm *Manager) Stop() {
-	rm.relatedInformers.Range(func(_ schema.GroupVersionResource, informer *dynamicinformer.ResourceInformer) {
+	rm.relatedInformers.ForEach(func(_ schema.GroupVersionResource, informer *dynamicinformer.ResourceInformer) {
 		informer.Informer().RemoveEventHandlers()
 		informer.Close()
 	})
@@ -281,7 +281,7 @@ func (rm *Manager) notifyRelatedParents(related ...*unstructured.Unstructured) {
 func (rm *Manager) findRelatedParents(relatedSlice ...*unstructured.Unstructured) []*unstructured.Unstructured {
 	var matchingParents []*unstructured.Unstructured
 
-	rm.parentInformers.Range(func(_ schema.GroupVersionResource, parentInformer *dynamicinformer.ResourceInformer) {
+	rm.parentInformers.ForEach(func(_ schema.GroupVersionResource, parentInformer *dynamicinformer.ResourceInformer) {
 		parents, err := parentInformer.Lister().List(labels.Everything())
 		if err != nil {
 			return

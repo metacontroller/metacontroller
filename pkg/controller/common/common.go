@@ -172,6 +172,12 @@ func (m *SyncMap[K, V]) Load(key K) (V, bool) {
 	return v.(V), true
 }
 
+// Get returns the value stored in the map for a key, or the zero value if no value is present.
+func (m *SyncMap[K, V]) Get(key K) V {
+	v, _ := m.Load(key)
+	return v
+}
+
 // LoadOrStore returns the existing value for the key if present.
 // Otherwise, it stores and returns the given value.
 // The loaded result is true if the value was loaded, false if stored.
@@ -196,9 +202,22 @@ func (m *SyncMap[K, V]) Store(key K, val V) {
 	m.m.Store(key, val)
 }
 
+// Set sets the value for a key. Alias for Store.
+func (m *SyncMap[K, V]) Set(key K, val V) {
+	m.Store(key, val)
+}
+
 // Delete deletes the value for a key.
 func (m *SyncMap[K, V]) Delete(key K) {
 	m.m.Delete(key)
+}
+
+// GetOrCreate returns the existing value for the key if present.
+// Otherwise, it stores and returns the given value.
+// The loaded result is true if the value was loaded, false if stored.
+// Alias for LoadOrStore.
+func (m *SyncMap[K, V]) GetOrCreate(key K, val V) (actual V, loaded bool) {
+	return m.LoadOrStore(key, val)
 }
 
 // Range calls f sequentially for each key and value present in the map.
@@ -209,115 +228,35 @@ func (m *SyncMap[K, V]) Range(f func(key K, value V) bool) {
 	})
 }
 
-func NewGroupKindMap() *GroupKindMap {
-	return &GroupKindMap{}
+// ForEach calls f for each key and value present in the map.
+func (m *SyncMap[K, V]) ForEach(f func(key K, value V)) {
+	m.Range(func(key K, value V) bool {
+		f(key, value)
+		return true
+	})
 }
 
-type GroupKindMap struct {
-	m SyncMap[schema.GroupKind, *dynamicdiscovery.APIResource]
-}
-
-func (m *GroupKindMap) Set(gk schema.GroupKind, resource *dynamicdiscovery.APIResource) {
-	if m == nil {
-		return
-	}
-	m.m.Store(gk, resource)
-}
-
-func (m *GroupKindMap) Get(gk schema.GroupKind) *dynamicdiscovery.APIResource {
-	if m == nil {
-		return nil
-	}
-	val, ok := m.m.Load(gk)
-	if !ok {
-		return nil
-	}
-	return val
-}
-
-func (m *GroupKindMap) Len() int {
-	if m == nil {
-		return 0
-	}
+// Len returns the number of items in the map.
+func (m *SyncMap[K, V]) Len() int {
 	length := 0
-	m.m.Range(func(_ schema.GroupKind, _ *dynamicdiscovery.APIResource) bool {
+	m.Range(func(_ K, _ V) bool {
 		length++
 		return true
 	})
 	return length
 }
 
-func (m *GroupKindMap) Range(f func(gk schema.GroupKind, resource *dynamicdiscovery.APIResource)) {
-	if m == nil {
-		return
-	}
-	m.m.Range(func(key schema.GroupKind, value *dynamicdiscovery.APIResource) bool {
-		f(key, value)
-		return true
-	})
+func NewGroupKindMap() *GroupKindMap {
+	return &GroupKindMap{}
 }
+
+type GroupKindMap = SyncMap[schema.GroupKind, *dynamicdiscovery.APIResource]
 
 func NewInformerMap() *InformerMap {
 	return &InformerMap{}
 }
 
-type InformerMap struct {
-	m SyncMap[schema.GroupVersionResource, *dynamicinformer.ResourceInformer]
-}
-
-func (m *InformerMap) Set(gvr schema.GroupVersionResource, informer *dynamicinformer.ResourceInformer) {
-	if m == nil {
-		return
-	}
-	m.m.Store(gvr, informer)
-}
-
-func (m *InformerMap) Get(gvr schema.GroupVersionResource) *dynamicinformer.ResourceInformer {
-	if m == nil {
-		return nil
-	}
-	val, ok := m.m.Load(gvr)
-	if !ok {
-		return nil
-	}
-	return val
-}
-
-func (m *InformerMap) GetOrCreate(gvr schema.GroupVersionResource, informer *dynamicinformer.ResourceInformer) (*dynamicinformer.ResourceInformer, bool) {
-	if m == nil {
-		return nil, false
-	}
-	return m.m.LoadOrStore(gvr, informer)
-}
-
-func (m *InformerMap) Delete(gvr schema.GroupVersionResource) {
-	if m == nil {
-		return
-	}
-	m.m.Delete(gvr)
-}
-
-func (m *InformerMap) Len() int {
-	if m == nil {
-		return 0
-	}
-	length := 0
-	m.m.Range(func(_ schema.GroupVersionResource, _ *dynamicinformer.ResourceInformer) bool {
-		length++
-		return true
-	})
-	return length
-}
-
-func (m *InformerMap) Range(f func(gvr schema.GroupVersionResource, informer *dynamicinformer.ResourceInformer)) {
-	if m == nil {
-		return
-	}
-	m.m.Range(func(key schema.GroupVersionResource, value *dynamicinformer.ResourceInformer) bool {
-		f(key, value)
-		return true
-	})
-}
+type InformerMap = SyncMap[schema.GroupVersionResource, *dynamicinformer.ResourceInformer]
 
 // GetObject return object via Lister from given informer, namespaced or not.
 func GetObject(informer *dynamicinformer.ResourceInformer, namespace, name string) (*unstructured.Unstructured, error) {
