@@ -45,6 +45,16 @@ tolerations: []
 
 affinity: {}
 
+# Environment variables to set on the metacontroller container
+env: []
+# - name: MY_ENV_VAR
+#   value: "my-value"
+# - name: MY_SECRET_ENV_VAR
+#   valueFrom:
+#     secretKeyRef:
+#       name: my-secret
+#       key: my-key
+
 # Command which is used to start metacontroller
 command: "/usr/bin/metacontroller"
 
@@ -64,12 +74,12 @@ priorityClassName: ""
 clusterRole:
   aggregationRule: {}
   rules:
-  - apiGroups:
-      - "*"
-    resources:
-      - "*"
-    verbs:
-      - "*"
+    - apiGroups:
+        - "*"
+      resources:
+        - "*"
+      verbs:
+        - "*"
 
 replicas: 1
 
@@ -77,7 +87,6 @@ replicas: 1
 podDisruptionBudget: {}
   # minAvailable: 1
   # maxUnavailable: 0
-
 
 service:
   enabled: false
