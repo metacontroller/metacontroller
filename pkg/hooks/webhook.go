@@ -232,7 +232,7 @@ func (w *webhookExecutor) Call(webhookRequest api.WebhookRequest, webhookRespons
 		if w.shouldReportStrictErrors() {
 			return fmt.Errorf("strict validation failed for %s webhookResponse (type: %s, mode: %s): %w", requestAPIVersion, w.hookType, w.responseUnmarshallMode, strictAggregateErr)
 		}
-		logging.Logger.V(4).Info("Webhook %s response had non-fatal strict validation issues (due to loose mode)", requestAPIVersion, w.hookType, w.url, "issues", strictAggregateErr.Error())
+		logging.Logger.V(4).Info("Webhook response had non-fatal strict validation issues (due to loose mode)", "version", requestAPIVersion, "type", w.hookType, "url", w.url, "issues", strictAggregateErr.Error())
 	}
 	return nil
 }

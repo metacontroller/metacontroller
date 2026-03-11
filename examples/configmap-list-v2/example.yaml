@@ -48,3 +48,28 @@ spec:
   sourceNamespace: source-ns
   sourceLabels:
     app: my-app
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: other-source-ns
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cm-3
+  namespace: other-source-ns
+  labels:
+    app: my-app
+data:
+  key: value4
+---
+apiVersion: examples.metacontroller.io/v1alpha1
+kind: ConfigMapList
+metadata:
+  name: all-configs-list
+  namespace: target-ns
+spec:
+  # sourceNamespace omitted to search ALL namespaces (v2-only)
+  sourceLabels:
+    app: my-app

@@ -23,7 +23,6 @@ import (
 	"fmt"
 	"metacontroller/pkg/controller/common/api"
 	commonv1 "metacontroller/pkg/controller/common/api/v1"
-	commonv2 "metacontroller/pkg/controller/common/api/v2"
 	v1 "metacontroller/pkg/controller/composite/api/v1"
 	"metacontroller/pkg/logging"
 	"strings"
