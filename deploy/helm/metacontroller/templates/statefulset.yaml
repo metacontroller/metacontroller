@@ -41,6 +41,10 @@ spec:
             httpGet:
               port: {{ .Values.probes.port | default 8081 }}
               path: /readyz
+          {{- with .Values.env }}
+          env:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           command:
           - {{ .Values.command | default "/usr/bin/metacontroller" }}
           args:
