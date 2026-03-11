@@ -1,3 +1,16 @@
+# [4.13.0](https://github.com/metacontroller/metacontroller/compare/v4.12.13...v4.13.0) (2026-03-11)
+
+
+### Bug Fixes
+
+* **concurrency:** Add wider protection againts concurrent use ([942d5d7](https://github.com/metacontroller/metacontroller/commit/942d5d7ad0a68d5d721e1430510eeddd1b2c9fce))
+* **race:** Fix race condition when accessing structs from different goroutines ([f0fe99c](https://github.com/metacontroller/metacontroller/commit/f0fe99ceb518e592bb45e0e323aaed1ff01dda39)), closes [#1160](https://github.com/metacontroller/metacontroller/issues/1160)
+
+
+### Features
+
+* **helm:** support setting environment variables ([fa3505c](https://github.com/metacontroller/metacontroller/commit/fa3505c4351b032e8593544351bb5035523b61f1))
+
 ## [4.12.13](https://github.com/metacontroller/metacontroller/compare/v4.12.12...v4.12.13) (2026-03-10)
 
 
