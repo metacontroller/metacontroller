@@ -7,6 +7,7 @@ import (
 	_ "net/http/pprof" //nolint:gosec
 	"os"
 	"os/signal"
+	"syscall"
 	"time"
 )
 
@@ -25,14 +26,15 @@ func EnablePprof(address string) <-chan struct{} {
 	// In addition, by default pprof is not enabled. This is only intended to be enabled
 	// temporarily while gathering profiling information to help troubleshoot
 
+	pprofMux := http.DefaultServeMux
+	http.DefaultServeMux = http.NewServeMux()
+
 	if address == "0" {
 		logging.Logger.V(5).Info("pprof address is set to 0, pprof will not be enabled")
 		return nil
 	}
 
 	logging.Logger.V(4).Info("enabling pprof", "address", address)
-	pprofMux := http.DefaultServeMux
-	http.DefaultServeMux = http.NewServeMux()
 	server := &http.Server{
 		Addr:              address,
 		Handler:           pprofMux,
@@ -41,12 +43,15 @@ func EnablePprof(address string) <-chan struct{} {
 	pprofStopChan := make(chan struct{})
 
 	go func() {
-		sigint := make(chan os.Signal, 1)
-		signal.Notify(sigint, os.Interrupt)
-		<-sigint
+		stop := make(chan os.Signal, 1)
+		signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
+		<-stop
 
-		// We received an interrupt signal, shut down.
-		if err := server.Shutdown(context.Background()); err != nil {
+		// We received a signal, shut down.
+		logging.Logger.Info("Shutting down pprof server...")
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := server.Shutdown(ctx); err != nil {
 			// Error from closing listeners, or context timeout:
 			logging.Logger.Error(err, "pprof server shutdown")
 		}
@@ -55,9 +60,15 @@ func EnablePprof(address string) <-chan struct{} {
 
 	go func() {
 		// TODO replace with some server with timeout start method
-		err := http.ListenAndServe(address, pprofMux) //nolint:gosec
-		if err != nil {
+		err := server.ListenAndServe()
+		if err != nil && err != http.ErrServerClosed {
 			logging.Logger.Error(err, "error enabling and serving pprof", "address", address)
+			// If it failed to start, we should still close the channel if it hasn't been closed
+			select {
+			case <-pprofStopChan:
+			default:
+				close(pprofStopChan)
+			}
 		}
 	}()
 

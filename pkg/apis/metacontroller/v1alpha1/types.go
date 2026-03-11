@@ -121,6 +121,14 @@ type Hook struct {
 	Webhook *Webhook     `json:"webhook,omitempty"`
 }
 
+// GetVersion returns the hook version, defaulting to v1 if not specified.
+func (h *Hook) GetVersion() HookVersion {
+	if h == nil || h.Version == nil || *h.Version == "" {
+		return HookVersionV1
+	}
+	return *h.Version
+}
+
 // +kubebuilder:validation:Enum={"v1","v2"}
 type HookVersion string
 
@@ -264,8 +272,9 @@ type DecoratorControllerList struct {
 type RelatedResourceRule struct {
 	ResourceRule          `json:",inline"`
 	*metav1.LabelSelector `json:"labelSelector"`
-	Namespace             string   `json:"namespace,omitempty"`
-	Names                 []string `json:"names"`
+	NamespaceSelector     *metav1.LabelSelector `json:"namespaceSelector,omitempty"`
+	Namespace             string                `json:"namespace,omitempty"`
+	Names                 []string              `json:"names"`
 }
 
 // CustomizableController is an interface representing Controller exposing customize hook
