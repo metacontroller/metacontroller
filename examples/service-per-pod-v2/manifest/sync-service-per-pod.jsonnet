@@ -7,11 +7,12 @@ function(request) {
   // Check if we can see our existing attachments via UniformObjectMap (v2) naming.
   // In v2, keys for namespaced resources are always "namespace/name".
   local firstSvcKey = ns + "/" + statefulset.metadata.name + "-0",
+  local services = if std.objectHas(request.attachments, 'Service.v1') then request.attachments['Service.v1'] else {},
   
   // We add an annotation to the parent to signal that we verified v2 naming.
   annotations: {
     // If the service exists, we should be able to find it by namespace/name key
-    "v2-naming-verified": if std.objectHas(request.attachments['Service.v1'], firstSvcKey) then "true" else "false"
+    "v2-naming-verified": if std.objectHas(services, firstSvcKey) then "true" else "false"
   },
 
   // Create a service for each Pod, with a selector on the given label key.

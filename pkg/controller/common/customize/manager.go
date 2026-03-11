@@ -34,7 +34,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	"k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -66,7 +66,6 @@ type Manager struct {
 	dynInformers    *dynamicinformer.SharedInformerFactory
 	parentInformers *common.InformerMap
 
-	relatedInformers common.InformerMap
 	nsInformer       *dynamicinformer.ResourceInformer
 	relatedInformers *common.InformerMap
 	customizeCache   *cache.Cache[customizeKey, *v1.CustomizeHookResponse]
@@ -440,6 +439,14 @@ func (rm *Manager) matchesRelatedRule(hookVersion v1alpha1.HookVersion, parentIs
 		}
 		return true, nil
 	case selectByNamespaceAndLabels:
+		if hookVersion == v1alpha1.HookVersionV1 && parentIsNamespaced {
+			if len(relatedRule.Namespace) != 0 && parent.GetNamespace() != relatedRule.Namespace {
+				return false, fmt.Errorf("%s: Namespace of parent %s does not match with namespace %s of related rule for %s/%s", parent.GetKind(), parent.GetName(), relatedRule.Namespace, relatedRule.APIVersion, relatedRule.Resource)
+			}
+			if related.GetNamespace() != "" && parent.GetNamespace() != related.GetNamespace() {
+				return false, nil
+			}
+		}
 		selector, err := toSelector(relatedRule.LabelSelector)
 		if err != nil {
 			return false, err
@@ -452,6 +459,9 @@ func (rm *Manager) matchesRelatedRule(hookVersion v1alpha1.HookVersion, parentIs
 		}
 		return true, nil
 	case selectByNamespaceSelector:
+		if hookVersion == v1alpha1.HookVersionV1 && parentIsNamespaced {
+			return false, fmt.Errorf("namespaceSelector cannot be used by namespaced parent in v1 hook")
+		}
 		selector, err := toSelector(relatedRule.LabelSelector)
 		if err != nil {
 			return false, err
@@ -471,7 +481,7 @@ func (rm *Manager) matchesRelatedRule(hookVersion v1alpha1.HookVersion, parentIs
 		}
 		nsObj, err := rm.nsInformer.Lister().Get(related.GetNamespace())
 		if err != nil {
-			if errors.IsNotFound(err) {
+			if apierrors.IsNotFound(err) {
 				return false, nil // Namespace not found, definitely no match.
 			}
 			return false, err
@@ -566,6 +576,9 @@ func (rm *Manager) GetRelatedObjects(parent *unstructured.Unstructured) (api.Obj
 			childMap.InsertAll(parent, all)
 
 		case selectByNamespaceAndLabels:
+			if customizeHookResponse.Version == v1alpha1.HookVersionV1 && parentResource.Namespaced && relatedClient.Namespaced && len(relatedRule.Namespace) != 0 && parentNamespace != relatedRule.Namespace {
+				return nil, fmt.Errorf("requested related object namespace %s differs from parent object namespace %s", relatedRule.Namespace, parentNamespace)
+			}
 			selector, err := toSelector(relatedRule.LabelSelector)
 			if err != nil {
 				return nil, err
@@ -578,6 +591,9 @@ func (rm *Manager) GetRelatedObjects(parent *unstructured.Unstructured) (api.Obj
 			childMap.InsertAll(parent, all)
 
 		case selectByNamespaceSelector:
+			if customizeHookResponse.Version == v1alpha1.HookVersionV1 && parentResource.Namespaced && relatedClient.Namespaced {
+				return nil, fmt.Errorf("namespaceSelector is not supported for namespaced parent in v1 hook version")
+			}
 			if rm.nsInformer == nil {
 				return nil, fmt.Errorf("namespace informer is not initialized, cannot use namespaceSelector")
 			}
