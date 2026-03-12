@@ -340,6 +340,7 @@ type eventHandler struct {
 	cache.ResourceEventHandler
 
 	stopCh, doneCh     chan struct{}
+	stopOnce           sync.Once
 	sharedEventHandler *sharedEventHandler
 }
 
@@ -389,10 +390,12 @@ func (eh *eventHandler) resync() {
 }
 
 func (eh *eventHandler) stop() {
-	if eh.stopCh != nil {
-		close(eh.stopCh)
-		<-eh.doneCh
-	}
+	eh.stopOnce.Do(func() {
+		if eh.stopCh != nil {
+			close(eh.stopCh)
+			<-eh.doneCh
+		}
+	})
 }
 
 // informerWrapper wraps a cache.SharedIndexInformer and adds the ability to

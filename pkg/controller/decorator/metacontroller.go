@@ -87,14 +87,13 @@ func (mc *Metacontroller) Reconcile(ctx context.Context, request reconcile.Reque
 	if apierrors.IsNotFound(err) {
 		mc.logger.V(4).Info("DecoratorController has been deleted", "name", decoratorControllerName)
 		// Stop and remove the controller if it exists.
-		if c, ok := mc.decoratorControllers.Load(decoratorControllerName); ok {
+		if c, ok := mc.decoratorControllers.LoadAndDelete(decoratorControllerName); ok {
 			c.Stop()
-			defer c.eventRecorder.Eventf(
+			c.eventRecorder.Eventf(
 				c.dc,
 				v1.EventTypeNormal,
 				events.ReasonStopped,
 				"Stopped controller: %s", c.dc.Name)
-			mc.decoratorControllers.Delete(decoratorControllerName)
 		}
 		return reconcile.Result{}, nil
 	}
@@ -118,14 +117,15 @@ func (mc *Metacontroller) reconcileDecoratorController(dc *v1alpha1.DecoratorCon
 			// Nothing has changed.
 			return nil
 		}
-		// Stop and remove the controller so it can be recreated.
+	}
+	// Stop and remove the controller so it can be recreated.
+	if c, ok := mc.decoratorControllers.LoadAndDelete(dc.Name); ok {
 		c.Stop()
 		mc.eventRecorder.Eventf(
 			dc,
 			v1.EventTypeNormal,
 			events.ReasonStopped,
 			"Stopped controller: %s", dc.Name)
-		mc.decoratorControllers.Delete(dc.Name)
 	}
 
 	c, err := newDecoratorController(

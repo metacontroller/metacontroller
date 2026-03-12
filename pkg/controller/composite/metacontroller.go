@@ -101,14 +101,13 @@ func (mc *Metacontroller) Reconcile(ctx context.Context, request reconcile.Reque
 	if apierrors.IsNotFound(err) {
 		mc.logger.Info("CompositeController has been deleted", "name", compositeControllerName)
 		// Stop and remove the controller if it exists.
-		if pc, ok := mc.parentControllers.Load(compositeControllerName); ok {
+		if pc, ok := mc.parentControllers.LoadAndDelete(compositeControllerName); ok {
 			pc.Stop()
-			defer pc.eventRecorder.Eventf(
+			pc.eventRecorder.Eventf(
 				pc.cc,
 				v1.EventTypeNormal,
 				events.ReasonStopped,
 				"Stopped controller: %s", pc.cc.Name)
-			mc.parentControllers.Delete(compositeControllerName)
 		}
 		return reconcile.Result{}, nil
 	}
@@ -161,10 +160,11 @@ func (mc *Metacontroller) reconcileCompositeController(cc *v1alpha1.CompositeCon
 			// Nothing has changed.
 			return nil
 		}
-		// Stop and remove the controller so it can be recreated.
+	}
+	// Stop and remove the controller so it can be recreated.
+	if pc, ok := mc.parentControllers.LoadAndDelete(cc.Name); ok {
 		pc.Stop()
 		mc.eventRecorder.Eventf(cc, v1.EventTypeNormal, events.ReasonStopped, "Stopped controller: %s", cc.Name)
-		mc.parentControllers.Delete(cc.Name)
 	}
 
 	pc, err := newParentController(
