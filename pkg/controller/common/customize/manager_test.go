@@ -29,10 +29,13 @@ import (
 	dynamicclientset "metacontroller/pkg/dynamic/clientset"
 	dynamicinformer "metacontroller/pkg/dynamic/informer"
 
+	"metacontroller/pkg/internal/testutils/dynamic/discovery"
 	. "metacontroller/pkg/internal/testutils/hooks"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/client-go/kubernetes/fake"
+	"k8s.io/client-go/rest"
 )
 
 var fakeEnqueueParent = func(obj interface{}) {}
@@ -625,16 +628,49 @@ func Test_matchRelatedRule(t *testing.T) {
 			relatedRuleKind: "Secret",
 			wantMatch:       false,
 		},
+		{
+			name:         "return ErrRelatedInformerNotSynced when namespaceSelector is used but nsInformer not synced",
+			hookVersion:  v1alpha1.HookVersionV2,
+			isNamespaced: false,
+			parent:       fakeGenericParentWithNamespace(),
+			related: func() *unstructured.Unstructured {
+				rc := &unstructured.Unstructured{}
+				rc.SetAPIVersion("v1")
+				rc.SetKind("Secret")
+				rc.SetNamespace("some")
+				rc.SetName("name")
+				return rc
+			}(),
+			relatedRule: &v1alpha1.RelatedResourceRule{
+				ResourceRule: v1alpha1.ResourceRule{
+					APIVersion: "v1",
+					Resource:   "secrets",
+				},
+				NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"env": "prod"}},
+			},
+			relatedRuleKind: "Secret",
+			wantMatch:       false,
+			wantErr:         true,
+			dynInformers: dynamicinformer.NewSharedInformerFactory(
+				dynamicclientset.NewClientset(&rest.Config{}, discovery.NewFakeResourceMap(fake.NewSimpleClientset()), nil),
+				0,
+			),
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			if tt.dynInformers == nil {
+				// Provide a fake if not specified, some tests might need it.
+				tt.dynInformers = dynamicinformer.NewSharedInformerFactory(nil, 0)
+			}
+			var nsInformer *dynamicinformer.ResourceInformer
+			if tt.dynInformers.IsInitialized() {
+				nsInformer, _ = tt.dynInformers.Resource("v1", "namespaces")
+			}
 			rm := &Manager{
 				dynInformers: tt.dynInformers,
-			}
-			if rm.dynInformers == nil {
-				// Provide a fake if not specified, some tests might need it.
-				rm.dynInformers = dynamicinformer.NewSharedInformerFactory(nil, 0)
+				nsInformer:   nsInformer,
 			}
 			matches, err := rm.matchesRelatedRule(tt.hookVersion, tt.isNamespaced, tt.parent, tt.related, tt.relatedRule, tt.relatedRuleKind)
 			if err != nil && !tt.wantErr {
