@@ -307,7 +307,7 @@ type updateStrategyMap map[string]*v1alpha1.CompositeControllerChildUpdateStrate
 func (m updateStrategyMap) GetMethod(apiGroup, kind string) v1alpha1.ChildUpdateMethod {
 	strategy := m.get(apiGroup, kind)
 	if strategy == nil || strategy.Method == "" {
-		return v1alpha1.ChildUpdateOnDelete
+		return v1alpha1.ChildUpdateMethodUnknown
 	}
 	return strategy.Method
 }
@@ -345,17 +345,25 @@ func isRollingStrategy(strategy *v1alpha1.CompositeControllerChildUpdateStrategy
 func makeUpdateStrategyMap(resources *dynamicdiscovery.ResourceMap, cc *v1alpha1.CompositeController) (updateStrategyMap, error) {
 	m := make(updateStrategyMap)
 	for _, child := range cc.Spec.ChildResources {
-		if child.UpdateStrategy != nil && child.UpdateStrategy.Method != v1alpha1.ChildUpdateOnDelete {
-			// Map resource name to kind name.
-			resource := resources.Get(child.APIVersion, child.Resource)
-			if resource == nil {
-				return nil, fmt.Errorf("can't find child resource %q in %v", child.Resource, child.APIVersion)
+		strategy := child.UpdateStrategy
+		if child.UpdateStrategy == nil {
+			strategy = &v1alpha1.CompositeControllerChildUpdateStrategy{
+				Method:       v1alpha1.ChildUpdateOnDelete,
+				StatusChecks: child.UpdateStrategy.StatusChecks,
 			}
-			// Ignore API version.
-			apiGroup, _ := common.ParseAPIVersion(child.APIVersion)
-			key := claimMapKey(apiGroup, resource.Kind)
-			m[key] = child.UpdateStrategy
 		}
+		// Map resource name to kind name.
+		resource := resources.Get(child.APIVersion, child.Resource)
+		if resource == nil {
+			if child.Optional != nil && *child.Optional {
+				continue
+			}
+			return nil, fmt.Errorf("can't find child resource %q in %v", child.Resource, child.APIVersion)
+		}
+		// Ignore API version.
+		apiGroup, _ := common.ParseAPIVersion(child.APIVersion)
+		key := claimMapKey(apiGroup, resource.Kind)
+		m[key] = strategy
 	}
 	return m, nil
 }
