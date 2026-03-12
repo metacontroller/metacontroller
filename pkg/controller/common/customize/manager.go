@@ -479,6 +479,11 @@ func (rm *Manager) matchesRelatedRule(hookVersion v1alpha1.HookVersion, parentIs
 		if rm.nsInformer == nil {
 			return false, fmt.Errorf("namespace informer is not initialized, cannot use namespaceSelector")
 		}
+
+		if !rm.nsInformer.Informer().HasSynced() {
+			return false, ErrRelatedInformerNotSynced
+		}
+
 		nsObj, err := rm.nsInformer.Lister().Get(related.GetNamespace())
 		if err != nil {
 			if apierrors.IsNotFound(err) {
@@ -597,6 +602,11 @@ func (rm *Manager) GetRelatedObjects(parent *unstructured.Unstructured) (api.Obj
 			if rm.nsInformer == nil {
 				return nil, fmt.Errorf("namespace informer is not initialized, cannot use namespaceSelector")
 			}
+
+			if !rm.nsInformer.Informer().HasSynced() {
+				return nil, ErrRelatedInformerNotSynced
+			}
+
 			nsSelector, err := toSelector(relatedRule.NamespaceSelector)
 			if err != nil {
 				return nil, err
