@@ -136,6 +136,12 @@ func newParentController(
 		}
 	}()
 	for _, child := range cc.Spec.ChildResources {
+		if resources.Get(child.APIVersion, child.Resource) == nil {
+			if child.Optional != nil && *child.Optional {
+				logger.Info("Skipping optional child resource not found in discovery", "resource", child.Resource, "apiVersion", child.APIVersion)
+				continue
+			}
+		}
 		childInformer, err := dynInformers.Resource(child.APIVersion, child.Resource)
 		if err != nil {
 			return nil, fmt.Errorf("can't create informer for child resource: %w", err)
@@ -765,14 +771,17 @@ func (pc *parentController) claimChildren(parent *unstructured.Unstructured) (co
 	for _, child := range pc.cc.Spec.ChildResources {
 		// List all objects of the child kind in the parent object's namespace,
 		// or in all namespaces if the parent is cluster-scoped.
-		childClient, err := pc.dynClient.Resource(child.APIVersion, child.Resource)
-		if err != nil {
-			return nil, err
-		}
 		groupVersion, _ := schema.ParseGroupVersion(child.APIVersion)
 		informer := pc.childInformers.Get(groupVersion.WithResource(child.Resource))
 		if informer == nil {
+			if child.Optional != nil && *child.Optional {
+				continue
+			}
 			return nil, fmt.Errorf("no informer for resource %q in apiVersion %q", child.Resource, child.APIVersion)
+		}
+		childClient, err := pc.dynClient.Resource(child.APIVersion, child.Resource)
+		if err != nil {
+			return nil, err
 		}
 		var all []*unstructured.Unstructured
 		if pc.parentResource.Namespaced {

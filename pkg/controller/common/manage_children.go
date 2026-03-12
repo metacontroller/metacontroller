@@ -141,7 +141,9 @@ func ManageChildren(
 	dynClient *dynamicclientset.Clientset,
 	updateStrategy ChildUpdateStrategy,
 	parent *unstructured.Unstructured,
-	observedChildren, desiredChildren commonv2.UniformObjectMap, ssaOptions *ApplyOptions) error {
+	observedChildren,
+	desiredChildren commonv2.UniformObjectMap,
+	ssaOptions *ApplyOptions) error {
 	// If some operations fail, keep trying others so, for example,
 	// we don't block recovery (create new Pod) on a failed delete.
 	var errs []error
@@ -391,7 +393,7 @@ func (h *ServerSideApply) Apply(ctx context.Context, op *ApplyOperation) error {
 
 		// Check the update strategy for this child kind.
 		switch method := op.updateStrategy.GetMethod(h.client.Group, h.client.Kind); method {
-		case v1alpha1.ChildUpdateOnDelete, "":
+		case v1alpha1.ChildUpdateOnDelete:
 			defer storeState(op.observed.GetGeneration(), op.observed.GetResourceVersion(), op.observed.GetUID())
 			return h.childUpdateOnDelete(ctx, op)
 		case v1alpha1.ChildUpdateRecreate, v1alpha1.ChildUpdateRollingRecreate:
@@ -560,7 +562,7 @@ func (h *DynamicApply) Apply(ctx context.Context, op *ApplyOperation) error {
 
 		// Check the update strategy for this child kind.
 		switch method := op.updateStrategy.GetMethod(h.client.Group, h.client.Kind); method {
-		case v1alpha1.ChildUpdateOnDelete, "":
+		case v1alpha1.ChildUpdateOnDelete:
 			return h.childUpdateOnDelete(ctx, op)
 		case v1alpha1.ChildUpdateRecreate, v1alpha1.ChildUpdateRollingRecreate:
 			return h.childUpdateRecreate(ctx, op)

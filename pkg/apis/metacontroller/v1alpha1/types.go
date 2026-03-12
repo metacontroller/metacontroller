@@ -72,6 +72,7 @@ type CompositeControllerRevisionHistory struct {
 type ChildUpdateMethod string
 
 const (
+	ChildUpdateMethodUnknown   ChildUpdateMethod = ""
 	ChildUpdateOnDelete        ChildUpdateMethod = "OnDelete"
 	ChildUpdateRecreate        ChildUpdateMethod = "Recreate"
 	ChildUpdateInPlace         ChildUpdateMethod = "InPlace"
@@ -82,6 +83,7 @@ const (
 type CompositeControllerChildResourceRule struct {
 	ResourceRule   `json:",inline"`
 	UpdateStrategy *CompositeControllerChildUpdateStrategy `json:"updateStrategy,omitempty"`
+	Optional       *bool                                   `json:"optional,omitempty"`
 }
 
 type CompositeControllerChildUpdateStrategy struct {
