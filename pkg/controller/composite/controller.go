@@ -77,6 +77,7 @@ type parentController struct {
 	revisionLister mclisters.ControllerRevisionLister
 
 	stopCh, doneCh chan struct{}
+	stopOnce       sync.Once
 	queue          workqueue.TypedRateLimitingInterface[string]
 
 	updateStrategy updateStrategyMap
@@ -298,19 +299,21 @@ func (pc *parentController) Start() {
 }
 
 func (pc *parentController) Stop() {
-	close(pc.stopCh)
-	pc.queue.ShutDown()
-	<-pc.doneCh
+	pc.stopOnce.Do(func() {
+		close(pc.stopCh)
+		pc.queue.ShutDown()
+		<-pc.doneCh
 
-	// Remove event handlers and close informers for all child resources.
-	pc.childInformers.ForEach(func(_ schema.GroupVersionResource, informer *dynamicinformer.ResourceInformer) {
-		informer.Informer().RemoveEventHandlers()
-		informer.Close()
+		// Remove event handlers and close informers for all child resources.
+		pc.childInformers.ForEach(func(_ schema.GroupVersionResource, informer *dynamicinformer.ResourceInformer) {
+			informer.Informer().RemoveEventHandlers()
+			informer.Close()
+		})
+		// Remove event handlers and close informer for the parent resource.
+		pc.parentInformer.Informer().RemoveEventHandlers()
+		pc.parentInformer.Close()
+		pc.customize.Stop()
 	})
-	// Remove event handlers and close informer for the parent resource.
-	pc.parentInformer.Informer().RemoveEventHandlers()
-	pc.parentInformer.Close()
-	pc.customize.Stop()
 }
 
 func (pc *parentController) worker() {
@@ -826,6 +829,6 @@ func (pc *parentController) updateParentStatus(parent *unstructured.Unstructured
 	})
 }
 
-func (pc parentController) doNotMatchLabels(labelsMap map[string]string) bool {
+func (pc *parentController) doNotMatchLabels(labelsMap map[string]string) bool {
 	return pc.parentSelector != nil && !pc.parentSelector.Matches(labels.Set(labelsMap))
 }

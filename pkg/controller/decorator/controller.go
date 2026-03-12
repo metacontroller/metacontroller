@@ -75,6 +75,7 @@ type decoratorController struct {
 	dynClient *dynamicclientset.Clientset
 
 	stopCh, doneCh chan struct{}
+	stopOnce       sync.Once
 	queue          workqueue.TypedRateLimitingInterface[string]
 
 	updateStrategy updateStrategyMap
@@ -291,21 +292,23 @@ func (c *decoratorController) Start() {
 }
 
 func (c *decoratorController) Stop() {
-	close(c.stopCh)
-	c.queue.ShutDown()
-	<-c.doneCh
+	c.stopOnce.Do(func() {
+		close(c.stopCh)
+		c.queue.ShutDown()
+		<-c.doneCh
 
-	// Remove event handlers and close informers for all child resources.
-	c.childInformers.ForEach(func(_ schema.GroupVersionResource, informer *dynamicinformer.ResourceInformer) {
-		informer.Informer().RemoveEventHandlers()
-		informer.Close()
+		// Remove event handlers and close informers for all child resources.
+		c.childInformers.ForEach(func(_ schema.GroupVersionResource, informer *dynamicinformer.ResourceInformer) {
+			informer.Informer().RemoveEventHandlers()
+			informer.Close()
+		})
+		// Remove event handlers and close informer for all parent resources.
+		c.parentInformers.ForEach(func(_ schema.GroupVersionResource, informer *dynamicinformer.ResourceInformer) {
+			informer.Informer().RemoveEventHandlers()
+			informer.Close()
+		})
+		c.customize.Stop()
 	})
-	// Remove event handlers and close informer for all parent resources.
-	c.parentInformers.ForEach(func(_ schema.GroupVersionResource, informer *dynamicinformer.ResourceInformer) {
-		informer.Informer().RemoveEventHandlers()
-		informer.Close()
-	})
-	c.customize.Stop()
 }
 
 func (c *decoratorController) worker() {

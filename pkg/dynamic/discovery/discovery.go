@@ -69,6 +69,7 @@ type ResourceMap struct {
 
 	discoveryClient discovery.DiscoveryInterface
 	stopCh, doneCh  chan struct{}
+	stopOnce        sync.Once
 }
 
 func (rm *ResourceMap) Get(apiVersion, resource string) (result *APIResource) {
@@ -191,8 +192,10 @@ func (rm *ResourceMap) Start(refreshInterval time.Duration) {
 }
 
 func (rm *ResourceMap) Stop() {
-	close(rm.stopCh)
-	<-rm.doneCh
+	rm.stopOnce.Do(func() {
+		close(rm.stopCh)
+		<-rm.doneCh
+	})
 }
 
 func (rm *ResourceMap) HasSynced() bool {
