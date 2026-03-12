@@ -356,7 +356,7 @@ func (rm *Manager) findRelatedParents(relatedSlice ...*unstructured.Unstructured
 						utilruntime.HandleError(fmt.Errorf("unknown related rule %v/%v", relatedRule.APIVersion, relatedRule.Resource))
 						continue
 					}
-					matches, err := rm.matchesRelatedRule(customizeHookResponse.Version, parentResource.Namespaced, parent, related, relatedRule, relatedRuleClient.Kind)
+					matches, err := rm.matchesRelatedRule(customizeHookResponse.Version, parentResource.Namespaced, parent, related, relatedRule, relatedRuleClient.Kind, relatedRuleClient.Namespaced)
 					if err != nil {
 						utilruntime.HandleError(err)
 						continue
@@ -417,7 +417,7 @@ func toSelector(labelSelector *metav1.LabelSelector) (labels.Selector, error) {
 	}
 }
 
-func (rm *Manager) matchesRelatedRule(hookVersion v1alpha1.HookVersion, parentIsNamespaced bool, parent, related *unstructured.Unstructured, relatedRule *v1alpha1.RelatedResourceRule, relatedRuleKind string) (bool, error) {
+func (rm *Manager) matchesRelatedRule(hookVersion v1alpha1.HookVersion, parentIsNamespaced bool, parent, related *unstructured.Unstructured, relatedRule *v1alpha1.RelatedResourceRule, relatedRuleKind string, relatedIsNamespaced bool) (bool, error) {
 	// Ensure that the related resource matches the version and kind of the related rule.
 	if related.GetAPIVersion() != relatedRule.APIVersion || related.GetKind() != relatedRuleKind {
 		return false, nil
@@ -434,7 +434,7 @@ func (rm *Manager) matchesRelatedRule(hookVersion v1alpha1.HookVersion, parentIs
 		if !selector.Matches(labels.Set(related.GetLabels())) {
 			return false, nil
 		}
-		if hookVersion == v1alpha1.HookVersionV1 && parentIsNamespaced && related.GetNamespace() != "" && parent.GetNamespace() != related.GetNamespace() {
+		if hookVersion == v1alpha1.HookVersionV1 && parentIsNamespaced && relatedIsNamespaced && parent.GetNamespace() != related.GetNamespace() {
 			return false, nil
 		}
 		return true, nil
@@ -443,7 +443,7 @@ func (rm *Manager) matchesRelatedRule(hookVersion v1alpha1.HookVersion, parentIs
 			if len(relatedRule.Namespace) != 0 && parent.GetNamespace() != relatedRule.Namespace {
 				return false, fmt.Errorf("%s: Namespace of parent %s does not match with namespace %s of related rule for %s/%s", parent.GetKind(), parent.GetName(), relatedRule.Namespace, relatedRule.APIVersion, relatedRule.Resource)
 			}
-			if related.GetNamespace() != "" && parent.GetNamespace() != related.GetNamespace() {
+			if relatedIsNamespaced && parent.GetNamespace() != related.GetNamespace() {
 				return false, nil
 			}
 		}
@@ -454,7 +454,7 @@ func (rm *Manager) matchesRelatedRule(hookVersion v1alpha1.HookVersion, parentIs
 		if !selector.Matches(labels.Set(related.GetLabels())) {
 			return false, nil
 		}
-		if related.GetNamespace() != relatedRule.Namespace {
+		if relatedIsNamespaced && related.GetNamespace() != relatedRule.Namespace {
 			return false, nil
 		}
 		return true, nil
@@ -462,17 +462,17 @@ func (rm *Manager) matchesRelatedRule(hookVersion v1alpha1.HookVersion, parentIs
 		if hookVersion == v1alpha1.HookVersionV1 && parentIsNamespaced {
 			return false, fmt.Errorf("namespaceSelector cannot be used by namespaced parent in v1 hook")
 		}
+
+		if !relatedIsNamespaced {
+			return false, fmt.Errorf("namespaceSelector is only supported for namespaced related resources")
+		}
+
 		selector, err := toSelector(relatedRule.LabelSelector)
 		if err != nil {
 			return false, err
 		}
 		if !selector.Matches(labels.Set(related.GetLabels())) {
 			return false, nil
-		}
-		// If the resource is cluster-scoped, it matches any namespaceSelector
-		// (though usually cluster-scoped resources don't have a namespace).
-		if related.GetNamespace() == "" {
-			return true, nil
 		}
 
 		// Check if the related object's namespace matches the namespaceSelector.
@@ -510,10 +510,10 @@ func (rm *Manager) matchesRelatedRule(hookVersion v1alpha1.HookVersion, parentIs
 				return false, fmt.Errorf("%s: Namespace of parent %s does not match with namespace %s of related rule for %s/%s", parent.GetKind(), parent.GetName(), relatedRule.Namespace, relatedRule.APIVersion, relatedRule.Resource)
 			}
 			// If related object is namespaced, it must match parent namespace
-			if related.GetNamespace() != "" && parentNamespace != related.GetNamespace() {
+			if relatedIsNamespaced && parentNamespace != related.GetNamespace() {
 				return false, nil
 			}
-		} else if len(relatedRule.Namespace) != 0 && related.GetNamespace() != relatedRule.Namespace {
+		} else if relatedIsNamespaced && len(relatedRule.Namespace) != 0 && related.GetNamespace() != relatedRule.Namespace {
 			// v2 or cluster-scoped parent: objects from any namespace can match, but only if they match the rule
 			return false, nil
 		}
@@ -528,8 +528,8 @@ func (rm *Manager) matchesRelatedRule(hookVersion v1alpha1.HookVersion, parentIs
 	return false, fmt.Errorf("should not reach here")
 }
 
-func listObjects(selector labels.Selector, namespace string, informer *dynamicinformer.ResourceInformer) ([]*unstructured.Unstructured, error) {
-	if len(namespace) != 0 {
+func listObjects(selector labels.Selector, namespace string, informer *dynamicinformer.ResourceInformer, namespaced bool) ([]*unstructured.Unstructured, error) {
+	if namespaced && len(namespace) != 0 {
 		return informer.Lister().Namespace(namespace).List(selector)
 	}
 	return informer.Lister().List(selector)
@@ -588,7 +588,7 @@ func (rm *Manager) GetRelatedObjects(parent *unstructured.Unstructured) (api.Obj
 			if err != nil {
 				return nil, err
 			}
-			all, err := listObjects(selector, relatedRule.Namespace, informer)
+			all, err := listObjects(selector, relatedRule.Namespace, informer, relatedClient.Namespaced)
 			if err != nil {
 				return nil, fmt.Errorf("can't list %v related objects: %w", relatedClient.Kind, err)
 			}
@@ -599,6 +599,11 @@ func (rm *Manager) GetRelatedObjects(parent *unstructured.Unstructured) (api.Obj
 			if customizeHookResponse.Version == v1alpha1.HookVersionV1 && parentResource.Namespaced && relatedClient.Namespaced {
 				return nil, fmt.Errorf("namespaceSelector is not supported for namespaced parent in v1 hook version")
 			}
+
+			if !relatedClient.Namespaced {
+				return nil, fmt.Errorf("namespaceSelector is only supported for namespaced related resources")
+			}
+
 			if rm.nsInformer == nil {
 				return nil, fmt.Errorf("namespace informer is not initialized, cannot use namespaceSelector")
 			}
@@ -627,7 +632,7 @@ func (rm *Manager) GetRelatedObjects(parent *unstructured.Unstructured) (api.Obj
 
 			childMap.InitGroup(relatedClient.GroupVersionKind())
 			for _, ns := range matchingNamespaces {
-				all, err := listObjects(labelSelector, ns.GetName(), informer)
+				all, err := listObjects(labelSelector, ns.GetName(), informer, relatedClient.Namespaced)
 				if err != nil {
 					return nil, fmt.Errorf("can't list %v related objects in namespace %s: %w", relatedClient.Kind, ns.GetName(), err)
 				}
@@ -638,7 +643,7 @@ func (rm *Manager) GetRelatedObjects(parent *unstructured.Unstructured) (api.Obj
 			if customizeHookResponse.Version == v1alpha1.HookVersionV1 && parentResource.Namespaced && relatedClient.Namespaced && len(relatedRule.Namespace) != 0 && parentNamespace != relatedRule.Namespace {
 				return nil, fmt.Errorf("requested related object namespace %s differs from parent object namespace %s", relatedRule.Namespace, parentNamespace)
 			}
-			all, err := listObjects(labels.Everything(), relatedRule.Namespace, informer)
+			all, err := listObjects(labels.Everything(), relatedRule.Namespace, informer, relatedClient.Namespaced)
 			if err != nil {
 				return nil, fmt.Errorf("can't list %v related objects: %w", relatedClient.Kind, err)
 			}
