@@ -81,6 +81,8 @@ type decoratorController struct {
 	parentInformers *common.InformerMap
 	childInformers  *common.InformerMap
 
+	ssaOptions *common.ApplyOptions
+
 	numWorkers    int
 	eventRecorder record.EventRecorder
 
@@ -92,7 +94,16 @@ type decoratorController struct {
 	logger logr.Logger
 }
 
-func newDecoratorController(resources *dynamicdiscovery.ResourceMap, dynClient *dynamicclientset.Clientset, dynInformers *dynamicinformer.SharedInformerFactory, eventRecorder record.EventRecorder, dc *v1alpha1.DecoratorController, numWorkers int, logger logr.Logger) (controller *decoratorController, newErr error) {
+func newDecoratorController(
+	resources *dynamicdiscovery.ResourceMap,
+	dynClient *dynamicclientset.Clientset,
+	dynInformers *dynamicinformer.SharedInformerFactory,
+	eventRecorder record.EventRecorder,
+	dc *v1alpha1.DecoratorController,
+	numWorkers int,
+	ssaOptions *common.ApplyOptions,
+	logger logr.Logger,
+) (controller *decoratorController, newErr error) {
 	if dc.Spec.Hooks == nil {
 		return nil, fmt.Errorf("no hooks defined")
 	}
@@ -127,6 +138,7 @@ func newDecoratorController(resources *dynamicdiscovery.ResourceMap, dynClient *
 		syncHook:     syncHook,
 		finalizeHook: finalizeHook,
 		logger:       logger.WithName(dc.Name),
+		ssaOptions:   ssaOptions,
 	}
 
 	customize, err := customize.NewCustomizeManager(
@@ -710,7 +722,7 @@ func (c *decoratorController) syncParentObject(parent *unstructured.Unstructured
 	var manageErr error
 	if parent.GetDeletionTimestamp() == nil || c.finalizer.ShouldFinalize(parent) {
 		// Reconcile children.
-		if err := common.ManageChildren(c.dynClient, c.updateStrategy, parent, observedChildren, desiredChildren, &common.ApplyOptions{Strategy: common.ApplyStrategyDynamicApply}); err != nil {
+		if err := common.ManageChildren(c.dynClient, c.updateStrategy, parent, observedChildren, desiredChildren, c.ssaOptions); err != nil {
 			manageErr = fmt.Errorf("can't reconcile children for %v %v/%v: %w", parent.GetKind(), parent.GetNamespace(), parent.GetName(), err)
 		}
 	}
