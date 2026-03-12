@@ -133,10 +133,12 @@ func New(configuration options.Configuration) (controllerruntime.Manager, error)
 		return nil, fmt.Errorf("unknown apply strategy: %s", configuration.ApplyStrategy)
 	}
 
-	compositeReconciler := composite.NewMetacontroller(*controllerContext, mcClient, configuration.Workers, &common.ApplyOptions{
+	applyOptions := &common.ApplyOptions{
 		FieldManager: configuration.SsaFieldManager,
 		Strategy:     strategy,
-	})
+	}
+
+	compositeReconciler := composite.NewMetacontroller(*controllerContext, mcClient, configuration.Workers, applyOptions)
 	compositeCtrl, err := controller.New("composite-metacontroller", mgr, controller.Options{
 		Reconciler: compositeReconciler,
 	})
@@ -148,7 +150,7 @@ func New(configuration options.Configuration) (controllerruntime.Manager, error)
 	if err != nil {
 		return nil, err
 	}
-	decoratorReconciler := decorator.NewMetacontroller(*controllerContext, configuration.Workers)
+	decoratorReconciler := decorator.NewMetacontroller(*controllerContext, configuration.Workers, applyOptions)
 	decoratorCtrl, err := controller.New("decorator-metacontroller", mgr, controller.Options{
 		Reconciler: decoratorReconciler,
 	})
