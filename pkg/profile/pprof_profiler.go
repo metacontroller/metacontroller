@@ -7,6 +7,7 @@ import (
 	_ "net/http/pprof" //nolint:gosec
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 )
@@ -41,6 +42,7 @@ func EnablePprof(address string) <-chan struct{} {
 		ReadHeaderTimeout: 30 * time.Second,
 	}
 	pprofStopChan := make(chan struct{})
+	var closeOnce sync.Once
 
 	go func() {
 		stop := make(chan os.Signal, 1)
@@ -55,7 +57,9 @@ func EnablePprof(address string) <-chan struct{} {
 			// Error from closing listeners, or context timeout:
 			logging.Logger.Error(err, "pprof server shutdown")
 		}
-		close(pprofStopChan)
+		closeOnce.Do(func() {
+			close(pprofStopChan)
+		})
 	}()
 
 	go func() {
@@ -64,11 +68,9 @@ func EnablePprof(address string) <-chan struct{} {
 		if err != nil && err != http.ErrServerClosed {
 			logging.Logger.Error(err, "error enabling and serving pprof", "address", address)
 			// If it failed to start, we should still close the channel if it hasn't been closed
-			select {
-			case <-pprofStopChan:
-			default:
+			closeOnce.Do(func() {
 				close(pprofStopChan)
-			}
+			})
 		}
 	}()
 
