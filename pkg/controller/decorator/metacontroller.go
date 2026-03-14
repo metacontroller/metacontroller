@@ -56,16 +56,19 @@ type Metacontroller struct {
 
 	numWorkers int
 
+	ssaOptions *common.ApplyOptions
+
 	logger logr.Logger
 }
 
-func NewMetacontroller(controllerContext common.ControllerContext, numWorkers int) *Metacontroller {
+func NewMetacontroller(controllerContext common.ControllerContext, numWorkers int, ssaOptions *common.ApplyOptions) *Metacontroller {
 	mc := &Metacontroller{
 		k8sClient:     controllerContext.K8sClient,
 		resources:     controllerContext.Resources,
 		dynClient:     controllerContext.DynClient,
 		dynInformers:  controllerContext.DynInformers,
 		eventRecorder: controllerContext.EventRecorder,
+		ssaOptions:    ssaOptions,
 
 		numWorkers: numWorkers,
 
@@ -132,6 +135,7 @@ func (mc *Metacontroller) reconcileDecoratorController(dc *v1alpha1.DecoratorCon
 		mc.eventRecorder,
 		dc,
 		mc.numWorkers,
+		mc.ssaOptions,
 		mc.logger,
 	)
 	if err != nil {
