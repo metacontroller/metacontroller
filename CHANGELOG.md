@@ -1,3 +1,10 @@
+## [4.13.1](https://github.com/metacontroller/metacontroller/compare/v4.13.0...v4.13.1) (2026-03-14)
+
+
+### Bug Fixes
+
+* optimize cpu usage on claiming children ([ed465e4](https://github.com/metacontroller/metacontroller/commit/ed465e4cc6ad405b2d6889aefff4c1b2b441ef6b))
+
 # [4.13.0](https://github.com/metacontroller/metacontroller/compare/v4.12.13...v4.13.0) (2026-03-11)
 
 
