@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"metacontroller/pkg/controller/common/api"
 	commonv1 "metacontroller/pkg/controller/common/api/v1"
+	"sort"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -109,6 +110,37 @@ func (m UniformObjectMap) List() []*unstructured.Unstructured {
 		}
 	}
 	return list
+}
+
+// GetObjectsByGVK returns objects for a specific GroupVersionKind, or nil if not found
+func (m UniformObjectMap) GetObjectsByGVK(gvk schema.GroupVersionKind) map[string]*unstructured.Unstructured {
+	internalGvk := api.GroupVersionKind{GroupVersionKind: gvk}
+	return m[internalGvk]
+}
+
+// GetAllGVKs returns all GroupVersionKinds present in the map, sorted by Group, Version, and Kind
+func (m UniformObjectMap) GetAllGVKs() []schema.GroupVersionKind {
+	if len(m) == 0 {
+		return nil // Avoid allocation for empty maps
+	}
+
+	gvks := make([]schema.GroupVersionKind, 0, len(m)) // Pre-allocate with known capacity
+	for gvk := range m {
+		gvks = append(gvks, gvk.GroupVersionKind)
+	}
+
+	// Sort GVKs to ensure deterministic iteration
+	sort.Slice(gvks, func(i, j int) bool {
+		if gvks[i].Group != gvks[j].Group {
+			return gvks[i].Group < gvks[j].Group
+		}
+		if gvks[i].Version != gvks[j].Version {
+			return gvks[i].Version < gvks[j].Version
+		}
+		return gvks[i].Kind < gvks[j].Kind
+	})
+
+	return gvks
 }
 
 // Convert returns commonv1.RelativeObjectMap against given parent, removing non matching objects

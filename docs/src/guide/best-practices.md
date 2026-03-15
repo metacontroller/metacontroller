@@ -17,7 +17,7 @@ we have following restrictions between objects:
 | Parent        | Child         | Related  |
 | ------------- |-------------| -----|
 | Cluster      | - Cluster <br> - Namespaced (any namespace) | - Cluster <br> - Namespaced (any namespace) |
-| Namespaced      |  - Namespaced (the same namespace as parent)     | -  Namespaced (the same namespace as parent) |
+| Namespaced      |  - Namespaced (the same namespace as parent)     | - Cluster (requires hook v2) <br> - Namespaced (any namespace, requires hook v2) |
 
 
 ## Lambda Hooks

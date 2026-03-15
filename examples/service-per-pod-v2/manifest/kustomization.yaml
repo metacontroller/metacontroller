@@ -1,0 +1,9 @@
+resources:
+- service-per-pod.yaml
+configMapGenerator:
+- name: service-per-pod-hooks
+  namespace: metacontroller
+  files:
+  - finalize-service-per-pod.jsonnet
+  - sync-pod-name-label.jsonnet
+  - sync-service-per-pod.jsonnet

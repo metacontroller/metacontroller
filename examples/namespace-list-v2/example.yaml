@@ -1,0 +1,17 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: test-ns
+  labels:
+    example-controller: namespace-list
+---
+apiVersion: examples.metacontroller.io/v1alpha1
+kind: NamespaceList
+metadata:
+  name: filtered-namespaces
+  namespace: test-ns
+spec:
+  labelSelector:
+    matchLabels:
+      example-controller: namespace-list

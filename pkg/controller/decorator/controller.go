@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"metacontroller/pkg/controller/common/api"
 	commonv2 "metacontroller/pkg/controller/common/api/v2"
 	"metacontroller/pkg/hooks"
 	"reflect"
@@ -74,6 +75,7 @@ type decoratorController struct {
 	dynClient *dynamicclientset.Clientset
 
 	stopCh, doneCh chan struct{}
+	stopOnce       sync.Once
 	queue          workqueue.TypedRateLimitingInterface[string]
 
 	updateStrategy updateStrategyMap
@@ -290,21 +292,23 @@ func (c *decoratorController) Start() {
 }
 
 func (c *decoratorController) Stop() {
-	close(c.stopCh)
-	c.queue.ShutDown()
-	<-c.doneCh
+	c.stopOnce.Do(func() {
+		close(c.stopCh)
+		c.queue.ShutDown()
+		<-c.doneCh
 
-	// Remove event handlers and close informers for all child resources.
-	c.childInformers.ForEach(func(_ schema.GroupVersionResource, informer *dynamicinformer.ResourceInformer) {
-		informer.Informer().RemoveEventHandlers()
-		informer.Close()
+		// Remove event handlers and close informers for all child resources.
+		c.childInformers.ForEach(func(_ schema.GroupVersionResource, informer *dynamicinformer.ResourceInformer) {
+			informer.Informer().RemoveEventHandlers()
+			informer.Close()
+		})
+		// Remove event handlers and close informer for all parent resources.
+		c.parentInformers.ForEach(func(_ schema.GroupVersionResource, informer *dynamicinformer.ResourceInformer) {
+			informer.Informer().RemoveEventHandlers()
+			informer.Close()
+		})
+		c.customize.Stop()
 	})
-	// Remove event handlers and close informer for all parent resources.
-	c.parentInformers.ForEach(func(_ schema.GroupVersionResource, informer *dynamicinformer.ResourceInformer) {
-		informer.Informer().RemoveEventHandlers()
-		informer.Close()
-	})
-	c.customize.Stop()
 }
 
 func (c *decoratorController) worker() {
@@ -718,7 +722,7 @@ func (c *decoratorController) syncParentObject(parent *unstructured.Unstructured
 	return manageErr
 }
 
-func (c *decoratorController) getChildren(parent *unstructured.Unstructured) (commonv2.UniformObjectMap, error) {
+func (c *decoratorController) getChildren(parent *unstructured.Unstructured) (api.ObjectMap, error) {
 	parentUID := parent.GetUID()
 	parentNamespace := parent.GetNamespace()
 	childMap := make(commonv2.UniformObjectMap)

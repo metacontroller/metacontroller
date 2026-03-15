@@ -26,6 +26,7 @@ import (
 type Hook interface {
 	IsEnabled() bool
 	Call(request api.WebhookRequest, response interface{}) error
+	GetVersion() v1alpha1.HookVersion
 }
 
 // NewHook return new Hook which implements given v1alpha1.Hook
@@ -35,7 +36,7 @@ func NewHook(
 	controllerType common.ControllerType,
 	hookType common.HookType) (Hook, error) {
 	if hook != nil {
-		executor, err := NewWebhookExecutor(hook.Webhook, controllerName, controllerType, hookType)
+		executor, err := NewWebhookExecutor(hook.Webhook, hook.Version, controllerName, controllerType, hookType)
 		if err != nil {
 			return nil, err
 		}
@@ -55,6 +56,13 @@ type hookExecutorImpl struct {
 
 func (h *hookExecutorImpl) IsEnabled() bool {
 	return h.webhookExecutor != nil
+}
+
+func (h *hookExecutorImpl) GetVersion() v1alpha1.HookVersion {
+	if h.webhookExecutor != nil {
+		return h.webhookExecutor.GetVersion()
+	}
+	return v1alpha1.HookVersionV1
 }
 
 func (h *hookExecutorImpl) Call(request api.WebhookRequest, response interface{}) error {
