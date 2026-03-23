@@ -1,3 +1,15 @@
+# [4.15.0](https://github.com/metacontroller/metacontroller/compare/v4.14.0...v4.15.0) (2026-03-23)
+
+
+### Bug Fixes
+
+* **sync:** Protect resources against concurrent close ([ec03baa](https://github.com/metacontroller/metacontroller/commit/ec03baa9df80934b167f2b518649327185501140))
+
+
+### Features
+
+* Handle hook versioning ([b6b93d6](https://github.com/metacontroller/metacontroller/commit/b6b93d699987d722b8f307baa439255235cff1b2)), closes [#1142](https://github.com/metacontroller/metacontroller/issues/1142) [#842](https://github.com/metacontroller/metacontroller/issues/842) [#496](https://github.com/metacontroller/metacontroller/issues/496) [#345](https://github.com/metacontroller/metacontroller/issues/345)
+
 # [4.14.0](https://github.com/metacontroller/metacontroller/compare/v4.13.1...v4.14.0) (2026-03-23)
 
 
