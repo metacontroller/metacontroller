@@ -1468,7 +1468,7 @@ kubectl delete ns hello
 we have following restrictions between objects:</p>
 <table><thead><tr><th>Parent</th><th>Child</th><th>Related</th></tr></thead><tbody>
 <tr><td>Cluster</td><td>- Cluster <br> - Namespaced (any namespace)</td><td>- Cluster <br> - Namespaced (any namespace)</td></tr>
-<tr><td>Namespaced</td><td>- Namespaced (the same namespace as parent)</td><td>-  Namespaced (the same namespace as parent)</td></tr>
+<tr><td>Namespaced</td><td>- Namespaced (the same namespace as parent)</td><td>- Cluster (requires hook v2) <br> - Namespaced (any namespace, requires hook v2)</td></tr>
 </tbody></table>
 <h2 id="lambda-hooks"><a class="header" href="#lambda-hooks">Lambda Hooks</a></h2>
 <h3 id="apply-semantics"><a class="header" href="#apply-semantics">Apply Semantics</a></h3>
@@ -2254,20 +2254,30 @@ Metacontroller requires you to be explicit about the version you expect
 because it does conversion for you as needed, so your hook doesn't need
 to know how to convert between different versions of a given resource.</p>
 <p>Within each child type (e.g. in <code>children['Pod.v1']</code>), there is another
-associative array that maps from the child's path relative to the parent
-to the JSON representation, like what you might get from
-<code>kubectl get &lt;child-resource&gt; &lt;child-name&gt; -o json</code>.</p>
+associative array that maps from the child's path to the JSON representation, 
+like what you might get from <code>kubectl get &lt;child-resource&gt; &lt;child-name&gt; -o json</code>.</p>
+<p>The format of the keys in this associative array depends on the hook <code>version</code>:</p>
+<h5 id="hook-version-v1-relativeobjectmap"><a class="header" href="#hook-version-v1-relativeobjectmap">Hook Version v1 (RelativeObjectMap)</a></h5>
 <p>If the parent and child are of the same scope - both cluster or both namespace -
 then the key is only the child's <code>.metadata.name</code>. If the parent is
 cluster scoped and the child is namespace scoped, then the key will be of the
 form <code>{.metadata.namespace}/{.metadata.name}</code>. This is to disambiguate between
 two children with the same name in different namespaces. A parent may never be
 namespace scoped while a child is cluster scoped.</p>
+<h5 id="hook-version-v2-uniformobjectmap"><a class="header" href="#hook-version-v2-uniformobjectmap">Hook Version v2 (UniformObjectMap)</a></h5>
+<p>In v2, a uniform naming convention is used regardless of the parent's scope.
+If the child resource is namespaced, the key will always be of the form 
+<code>{.metadata.namespace}/{.metadata.name}</code>. If the child resource is 
+cluster scoped, the key is only the child's <code>.metadata.name</code>.</p>
 <p>For example, a Pod named <code>my-pod</code> in the <code>my-namespace</code> namespace could be
-accessed as follows if the parent is also in <code>my-namespace</code>:</p>
-<pre><code class="language-js">request.children['Pod.v1']['my-pod']
+accessed as follows:</p>
+<pre><code class="language-js">// v1 (if parent is also in 'my-namespace')
+request.children['Pod.v1']['my-pod']
+
+// v2 (always)
+request.children['Pod.v1']['my-namespace/my-pod']
 </code></pre>
-<p>Alternatively, if the parent resource is cluster scoped, the Pod could be
+<p>Alternatively, if the parent resource is cluster scoped, the Pod in v1 would be
 accessed as:</p>
 <pre><code class="language-js">request.children['Pod.v1']['my-namespace/my-pod']
 </code></pre>
@@ -2699,20 +2709,30 @@ Metacontroller requires you to be explicit about the version you expect
 because it does conversion for you as needed, so your hook doesn't need
 to know how to convert between different versions of a given resource.</p>
 <p>Within each attachment type (e.g. in <code>attachments['Pod.v1']</code>), there is another
-associative array that maps from the attachment's path relative to the parent to
-the JSON representation, like what you might get from
-<code>kubectl get &lt;attachment-resource&gt; &lt;attachment-name&gt; -o json</code>.</p>
+associative array that maps from the attachment's path to the JSON representation, 
+like what you might get from <code>kubectl get &lt;attachment-resource&gt; &lt;attachment-name&gt; -o json</code>.</p>
+<p>The format of the keys in this associative array depends on the hook <code>version</code>:</p>
+<h5 id="hook-version-v1-relativeobjectmap-1"><a class="header" href="#hook-version-v1-relativeobjectmap-1">Hook Version v1 (RelativeObjectMap)</a></h5>
 <p>If the parent and attachment are of the same scope - both cluster or both namespace -
 then the key is only the object's <code>.metadata.name</code>. If the parent is
 cluster scoped and the attachment is namespace scoped, then the key will be of the
 form <code>{.metadata.namespace}/{.metadata.name}</code>. This is to disambiguate between
 two attachments with the same name in different namespaces. A parent may never
 be namespace scoped while an attachment is cluster scoped.</p>
+<h5 id="hook-version-v2-uniformobjectmap-1"><a class="header" href="#hook-version-v2-uniformobjectmap-1">Hook Version v2 (UniformObjectMap)</a></h5>
+<p>In v2, a uniform naming convention is used regardless of the parent's scope.
+If the attachment resource is namespaced, the key will always be of the form 
+<code>{.metadata.namespace}/{.metadata.name}</code>. If the attachment resource is 
+cluster scoped, the key is only the object's <code>.metadata.name</code>.</p>
 <p>For example, a Pod named <code>my-pod</code> in the <code>my-namespace</code> namespace could be
-accessed as follows if the parent is also in <code>my-namespace</code>:</p>
-<pre><code class="language-js">request.attachments['Pod.v1']['my-pod']
+accessed as follows:</p>
+<pre><code class="language-js">// v1 (if parent is also in 'my-namespace')
+request.attachments['Pod.v1']['my-pod']
+
+// v2 (always)
+request.attachments['Pod.v1']['my-namespace/my-pod']
 </code></pre>
-<p>Alternatively, if the parent resource is cluster scoped, the Pod could be
+<p>Alternatively, if the parent resource is cluster scoped, the Pod in v1 would be
 accessed as:</p>
 <pre><code class="language-js">request.attachments['Pod.v1']['my-namespace/my-pod']
 </code></pre>
@@ -2890,9 +2910,16 @@ so your hook only needs to think about one parent at a time.</p>
 <p>The body of the request (a POST in the case of a <a href="api/../api/hook.html#webhook">webhook</a>)
 will be a JSON object with the following fields:</p>
 <table><thead><tr><th>Field</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>controller</code></td><td>The whole CompositeController object, like what you might get from <code>kubectl get compositecontroller &lt;name&gt; -o json</code>.</td></tr>
-<tr><td><code>parent</code></td><td>The parent object, like what you might get from <code>kubectl get &lt;parent-resource&gt; &lt;parent-name&gt; -o json</code>.</td></tr>
+<tr><td><code>controller</code></td><td>The whole controller object (CompositeController or DecoratorController).</td></tr>
+<tr><td><code>parent</code></td><td>The parent object (or target object for DecoratorController).</td></tr>
 </tbody></table>
+<p>Metacontroller supports both <code>v1</code> and <code>v2</code> hook versions. 
+The version can be specified in the controller's <code>hooks.customize.version</code> field.
+The primary difference is the naming convention used for objects in the <code>sync</code> 
+and <code>finalize</code> hooks' <code>related</code> field (see 
+<a href="api/./compositecontroller.html#hook-version-v2-uniformobjectmap">CompositeController</a> 
+and <a href="api/./decoratorcontroller.html#hook-version-v2-uniformobjectmap">DecoratorController</a> 
+API references for details on <code>v2</code> naming).</p>
 <h2 id="customize-hook-response"><a class="header" href="#customize-hook-response">Customize Hook Response</a></h2>
 <p>The body of your response should be a JSON object with the following fields:</p>
 <table><thead><tr><th>Field</th><th>Description</th></tr></thead><tbody>
@@ -2904,16 +2931,30 @@ not an associative array.</p>
 <table><thead><tr><th>Field</th><th>Description</th></tr></thead><tbody>
 <tr><td><code>apiVersion</code></td><td>The API <code>&lt;group&gt;/&lt;version&gt;</code> of the parent resource, or just <code>&lt;version&gt;</code> for core APIs. (e.g. <code>v1</code>, <code>apps/v1</code>, <code>batch/v1</code>)</td></tr>
 <tr><td><code>resource</code></td><td>The canonical, lowercase, plural name of the parent resource. (e.g. <code>deployments</code>, <code>replicasets</code>, <code>statefulsets</code>)</td></tr>
-<tr><td><code>labelSelector</code></td><td>A <code>v1.LabelSelector</code> object. Omit if not used (i.e. Namespace or Names should be used)</td></tr>
-<tr><td><code>namespace</code></td><td>Optional. The Namespace to select in</td></tr>
-<tr><td><code>names</code></td><td>Optional. A list of strings, representing individual objects to return</td></tr>
+<tr><td><code>labelSelector</code></td><td>A <code>v1.LabelSelector</code> object. Filters objects by their labels.</td></tr>
+<tr><td><code>namespaceSelector</code></td><td>A <code>v1.LabelSelector</code> object. Filters namespaces by their labels. If omitted and <code>namespace</code> is also omitted, searching is performed across all namespaces. <strong>Warning:</strong> Using <code>namespaceSelector</code> without a <code>labelSelector</code> will select <strong>ALL</strong> objects of the specified type in the matching namespaces, which can have a significant performance impact in large clusters. Additionally, selecting a large number of namespaces can be expensive as it requires separate list operations for each matching namespace.</td></tr>
+<tr><td><code>namespace</code></td><td>Optional. The specific Namespace to select in.</td></tr>
+<tr><td><code>names</code></td><td>Optional. A list of strings, representing individual objects to return.</td></tr>
 </tbody></table>
-<p><strong>Important note</strong>
-Please note that you can specify label selector or Namespace/Names, not both in the same <code>ResourceRule</code>.</p>
+<p><strong>Combined usage rules</strong></p>
+<ul>
+<li><code>names</code> (explicit list) <strong>cannot</strong> be combined with any selector (<code>labelSelector</code> or <code>namespaceSelector</code>).</li>
+<li><code>namespace</code> (explicit name) <strong>cannot</strong> be combined with <code>namespaceSelector</code>.</li>
+<li><code>namespace</code> <strong>can</strong> be combined with <code>labelSelector</code> to find specific objects within one namespace.</li>
+<li><code>namespaceSelector</code> <strong>can</strong> be combined with <code>labelSelector</code> to find specific objects across multiple namespaces. <strong>It is highly recommended to provide a <code>labelSelector</code> when using <code>namespaceSelector</code> to avoid accidentally selecting all objects in the target namespaces.</strong></li>
+<li>If both <code>namespace</code> and <code>namespaceSelector</code> are omitted, <code>labelSelector</code> will search across <strong>all</strong> namespaces.</li>
+</ul>
 <p>If the parent resource is cluster scoped and the related resource is namespaced,
-the namespace may be used to restrict which objects to look at. If the parent
-resource is namespaced, the related resources must come from the same namespace.
-Specifying the namespace is optional, but if specified must match.</p>
+the namespace may be used to restrict which objects to look at.</p>
+<p>If the parent resource is namespaced, the related resources must come from the
+same namespace <strong>unless hook version <code>v2</code> is used</strong>.</p>
+<p>In <code>v2</code>, a namespaced parent can access:</p>
+<ul>
+<li><strong>Cluster-scoped</strong> related objects.</li>
+<li><strong>Namespaced</strong> related objects from <strong>any namespace</strong>.</li>
+</ul>
+<p>Specifying the namespace is optional. In <code>v1</code>, if specified, it must match the 
+parent's namespace. In <code>v2</code>, it can be any namespace.</p>
 <p>Note that your webhook handler must return a response with a status code of <code>200</code>
 to be considered successful. Metacontroller will wait for a response for up to the
 amount defined in the <a href="api/../api/hook.html#webhook">Webhook spec</a>.</p>
@@ -2959,7 +3000,8 @@ present in each namespace.</p>
 <p>Each hook that you define as part of using one of the hook-based APIs
 has the following fields:</p>
 <table><thead><tr><th>Field</th><th>Description</th></tr></thead><tbody>
-<tr><td><a href="api/hook.html#webhook">webhook</a></td><td>Specify how to invoke this hook over HTTP(S).</td></tr>
+<tr><td><code>version</code></td><td>The version of the hook API to use. Can be <code>v1</code> or <code>v2</code>. Defaults to <code>v1</code>.</td></tr>
+<tr><td><a href="api/hook.html#webhook"><code>webhook</code></a></td><td>Specify how to invoke this hook over HTTP(S).</td></tr>
 </tbody></table>
 <ul>
 <li><a href="api/hook.html#example">Example</a></li>
@@ -2982,6 +3024,7 @@ has the following fields:</p>
 <tr><td>timeout</td><td>A duration (in the format of Go's time.Duration) indicating the time that Metacontroller should wait for a resserviceponse. If the webhook takes longer than this time, the webhook call is aborted and retried later. Defaults to 10s.</td></tr>
 <tr><td>path</td><td>A path to be appended to the accompanying <code>service</code> to reach this hook (e.g. <code>/hook</code>). Ignored if full <code>url</code> is specified.</td></tr>
 <tr><td><a href="api/hook.html#service-reference">service</a></td><td>A reference to a Kubernetes Service through which this hook can be reached.</td></tr>
+<tr><td>responseUnMarshallMode</td><td>Sets the JSON unmarshall mode. One of <code>loose</code> or <code>strict</code>. In <code>strict</code> mode, additional checks are performed to detect unknown and duplicated fields. <strong>Default:</strong> <code>loose</code> for <code>v1</code> hooks, <code>strict</code> for <code>v2</code> hooks.</td></tr>
 </tbody></table>
 <h3 id="service-reference"><a class="header" href="#service-reference">Service Reference</a></h3>
 <p>Within a <code>webhook</code>, the <code>service</code> field has the following subfields:</p>

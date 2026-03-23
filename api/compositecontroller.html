@@ -419,20 +419,30 @@ Metacontroller requires you to be explicit about the version you expect
 because it does conversion for you as needed, so your hook doesn't need
 to know how to convert between different versions of a given resource.</p>
 <p>Within each child type (e.g. in <code>children['Pod.v1']</code>), there is another
-associative array that maps from the child's path relative to the parent
-to the JSON representation, like what you might get from
-<code>kubectl get &lt;child-resource&gt; &lt;child-name&gt; -o json</code>.</p>
+associative array that maps from the child's path to the JSON representation, 
+like what you might get from <code>kubectl get &lt;child-resource&gt; &lt;child-name&gt; -o json</code>.</p>
+<p>The format of the keys in this associative array depends on the hook <code>version</code>:</p>
+<h5 id="hook-version-v1-relativeobjectmap"><a class="header" href="#hook-version-v1-relativeobjectmap">Hook Version v1 (RelativeObjectMap)</a></h5>
 <p>If the parent and child are of the same scope - both cluster or both namespace -
 then the key is only the child's <code>.metadata.name</code>. If the parent is
 cluster scoped and the child is namespace scoped, then the key will be of the
 form <code>{.metadata.namespace}/{.metadata.name}</code>. This is to disambiguate between
 two children with the same name in different namespaces. A parent may never be
 namespace scoped while a child is cluster scoped.</p>
+<h5 id="hook-version-v2-uniformobjectmap"><a class="header" href="#hook-version-v2-uniformobjectmap">Hook Version v2 (UniformObjectMap)</a></h5>
+<p>In v2, a uniform naming convention is used regardless of the parent's scope.
+If the child resource is namespaced, the key will always be of the form 
+<code>{.metadata.namespace}/{.metadata.name}</code>. If the child resource is 
+cluster scoped, the key is only the child's <code>.metadata.name</code>.</p>
 <p>For example, a Pod named <code>my-pod</code> in the <code>my-namespace</code> namespace could be
-accessed as follows if the parent is also in <code>my-namespace</code>:</p>
-<pre><code class="language-js">request.children['Pod.v1']['my-pod']
+accessed as follows:</p>
+<pre><code class="language-js">// v1 (if parent is also in 'my-namespace')
+request.children['Pod.v1']['my-pod']
+
+// v2 (always)
+request.children['Pod.v1']['my-namespace/my-pod']
 </code></pre>
-<p>Alternatively, if the parent resource is cluster scoped, the Pod could be
+<p>Alternatively, if the parent resource is cluster scoped, the Pod in v1 would be
 accessed as:</p>
 <pre><code class="language-js">request.children['Pod.v1']['my-namespace/my-pod']
 </code></pre>

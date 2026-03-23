@@ -175,7 +175,7 @@
 we have following restrictions between objects:</p>
 <table><thead><tr><th>Parent</th><th>Child</th><th>Related</th></tr></thead><tbody>
 <tr><td>Cluster</td><td>- Cluster <br> - Namespaced (any namespace)</td><td>- Cluster <br> - Namespaced (any namespace)</td></tr>
-<tr><td>Namespaced</td><td>- Namespaced (the same namespace as parent)</td><td>-  Namespaced (the same namespace as parent)</td></tr>
+<tr><td>Namespaced</td><td>- Namespaced (the same namespace as parent)</td><td>- Cluster (requires hook v2) <br> - Namespaced (any namespace, requires hook v2)</td></tr>
 </tbody></table>
 <h2 id="lambda-hooks"><a class="header" href="#lambda-hooks">Lambda Hooks</a></h2>
 <h3 id="apply-semantics"><a class="header" href="#apply-semantics">Apply Semantics</a></h3>

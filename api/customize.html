@@ -167,9 +167,16 @@ so your hook only needs to think about one parent at a time.</p>
 <p>The body of the request (a POST in the case of a <a href="../api/hook.html#webhook">webhook</a>)
 will be a JSON object with the following fields:</p>
 <table><thead><tr><th>Field</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>controller</code></td><td>The whole CompositeController object, like what you might get from <code>kubectl get compositecontroller &lt;name&gt; -o json</code>.</td></tr>
-<tr><td><code>parent</code></td><td>The parent object, like what you might get from <code>kubectl get &lt;parent-resource&gt; &lt;parent-name&gt; -o json</code>.</td></tr>
+<tr><td><code>controller</code></td><td>The whole controller object (CompositeController or DecoratorController).</td></tr>
+<tr><td><code>parent</code></td><td>The parent object (or target object for DecoratorController).</td></tr>
 </tbody></table>
+<p>Metacontroller supports both <code>v1</code> and <code>v2</code> hook versions. 
+The version can be specified in the controller's <code>hooks.customize.version</code> field.
+The primary difference is the naming convention used for objects in the <code>sync</code> 
+and <code>finalize</code> hooks' <code>related</code> field (see 
+<a href="./compositecontroller.html#hook-version-v2-uniformobjectmap">CompositeController</a> 
+and <a href="./decoratorcontroller.html#hook-version-v2-uniformobjectmap">DecoratorController</a> 
+API references for details on <code>v2</code> naming).</p>
 <h2 id="customize-hook-response"><a class="header" href="#customize-hook-response">Customize Hook Response</a></h2>
 <p>The body of your response should be a JSON object with the following fields:</p>
 <table><thead><tr><th>Field</th><th>Description</th></tr></thead><tbody>
@@ -181,16 +188,30 @@ not an associative array.</p>
 <table><thead><tr><th>Field</th><th>Description</th></tr></thead><tbody>
 <tr><td><code>apiVersion</code></td><td>The API <code>&lt;group&gt;/&lt;version&gt;</code> of the parent resource, or just <code>&lt;version&gt;</code> for core APIs. (e.g. <code>v1</code>, <code>apps/v1</code>, <code>batch/v1</code>)</td></tr>
 <tr><td><code>resource</code></td><td>The canonical, lowercase, plural name of the parent resource. (e.g. <code>deployments</code>, <code>replicasets</code>, <code>statefulsets</code>)</td></tr>
-<tr><td><code>labelSelector</code></td><td>A <code>v1.LabelSelector</code> object. Omit if not used (i.e. Namespace or Names should be used)</td></tr>
-<tr><td><code>namespace</code></td><td>Optional. The Namespace to select in</td></tr>
-<tr><td><code>names</code></td><td>Optional. A list of strings, representing individual objects to return</td></tr>
+<tr><td><code>labelSelector</code></td><td>A <code>v1.LabelSelector</code> object. Filters objects by their labels.</td></tr>
+<tr><td><code>namespaceSelector</code></td><td>A <code>v1.LabelSelector</code> object. Filters namespaces by their labels. If omitted and <code>namespace</code> is also omitted, searching is performed across all namespaces. <strong>Warning:</strong> Using <code>namespaceSelector</code> without a <code>labelSelector</code> will select <strong>ALL</strong> objects of the specified type in the matching namespaces, which can have a significant performance impact in large clusters. Additionally, selecting a large number of namespaces can be expensive as it requires separate list operations for each matching namespace.</td></tr>
+<tr><td><code>namespace</code></td><td>Optional. The specific Namespace to select in.</td></tr>
+<tr><td><code>names</code></td><td>Optional. A list of strings, representing individual objects to return.</td></tr>
 </tbody></table>
-<p><strong>Important note</strong>
-Please note that you can specify label selector or Namespace/Names, not both in the same <code>ResourceRule</code>.</p>
+<p><strong>Combined usage rules</strong></p>
+<ul>
+<li><code>names</code> (explicit list) <strong>cannot</strong> be combined with any selector (<code>labelSelector</code> or <code>namespaceSelector</code>).</li>
+<li><code>namespace</code> (explicit name) <strong>cannot</strong> be combined with <code>namespaceSelector</code>.</li>
+<li><code>namespace</code> <strong>can</strong> be combined with <code>labelSelector</code> to find specific objects within one namespace.</li>
+<li><code>namespaceSelector</code> <strong>can</strong> be combined with <code>labelSelector</code> to find specific objects across multiple namespaces. <strong>It is highly recommended to provide a <code>labelSelector</code> when using <code>namespaceSelector</code> to avoid accidentally selecting all objects in the target namespaces.</strong></li>
+<li>If both <code>namespace</code> and <code>namespaceSelector</code> are omitted, <code>labelSelector</code> will search across <strong>all</strong> namespaces.</li>
+</ul>
 <p>If the parent resource is cluster scoped and the related resource is namespaced,
-the namespace may be used to restrict which objects to look at. If the parent
-resource is namespaced, the related resources must come from the same namespace.
-Specifying the namespace is optional, but if specified must match.</p>
+the namespace may be used to restrict which objects to look at.</p>
+<p>If the parent resource is namespaced, the related resources must come from the
+same namespace <strong>unless hook version <code>v2</code> is used</strong>.</p>
+<p>In <code>v2</code>, a namespaced parent can access:</p>
+<ul>
+<li><strong>Cluster-scoped</strong> related objects.</li>
+<li><strong>Namespaced</strong> related objects from <strong>any namespace</strong>.</li>
+</ul>
+<p>Specifying the namespace is optional. In <code>v1</code>, if specified, it must match the 
+parent's namespace. In <code>v2</code>, it can be any namespace.</p>
 <p>Note that your webhook handler must return a response with a status code of <code>200</code>
 to be considered successful. Metacontroller will wait for a response for up to the
 amount defined in the <a href="../api/hook.html#webhook">Webhook spec</a>.</p>

@@ -152,7 +152,8 @@
 <p>Each hook that you define as part of using one of the hook-based APIs
 has the following fields:</p>
 <table><thead><tr><th>Field</th><th>Description</th></tr></thead><tbody>
-<tr><td><a href="#webhook">webhook</a></td><td>Specify how to invoke this hook over HTTP(S).</td></tr>
+<tr><td><code>version</code></td><td>The version of the hook API to use. Can be <code>v1</code> or <code>v2</code>. Defaults to <code>v1</code>.</td></tr>
+<tr><td><a href="#webhook"><code>webhook</code></a></td><td>Specify how to invoke this hook over HTTP(S).</td></tr>
 </tbody></table>
 <ul>
 <li><a href="#example">Example</a></li>
@@ -175,6 +176,7 @@ has the following fields:</p>
 <tr><td>timeout</td><td>A duration (in the format of Go's time.Duration) indicating the time that Metacontroller should wait for a resserviceponse. If the webhook takes longer than this time, the webhook call is aborted and retried later. Defaults to 10s.</td></tr>
 <tr><td>path</td><td>A path to be appended to the accompanying <code>service</code> to reach this hook (e.g. <code>/hook</code>). Ignored if full <code>url</code> is specified.</td></tr>
 <tr><td><a href="#service-reference">service</a></td><td>A reference to a Kubernetes Service through which this hook can be reached.</td></tr>
+<tr><td>responseUnMarshallMode</td><td>Sets the JSON unmarshall mode. One of <code>loose</code> or <code>strict</code>. In <code>strict</code> mode, additional checks are performed to detect unknown and duplicated fields. <strong>Default:</strong> <code>loose</code> for <code>v1</code> hooks, <code>strict</code> for <code>v2</code> hooks.</td></tr>
 </tbody></table>
 <h3 id="service-reference"><a class="header" href="#service-reference">Service Reference</a></h3>
 <p>Within a <code>webhook</code>, the <code>service</code> field has the following subfields:</p>
