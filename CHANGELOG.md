@@ -1,3 +1,10 @@
+# [4.14.0](https://github.com/metacontroller/metacontroller/compare/v4.13.1...v4.14.0) (2026-03-23)
+
+
+### Features
+
+* allow ssa in decorator controller ([c86d8c2](https://github.com/metacontroller/metacontroller/commit/c86d8c2b1661893bd3644e0624c9a0567cc59666))
+
 ## [4.13.1](https://github.com/metacontroller/metacontroller/compare/v4.13.0...v4.13.1) (2026-03-14)
 
 
