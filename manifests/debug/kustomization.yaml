@@ -3,19 +3,19 @@ resources:
 patches:
 - target:
     group: apps
-    kind: StatefulSet
+    kind: Deployment
     version: v1
     name: metacontroller
   path: args.yaml
 - target:
     group: apps
-    kind: StatefulSet
+    kind: Deployment
     version: v1
     name: metacontroller
   path: image.yaml
 - target:
     group: apps
-    kind: StatefulSet
+    kind: Deployment
     version: v1
     name: metacontroller
   patch: |-

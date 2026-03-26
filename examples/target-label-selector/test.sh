@@ -9,8 +9,8 @@ cleanup() {
   kubectl delete -k ./manifest
 
   echo "Rollback metacontroller..."
-  kubectl rollout undo statefulset metacontroller -n metacontroller
-  kubectl rollout status --watch --timeout=180s statefulset/metacontroller -n metacontroller
+  kubectl rollout undo deployment metacontroller -n metacontroller
+  kubectl rollout status --watch --timeout=180s deployment/metacontroller -n metacontroller
   exit $exit_code
 }
 trap cleanup EXIT
@@ -19,10 +19,10 @@ set -euo
 
 # install metacontroller with the --target-label-selector arg.
 kubectl apply -k ./instance
-kubectl rollout status --watch --timeout=180s statefulset/metacontroller -n metacontroller
+kubectl rollout status --watch --timeout=180s deployment/metacontroller -n metacontroller
 
 # wait for metacontroller pod to be ready
-kubectl wait --timeout=180s --for=condition=ready pod metacontroller-0 -n metacontroller
+kubectl wait --timeout=180s --for=condition=ready pod -l app.kubernetes.io/name=metacontroller -n metacontroller
 
 # install the the secretpropagation example and applies a patch to add labels to the CompositeController instance.
 kubectl apply -k ./manifest
