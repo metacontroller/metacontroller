@@ -29,7 +29,7 @@ Once disabled, the endpoint `/debug/pprof` will be unavailable.
   ```
 
 ### Profiling metacontroller
-- Port-forward metacontroller `kubectl -n metacontroller port-forward statefulset/metacontroller 6060`
+- Port-forward metacontroller `kubectl -n metacontroller port-forward deployment/metacontroller 6060`
 - Open http://localhost:6060/debug/pprof/ in a web browser
 - Select your desired profile.
 

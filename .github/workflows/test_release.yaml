@@ -144,7 +144,7 @@ jobs:
       - name: Apply metacontroller manifests
         run: |
           kubectl apply -k manifests/${{ matrix.configuration.variant }}
-          kubectl rollout status --watch --timeout=180s statefulset/metacontroller -n metacontroller || kubectl describe pod metacontroller-0 -n metacontroller
+          kubectl rollout status --watch --timeout=180s deployment/metacontroller -n metacontroller
           kubectl get pods -n metacontroller
 
       - name: Run e2e tests
