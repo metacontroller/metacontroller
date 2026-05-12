@@ -23,7 +23,7 @@ jobs:
       pull-requests: write
     steps:
       - uses: actions/checkout@v6
-      - uses: devops-actions/actionlint@v0.1.11
+      - uses: devops-actions/actionlint@v0.1.12
   docker-image-for-linting:
     runs-on: ubuntu-24.04
     steps:
