@@ -66,7 +66,7 @@ func (h *hookExecutorStub) Call(request api.WebhookRequest, response interface{}
 	}
 
 	val := reflect.ValueOf(response)
-	if val.Kind() != reflect.Ptr {
+	if val.Kind() != reflect.Pointer {
 		return fmt.Errorf(`panic("not a pointer")`)
 	}
 

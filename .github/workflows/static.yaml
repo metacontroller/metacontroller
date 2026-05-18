@@ -108,7 +108,7 @@ jobs:
       - name: WriteGoList
         run: go list -deps -json ./... > go.list
       - name: Nancy
-        uses: sonatype-nexus-community/nancy-github-action@main
+        uses: sonatype-nexus-community/nancy-github-action@v1.0.3
         env:
           OSSI_USERNAME: ${{ secrets.OSSI_USERNAME }}
           OSSI_TOKEN: ${{ secrets.OSSI_TOKEN }}

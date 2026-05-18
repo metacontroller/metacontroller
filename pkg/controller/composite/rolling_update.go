@@ -30,6 +30,8 @@ import (
 	dynamicobject "metacontroller/pkg/dynamic/object"
 )
 
+const updatedConditionType = "Updated"
+
 func (pc *parentController) syncRollingUpdate(parentRevisions []*parentRevision, observedChildren api.ObjectMap) error {
 	// Reconcile the set of existing child claims in ControllerRevisions.
 	claimed := pc.syncRevisionClaims(parentRevisions)
@@ -111,7 +113,7 @@ func (pc *parentController) syncRollingUpdate(parentRevisions []*parentRevision,
 			if err := pc.shouldContinueRolling(latest, observedChildren); err != nil {
 				// Add status condition to explain what we're waiting for.
 				updatedCondition := &dynamicobject.StatusCondition{
-					Type:    "Updated",
+					Type:    updatedConditionType,
 					Status:  "False",
 					Reason:  "RolloutWaiting",
 					Message: err.Error(),
@@ -131,7 +133,7 @@ func (pc *parentController) syncRollingUpdate(parentRevisions []*parentRevision,
 			// We've done our one move for this sync pass.
 			// Add status condition to explain what we're doing next.
 			updatedCondition := &dynamicobject.StatusCondition{
-				Type:    "Updated",
+				Type:    updatedConditionType,
 				Status:  "False",
 				Reason:  "RolloutProgressing",
 				Message: fmt.Sprintf("updating %v %v", kind, name),
@@ -145,7 +147,7 @@ func (pc *parentController) syncRollingUpdate(parentRevisions []*parentRevision,
 
 	// Everything is already on the latest revision.
 	updatedCondition := &dynamicobject.StatusCondition{
-		Type:    "Updated",
+		Type:    updatedConditionType,
 		Status:  "True",
 		Reason:  "OnLatestRevision",
 		Message: fmt.Sprintf("latest ControllerRevision: %v", latest.revision.Name),
