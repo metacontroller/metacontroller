@@ -2,6 +2,7 @@ package hooks
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"metacontroller/pkg/controller/common"
@@ -144,7 +145,7 @@ func Test_when_incorrectJsonResponseInLooseMode_deserializeToEmptyResponse(t *te
 	)
 
 	var response v1.CustomizeHookResponse
-	err := webhookExecutor.Call(nil, &response)
+	err := webhookExecutor.Call(context.TODO(), nil, &response)
 	assert.NoError(t, err)
 }
 
@@ -162,7 +163,7 @@ func Test_when_incorrectJsonResponseInLooseMode_V1_deserializeToEmptyResponse(t 
 	)
 
 	var response v1.CustomizeHookResponse // Simple structure without 'unknownField'
-	err := webhookExecutor.Call(nil, &response)
+	err := webhookExecutor.Call(context.TODO(), nil, &response)
 	assert.NoError(t, err, "V1 loose mode should not error on unknown fields")
 }
 
@@ -180,7 +181,7 @@ func Test_when_incorrectJsonResponseInStrictMode_V1_throwsError(t *testing.T) {
 	)
 
 	var response v1.CustomizeHookResponse
-	err := webhookExecutor.Call(nil, &response)
+	err := webhookExecutor.Call(context.TODO(), nil, &response)
 	assert.Error(t, err, "V1 strict mode should error on unknown fields")
 	assert.Contains(t, err.Error(), "strict validation failed for v1 webhookResponse", "Error message should indicate v1 strict failure")
 }
@@ -200,7 +201,7 @@ func TestV2StrictByDefault(t *testing.T) {
 	)
 
 	var response v1.CustomizeHookResponse
-	err := webhookExecutor.Call(nil, &response)
+	err := webhookExecutor.Call(context.TODO(), nil, &response)
 	assert.Error(t, err, "V2 should default to strict mode and error on unknown fields")
 	assert.Contains(t, err.Error(), "strict validation failed for v2", "Error message should indicate v2 strict failure")
 
@@ -215,7 +216,7 @@ func TestV2StrictByDefault(t *testing.T) {
 		time.Now,
 	)
 
-	err = webhookExecutorLoose.Call(nil, &response)
+	err = webhookExecutorLoose.Call(context.TODO(), nil, &response)
 	assert.NoError(t, err, "V2 should honor ResponseUnmarshallModeLoose")
 }
 func Test_when_incorrectJsonResponseInStrictMode_thrownError(t *testing.T) {
@@ -231,7 +232,7 @@ func Test_when_incorrectJsonResponseInStrictMode_thrownError(t *testing.T) {
 	)
 
 	var response v1.CustomizeHookResponse
-	err := webhookExecutor.Call(nil, &response)
+	err := webhookExecutor.Call(context.TODO(), nil, &response)
 	assert.Error(t, err)
 }
 
@@ -252,7 +253,7 @@ func TestWebhookExecutor_Call_WithDifferentVersions(t *testing.T) {
 			executor := newWebhookExecutor(mockClient, "http://test.com", common.SyncHook, tt.hookVersion, nil, &webhookExecutorPlain{}, time.Now)
 
 			var respData map[string]interface{}
-			err := executor.Call(nil, &respData)
+			err := executor.Call(context.TODO(), nil, &respData)
 			assert.NoError(t, err)
 
 			// Verify the effective version is calculated correctly
@@ -294,7 +295,7 @@ func Test429Response_thrown_TooManyRequestError(t *testing.T) {
 				},
 			)
 
-			err := webhookExecutor.Call(nil, &v1.CustomizeHookResponse{})
+			err := webhookExecutor.Call(context.TODO(), nil, &v1.CustomizeHookResponse{})
 			var tooManyRequestError *TooManyRequestError
 			errors.As(err, &tooManyRequestError)
 			assert.Equal(t, expectAfterSecond, tooManyRequestError.AfterSecond)

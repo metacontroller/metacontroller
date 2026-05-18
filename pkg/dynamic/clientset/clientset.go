@@ -149,11 +149,11 @@ func (rc *ResourceClient) Namespace(namespace string) *ResourceClient {
 //
 // The update() func should modify the passed object and return true to go ahead
 // with the update, or false if no update is required.
-func (rc *ResourceClient) AtomicUpdate(orig *unstructured.Unstructured, update func(obj *unstructured.Unstructured) bool) (result *unstructured.Unstructured, err error) {
+func (rc *ResourceClient) AtomicUpdate(ctx context.Context, orig *unstructured.Unstructured, update func(obj *unstructured.Unstructured) bool) (result *unstructured.Unstructured, err error) {
 	name := orig.GetName()
 
 	err = retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-		current, err := rc.Get(context.TODO(), name, metav1.GetOptions{})
+		current, err := rc.Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
@@ -166,15 +166,15 @@ func (rc *ResourceClient) AtomicUpdate(orig *unstructured.Unstructured, update f
 			result = current
 			return nil
 		}
-		result, err = rc.Update(context.TODO(), current, metav1.UpdateOptions{})
+		result, err = rc.Update(ctx, current, metav1.UpdateOptions{})
 		return err
 	})
 	return result, err
 }
 
 // AddFinalizer adds the given finalizer to the list, if it isn't there already.
-func (rc *ResourceClient) AddFinalizer(orig *unstructured.Unstructured, name string) (*unstructured.Unstructured, error) {
-	return rc.AtomicUpdate(orig, func(obj *unstructured.Unstructured) bool {
+func (rc *ResourceClient) AddFinalizer(ctx context.Context, orig *unstructured.Unstructured, name string) (*unstructured.Unstructured, error) {
+	return rc.AtomicUpdate(ctx, orig, func(obj *unstructured.Unstructured) bool {
 		if controllerutil.ContainsFinalizer(obj, name) {
 			// Nothing to do. Abort update.
 			return false
@@ -185,8 +185,8 @@ func (rc *ResourceClient) AddFinalizer(orig *unstructured.Unstructured, name str
 }
 
 // RemoveFinalizer removes the given finalizer from the list, if it's there.
-func (rc *ResourceClient) RemoveFinalizer(orig *unstructured.Unstructured, name string) (*unstructured.Unstructured, error) {
-	return rc.AtomicUpdate(orig, func(obj *unstructured.Unstructured) bool {
+func (rc *ResourceClient) RemoveFinalizer(ctx context.Context, orig *unstructured.Unstructured, name string) (*unstructured.Unstructured, error) {
+	return rc.AtomicUpdate(ctx, orig, func(obj *unstructured.Unstructured) bool {
 		if !controllerutil.ContainsFinalizer(obj, name) {
 			// Nothing to do. Abort update.
 			return false
@@ -197,13 +197,13 @@ func (rc *ResourceClient) RemoveFinalizer(orig *unstructured.Unstructured, name 
 }
 
 // AtomicStatusUpdate is similar to AtomicUpdate, except that it updates status.
-func (rc *ResourceClient) AtomicStatusUpdate(orig *unstructured.Unstructured, update func(obj *unstructured.Unstructured) bool) (result *unstructured.Unstructured, err error) {
+func (rc *ResourceClient) AtomicStatusUpdate(ctx context.Context, orig *unstructured.Unstructured, update func(obj *unstructured.Unstructured) bool) (result *unstructured.Unstructured, err error) {
 	name := orig.GetName()
 
 	// We should call GetStatus (if it HasSubresource) to respect subresource
 	// RBAC rules, but the dynamic client does not support this yet.
 	err = retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-		current, err := rc.Get(context.TODO(), name, metav1.GetOptions{})
+		current, err := rc.Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
@@ -218,9 +218,9 @@ func (rc *ResourceClient) AtomicStatusUpdate(orig *unstructured.Unstructured, up
 		}
 
 		if rc.HasSubresource("status") {
-			result, err = rc.UpdateStatus(context.TODO(), current, metav1.UpdateOptions{})
+			result, err = rc.UpdateStatus(ctx, current, metav1.UpdateOptions{})
 		} else {
-			result, err = rc.Update(context.TODO(), current, metav1.UpdateOptions{})
+			result, err = rc.Update(ctx, current, metav1.UpdateOptions{})
 		}
 		return err
 	})

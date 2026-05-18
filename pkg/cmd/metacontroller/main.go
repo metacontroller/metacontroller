@@ -86,7 +86,9 @@ func main() {
 		"target-label-selector", *targetLabelSelector,
 		"version", version)
 
-	pprofStopChan := profile.EnablePprof(*pprofAddr)
+	stopCtx := signals.SetupSignalHandler()
+
+	pprofStopChan := profile.EnablePprof(stopCtx, *pprofAddr)
 
 	config, err := controllerruntime.GetConfig()
 	if err != nil {
@@ -120,7 +122,7 @@ func main() {
 
 	// Create a new manager with a stop function
 	// for resource cleanup
-	mgr, err := server.New(configuration)
+	mgr, err := server.New(stopCtx, configuration)
 	if err != nil {
 		logging.Logger.Error(err, "Cannot create server")
 		os.Exit(1)
@@ -140,10 +142,9 @@ func main() {
 	// before we exit
 	var wg sync.WaitGroup
 	wg.Add(1)
-	mgrStopChan := signals.SetupSignalHandler()
 	go func() {
 		defer wg.Done()
-		if err := mgr.Start(mgrStopChan); err != nil {
+		if err := mgr.Start(stopCtx); err != nil {
 			logging.Logger.Error(err, "Terminating")
 			os.Exit(1)
 		}
@@ -155,7 +156,7 @@ func main() {
 		logging.Logger.Info("Stopped pprof server")
 	}
 
-	<-mgrStopChan.Done()
+	<-stopCtx.Done()
 	logging.Logger.Info("Stopped controller manager")
 
 	wg.Wait()

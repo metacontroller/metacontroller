@@ -58,6 +58,7 @@ var fakeLogger = funcr.New(
 	})
 
 var customizeManagerWithNilController, _ = NewCustomizeManager(
+	context.TODO(),
 	"test",
 	fakeEnqueueParent,
 	&NilCustomizableController{},
@@ -70,6 +71,7 @@ var customizeManagerWithNilController, _ = NewCustomizeManager(
 )
 
 var customizeManagerWithFakeController, _ = NewCustomizeManager(
+	context.TODO(),
 	"test",
 	fakeEnqueueParent,
 	&FakeCustomizableController{},
@@ -86,7 +88,7 @@ func TestGetRelatedObjects_whenHookDisabled_returnEmptyMap(t *testing.T) {
 	parent.SetName("test")
 	parent.SetGeneration(1)
 
-	relatedObjects, err := customizeManagerWithNilController.GetRelatedObjects(parent)
+	relatedObjects, err := customizeManagerWithNilController.GetRelatedObjects(context.TODO(), parent)
 
 	if err != nil {
 		t.Errorf("Incorrect invocation, err should be nil, got: %v", err)
@@ -116,7 +118,7 @@ func TestGetRelatedObject_requestResponse(t *testing.T) {
 	parent.SetUID("some")
 	parent.SetGeneration(1)
 
-	response, err := customizeManagerWithFakeController.getCustomizeHookResponse(parent)
+	response, err := customizeManagerWithFakeController.getCustomizeHookResponse(context.TODO(), parent)
 
 	if err != nil {
 		t.Errorf("Incorrect invocation, err should be nil, got: %v", err)
@@ -697,7 +699,7 @@ func Test_matchRelatedRule(t *testing.T) {
 			}
 			var nsInformer *dynamicinformer.ResourceInformer
 			if tt.dynInformers.IsInitialized() {
-				nsInformer, _ = tt.dynInformers.Resource("v1", "namespaces")
+				nsInformer, _ = tt.dynInformers.Resource(context.TODO(), "v1", "namespaces")
 			}
 			rm := &Manager{
 				dynInformers: tt.dynInformers,
@@ -756,7 +758,7 @@ func TestGetRelatedObjects_ErrorWhenNamespaceSelectorForClusterScopedResource(t 
 
 	// Setup informers
 	dynInformers := dynamicinformer.NewSharedInformerFactory(dynClient, 0)
-	nsInformer, _ := dynInformers.Resource("v1", "namespaces")
+	nsInformer, _ := dynInformers.Resource(context.TODO(), "v1", "namespaces")
 	defer nsInformer.Close()
 
 	// Start informers and wait for sync
@@ -786,7 +788,6 @@ func TestGetRelatedObjects_ErrorWhenNamespaceSelectorForClusterScopedResource(t 
 		parentInformers:  common.NewInformerMap(),
 		relatedInformers: common.NewInformerMap(),
 		logger:           fakeLogger,
-		stopCh:           stopCh,
 		customizeCache:   newResponseCache(),
 	}
 
@@ -804,6 +805,7 @@ func TestGetRelatedObjects_ErrorWhenNamespaceSelectorForClusterScopedResource(t 
 		},
 	}
 	rm.customizeHook = NewHookExecutorStub(expectedResponse)
+	rm.Start(ctx)
 
 	// Trigger creation and wait for sync of the related informer
 	for {
@@ -833,7 +835,7 @@ func TestGetRelatedObjects_ErrorWhenNamespaceSelectorForClusterScopedResource(t 
 	parent.SetGeneration(1)
 
 	// Call GetRelatedObjects
-	_, err := rm.GetRelatedObjects(parent)
+	_, err := rm.GetRelatedObjects(ctx, parent)
 
 	if err == nil {
 		t.Fatal("Expected error when using namespaceSelector for cluster-scoped resource, but got nil")
@@ -902,7 +904,6 @@ func TestGetRelatedObjects_IgnoreNamespaceForClusterScopedResource(t *testing.T)
 		parentInformers:  common.NewInformerMap(),
 		relatedInformers: common.NewInformerMap(),
 		logger:           fakeLogger,
-		stopCh:           stopCh,
 		customizeCache:   newResponseCache(),
 	}
 
@@ -925,6 +926,7 @@ func TestGetRelatedObjects_IgnoreNamespaceForClusterScopedResource(t *testing.T)
 	// Trigger creation and wait for sync of the related informer
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
+	rm.Start(ctx)
 	for {
 		_, informer, err := rm.getRelatedClient("rbac.authorization.k8s.io/v1", "clusterroles")
 		if err == nil {
@@ -952,7 +954,7 @@ func TestGetRelatedObjects_IgnoreNamespaceForClusterScopedResource(t *testing.T)
 	parent.SetGeneration(1)
 
 	// Call GetRelatedObjects
-	relatedObjects, err := rm.GetRelatedObjects(parent)
+	relatedObjects, err := rm.GetRelatedObjects(ctx, parent)
 
 	if err != nil {
 		t.Fatalf("Expected no error, but got: %v", err)

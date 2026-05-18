@@ -59,9 +59,10 @@ type Metacontroller struct {
 	ssaOptions *common.ApplyOptions
 
 	logger logr.Logger
+	ctx    context.Context
 }
 
-func NewMetacontroller(controllerContext common.ControllerContext, numWorkers int, ssaOptions *common.ApplyOptions) *Metacontroller {
+func NewMetacontroller(ctx context.Context, controllerContext common.ControllerContext, numWorkers int, ssaOptions *common.ApplyOptions) *Metacontroller {
 	mc := &Metacontroller{
 		k8sClient:     controllerContext.K8sClient,
 		resources:     controllerContext.Resources,
@@ -73,6 +74,7 @@ func NewMetacontroller(controllerContext common.ControllerContext, numWorkers in
 		numWorkers: numWorkers,
 
 		logger: logging.Logger.WithName("decorator"),
+		ctx:    ctx,
 	}
 
 	return mc
@@ -106,11 +108,11 @@ func (mc *Metacontroller) Reconcile(ctx context.Context, request reconcile.Reque
 		return reconcile.Result{}, err
 	}
 
-	reconcileErr := mc.reconcileDecoratorController(&dc)
+	reconcileErr := mc.reconcileDecoratorController(ctx, &dc)
 	return reconcile.Result{}, reconcileErr
 }
 
-func (mc *Metacontroller) reconcileDecoratorController(dc *v1alpha1.DecoratorController) error {
+func (mc *Metacontroller) reconcileDecoratorController(ctx context.Context, dc *v1alpha1.DecoratorController) error {
 	if c, ok := mc.decoratorControllers.Load(dc.Name); ok {
 		// The controller was already started.
 		if apiequality.Semantic.DeepEqual(dc.Spec, c.dc.Spec) {
@@ -129,6 +131,7 @@ func (mc *Metacontroller) reconcileDecoratorController(dc *v1alpha1.DecoratorCon
 	}
 
 	c, err := newDecoratorController(
+		mc.ctx,
 		mc.resources,
 		mc.dynClient,
 		mc.dynInformers,
