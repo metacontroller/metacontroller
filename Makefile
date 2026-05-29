@@ -29,6 +29,10 @@ build_debug: build
 unit-test: test-setup
 	@gotestsum -- -race -coverpkg="${COVER_PKGS}" -coverprofile=test/integration/hack/tmp/unit-test-coverage.out ${PKGS}
 
+.PHONY: lint
+lint:
+	go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest run --timeout 10m ./...
+
 .PHONY: integration-test
 integration-test: test-setup
 	@cd ./test/integration; \
