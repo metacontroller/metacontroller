@@ -4,7 +4,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: unapproved, request not yet submitted
-    controller-gen.kubebuilder.io/version: v0.20.1
+    controller-gen.kubebuilder.io/version: v0.21.0
   name: compositecontrollers.metacontroller.k8s.io
 spec:
   group: metacontroller.k8s.io
@@ -95,6 +95,69 @@ spec:
                         type: string
                       webhook:
                         properties:
+                          caBundle:
+                            description: |-
+                              CABundle configures the CA certificate(s) used to verify the webhook server's
+                              TLS certificate when the endpoint uses HTTPS with a private or self-signed CA.
+                              If not specified, the system trust roots are used (publicly-trusted CAs such as
+                              Let's Encrypt work without this field).
+                              Exactly one of inline, secretRef, or configMapRef must be set when this field is present.
+
+                              updated, and is not reloaded automatically if the underlying Secret or ConfigMap changes.
+                              To pick up a rotated CA, update the controller CR (e.g. add/change an annotation) to
+                              trigger re-creation of the webhook executor with the new certificate data.
+                            properties:
+                              configMapRef:
+                                description: |-
+                                  ConfigMapRef references a key in a Kubernetes ConfigMap containing
+                                  PEM-encoded CA certificate(s). This is the idiomatic approach for
+                                  public CA data that does not need to be stored in a Secret.
+                                properties:
+                                  key:
+                                    description: |-
+                                      Key is the key within the Secret's or ConfigMap's data map.
+                                      Defaults to "ca.crt" if not specified.
+                                    type: string
+                                  name:
+                                    description: Name is the metadata.name of the
+                                      target Secret or ConfigMap.
+                                    type: string
+                                  namespace:
+                                    description: Namespace is the metadata.namespace
+                                      of the target Secret or ConfigMap.
+                                    type: string
+                                required:
+                                - name
+                                - namespace
+                                type: object
+                              inline:
+                                description: Inline contains PEM-encoded CA certificate(s)
+                                  directly embedded in the spec.
+                                type: string
+                              secretRef:
+                                description: |-
+                                  SecretRef references a key in a Kubernetes Secret containing PEM-encoded
+                                  CA certificate(s). Useful when the CA is already stored in a Secret
+                                  (e.g. created by cert-manager alongside a TLS keypair).
+                                properties:
+                                  key:
+                                    description: |-
+                                      Key is the key within the Secret's or ConfigMap's data map.
+                                      Defaults to "ca.crt" if not specified.
+                                    type: string
+                                  name:
+                                    description: Name is the metadata.name of the
+                                      target Secret or ConfigMap.
+                                    type: string
+                                  namespace:
+                                    description: Namespace is the metadata.namespace
+                                      of the target Secret or ConfigMap.
+                                    type: string
+                                required:
+                                - name
+                                - namespace
+                                type: object
+                            type: object
                           etag:
                             properties:
                               cacheCleanupSeconds:
@@ -148,6 +211,69 @@ spec:
                         type: string
                       webhook:
                         properties:
+                          caBundle:
+                            description: |-
+                              CABundle configures the CA certificate(s) used to verify the webhook server's
+                              TLS certificate when the endpoint uses HTTPS with a private or self-signed CA.
+                              If not specified, the system trust roots are used (publicly-trusted CAs such as
+                              Let's Encrypt work without this field).
+                              Exactly one of inline, secretRef, or configMapRef must be set when this field is present.
+
+                              updated, and is not reloaded automatically if the underlying Secret or ConfigMap changes.
+                              To pick up a rotated CA, update the controller CR (e.g. add/change an annotation) to
+                              trigger re-creation of the webhook executor with the new certificate data.
+                            properties:
+                              configMapRef:
+                                description: |-
+                                  ConfigMapRef references a key in a Kubernetes ConfigMap containing
+                                  PEM-encoded CA certificate(s). This is the idiomatic approach for
+                                  public CA data that does not need to be stored in a Secret.
+                                properties:
+                                  key:
+                                    description: |-
+                                      Key is the key within the Secret's or ConfigMap's data map.
+                                      Defaults to "ca.crt" if not specified.
+                                    type: string
+                                  name:
+                                    description: Name is the metadata.name of the
+                                      target Secret or ConfigMap.
+                                    type: string
+                                  namespace:
+                                    description: Namespace is the metadata.namespace
+                                      of the target Secret or ConfigMap.
+                                    type: string
+                                required:
+                                - name
+                                - namespace
+                                type: object
+                              inline:
+                                description: Inline contains PEM-encoded CA certificate(s)
+                                  directly embedded in the spec.
+                                type: string
+                              secretRef:
+                                description: |-
+                                  SecretRef references a key in a Kubernetes Secret containing PEM-encoded
+                                  CA certificate(s). Useful when the CA is already stored in a Secret
+                                  (e.g. created by cert-manager alongside a TLS keypair).
+                                properties:
+                                  key:
+                                    description: |-
+                                      Key is the key within the Secret's or ConfigMap's data map.
+                                      Defaults to "ca.crt" if not specified.
+                                    type: string
+                                  name:
+                                    description: Name is the metadata.name of the
+                                      target Secret or ConfigMap.
+                                    type: string
+                                  namespace:
+                                    description: Namespace is the metadata.namespace
+                                      of the target Secret or ConfigMap.
+                                    type: string
+                                required:
+                                - name
+                                - namespace
+                                type: object
+                            type: object
                           etag:
                             properties:
                               cacheCleanupSeconds:
@@ -201,6 +327,69 @@ spec:
                         type: string
                       webhook:
                         properties:
+                          caBundle:
+                            description: |-
+                              CABundle configures the CA certificate(s) used to verify the webhook server's
+                              TLS certificate when the endpoint uses HTTPS with a private or self-signed CA.
+                              If not specified, the system trust roots are used (publicly-trusted CAs such as
+                              Let's Encrypt work without this field).
+                              Exactly one of inline, secretRef, or configMapRef must be set when this field is present.
+
+                              updated, and is not reloaded automatically if the underlying Secret or ConfigMap changes.
+                              To pick up a rotated CA, update the controller CR (e.g. add/change an annotation) to
+                              trigger re-creation of the webhook executor with the new certificate data.
+                            properties:
+                              configMapRef:
+                                description: |-
+                                  ConfigMapRef references a key in a Kubernetes ConfigMap containing
+                                  PEM-encoded CA certificate(s). This is the idiomatic approach for
+                                  public CA data that does not need to be stored in a Secret.
+                                properties:
+                                  key:
+                                    description: |-
+                                      Key is the key within the Secret's or ConfigMap's data map.
+                                      Defaults to "ca.crt" if not specified.
+                                    type: string
+                                  name:
+                                    description: Name is the metadata.name of the
+                                      target Secret or ConfigMap.
+                                    type: string
+                                  namespace:
+                                    description: Namespace is the metadata.namespace
+                                      of the target Secret or ConfigMap.
+                                    type: string
+                                required:
+                                - name
+                                - namespace
+                                type: object
+                              inline:
+                                description: Inline contains PEM-encoded CA certificate(s)
+                                  directly embedded in the spec.
+                                type: string
+                              secretRef:
+                                description: |-
+                                  SecretRef references a key in a Kubernetes Secret containing PEM-encoded
+                                  CA certificate(s). Useful when the CA is already stored in a Secret
+                                  (e.g. created by cert-manager alongside a TLS keypair).
+                                properties:
+                                  key:
+                                    description: |-
+                                      Key is the key within the Secret's or ConfigMap's data map.
+                                      Defaults to "ca.crt" if not specified.
+                                    type: string
+                                  name:
+                                    description: Name is the metadata.name of the
+                                      target Secret or ConfigMap.
+                                    type: string
+                                  namespace:
+                                    description: Namespace is the metadata.namespace
+                                      of the target Secret or ConfigMap.
+                                    type: string
+                                required:
+                                - name
+                                - namespace
+                                type: object
+                            type: object
                           etag:
                             properties:
                               cacheCleanupSeconds:
@@ -254,6 +443,69 @@ spec:
                         type: string
                       webhook:
                         properties:
+                          caBundle:
+                            description: |-
+                              CABundle configures the CA certificate(s) used to verify the webhook server's
+                              TLS certificate when the endpoint uses HTTPS with a private or self-signed CA.
+                              If not specified, the system trust roots are used (publicly-trusted CAs such as
+                              Let's Encrypt work without this field).
+                              Exactly one of inline, secretRef, or configMapRef must be set when this field is present.
+
+                              updated, and is not reloaded automatically if the underlying Secret or ConfigMap changes.
+                              To pick up a rotated CA, update the controller CR (e.g. add/change an annotation) to
+                              trigger re-creation of the webhook executor with the new certificate data.
+                            properties:
+                              configMapRef:
+                                description: |-
+                                  ConfigMapRef references a key in a Kubernetes ConfigMap containing
+                                  PEM-encoded CA certificate(s). This is the idiomatic approach for
+                                  public CA data that does not need to be stored in a Secret.
+                                properties:
+                                  key:
+                                    description: |-
+                                      Key is the key within the Secret's or ConfigMap's data map.
+                                      Defaults to "ca.crt" if not specified.
+                                    type: string
+                                  name:
+                                    description: Name is the metadata.name of the
+                                      target Secret or ConfigMap.
+                                    type: string
+                                  namespace:
+                                    description: Namespace is the metadata.namespace
+                                      of the target Secret or ConfigMap.
+                                    type: string
+                                required:
+                                - name
+                                - namespace
+                                type: object
+                              inline:
+                                description: Inline contains PEM-encoded CA certificate(s)
+                                  directly embedded in the spec.
+                                type: string
+                              secretRef:
+                                description: |-
+                                  SecretRef references a key in a Kubernetes Secret containing PEM-encoded
+                                  CA certificate(s). Useful when the CA is already stored in a Secret
+                                  (e.g. created by cert-manager alongside a TLS keypair).
+                                properties:
+                                  key:
+                                    description: |-
+                                      Key is the key within the Secret's or ConfigMap's data map.
+                                      Defaults to "ca.crt" if not specified.
+                                    type: string
+                                  name:
+                                    description: Name is the metadata.name of the
+                                      target Secret or ConfigMap.
+                                    type: string
+                                  namespace:
+                                    description: Namespace is the metadata.namespace
+                                      of the target Secret or ConfigMap.
+                                    type: string
+                                required:
+                                - name
+                                - namespace
+                                type: object
+                            type: object
                           etag:
                             properties:
                               cacheCleanupSeconds:
@@ -307,6 +559,69 @@ spec:
                         type: string
                       webhook:
                         properties:
+                          caBundle:
+                            description: |-
+                              CABundle configures the CA certificate(s) used to verify the webhook server's
+                              TLS certificate when the endpoint uses HTTPS with a private or self-signed CA.
+                              If not specified, the system trust roots are used (publicly-trusted CAs such as
+                              Let's Encrypt work without this field).
+                              Exactly one of inline, secretRef, or configMapRef must be set when this field is present.
+
+                              updated, and is not reloaded automatically if the underlying Secret or ConfigMap changes.
+                              To pick up a rotated CA, update the controller CR (e.g. add/change an annotation) to
+                              trigger re-creation of the webhook executor with the new certificate data.
+                            properties:
+                              configMapRef:
+                                description: |-
+                                  ConfigMapRef references a key in a Kubernetes ConfigMap containing
+                                  PEM-encoded CA certificate(s). This is the idiomatic approach for
+                                  public CA data that does not need to be stored in a Secret.
+                                properties:
+                                  key:
+                                    description: |-
+                                      Key is the key within the Secret's or ConfigMap's data map.
+                                      Defaults to "ca.crt" if not specified.
+                                    type: string
+                                  name:
+                                    description: Name is the metadata.name of the
+                                      target Secret or ConfigMap.
+                                    type: string
+                                  namespace:
+                                    description: Namespace is the metadata.namespace
+                                      of the target Secret or ConfigMap.
+                                    type: string
+                                required:
+                                - name
+                                - namespace
+                                type: object
+                              inline:
+                                description: Inline contains PEM-encoded CA certificate(s)
+                                  directly embedded in the spec.
+                                type: string
+                              secretRef:
+                                description: |-
+                                  SecretRef references a key in a Kubernetes Secret containing PEM-encoded
+                                  CA certificate(s). Useful when the CA is already stored in a Secret
+                                  (e.g. created by cert-manager alongside a TLS keypair).
+                                properties:
+                                  key:
+                                    description: |-
+                                      Key is the key within the Secret's or ConfigMap's data map.
+                                      Defaults to "ca.crt" if not specified.
+                                    type: string
+                                  name:
+                                    description: Name is the metadata.name of the
+                                      target Secret or ConfigMap.
+                                    type: string
+                                  namespace:
+                                    description: Namespace is the metadata.namespace
+                                      of the target Secret or ConfigMap.
+                                    type: string
+                                required:
+                                - name
+                                - namespace
+                                type: object
+                            type: object
                           etag:
                             properties:
                               cacheCleanupSeconds:
@@ -441,7 +756,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: unapproved, request not yet submitted
-    controller-gen.kubebuilder.io/version: v0.20.1
+    controller-gen.kubebuilder.io/version: v0.21.0
   name: controllerrevisions.metacontroller.k8s.io
 spec:
   group: metacontroller.k8s.io
@@ -508,7 +823,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: unapproved, request not yet submitted
-    controller-gen.kubebuilder.io/version: v0.20.1
+    controller-gen.kubebuilder.io/version: v0.21.0
   name: decoratorcontrollers.metacontroller.k8s.io
 spec:
   group: metacontroller.k8s.io
@@ -581,6 +896,69 @@ spec:
                         type: string
                       webhook:
                         properties:
+                          caBundle:
+                            description: |-
+                              CABundle configures the CA certificate(s) used to verify the webhook server's
+                              TLS certificate when the endpoint uses HTTPS with a private or self-signed CA.
+                              If not specified, the system trust roots are used (publicly-trusted CAs such as
+                              Let's Encrypt work without this field).
+                              Exactly one of inline, secretRef, or configMapRef must be set when this field is present.
+
+                              updated, and is not reloaded automatically if the underlying Secret or ConfigMap changes.
+                              To pick up a rotated CA, update the controller CR (e.g. add/change an annotation) to
+                              trigger re-creation of the webhook executor with the new certificate data.
+                            properties:
+                              configMapRef:
+                                description: |-
+                                  ConfigMapRef references a key in a Kubernetes ConfigMap containing
+                                  PEM-encoded CA certificate(s). This is the idiomatic approach for
+                                  public CA data that does not need to be stored in a Secret.
+                                properties:
+                                  key:
+                                    description: |-
+                                      Key is the key within the Secret's or ConfigMap's data map.
+                                      Defaults to "ca.crt" if not specified.
+                                    type: string
+                                  name:
+                                    description: Name is the metadata.name of the
+                                      target Secret or ConfigMap.
+                                    type: string
+                                  namespace:
+                                    description: Namespace is the metadata.namespace
+                                      of the target Secret or ConfigMap.
+                                    type: string
+                                required:
+                                - name
+                                - namespace
+                                type: object
+                              inline:
+                                description: Inline contains PEM-encoded CA certificate(s)
+                                  directly embedded in the spec.
+                                type: string
+                              secretRef:
+                                description: |-
+                                  SecretRef references a key in a Kubernetes Secret containing PEM-encoded
+                                  CA certificate(s). Useful when the CA is already stored in a Secret
+                                  (e.g. created by cert-manager alongside a TLS keypair).
+                                properties:
+                                  key:
+                                    description: |-
+                                      Key is the key within the Secret's or ConfigMap's data map.
+                                      Defaults to "ca.crt" if not specified.
+                                    type: string
+                                  name:
+                                    description: Name is the metadata.name of the
+                                      target Secret or ConfigMap.
+                                    type: string
+                                  namespace:
+                                    description: Namespace is the metadata.namespace
+                                      of the target Secret or ConfigMap.
+                                    type: string
+                                required:
+                                - name
+                                - namespace
+                                type: object
+                            type: object
                           etag:
                             properties:
                               cacheCleanupSeconds:
@@ -634,6 +1012,69 @@ spec:
                         type: string
                       webhook:
                         properties:
+                          caBundle:
+                            description: |-
+                              CABundle configures the CA certificate(s) used to verify the webhook server's
+                              TLS certificate when the endpoint uses HTTPS with a private or self-signed CA.
+                              If not specified, the system trust roots are used (publicly-trusted CAs such as
+                              Let's Encrypt work without this field).
+                              Exactly one of inline, secretRef, or configMapRef must be set when this field is present.
+
+                              updated, and is not reloaded automatically if the underlying Secret or ConfigMap changes.
+                              To pick up a rotated CA, update the controller CR (e.g. add/change an annotation) to
+                              trigger re-creation of the webhook executor with the new certificate data.
+                            properties:
+                              configMapRef:
+                                description: |-
+                                  ConfigMapRef references a key in a Kubernetes ConfigMap containing
+                                  PEM-encoded CA certificate(s). This is the idiomatic approach for
+                                  public CA data that does not need to be stored in a Secret.
+                                properties:
+                                  key:
+                                    description: |-
+                                      Key is the key within the Secret's or ConfigMap's data map.
+                                      Defaults to "ca.crt" if not specified.
+                                    type: string
+                                  name:
+                                    description: Name is the metadata.name of the
+                                      target Secret or ConfigMap.
+                                    type: string
+                                  namespace:
+                                    description: Namespace is the metadata.namespace
+                                      of the target Secret or ConfigMap.
+                                    type: string
+                                required:
+                                - name
+                                - namespace
+                                type: object
+                              inline:
+                                description: Inline contains PEM-encoded CA certificate(s)
+                                  directly embedded in the spec.
+                                type: string
+                              secretRef:
+                                description: |-
+                                  SecretRef references a key in a Kubernetes Secret containing PEM-encoded
+                                  CA certificate(s). Useful when the CA is already stored in a Secret
+                                  (e.g. created by cert-manager alongside a TLS keypair).
+                                properties:
+                                  key:
+                                    description: |-
+                                      Key is the key within the Secret's or ConfigMap's data map.
+                                      Defaults to "ca.crt" if not specified.
+                                    type: string
+                                  name:
+                                    description: Name is the metadata.name of the
+                                      target Secret or ConfigMap.
+                                    type: string
+                                  namespace:
+                                    description: Namespace is the metadata.namespace
+                                      of the target Secret or ConfigMap.
+                                    type: string
+                                required:
+                                - name
+                                - namespace
+                                type: object
+                            type: object
                           etag:
                             properties:
                               cacheCleanupSeconds:
@@ -687,6 +1128,69 @@ spec:
                         type: string
                       webhook:
                         properties:
+                          caBundle:
+                            description: |-
+                              CABundle configures the CA certificate(s) used to verify the webhook server's
+                              TLS certificate when the endpoint uses HTTPS with a private or self-signed CA.
+                              If not specified, the system trust roots are used (publicly-trusted CAs such as
+                              Let's Encrypt work without this field).
+                              Exactly one of inline, secretRef, or configMapRef must be set when this field is present.
+
+                              updated, and is not reloaded automatically if the underlying Secret or ConfigMap changes.
+                              To pick up a rotated CA, update the controller CR (e.g. add/change an annotation) to
+                              trigger re-creation of the webhook executor with the new certificate data.
+                            properties:
+                              configMapRef:
+                                description: |-
+                                  ConfigMapRef references a key in a Kubernetes ConfigMap containing
+                                  PEM-encoded CA certificate(s). This is the idiomatic approach for
+                                  public CA data that does not need to be stored in a Secret.
+                                properties:
+                                  key:
+                                    description: |-
+                                      Key is the key within the Secret's or ConfigMap's data map.
+                                      Defaults to "ca.crt" if not specified.
+                                    type: string
+                                  name:
+                                    description: Name is the metadata.name of the
+                                      target Secret or ConfigMap.
+                                    type: string
+                                  namespace:
+                                    description: Namespace is the metadata.namespace
+                                      of the target Secret or ConfigMap.
+                                    type: string
+                                required:
+                                - name
+                                - namespace
+                                type: object
+                              inline:
+                                description: Inline contains PEM-encoded CA certificate(s)
+                                  directly embedded in the spec.
+                                type: string
+                              secretRef:
+                                description: |-
+                                  SecretRef references a key in a Kubernetes Secret containing PEM-encoded
+                                  CA certificate(s). Useful when the CA is already stored in a Secret
+                                  (e.g. created by cert-manager alongside a TLS keypair).
+                                properties:
+                                  key:
+                                    description: |-
+                                      Key is the key within the Secret's or ConfigMap's data map.
+                                      Defaults to "ca.crt" if not specified.
+                                    type: string
+                                  name:
+                                    description: Name is the metadata.name of the
+                                      target Secret or ConfigMap.
+                                    type: string
+                                  namespace:
+                                    description: Namespace is the metadata.namespace
+                                      of the target Secret or ConfigMap.
+                                    type: string
+                                required:
+                                - name
+                                - namespace
+                                type: object
+                            type: object
                           etag:
                             properties:
                               cacheCleanupSeconds:

@@ -18,6 +18,8 @@ package hooks
 
 import (
 	"bytes"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -60,7 +62,8 @@ func NewWebhookExecutor(
 	hookVersion *v1alpha1.HookVersion,
 	controllerName string,
 	controllerType common.ControllerType,
-	hookType common.HookType) (WebhookExecutor, error) {
+	hookType common.HookType,
+	caBundle []byte) (WebhookExecutor, error) {
 	if webhook == nil {
 		return nil, nil
 	}
@@ -73,6 +76,13 @@ func NewWebhookExecutor(
 		logging.Logger.Info(err.Error())
 	}
 	client := &http.Client{Timeout: hookTimeout}
+	if len(caBundle) > 0 {
+		transport, err := buildTLSTransport(caBundle)
+		if err != nil {
+			return nil, err
+		}
+		client.Transport = transport
+	}
 	client, err = metrics.InstrumentClientWithConstLabels(
 		controllerName,
 		controllerType,
@@ -282,4 +292,18 @@ func webhookTimeout(webhook *v1alpha1.Webhook) (time.Duration, error) {
 	}
 
 	return webhook.Timeout.Duration, nil
+}
+
+// buildTLSTransport creates an http.Transport that uses the given PEM-encoded
+// CA certificate(s) as the only trusted roots for TLS verification.
+func buildTLSTransport(caBundle []byte) (*http.Transport, error) {
+	certPool := x509.NewCertPool()
+	if !certPool.AppendCertsFromPEM(caBundle) {
+		return nil, fmt.Errorf("caBundle: no valid PEM-encoded certificates found in the provided CA bundle")
+	}
+	return &http.Transport{
+		TLSClientConfig: &tls.Config{
+			RootCAs: certPool,
+		},
+	}, nil
 }

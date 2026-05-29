@@ -2,12 +2,15 @@ package hooks
 
 import (
 	"bytes"
+	"crypto/x509"
+	"encoding/pem"
 	"fmt"
 	"io"
 	"metacontroller/pkg/controller/common"
 	v1 "metacontroller/pkg/controller/common/customize/api/v1"
 	"metacontroller/pkg/logging"
 	"net/http"
+	"net/http/httptest"
 	"strconv"
 	"testing"
 	"time"
@@ -15,6 +18,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/go-logr/logr/testr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -24,7 +28,7 @@ import (
 )
 
 func TestNewHookExecutor_whenNilWebHook_returnNilWebhookExecutor(t *testing.T) {
-	executor, err := NewWebhookExecutor(nil, nil, "", common.CompositeController, "")
+	executor, err := NewWebhookExecutor(nil, nil, "", common.CompositeController, "", nil)
 
 	assert.NoError(t, err)
 
@@ -304,4 +308,53 @@ func Test429Response_thrown_TooManyRequestError(t *testing.T) {
 
 func toPointer(mode v1alpha1.ResponseUnmarshallMode) *v1alpha1.ResponseUnmarshallMode {
 	return &mode
+}
+
+func TestNewWebhookExecutor_TLSEnforcement(t *testing.T) {
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{}`))
+	}))
+	defer srv.Close()
+
+	cert, err := x509.ParseCertificate(srv.TLS.Certificates[0].Certificate[0])
+	require.NoError(t, err)
+	var pemBuf bytes.Buffer
+	require.NoError(t, pem.Encode(&pemBuf, &pem.Block{Type: "CERTIFICATE", Bytes: cert.Raw}))
+	serverCAPEM := pemBuf.Bytes()
+
+	url := srv.URL + "/sync"
+
+	tests := []struct {
+		name            string
+		caBundle        []byte
+		wantErrContains string
+	}{
+		{
+			name:     "correct CA bundle, call succeeds",
+			caBundle: serverCAPEM,
+		},
+		{
+			name:            "absent CA bundle, call fails with certificate error",
+			caBundle:        nil,
+			wantErrContains: "certificate",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			webhook := &v1alpha1.Webhook{URL: &url}
+			executor, err := NewWebhookExecutor(webhook, nil, "test-controller", common.CompositeController, "sync", tt.caBundle)
+			require.NoError(t, err)
+
+			var response struct{}
+			err = executor.Call(nil, &response)
+			if tt.wantErrContains != "" {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tt.wantErrContains)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
 }

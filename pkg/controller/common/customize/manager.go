@@ -17,6 +17,7 @@ limitations under the License.
 package customize
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"metacontroller/pkg/controller/common/api"
@@ -44,6 +45,8 @@ import (
 	"metacontroller/pkg/controller/common"
 	dynamicclientset "metacontroller/pkg/dynamic/clientset"
 	dynamicinformer "metacontroller/pkg/dynamic/informer"
+
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type relatedObjectsSelectionType string
@@ -98,11 +101,20 @@ func NewCustomizeManager(
 	parentInformers *common.InformerMap,
 	parentKinds *common.GroupKindMap,
 	logger logr.Logger,
-	controllerType common.ControllerType) (*Manager, error) {
+	controllerType common.ControllerType,
+	k8sClient client.Client) (*Manager, error) {
 	var hook hooks.Hook
 	var err error
 	if controller.GetCustomizeHook() != nil {
-		hook, err = hooks.NewHook(controller.GetCustomizeHook(), name, controllerType, common.CustomizeHook)
+		customizeHook := controller.GetCustomizeHook()
+		var caBundle []byte
+		if customizeHook.Webhook != nil {
+			caBundle, err = hooks.ResolveCABundle(context.Background(), k8sClient, customizeHook.Webhook.CABundle)
+			if err != nil {
+				return nil, fmt.Errorf("can't resolve caBundle for customize hook: %w", err)
+			}
+		}
+		hook, err = hooks.NewHook(customizeHook, name, controllerType, common.CustomizeHook, caBundle)
 		if err != nil {
 			return nil, err
 		}
