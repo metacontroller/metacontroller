@@ -61,6 +61,7 @@ func defaultCustomizeManager() *customize.Manager {
 		common.NewGroupKindMap(),
 		logging.Logger,
 		common.DecoratorController,
+		nil,
 	)
 	return customizeManager
 }

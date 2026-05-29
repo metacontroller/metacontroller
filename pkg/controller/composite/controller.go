@@ -62,6 +62,8 @@ import (
 	dynamicdiscovery "metacontroller/pkg/dynamic/discovery"
 	dynamicinformer "metacontroller/pkg/dynamic/informer"
 	k8s "metacontroller/pkg/third_party/kubernetes"
+
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type parentController struct {
@@ -107,6 +109,7 @@ func newParentController(
 	numWorkers int,
 	ssaOptions *common.ApplyOptions,
 	logger logr.Logger,
+	k8sClient client.Client,
 ) (pc *parentController, newErr error) {
 	// Make a dynamic client for the parent resource.
 	parentClient, err := dynClient.Resource(cc.Spec.ParentResource.APIVersion, cc.Spec.ParentResource.Resource)
@@ -159,11 +162,19 @@ func newParentController(
 	if cc.Spec.Hooks == nil {
 		return nil, fmt.Errorf("no hooks defined")
 	}
-	syncHook, err := hooks.NewHook(cc.Spec.Hooks.Sync, cc.Name, common.CompositeController, common.SyncHook)
+	syncCABundle, err := hooks.ResolveCABundle(context.Background(), k8sClient, syncWebhookCABundle(cc))
+	if err != nil {
+		return nil, fmt.Errorf("can't resolve caBundle for sync hook: %w", err)
+	}
+	syncHook, err := hooks.NewHook(cc.Spec.Hooks.Sync, cc.Name, common.CompositeController, common.SyncHook, syncCABundle)
 	if err != nil {
 		return nil, err
 	}
-	finalizeHook, err := hooks.NewHook(cc.Spec.Hooks.Finalize, cc.Name, common.CompositeController, common.FinalizeHook)
+	finalizeCABundle, err := hooks.ResolveCABundle(context.Background(), k8sClient, finalizeWebhookCABundle(cc))
+	if err != nil {
+		return nil, fmt.Errorf("can't resolve caBundle for finalize hook: %w", err)
+	}
+	finalizeHook, err := hooks.NewHook(cc.Spec.Hooks.Finalize, cc.Name, common.CompositeController, common.FinalizeHook, finalizeCABundle)
 	if err != nil {
 		return nil, err
 	}
@@ -215,12 +226,29 @@ func newParentController(
 		parentResources,
 		pc.logger,
 		common.CompositeController,
+		k8sClient,
 	)
 	if err != nil {
 		return nil, err
 	}
 
 	return pc, nil
+}
+
+// syncWebhookCABundle extracts the CABundle from the sync hook spec.
+func syncWebhookCABundle(cc *v1alpha1.CompositeController) *v1alpha1.CABundle {
+	if cc.Spec.Hooks == nil || cc.Spec.Hooks.Sync == nil || cc.Spec.Hooks.Sync.Webhook == nil {
+		return nil
+	}
+	return cc.Spec.Hooks.Sync.Webhook.CABundle
+}
+
+// finalizeWebhookCABundle extracts the CABundle from the finalize hook spec.
+func finalizeWebhookCABundle(cc *v1alpha1.CompositeController) *v1alpha1.CABundle {
+	if cc.Spec.Hooks == nil || cc.Spec.Hooks.Finalize == nil || cc.Spec.Hooks.Finalize.Webhook == nil {
+		return nil
+	}
+	return cc.Spec.Hooks.Finalize.Webhook.CABundle
 }
 
 func (pc *parentController) Start() {

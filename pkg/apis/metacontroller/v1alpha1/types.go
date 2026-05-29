@@ -154,6 +154,48 @@ type Webhook struct {
 	// Sets the json unmarshall mode. One of the 'loose' or 'strict'. In 'strict'
 	// mode additional checks are performed to detect unknown and duplicated fields.
 	ResponseUnmarshallMode *ResponseUnmarshallMode `json:"responseUnMarshallMode,omitempty"`
+	// CABundle configures the CA certificate(s) used to verify the webhook server's
+	// TLS certificate when the endpoint uses HTTPS with a private or self-signed CA.
+	// If not specified, the system trust roots are used.
+	// Exactly one of inline, secretRef, or configMapRef must be set when this field is present.
+	//
+	// TODO(hot-reload): The CA bundle is resolved once when the controller CR is created or
+	// updated, and is not reloaded automatically if the underlying Secret or ConfigMap changes.
+	// To pick up a rotated CA, update the controller CR (e.g. add/change an annotation) to
+	// trigger re-creation of the webhook executor with the new certificate data.
+	// +optional
+	CABundle *CABundle `json:"caBundle,omitempty"`
+}
+
+// CABundle specifies the source of PEM-encoded CA certificate(s) used to verify
+// the TLS certificate presented by a webhook server.
+// Exactly one of inline, secretRef, or configMapRef must be set.
+type CABundle struct {
+	// Inline contains PEM-encoded CA certificate(s) directly embedded in the spec.
+	// +optional
+	Inline *string `json:"inline,omitempty"`
+
+	// SecretRef references a key in a Kubernetes Secret containing PEM-encoded
+	// CA certificate(s).
+	// +optional
+	SecretRef *ResourceKeyRef `json:"secretRef,omitempty"`
+
+	// ConfigMapRef references a key in a Kubernetes ConfigMap containing
+	// PEM-encoded CA certificate(s).
+	// +optional
+	ConfigMapRef *ResourceKeyRef `json:"configMapRef,omitempty"`
+}
+
+// ResourceKeyRef identifies a specific key within a Kubernetes Secret or ConfigMap.
+type ResourceKeyRef struct {
+	// Name is the metadata.name of the target Secret or ConfigMap.
+	Name string `json:"name"`
+	// Namespace is the metadata.namespace of the target Secret or ConfigMap.
+	Namespace string `json:"namespace"`
+	// Key is the key within the Secret's or ConfigMap's data map.
+	// +kubebuilder:default="ca.crt"
+	// +optional
+	Key string `json:"key,omitempty"`
 }
 
 // +kubebuilder:validation:Enum:={"loose","strict"}

@@ -177,7 +177,8 @@ func (mc *Metacontroller) reconcileCompositeController(cc *v1alpha1.CompositeCon
 		cc,
 		mc.numWorkers,
 		mc.ssaOptions,
-		mc.logger)
+		mc.logger,
+		mc.k8sClient)
 	if err != nil {
 		mc.eventRecorder.Eventf(
 			cc,

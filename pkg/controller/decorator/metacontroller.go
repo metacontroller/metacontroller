@@ -137,6 +137,7 @@ func (mc *Metacontroller) reconcileDecoratorController(dc *v1alpha1.DecoratorCon
 		mc.numWorkers,
 		mc.ssaOptions,
 		mc.logger,
+		mc.k8sClient,
 	)
 	if err != nil {
 		mc.eventRecorder.Eventf(
