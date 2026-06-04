@@ -148,3 +148,22 @@ func (f *Fixture) Wait(condition func() (bool, error)) error {
 func (f *Fixture) deferTeardown(teardown func() error) {
 	f.teardownFuncs = append(f.teardownFuncs, teardown)
 }
+
+// WaitForSyncError waits until at least one Warning event with reason
+// "SyncError" appears in the given namespace. It is used in negative tests to
+// confirm that a webhook call was attempted and rejected before asserting that
+// a child was not created.
+func (f *Fixture) WaitForSyncError(namespace string) error {
+	return f.Wait(func() (bool, error) {
+		events, err := f.kubernetes.CoreV1().Events(namespace).List(context.TODO(), metav1.ListOptions{})
+		if err != nil {
+			return false, err
+		}
+		for _, e := range events.Items {
+			if e.Reason == "SyncError" {
+				return true, nil
+			}
+		}
+		return false, nil
+	})
+}
