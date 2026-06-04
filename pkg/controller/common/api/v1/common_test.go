@@ -27,6 +27,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
+const kindStatefulSet = "StatefulSet"
+const groupApps = "apps"
+
 var (
 	parameters = []struct {
 		gvk  api.GroupVersionKind
@@ -42,7 +45,7 @@ var (
 			text: "kind.someGroup/v1"},
 		{gvk: api.GroupVersionKind{
 			GroupVersionKind: schema.GroupVersionKind{
-				Group: "apps", Version: "v1", Kind: "StatefulSet"}},
+				Group: groupApps, Version: "v1", Kind: kindStatefulSet}},
 			text: "StatefulSet.apps/v1"},
 	}
 )
@@ -85,7 +88,7 @@ func TestGroupVersionKind_UnmrshalTextWithException(t *testing.T) {
 
 func TestRelativeObjectMap_InitGroup_ShouldInitializeNilGroup(t *testing.T) {
 	underTest := make(RelativeObjectMap)
-	gvk := schema.GroupVersionKind{Group: "apps", Version: "v1", Kind: "StatefulSet"}
+	gvk := schema.GroupVersionKind{Group: groupApps, Version: "v1", Kind: kindStatefulSet}
 
 	underTest.InitGroup(gvk)
 
@@ -98,7 +101,7 @@ func TestRelativeObjectMap_InitGroup_ShouldInitializeNilGroup(t *testing.T) {
 
 func TestRelativeObjectMap_InitGroup_ShouldNotOverrideNonNilGroup(t *testing.T) {
 	underTest := make(RelativeObjectMap)
-	gvk := schema.GroupVersionKind{Group: "apps", Version: "v1", Kind: "StatefulSet"}
+	gvk := schema.GroupVersionKind{Group: groupApps, Version: "v1", Kind: kindStatefulSet}
 	internalGvk := api.GroupVersionKind{GroupVersionKind: gvk}
 	expectedGroup := make(map[string]*unstructured.Unstructured)
 	expectedGroup["test"] = &unstructured.Unstructured{}
