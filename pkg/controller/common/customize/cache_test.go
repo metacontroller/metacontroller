@@ -17,17 +17,18 @@ limitations under the License.
 package customize
 
 import (
-	v1 "metacontroller/pkg/controller/common/customize/api/v1"
 	"testing"
+
+	v1 "metacontroller/pkg/controller/common/customize/api/v1"
 )
 
 func TestAdd_ElementFirstTime(t *testing.T) {
 	responseCache := newResponseCache()
 	mockResponse := v1.CustomizeHookResponse{}
 
-	responseCache.Set(customizeKey{"some", 12}, &mockResponse)
+	responseCache.Set(customizeKey{someValue, 12}, &mockResponse)
 
-	if cachedElement, _ := responseCache.Get(customizeKey{"some", 12}); cachedElement != &mockResponse {
+	if cachedElement, _ := responseCache.Get(customizeKey{someValue, 12}); cachedElement != &mockResponse {
 		t.Errorf("Incorrect responseCache entry, got: %v, expected: %v", cachedElement, mockResponse)
 	}
 }
@@ -35,7 +36,7 @@ func TestAdd_ElementFirstTime(t *testing.T) {
 func TestGet_IfNotPresent(t *testing.T) {
 	responseCache := newResponseCache()
 
-	response, _ := responseCache.Get(customizeKey{"some", 13})
+	response, _ := responseCache.Get(customizeKey{someValue, 13})
 
 	if response != nil {
 		t.Errorf("Incorrect cache entry, should be nil, got: %v", response)
@@ -45,9 +46,9 @@ func TestGet_IfNotPresent(t *testing.T) {
 func TestGet_IfPresentWithDifferentGeneration(t *testing.T) {
 	responseCache := newResponseCache()
 	mockResponse := v1.CustomizeHookResponse{}
-	responseCache.Set(customizeKey{"some", 12}, &mockResponse)
+	responseCache.Set(customizeKey{someValue, 12}, &mockResponse)
 
-	response, _ := responseCache.Get(customizeKey{"some", 13})
+	response, _ := responseCache.Get(customizeKey{someValue, 13})
 
 	if response != nil {
 		t.Errorf("Incorrect cache entry, should be nil, got: %v", response)
@@ -57,9 +58,9 @@ func TestGet_IfPresentWithDifferentGeneration(t *testing.T) {
 func TestGet_IfExistsAndGenerationMatches(t *testing.T) {
 	responseCache := newResponseCache()
 	expectedResponse := v1.CustomizeHookResponse{}
-	responseCache.Set(customizeKey{"some", 12}, &expectedResponse)
+	responseCache.Set(customizeKey{someValue, 12}, &expectedResponse)
 
-	response, _ := responseCache.Get(customizeKey{"some", 12})
+	response, _ := responseCache.Get(customizeKey{someValue, 12})
 
 	if response != &expectedResponse {
 		t.Errorf("Incorrect cache entry, expected: %v, got: %v", expectedResponse, response)
@@ -70,7 +71,7 @@ func Test_ConcurrentMapAccess(t *testing.T) {
 	responseCache := newResponseCache()
 	someResponse := v1.CustomizeHookResponse{}
 
-	go responseCache.Set(customizeKey{"some", 12}, &someResponse)
+	go responseCache.Set(customizeKey{someValue, 12}, &someResponse)
 	go responseCache.Set(customizeKey{"some_one", 12}, &someResponse)
 	go responseCache.Set(customizeKey{"some_two", 12}, &someResponse)
 	go responseCache.Set(customizeKey{"some_three", 12}, &someResponse)
