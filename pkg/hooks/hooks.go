@@ -35,9 +35,9 @@ func NewHook(
 	controllerName string,
 	controllerType common.ControllerType,
 	hookType common.HookType,
-	caBundle []byte) (Hook, error) {
+	conn *ResolvedConnection) (Hook, error) {
 	if hook != nil {
-		executor, err := NewWebhookExecutor(hook.Webhook, hook.Version, controllerName, controllerType, hookType, caBundle)
+		executor, err := NewWebhookExecutor(hook.Webhook, hook.Version, controllerName, controllerType, hookType, conn)
 		if err != nil {
 			return nil, err
 		}

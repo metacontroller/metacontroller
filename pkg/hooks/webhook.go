@@ -44,6 +44,7 @@ import (
 const (
 	headerIfNoneMatch = "If-None-Match"
 	headerETag        = "ETag"
+	schemeHTTP        = "http"
 )
 
 type HttpClientInterface interface {
@@ -63,7 +64,7 @@ func NewWebhookExecutor(
 	controllerName string,
 	controllerType common.ControllerType,
 	hookType common.HookType,
-	caBundle []byte) (WebhookExecutor, error) {
+	conn *ResolvedConnection) (WebhookExecutor, error) {
 	if webhook == nil {
 		return nil, nil
 	}
@@ -76,8 +77,16 @@ func NewWebhookExecutor(
 		logging.Logger.Info(err.Error())
 	}
 	client := &http.Client{Timeout: hookTimeout}
-	if len(caBundle) > 0 {
-		transport, err := buildTLSTransport(caBundle)
+	var caBundle []byte
+	var clientCert *tls.Certificate
+	var authHeader string
+	if conn != nil {
+		caBundle = conn.CABundle
+		clientCert = conn.ClientCert
+		authHeader = conn.AuthHeader
+	}
+	if len(caBundle) > 0 || clientCert != nil {
+		transport, err := buildTLSTransport(caBundle, clientCert)
 		if err != nil {
 			return nil, err
 		}
@@ -113,6 +122,7 @@ func NewWebhookExecutor(
 		hookVersion,
 		webhook.ResponseUnmarshallMode,
 		abstract,
+		authHeader,
 		time.Now,
 	), nil
 }
@@ -123,6 +133,7 @@ func newWebhookExecutor(client HttpClientInterface,
 	hookVersion *v1alpha1.HookVersion,
 	unmarshallMode *v1alpha1.ResponseUnmarshallMode,
 	abstract webhookAbstract,
+	authHeader string,
 	now func() time.Time) *webhookExecutor {
 	return &webhookExecutor{
 		client:                 client,
@@ -131,6 +142,7 @@ func newWebhookExecutor(client HttpClientInterface,
 		hookType:               hookType.String(),
 		webhookAbstract:        abstract,
 		responseUnmarshallMode: responseUnmarshallMode(unmarshallMode, hookVersion),
+		authHeader:             authHeader,
 		now:                    now,
 	}
 }
@@ -158,6 +170,7 @@ type webhookExecutor struct {
 	hookVersion            *v1alpha1.HookVersion
 	webhookAbstract        webhookAbstract
 	responseUnmarshallMode v1alpha1.ResponseUnmarshallMode
+	authHeader             string
 	now                    func() time.Time
 }
 
@@ -189,6 +202,9 @@ func (w *webhookExecutor) Call(webhookRequest api.WebhookRequest, webhookRespons
 		return err
 	}
 	request.Header.Set("Content-Type", "application/json")
+	if w.authHeader != "" {
+		request.Header.Set("Authorization", w.authHeader)
+	}
 	w.webhookAbstract.enrichHeaders(request, webhookRequest)
 
 	response, err := w.client.Do(request)
@@ -273,7 +289,7 @@ func webhookURL(webhook *v1alpha1.Webhook) (string, error) {
 	if webhook.Service.Port != nil {
 		port = *webhook.Service.Port
 	}
-	protocol := "http"
+	protocol := schemeHTTP
 	if webhook.Service.Protocol != nil {
 		protocol = *webhook.Service.Protocol
 	}
@@ -295,15 +311,19 @@ func webhookTimeout(webhook *v1alpha1.Webhook) (time.Duration, error) {
 }
 
 // buildTLSTransport creates an http.Transport that uses the given PEM-encoded
-// CA certificate(s) as the only trusted roots for TLS verification.
-func buildTLSTransport(caBundle []byte) (*http.Transport, error) {
-	certPool := x509.NewCertPool()
-	if !certPool.AppendCertsFromPEM(caBundle) {
-		return nil, fmt.Errorf("caBundle: no valid PEM-encoded certificates found in the provided CA bundle")
+// CA certificate(s) as the only trusted roots for TLS verification. If
+// clientCert is non-nil it is presented during the TLS handshake.
+func buildTLSTransport(caBundle []byte, clientCert *tls.Certificate) (*http.Transport, error) {
+	tlsCfg := &tls.Config{}
+	if len(caBundle) > 0 {
+		certPool := x509.NewCertPool()
+		if !certPool.AppendCertsFromPEM(caBundle) {
+			return nil, fmt.Errorf("caBundle: no valid PEM-encoded certificates found in the provided CA bundle")
+		}
+		tlsCfg.RootCAs = certPool
 	}
-	return &http.Transport{
-		TLSClientConfig: &tls.Config{
-			RootCAs: certPool,
-		},
-	}, nil
+	if clientCert != nil {
+		tlsCfg.Certificates = []tls.Certificate{*clientCert}
+	}
+	return &http.Transport{TLSClientConfig: tlsCfg}, nil
 }

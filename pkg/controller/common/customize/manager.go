@@ -20,13 +20,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
+
 	"metacontroller/pkg/controller/common/api"
 	commonv2 "metacontroller/pkg/controller/common/api/v2"
 	customizecommon "metacontroller/pkg/controller/common/customize/api/common"
 	v1 "metacontroller/pkg/controller/common/customize/api/v1"
 	v2 "metacontroller/pkg/controller/common/customize/api/v2"
 	"metacontroller/pkg/hooks"
-	"time"
 
 	"k8s.io/apimachinery/pkg/types"
 	clientgo_cache "k8s.io/client-go/tools/cache"
@@ -102,19 +103,21 @@ func NewCustomizeManager(
 	parentKinds *common.GroupKindMap,
 	logger logr.Logger,
 	controllerType common.ControllerType,
-	k8sClient client.Client) (*Manager, error) {
+	k8sClient client.Client,
+) (*Manager, error) {
 	var hook hooks.Hook
 	var err error
 	if controller.GetCustomizeHook() != nil {
 		customizeHook := controller.GetCustomizeHook()
-		var caBundle []byte
+		var webhookSpec *v1alpha1.Webhook
 		if customizeHook.Webhook != nil {
-			caBundle, err = hooks.ResolveCABundle(context.Background(), k8sClient, customizeHook.Webhook.CABundle)
-			if err != nil {
-				return nil, fmt.Errorf("can't resolve caBundle for customize hook: %w", err)
-			}
+			webhookSpec = customizeHook.Webhook
 		}
-		hook, err = hooks.NewHook(customizeHook, name, controllerType, common.CustomizeHook, caBundle)
+		conn, connErr := hooks.ResolveConnectionConfig(context.Background(), k8sClient, webhookSpec, controller.GetConnections())
+		if connErr != nil {
+			return nil, fmt.Errorf("can't resolve connection config for customize hook: %w", connErr)
+		}
+		hook, err = hooks.NewHook(customizeHook, name, controllerType, common.CustomizeHook, conn)
 		if err != nil {
 			return nil, err
 		}
@@ -225,7 +228,6 @@ var ErrRelatedInformerNotSynced = errors.New("related informer not synced yet")
 
 func (rm *Manager) getRelatedClient(apiVersion, resource string) (*dynamicclientset.ResourceClient, *dynamicinformer.ResourceInformer, error) {
 	client, err := rm.dynClient.Resource(apiVersion, resource)
-
 	if err != nil {
 		return nil, nil, err
 	}
@@ -272,7 +274,6 @@ func (rm *Manager) getOrCreateRelatedInformer(apiVersion, resource string, gvr s
 		UpdateFunc: rm.onRelatedUpdate,
 		DeleteFunc: rm.onRelatedDelete,
 	})
-
 	if err != nil {
 		// If we fail to add event handlers, we should probably remove the informer from the map
 		// and close it so we don't leave a "broken" informer.
@@ -561,7 +562,6 @@ func (rm *Manager) GetRelatedObjects(parent *unstructured.Unstructured) (api.Obj
 	parentNamespace := parent.GetNamespace()
 
 	customizeHookResponse, err := rm.getCustomizeHookResponse(parent)
-
 	if err != nil {
 		return nil, err
 	}

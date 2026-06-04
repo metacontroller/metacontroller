@@ -20,13 +20,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
+	"sync"
+	"time"
+
 	"metacontroller/pkg/controller/common/api"
 	commonv2 "metacontroller/pkg/controller/common/api/v2"
 	"metacontroller/pkg/hooks"
 	"metacontroller/pkg/logging"
-	"reflect"
-	"sync"
-	"time"
 
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -162,19 +163,19 @@ func newParentController(
 	if cc.Spec.Hooks == nil {
 		return nil, fmt.Errorf("no hooks defined")
 	}
-	syncCABundle, err := hooks.ResolveCABundle(context.Background(), k8sClient, syncWebhookCABundle(cc))
+	syncConn, err := hooks.ResolveConnectionConfig(context.Background(), k8sClient, syncWebhook(cc), cc.GetConnections())
 	if err != nil {
-		return nil, fmt.Errorf("can't resolve caBundle for sync hook: %w", err)
+		return nil, fmt.Errorf("can't resolve connection config for sync hook: %w", err)
 	}
-	syncHook, err := hooks.NewHook(cc.Spec.Hooks.Sync, cc.Name, common.CompositeController, common.SyncHook, syncCABundle)
+	syncHook, err := hooks.NewHook(cc.Spec.Hooks.Sync, cc.Name, common.CompositeController, common.SyncHook, syncConn)
 	if err != nil {
 		return nil, err
 	}
-	finalizeCABundle, err := hooks.ResolveCABundle(context.Background(), k8sClient, finalizeWebhookCABundle(cc))
+	finalizeConn, err := hooks.ResolveConnectionConfig(context.Background(), k8sClient, finalizeWebhook(cc), cc.GetConnections())
 	if err != nil {
-		return nil, fmt.Errorf("can't resolve caBundle for finalize hook: %w", err)
+		return nil, fmt.Errorf("can't resolve connection config for finalize hook: %w", err)
 	}
-	finalizeHook, err := hooks.NewHook(cc.Spec.Hooks.Finalize, cc.Name, common.CompositeController, common.FinalizeHook, finalizeCABundle)
+	finalizeHook, err := hooks.NewHook(cc.Spec.Hooks.Finalize, cc.Name, common.CompositeController, common.FinalizeHook, finalizeConn)
 	if err != nil {
 		return nil, err
 	}
@@ -235,20 +236,20 @@ func newParentController(
 	return pc, nil
 }
 
-// syncWebhookCABundle extracts the CABundle from the sync hook spec.
-func syncWebhookCABundle(cc *v1alpha1.CompositeController) *v1alpha1.CABundle {
-	if cc.Spec.Hooks == nil || cc.Spec.Hooks.Sync == nil || cc.Spec.Hooks.Sync.Webhook == nil {
+// syncWebhook extracts the Webhook from the sync hook spec.
+func syncWebhook(cc *v1alpha1.CompositeController) *v1alpha1.Webhook {
+	if cc.Spec.Hooks == nil || cc.Spec.Hooks.Sync == nil {
 		return nil
 	}
-	return cc.Spec.Hooks.Sync.Webhook.CABundle
+	return cc.Spec.Hooks.Sync.Webhook
 }
 
-// finalizeWebhookCABundle extracts the CABundle from the finalize hook spec.
-func finalizeWebhookCABundle(cc *v1alpha1.CompositeController) *v1alpha1.CABundle {
-	if cc.Spec.Hooks == nil || cc.Spec.Hooks.Finalize == nil || cc.Spec.Hooks.Finalize.Webhook == nil {
+// finalizeWebhook extracts the Webhook from the finalize hook spec.
+func finalizeWebhook(cc *v1alpha1.CompositeController) *v1alpha1.Webhook {
+	if cc.Spec.Hooks == nil || cc.Spec.Hooks.Finalize == nil {
 		return nil
 	}
-	return cc.Spec.Hooks.Finalize.Webhook.CABundle
+	return cc.Spec.Hooks.Finalize.Webhook
 }
 
 func (pc *parentController) Start() {
