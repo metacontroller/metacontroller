@@ -91,6 +91,10 @@ func (cc *NilCustomizableController) GetCustomizeHook() *v1alpha1.Hook {
 	return nil
 }
 
+func (cc *NilCustomizableController) GetConnections() []v1alpha1.WebhookConnection {
+	return nil
+}
+
 type FakeCustomizableController struct {
 }
 
@@ -101,6 +105,10 @@ func (cc *FakeCustomizableController) GetCustomizeHook() *v1alpha1.Hook {
 			URL: &url,
 		},
 	}
+}
+
+func (cc *FakeCustomizableController) GetConnections() []v1alpha1.WebhookConnection {
+	return nil
 }
 
 func NewSerializingExecutorStub(responseJson string) hooks.Hook {

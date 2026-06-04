@@ -20,13 +20,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"metacontroller/pkg/controller/common/api"
-	commonv2 "metacontroller/pkg/controller/common/api/v2"
-	"metacontroller/pkg/hooks"
 	"reflect"
 	"strings"
 	"sync"
 	"time"
+
+	"metacontroller/pkg/controller/common/api"
+	commonv2 "metacontroller/pkg/controller/common/api/v2"
+	"metacontroller/pkg/hooks"
 
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -112,19 +113,19 @@ func newDecoratorController(
 	if dc.Spec.Hooks == nil {
 		return nil, fmt.Errorf("no hooks defined")
 	}
-	syncCABundle, err := hooks.ResolveCABundle(context.Background(), k8sClient, syncWebhookCABundle(dc))
+	syncConn, err := hooks.ResolveConnectionConfig(context.Background(), k8sClient, syncWebhook(dc), dc.GetConnections())
 	if err != nil {
-		return nil, fmt.Errorf("can't resolve caBundle for sync hook: %w", err)
+		return nil, fmt.Errorf("can't resolve connection config for sync hook: %w", err)
 	}
-	syncHook, err := hooks.NewHook(dc.Spec.Hooks.Sync, dc.Name, common.DecoratorController, common.SyncHook, syncCABundle)
+	syncHook, err := hooks.NewHook(dc.Spec.Hooks.Sync, dc.Name, common.DecoratorController, common.SyncHook, syncConn)
 	if err != nil {
 		return nil, err
 	}
-	finalizeCABundle, err := hooks.ResolveCABundle(context.Background(), k8sClient, finalizeWebhookCABundle(dc))
+	finalizeConn, err := hooks.ResolveConnectionConfig(context.Background(), k8sClient, finalizeWebhook(dc), dc.GetConnections())
 	if err != nil {
-		return nil, fmt.Errorf("can't resolve caBundle for finalize hook: %w", err)
+		return nil, fmt.Errorf("can't resolve connection config for finalize hook: %w", err)
 	}
-	finalizeHook, err := hooks.NewHook(dc.Spec.Hooks.Finalize, dc.Name, common.DecoratorController, common.FinalizeHook, finalizeCABundle)
+	finalizeHook, err := hooks.NewHook(dc.Spec.Hooks.Finalize, dc.Name, common.DecoratorController, common.FinalizeHook, finalizeConn)
 	if err != nil {
 		return nil, err
 	}
@@ -232,20 +233,20 @@ func newDecoratorController(
 	return c, nil
 }
 
-// syncWebhookCABundle extracts the CABundle from the sync hook spec.
-func syncWebhookCABundle(dc *v1alpha1.DecoratorController) *v1alpha1.CABundle {
-	if dc.Spec.Hooks == nil || dc.Spec.Hooks.Sync == nil || dc.Spec.Hooks.Sync.Webhook == nil {
+// syncWebhook extracts the Webhook from the sync hook spec.
+func syncWebhook(dc *v1alpha1.DecoratorController) *v1alpha1.Webhook {
+	if dc.Spec.Hooks == nil || dc.Spec.Hooks.Sync == nil {
 		return nil
 	}
-	return dc.Spec.Hooks.Sync.Webhook.CABundle
+	return dc.Spec.Hooks.Sync.Webhook
 }
 
-// finalizeWebhookCABundle extracts the CABundle from the finalize hook spec.
-func finalizeWebhookCABundle(dc *v1alpha1.DecoratorController) *v1alpha1.CABundle {
-	if dc.Spec.Hooks == nil || dc.Spec.Hooks.Finalize == nil || dc.Spec.Hooks.Finalize.Webhook == nil {
+// finalizeWebhook extracts the Webhook from the finalize hook spec.
+func finalizeWebhook(dc *v1alpha1.DecoratorController) *v1alpha1.Webhook {
+	if dc.Spec.Hooks == nil || dc.Spec.Hooks.Finalize == nil {
 		return nil
 	}
-	return dc.Spec.Hooks.Finalize.Webhook.CABundle
+	return dc.Spec.Hooks.Finalize.Webhook
 }
 
 func (c *decoratorController) Start() {

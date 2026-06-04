@@ -22,6 +22,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
@@ -59,7 +60,7 @@ func generateSelfSignedCACert(t *testing.T) []byte {
 	require.NoError(t, err, "creating test CA certificate")
 
 	var buf bytes.Buffer
-	require.NoError(t, pem.Encode(&buf, &pem.Block{Type: "CERTIFICATE", Bytes: certDER}))
+	require.NoError(t, pem.Encode(&buf, &pem.Block{Type: pemTypeCert, Bytes: certDER}))
 	return buf.Bytes()
 }
 
@@ -235,7 +236,7 @@ func TestResolveCABundle_whenConfigMapRefKeyNotFound_returnsError(t *testing.T) 
 func TestBuildTLSTransport_whenValidPEM_returnsTransportWithCustomRootCAs(t *testing.T) {
 	caPEM := generateSelfSignedCACert(t)
 
-	transport, err := buildTLSTransport(caPEM)
+	transport, err := buildTLSTransport(caPEM, nil)
 
 	require.NoError(t, err)
 	require.NotNil(t, transport)
@@ -244,8 +245,37 @@ func TestBuildTLSTransport_whenValidPEM_returnsTransportWithCustomRootCAs(t *tes
 }
 
 func TestBuildTLSTransport_whenInvalidPEM_returnsError(t *testing.T) {
-	_, err := buildTLSTransport([]byte("not-a-valid-pem-block"))
+	_, err := buildTLSTransport([]byte("not-a-valid-pem-block"), nil)
 
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "no valid PEM-encoded certificates")
+}
+
+func TestBuildTLSTransport_whenClientCert_populatesCertificates(t *testing.T) {
+	certPEM, keyPEM := generateClientCertPEMs(t)
+	tlsCert, err := tls.X509KeyPair(certPEM, keyPEM)
+	require.NoError(t, err)
+
+	transport, err := buildTLSTransport(nil, &tlsCert)
+
+	require.NoError(t, err)
+	require.NotNil(t, transport)
+	require.NotNil(t, transport.TLSClientConfig)
+	assert.Len(t, transport.TLSClientConfig.Certificates, 1)
+	assert.Nil(t, transport.TLSClientConfig.RootCAs)
+}
+
+func TestBuildTLSTransport_whenCABundleAndClientCert_setsRootCAsAndCertificates(t *testing.T) {
+	caPEM := generateSelfSignedCACert(t)
+	certPEM, keyPEM := generateClientCertPEMs(t)
+	tlsCert, err := tls.X509KeyPair(certPEM, keyPEM)
+	require.NoError(t, err)
+
+	transport, err := buildTLSTransport(caPEM, &tlsCert)
+
+	require.NoError(t, err)
+	require.NotNil(t, transport)
+	require.NotNil(t, transport.TLSClientConfig)
+	assert.NotNil(t, transport.TLSClientConfig.RootCAs)
+	assert.Len(t, transport.TLSClientConfig.Certificates, 1)
 }

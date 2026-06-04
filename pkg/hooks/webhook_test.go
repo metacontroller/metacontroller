@@ -2,6 +2,7 @@ package hooks
 
 import (
 	"bytes"
+	"crypto/tls"
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
@@ -144,6 +145,7 @@ func Test_when_incorrectJsonResponseInLooseMode_deserializeToEmptyResponse(t *te
 		nil, // hookVersion (defaults to v1)
 		nil,
 		&webhookExecutorPlain{},
+		"",
 		time.Now,
 	)
 
@@ -162,6 +164,7 @@ func Test_when_incorrectJsonResponseInLooseMode_V1_deserializeToEmptyResponse(t 
 		&v1Version,
 		toPointer(v1alpha1.ResponseUnmarshallModeLoose),
 		&webhookExecutorPlain{},
+		"",
 		time.Now,
 	)
 
@@ -180,6 +183,7 @@ func Test_when_incorrectJsonResponseInStrictMode_V1_throwsError(t *testing.T) {
 		&v1Version,
 		toPointer(v1alpha1.ResponseUnmarshallModeStrict),
 		&webhookExecutorPlain{},
+		"",
 		time.Now,
 	)
 
@@ -200,6 +204,7 @@ func TestV2StrictByDefault(t *testing.T) {
 		&v2Version,
 		nil, // Default mode for V2 should be strict
 		&webhookExecutorPlain{},
+		"",
 		time.Now,
 	)
 
@@ -216,6 +221,7 @@ func TestV2StrictByDefault(t *testing.T) {
 		&v2Version,
 		toPointer(v1alpha1.ResponseUnmarshallModeLoose),
 		&webhookExecutorPlain{},
+		"",
 		time.Now,
 	)
 
@@ -231,6 +237,7 @@ func Test_when_incorrectJsonResponseInStrictMode_thrownError(t *testing.T) {
 		nil, // hookVersion (defaults to v1)
 		toPointer(v1alpha1.ResponseUnmarshallModeStrict),
 		&webhookExecutorPlain{},
+		"",
 		time.Now,
 	)
 
@@ -253,7 +260,7 @@ func TestWebhookExecutor_Call_WithDifferentVersions(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockClient := newHttpClientMockWithResponse(`{}`) // Empty JSON response
-			executor := newWebhookExecutor(mockClient, "http://test.com", common.SyncHook, tt.hookVersion, nil, &webhookExecutorPlain{}, time.Now)
+			executor := newWebhookExecutor(mockClient, "http://test.com", common.SyncHook, tt.hookVersion, nil, &webhookExecutorPlain{}, "", time.Now)
 
 			var respData map[string]interface{}
 			err := executor.Call(nil, &respData)
@@ -293,6 +300,7 @@ func Test429Response_thrown_TooManyRequestError(t *testing.T) {
 				nil, // hookVersion
 				toPointer(v1alpha1.ResponseUnmarshallModeStrict),
 				&webhookExecutorPlain{},
+				"",
 				func() time.Time {
 					return now
 				},
@@ -320,7 +328,7 @@ func TestNewWebhookExecutor_TLSEnforcement(t *testing.T) {
 	cert, err := x509.ParseCertificate(srv.TLS.Certificates[0].Certificate[0])
 	require.NoError(t, err)
 	var pemBuf bytes.Buffer
-	require.NoError(t, pem.Encode(&pemBuf, &pem.Block{Type: "CERTIFICATE", Bytes: cert.Raw}))
+	require.NoError(t, pem.Encode(&pemBuf, &pem.Block{Type: pemTypeCert, Bytes: cert.Raw}))
 	serverCAPEM := pemBuf.Bytes()
 
 	url := srv.URL + "/sync"
@@ -344,7 +352,11 @@ func TestNewWebhookExecutor_TLSEnforcement(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			webhook := &v1alpha1.Webhook{URL: &url}
-			executor, err := NewWebhookExecutor(webhook, nil, "test-controller", common.CompositeController, "sync", tt.caBundle)
+			var conn *ResolvedConnection
+			if len(tt.caBundle) > 0 {
+				conn = &ResolvedConnection{CABundle: tt.caBundle}
+			}
+			executor, err := NewWebhookExecutor(webhook, nil, "test-controller", common.CompositeController, "sync", conn)
 			require.NoError(t, err)
 
 			var response struct{}
@@ -357,4 +369,75 @@ func TestNewWebhookExecutor_TLSEnforcement(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestNewWebhookExecutor_AuthHeader_sentToServer(t *testing.T) {
+	var receivedAuth string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		receivedAuth = r.Header.Get("Authorization")
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{}`))
+	}))
+	defer srv.Close()
+
+	url := srv.URL + "/sync"
+	webhook := &v1alpha1.Webhook{URL: &url}
+	conn := &ResolvedConnection{AuthHeader: "Bearer secret-token"}
+	executor, err := NewWebhookExecutor(webhook, nil, "test-controller", common.CompositeController, common.SyncHook, conn)
+	require.NoError(t, err)
+
+	var response struct{}
+	require.NoError(t, executor.Call(nil, &response))
+	assert.Equal(t, "Bearer secret-token", receivedAuth)
+}
+
+func TestNewWebhookExecutor_ClientTLS_presentedDuringHandshake(t *testing.T) {
+	certPEM, keyPEM := generateClientCertPEMs(t)
+
+	expectedCert, err := x509.ParseCertificate(mustParsePEMBlock(t, certPEM).Bytes)
+	require.NoError(t, err)
+
+	var receivedCert *x509.Certificate
+	srv := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.TLS != nil && len(r.TLS.PeerCertificates) > 0 {
+			receivedCert = r.TLS.PeerCertificates[0]
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{}`))
+	}))
+	srv.TLS = &tls.Config{ClientAuth: tls.RequestClientCert}
+	srv.StartTLS()
+	defer srv.Close()
+
+	// Build the CA PEM from the server's self-signed cert so we trust it.
+	cert, err := x509.ParseCertificate(srv.TLS.Certificates[0].Certificate[0])
+	require.NoError(t, err)
+	var pemBuf bytes.Buffer
+	require.NoError(t, pem.Encode(&pemBuf, &pem.Block{Type: pemTypeCert, Bytes: cert.Raw}))
+
+	clientCert, err := tls.X509KeyPair(certPEM, keyPEM)
+	require.NoError(t, err)
+
+	url := srv.URL + "/sync"
+	webhook := &v1alpha1.Webhook{URL: &url}
+	conn := &ResolvedConnection{
+		CABundle:   pemBuf.Bytes(),
+		ClientCert: &clientCert,
+	}
+	executor, err := NewWebhookExecutor(webhook, nil, "test-controller", common.CompositeController, common.SyncHook, conn)
+	require.NoError(t, err)
+
+	var response struct{}
+	require.NoError(t, executor.Call(nil, &response))
+	require.NotNil(t, receivedCert, "server should have received a client certificate")
+	assert.Equal(t, expectedCert.Raw, receivedCert.Raw, "server should have received the correct client certificate")
+}
+
+// mustParsePEMBlock decodes the first PEM block from data and fails the test if
+// none is found.
+func mustParsePEMBlock(t *testing.T, data []byte) *pem.Block {
+	t.Helper()
+	block, _ := pem.Decode(data)
+	require.NotNil(t, block, "no PEM block found")
+	return block
 }

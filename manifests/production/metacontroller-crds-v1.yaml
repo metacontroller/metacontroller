@@ -81,6 +81,204 @@ spec:
                   - resource
                   type: object
                 type: array
+              connections:
+                description: |-
+                  Connections defines connection settings (TLS, authentication) keyed by
+                  webhook host. When a webhook URL's host matches a connection entry, the
+                  entry's settings are used unless the webhook overrides them directly.
+                items:
+                  description: |-
+                    WebhookConnection defines connection settings applied to webhooks whose URL
+                    host matches the entry's host field. Settings are resolved once when the
+                    controller CR is created or updated.
+                  properties:
+                    authorization:
+                      description: |-
+                        Authorization configures the Authorization header credential. Mutually exclusive
+                        with basicAuth.
+                      properties:
+                        secretRef:
+                          description: |-
+                            SecretRef selects the key from a Secret containing
+                            the credential value.
+                          properties:
+                            key:
+                              description: |-
+                                Key is the key within the Secret's data
+                                map.
+                              type: string
+                            name:
+                              description: |-
+                                Name is the metadata.name of the target
+                                Secret.
+                              type: string
+                            namespace:
+                              description: |-
+                                Namespace is the metadata.namespace of
+                                the target Secret.
+                              type: string
+                          required:
+                          - key
+                          - name
+                          - namespace
+                          type: object
+                        type:
+                          default: Bearer
+                          description: |-
+                            Type is the Authorization header scheme. The value is case-insensitive.
+                            "Basic" is not a supported value; use the basicAuth field instead.
+                          type: string
+                      required:
+                      - secretRef
+                      type: object
+                    basicAuth:
+                      description: |-
+                        BasicAuth configures HTTP Basic Authentication credentials. Mutually exclusive
+                        with authorization.
+                      properties:
+                        passwordKey:
+                          default: password
+                          description: |-
+                            PasswordKey is the key within the Secret for
+                            the password.
+                          type: string
+                        secretRef:
+                          description: |-
+                            SecretRef references the Secret containing
+                            the username and password.
+                          properties:
+                            name:
+                              description: |-
+                                Name is the metadata.name of the target
+                                Secret.
+                              type: string
+                            namespace:
+                              description: |-
+                                Namespace is the metadata.namespace of
+                                the target Secret.
+                              type: string
+                          required:
+                          - name
+                          - namespace
+                          type: object
+                        usernameKey:
+                          default: username
+                          description: |-
+                            UsernameKey is the key within the Secret for
+                            the username.
+                          type: string
+                      required:
+                      - secretRef
+                      type: object
+                    caBundle:
+                      description: |-
+                        CABundle configures the CA certificate(s) used to verify the webhook server's
+                        TLS certificate.
+                      properties:
+                        configMapRef:
+                          description: |-
+                            ConfigMapRef references a key in a Kubernetes ConfigMap containing
+                            PEM-encoded CA certificate(s).
+                          properties:
+                            key:
+                              default: ca.crt
+                              description: |-
+                                Key is the key within the Secret's or ConfigMap's
+                                data map.
+                              type: string
+                            name:
+                              description: |-
+                                Name is the metadata.name of the target
+                                Secret or ConfigMap.
+                              type: string
+                            namespace:
+                              description: |-
+                                Namespace is the metadata.namespace of
+                                the target Secret or ConfigMap.
+                              type: string
+                          required:
+                          - name
+                          - namespace
+                          type: object
+                        inline:
+                          description: |-
+                            Inline contains PEM-encoded CA certificate(s)
+                            directly embedded in the spec.
+                          type: string
+                        secretRef:
+                          description: |-
+                            SecretRef references a key in a Kubernetes Secret containing PEM-encoded
+                            CA certificate(s).
+                          properties:
+                            key:
+                              default: ca.crt
+                              description: |-
+                                Key is the key within the Secret's or ConfigMap's
+                                data map.
+                              type: string
+                            name:
+                              description: |-
+                                Name is the metadata.name of the target
+                                Secret or ConfigMap.
+                              type: string
+                            namespace:
+                              description: |-
+                                Namespace is the metadata.namespace of
+                                the target Secret or ConfigMap.
+                              type: string
+                          required:
+                          - name
+                          - namespace
+                          type: object
+                      type: object
+                    clientTLS:
+                      description: |-
+                        ClientTLS configures a client certificate for mutual
+                        TLS authentication.
+                      properties:
+                        certKey:
+                          default: tls.crt
+                          description: |-
+                            CertKey is the key within the Secret for the
+                            PEM-encoded client certificate.
+                          type: string
+                        privateKeyKey:
+                          default: tls.key
+                          description: |-
+                            PrivateKeyKey is the key within the Secret
+                            for the PEM-encoded client private key.
+                          type: string
+                        secretRef:
+                          description: |-
+                            SecretRef references the Secret containing
+                            the client certificate and private key.
+                          properties:
+                            name:
+                              description: |-
+                                Name is the metadata.name of the target
+                                Secret.
+                              type: string
+                            namespace:
+                              description: |-
+                                Namespace is the metadata.namespace of
+                                the target Secret.
+                              type: string
+                          required:
+                          - name
+                          - namespace
+                          type: object
+                      required:
+                      - secretRef
+                      type: object
+                    host:
+                      description: |-
+                        Host is the host or host:port to match against webhook URLs.
+                        Examples: "my-webhook.svc", "my-webhook.svc:8443"
+                      type: string
+                  required:
+                  - host
+                  type: object
+                type: array
               generateSelector:
                 type: boolean
               hooks:
@@ -95,13 +293,93 @@ spec:
                         type: string
                       webhook:
                         properties:
+                          authorization:
+                            description: |-
+                              Authorization configures the Authorization header credential sent with every
+                              request to this webhook. Mutually exclusive with basicAuth.
+                              When set, overrides any authorization or basicAuth from a matching connections entry.
+                            properties:
+                              secretRef:
+                                description: |-
+                                  SecretRef selects the key from a Secret
+                                  containing the credential value.
+                                properties:
+                                  key:
+                                    description: |-
+                                      Key is the key within the Secret's
+                                      data map.
+                                    type: string
+                                  name:
+                                    description: |-
+                                      Name is the metadata.name of the
+                                      target Secret.
+                                    type: string
+                                  namespace:
+                                    description: |-
+                                      Namespace is the metadata.namespace
+                                      of the target Secret.
+                                    type: string
+                                required:
+                                - key
+                                - name
+                                - namespace
+                                type: object
+                              type:
+                                default: Bearer
+                                description: |-
+                                  Type is the Authorization header scheme. The value is case-insensitive.
+                                  "Basic" is not a supported value; use the basicAuth field instead.
+                                type: string
+                            required:
+                            - secretRef
+                            type: object
+                          basicAuth:
+                            description: |-
+                              BasicAuth configures HTTP Basic Authentication credentials sent with every
+                              request to this webhook. Mutually exclusive with authorization.
+                              When set, overrides any authorization or basicAuth from a matching connections entry.
+                            properties:
+                              passwordKey:
+                                default: password
+                                description: |-
+                                  PasswordKey is the key within the Secret
+                                  for the password.
+                                type: string
+                              secretRef:
+                                description: |-
+                                  SecretRef references the Secret containing
+                                  the username and password.
+                                properties:
+                                  name:
+                                    description: |-
+                                      Name is the metadata.name of the
+                                      target Secret.
+                                    type: string
+                                  namespace:
+                                    description: |-
+                                      Namespace is the metadata.namespace
+                                      of the target Secret.
+                                    type: string
+                                required:
+                                - name
+                                - namespace
+                                type: object
+                              usernameKey:
+                                default: username
+                                description: |-
+                                  UsernameKey is the key within the Secret
+                                  for the username.
+                                type: string
+                            required:
+                            - secretRef
+                            type: object
                           caBundle:
                             description: |-
                               CABundle configures the CA certificate(s) used to verify the webhook server's
                               TLS certificate when the endpoint uses HTTPS with a private or self-signed CA.
-                              If not specified, the system trust roots are used (publicly-trusted CAs such as
-                              Let's Encrypt work without this field).
+                              If not specified, the system trust roots are used.
                               Exactly one of inline, secretRef, or configMapRef must be set when this field is present.
+                              When set, overrides any caBundle from a matching connections entry.
 
                               updated, and is not reloaded automatically if the underlying Secret or ConfigMap changes.
                               To pick up a rotated CA, update the controller CR (e.g. add/change an annotation) to
@@ -110,20 +388,22 @@ spec:
                               configMapRef:
                                 description: |-
                                   ConfigMapRef references a key in a Kubernetes ConfigMap containing
-                                  PEM-encoded CA certificate(s). This is the idiomatic approach for
-                                  public CA data that does not need to be stored in a Secret.
+                                  PEM-encoded CA certificate(s).
                                 properties:
                                   key:
+                                    default: ca.crt
                                     description: |-
-                                      Key is the key within the Secret's or ConfigMap's data map.
-                                      Defaults to "ca.crt" if not specified.
+                                      Key is the key within the Secret's
+                                      or ConfigMap's data map.
                                     type: string
                                   name:
-                                    description: Name is the metadata.name of the
+                                    description: |-
+                                      Name is the metadata.name of the
                                       target Secret or ConfigMap.
                                     type: string
                                   namespace:
-                                    description: Namespace is the metadata.namespace
+                                    description: |-
+                                      Namespace is the metadata.namespace
                                       of the target Secret or ConfigMap.
                                     type: string
                                 required:
@@ -131,32 +411,74 @@ spec:
                                 - namespace
                                 type: object
                               inline:
-                                description: Inline contains PEM-encoded CA certificate(s)
+                                description: |-
+                                  Inline contains PEM-encoded CA certificate(s)
                                   directly embedded in the spec.
                                 type: string
                               secretRef:
                                 description: |-
                                   SecretRef references a key in a Kubernetes Secret containing PEM-encoded
-                                  CA certificate(s). Useful when the CA is already stored in a Secret
-                                  (e.g. created by cert-manager alongside a TLS keypair).
+                                  CA certificate(s).
                                 properties:
                                   key:
+                                    default: ca.crt
                                     description: |-
-                                      Key is the key within the Secret's or ConfigMap's data map.
-                                      Defaults to "ca.crt" if not specified.
+                                      Key is the key within the Secret's
+                                      or ConfigMap's data map.
                                     type: string
                                   name:
-                                    description: Name is the metadata.name of the
+                                    description: |-
+                                      Name is the metadata.name of the
                                       target Secret or ConfigMap.
                                     type: string
                                   namespace:
-                                    description: Namespace is the metadata.namespace
+                                    description: |-
+                                      Namespace is the metadata.namespace
                                       of the target Secret or ConfigMap.
                                     type: string
                                 required:
                                 - name
                                 - namespace
                                 type: object
+                            type: object
+                          clientTLS:
+                            description: |-
+                              ClientTLS configures a client certificate for mutual TLS authentication with the
+                              webhook server. When set, overrides any clientTLS from a matching connections entry.
+                            properties:
+                              certKey:
+                                default: tls.crt
+                                description: |-
+                                  CertKey is the key within the Secret
+                                  for the PEM-encoded client certificate.
+                                type: string
+                              privateKeyKey:
+                                default: tls.key
+                                description: |-
+                                  PrivateKeyKey is the key within the Secret
+                                  for the PEM-encoded client private key.
+                                type: string
+                              secretRef:
+                                description: |-
+                                  SecretRef references the Secret containing
+                                  the client certificate and private key.
+                                properties:
+                                  name:
+                                    description: |-
+                                      Name is the metadata.name of the
+                                      target Secret.
+                                    type: string
+                                  namespace:
+                                    description: |-
+                                      Namespace is the metadata.namespace
+                                      of the target Secret.
+                                    type: string
+                                required:
+                                - name
+                                - namespace
+                                type: object
+                            required:
+                            - secretRef
                             type: object
                           etag:
                             properties:
@@ -211,13 +533,93 @@ spec:
                         type: string
                       webhook:
                         properties:
+                          authorization:
+                            description: |-
+                              Authorization configures the Authorization header credential sent with every
+                              request to this webhook. Mutually exclusive with basicAuth.
+                              When set, overrides any authorization or basicAuth from a matching connections entry.
+                            properties:
+                              secretRef:
+                                description: |-
+                                  SecretRef selects the key from a Secret
+                                  containing the credential value.
+                                properties:
+                                  key:
+                                    description: |-
+                                      Key is the key within the Secret's
+                                      data map.
+                                    type: string
+                                  name:
+                                    description: |-
+                                      Name is the metadata.name of the
+                                      target Secret.
+                                    type: string
+                                  namespace:
+                                    description: |-
+                                      Namespace is the metadata.namespace
+                                      of the target Secret.
+                                    type: string
+                                required:
+                                - key
+                                - name
+                                - namespace
+                                type: object
+                              type:
+                                default: Bearer
+                                description: |-
+                                  Type is the Authorization header scheme. The value is case-insensitive.
+                                  "Basic" is not a supported value; use the basicAuth field instead.
+                                type: string
+                            required:
+                            - secretRef
+                            type: object
+                          basicAuth:
+                            description: |-
+                              BasicAuth configures HTTP Basic Authentication credentials sent with every
+                              request to this webhook. Mutually exclusive with authorization.
+                              When set, overrides any authorization or basicAuth from a matching connections entry.
+                            properties:
+                              passwordKey:
+                                default: password
+                                description: |-
+                                  PasswordKey is the key within the Secret
+                                  for the password.
+                                type: string
+                              secretRef:
+                                description: |-
+                                  SecretRef references the Secret containing
+                                  the username and password.
+                                properties:
+                                  name:
+                                    description: |-
+                                      Name is the metadata.name of the
+                                      target Secret.
+                                    type: string
+                                  namespace:
+                                    description: |-
+                                      Namespace is the metadata.namespace
+                                      of the target Secret.
+                                    type: string
+                                required:
+                                - name
+                                - namespace
+                                type: object
+                              usernameKey:
+                                default: username
+                                description: |-
+                                  UsernameKey is the key within the Secret
+                                  for the username.
+                                type: string
+                            required:
+                            - secretRef
+                            type: object
                           caBundle:
                             description: |-
                               CABundle configures the CA certificate(s) used to verify the webhook server's
                               TLS certificate when the endpoint uses HTTPS with a private or self-signed CA.
-                              If not specified, the system trust roots are used (publicly-trusted CAs such as
-                              Let's Encrypt work without this field).
+                              If not specified, the system trust roots are used.
                               Exactly one of inline, secretRef, or configMapRef must be set when this field is present.
+                              When set, overrides any caBundle from a matching connections entry.
 
                               updated, and is not reloaded automatically if the underlying Secret or ConfigMap changes.
                               To pick up a rotated CA, update the controller CR (e.g. add/change an annotation) to
@@ -226,20 +628,22 @@ spec:
                               configMapRef:
                                 description: |-
                                   ConfigMapRef references a key in a Kubernetes ConfigMap containing
-                                  PEM-encoded CA certificate(s). This is the idiomatic approach for
-                                  public CA data that does not need to be stored in a Secret.
+                                  PEM-encoded CA certificate(s).
                                 properties:
                                   key:
+                                    default: ca.crt
                                     description: |-
-                                      Key is the key within the Secret's or ConfigMap's data map.
-                                      Defaults to "ca.crt" if not specified.
+                                      Key is the key within the Secret's
+                                      or ConfigMap's data map.
                                     type: string
                                   name:
-                                    description: Name is the metadata.name of the
+                                    description: |-
+                                      Name is the metadata.name of the
                                       target Secret or ConfigMap.
                                     type: string
                                   namespace:
-                                    description: Namespace is the metadata.namespace
+                                    description: |-
+                                      Namespace is the metadata.namespace
                                       of the target Secret or ConfigMap.
                                     type: string
                                 required:
@@ -247,32 +651,74 @@ spec:
                                 - namespace
                                 type: object
                               inline:
-                                description: Inline contains PEM-encoded CA certificate(s)
+                                description: |-
+                                  Inline contains PEM-encoded CA certificate(s)
                                   directly embedded in the spec.
                                 type: string
                               secretRef:
                                 description: |-
                                   SecretRef references a key in a Kubernetes Secret containing PEM-encoded
-                                  CA certificate(s). Useful when the CA is already stored in a Secret
-                                  (e.g. created by cert-manager alongside a TLS keypair).
+                                  CA certificate(s).
                                 properties:
                                   key:
+                                    default: ca.crt
                                     description: |-
-                                      Key is the key within the Secret's or ConfigMap's data map.
-                                      Defaults to "ca.crt" if not specified.
+                                      Key is the key within the Secret's
+                                      or ConfigMap's data map.
                                     type: string
                                   name:
-                                    description: Name is the metadata.name of the
+                                    description: |-
+                                      Name is the metadata.name of the
                                       target Secret or ConfigMap.
                                     type: string
                                   namespace:
-                                    description: Namespace is the metadata.namespace
+                                    description: |-
+                                      Namespace is the metadata.namespace
                                       of the target Secret or ConfigMap.
                                     type: string
                                 required:
                                 - name
                                 - namespace
                                 type: object
+                            type: object
+                          clientTLS:
+                            description: |-
+                              ClientTLS configures a client certificate for mutual TLS authentication with the
+                              webhook server. When set, overrides any clientTLS from a matching connections entry.
+                            properties:
+                              certKey:
+                                default: tls.crt
+                                description: |-
+                                  CertKey is the key within the Secret
+                                  for the PEM-encoded client certificate.
+                                type: string
+                              privateKeyKey:
+                                default: tls.key
+                                description: |-
+                                  PrivateKeyKey is the key within the Secret
+                                  for the PEM-encoded client private key.
+                                type: string
+                              secretRef:
+                                description: |-
+                                  SecretRef references the Secret containing
+                                  the client certificate and private key.
+                                properties:
+                                  name:
+                                    description: |-
+                                      Name is the metadata.name of the
+                                      target Secret.
+                                    type: string
+                                  namespace:
+                                    description: |-
+                                      Namespace is the metadata.namespace
+                                      of the target Secret.
+                                    type: string
+                                required:
+                                - name
+                                - namespace
+                                type: object
+                            required:
+                            - secretRef
                             type: object
                           etag:
                             properties:
@@ -327,13 +773,93 @@ spec:
                         type: string
                       webhook:
                         properties:
+                          authorization:
+                            description: |-
+                              Authorization configures the Authorization header credential sent with every
+                              request to this webhook. Mutually exclusive with basicAuth.
+                              When set, overrides any authorization or basicAuth from a matching connections entry.
+                            properties:
+                              secretRef:
+                                description: |-
+                                  SecretRef selects the key from a Secret
+                                  containing the credential value.
+                                properties:
+                                  key:
+                                    description: |-
+                                      Key is the key within the Secret's
+                                      data map.
+                                    type: string
+                                  name:
+                                    description: |-
+                                      Name is the metadata.name of the
+                                      target Secret.
+                                    type: string
+                                  namespace:
+                                    description: |-
+                                      Namespace is the metadata.namespace
+                                      of the target Secret.
+                                    type: string
+                                required:
+                                - key
+                                - name
+                                - namespace
+                                type: object
+                              type:
+                                default: Bearer
+                                description: |-
+                                  Type is the Authorization header scheme. The value is case-insensitive.
+                                  "Basic" is not a supported value; use the basicAuth field instead.
+                                type: string
+                            required:
+                            - secretRef
+                            type: object
+                          basicAuth:
+                            description: |-
+                              BasicAuth configures HTTP Basic Authentication credentials sent with every
+                              request to this webhook. Mutually exclusive with authorization.
+                              When set, overrides any authorization or basicAuth from a matching connections entry.
+                            properties:
+                              passwordKey:
+                                default: password
+                                description: |-
+                                  PasswordKey is the key within the Secret
+                                  for the password.
+                                type: string
+                              secretRef:
+                                description: |-
+                                  SecretRef references the Secret containing
+                                  the username and password.
+                                properties:
+                                  name:
+                                    description: |-
+                                      Name is the metadata.name of the
+                                      target Secret.
+                                    type: string
+                                  namespace:
+                                    description: |-
+                                      Namespace is the metadata.namespace
+                                      of the target Secret.
+                                    type: string
+                                required:
+                                - name
+                                - namespace
+                                type: object
+                              usernameKey:
+                                default: username
+                                description: |-
+                                  UsernameKey is the key within the Secret
+                                  for the username.
+                                type: string
+                            required:
+                            - secretRef
+                            type: object
                           caBundle:
                             description: |-
                               CABundle configures the CA certificate(s) used to verify the webhook server's
                               TLS certificate when the endpoint uses HTTPS with a private or self-signed CA.
-                              If not specified, the system trust roots are used (publicly-trusted CAs such as
-                              Let's Encrypt work without this field).
+                              If not specified, the system trust roots are used.
                               Exactly one of inline, secretRef, or configMapRef must be set when this field is present.
+                              When set, overrides any caBundle from a matching connections entry.
 
                               updated, and is not reloaded automatically if the underlying Secret or ConfigMap changes.
                               To pick up a rotated CA, update the controller CR (e.g. add/change an annotation) to
@@ -342,20 +868,22 @@ spec:
                               configMapRef:
                                 description: |-
                                   ConfigMapRef references a key in a Kubernetes ConfigMap containing
-                                  PEM-encoded CA certificate(s). This is the idiomatic approach for
-                                  public CA data that does not need to be stored in a Secret.
+                                  PEM-encoded CA certificate(s).
                                 properties:
                                   key:
+                                    default: ca.crt
                                     description: |-
-                                      Key is the key within the Secret's or ConfigMap's data map.
-                                      Defaults to "ca.crt" if not specified.
+                                      Key is the key within the Secret's
+                                      or ConfigMap's data map.
                                     type: string
                                   name:
-                                    description: Name is the metadata.name of the
+                                    description: |-
+                                      Name is the metadata.name of the
                                       target Secret or ConfigMap.
                                     type: string
                                   namespace:
-                                    description: Namespace is the metadata.namespace
+                                    description: |-
+                                      Namespace is the metadata.namespace
                                       of the target Secret or ConfigMap.
                                     type: string
                                 required:
@@ -363,32 +891,74 @@ spec:
                                 - namespace
                                 type: object
                               inline:
-                                description: Inline contains PEM-encoded CA certificate(s)
+                                description: |-
+                                  Inline contains PEM-encoded CA certificate(s)
                                   directly embedded in the spec.
                                 type: string
                               secretRef:
                                 description: |-
                                   SecretRef references a key in a Kubernetes Secret containing PEM-encoded
-                                  CA certificate(s). Useful when the CA is already stored in a Secret
-                                  (e.g. created by cert-manager alongside a TLS keypair).
+                                  CA certificate(s).
                                 properties:
                                   key:
+                                    default: ca.crt
                                     description: |-
-                                      Key is the key within the Secret's or ConfigMap's data map.
-                                      Defaults to "ca.crt" if not specified.
+                                      Key is the key within the Secret's
+                                      or ConfigMap's data map.
                                     type: string
                                   name:
-                                    description: Name is the metadata.name of the
+                                    description: |-
+                                      Name is the metadata.name of the
                                       target Secret or ConfigMap.
                                     type: string
                                   namespace:
-                                    description: Namespace is the metadata.namespace
+                                    description: |-
+                                      Namespace is the metadata.namespace
                                       of the target Secret or ConfigMap.
                                     type: string
                                 required:
                                 - name
                                 - namespace
                                 type: object
+                            type: object
+                          clientTLS:
+                            description: |-
+                              ClientTLS configures a client certificate for mutual TLS authentication with the
+                              webhook server. When set, overrides any clientTLS from a matching connections entry.
+                            properties:
+                              certKey:
+                                default: tls.crt
+                                description: |-
+                                  CertKey is the key within the Secret
+                                  for the PEM-encoded client certificate.
+                                type: string
+                              privateKeyKey:
+                                default: tls.key
+                                description: |-
+                                  PrivateKeyKey is the key within the Secret
+                                  for the PEM-encoded client private key.
+                                type: string
+                              secretRef:
+                                description: |-
+                                  SecretRef references the Secret containing
+                                  the client certificate and private key.
+                                properties:
+                                  name:
+                                    description: |-
+                                      Name is the metadata.name of the
+                                      target Secret.
+                                    type: string
+                                  namespace:
+                                    description: |-
+                                      Namespace is the metadata.namespace
+                                      of the target Secret.
+                                    type: string
+                                required:
+                                - name
+                                - namespace
+                                type: object
+                            required:
+                            - secretRef
                             type: object
                           etag:
                             properties:
@@ -443,13 +1013,93 @@ spec:
                         type: string
                       webhook:
                         properties:
+                          authorization:
+                            description: |-
+                              Authorization configures the Authorization header credential sent with every
+                              request to this webhook. Mutually exclusive with basicAuth.
+                              When set, overrides any authorization or basicAuth from a matching connections entry.
+                            properties:
+                              secretRef:
+                                description: |-
+                                  SecretRef selects the key from a Secret
+                                  containing the credential value.
+                                properties:
+                                  key:
+                                    description: |-
+                                      Key is the key within the Secret's
+                                      data map.
+                                    type: string
+                                  name:
+                                    description: |-
+                                      Name is the metadata.name of the
+                                      target Secret.
+                                    type: string
+                                  namespace:
+                                    description: |-
+                                      Namespace is the metadata.namespace
+                                      of the target Secret.
+                                    type: string
+                                required:
+                                - key
+                                - name
+                                - namespace
+                                type: object
+                              type:
+                                default: Bearer
+                                description: |-
+                                  Type is the Authorization header scheme. The value is case-insensitive.
+                                  "Basic" is not a supported value; use the basicAuth field instead.
+                                type: string
+                            required:
+                            - secretRef
+                            type: object
+                          basicAuth:
+                            description: |-
+                              BasicAuth configures HTTP Basic Authentication credentials sent with every
+                              request to this webhook. Mutually exclusive with authorization.
+                              When set, overrides any authorization or basicAuth from a matching connections entry.
+                            properties:
+                              passwordKey:
+                                default: password
+                                description: |-
+                                  PasswordKey is the key within the Secret
+                                  for the password.
+                                type: string
+                              secretRef:
+                                description: |-
+                                  SecretRef references the Secret containing
+                                  the username and password.
+                                properties:
+                                  name:
+                                    description: |-
+                                      Name is the metadata.name of the
+                                      target Secret.
+                                    type: string
+                                  namespace:
+                                    description: |-
+                                      Namespace is the metadata.namespace
+                                      of the target Secret.
+                                    type: string
+                                required:
+                                - name
+                                - namespace
+                                type: object
+                              usernameKey:
+                                default: username
+                                description: |-
+                                  UsernameKey is the key within the Secret
+                                  for the username.
+                                type: string
+                            required:
+                            - secretRef
+                            type: object
                           caBundle:
                             description: |-
                               CABundle configures the CA certificate(s) used to verify the webhook server's
                               TLS certificate when the endpoint uses HTTPS with a private or self-signed CA.
-                              If not specified, the system trust roots are used (publicly-trusted CAs such as
-                              Let's Encrypt work without this field).
+                              If not specified, the system trust roots are used.
                               Exactly one of inline, secretRef, or configMapRef must be set when this field is present.
+                              When set, overrides any caBundle from a matching connections entry.
 
                               updated, and is not reloaded automatically if the underlying Secret or ConfigMap changes.
                               To pick up a rotated CA, update the controller CR (e.g. add/change an annotation) to
@@ -458,20 +1108,22 @@ spec:
                               configMapRef:
                                 description: |-
                                   ConfigMapRef references a key in a Kubernetes ConfigMap containing
-                                  PEM-encoded CA certificate(s). This is the idiomatic approach for
-                                  public CA data that does not need to be stored in a Secret.
+                                  PEM-encoded CA certificate(s).
                                 properties:
                                   key:
+                                    default: ca.crt
                                     description: |-
-                                      Key is the key within the Secret's or ConfigMap's data map.
-                                      Defaults to "ca.crt" if not specified.
+                                      Key is the key within the Secret's
+                                      or ConfigMap's data map.
                                     type: string
                                   name:
-                                    description: Name is the metadata.name of the
+                                    description: |-
+                                      Name is the metadata.name of the
                                       target Secret or ConfigMap.
                                     type: string
                                   namespace:
-                                    description: Namespace is the metadata.namespace
+                                    description: |-
+                                      Namespace is the metadata.namespace
                                       of the target Secret or ConfigMap.
                                     type: string
                                 required:
@@ -479,32 +1131,74 @@ spec:
                                 - namespace
                                 type: object
                               inline:
-                                description: Inline contains PEM-encoded CA certificate(s)
+                                description: |-
+                                  Inline contains PEM-encoded CA certificate(s)
                                   directly embedded in the spec.
                                 type: string
                               secretRef:
                                 description: |-
                                   SecretRef references a key in a Kubernetes Secret containing PEM-encoded
-                                  CA certificate(s). Useful when the CA is already stored in a Secret
-                                  (e.g. created by cert-manager alongside a TLS keypair).
+                                  CA certificate(s).
                                 properties:
                                   key:
+                                    default: ca.crt
                                     description: |-
-                                      Key is the key within the Secret's or ConfigMap's data map.
-                                      Defaults to "ca.crt" if not specified.
+                                      Key is the key within the Secret's
+                                      or ConfigMap's data map.
                                     type: string
                                   name:
-                                    description: Name is the metadata.name of the
+                                    description: |-
+                                      Name is the metadata.name of the
                                       target Secret or ConfigMap.
                                     type: string
                                   namespace:
-                                    description: Namespace is the metadata.namespace
+                                    description: |-
+                                      Namespace is the metadata.namespace
                                       of the target Secret or ConfigMap.
                                     type: string
                                 required:
                                 - name
                                 - namespace
                                 type: object
+                            type: object
+                          clientTLS:
+                            description: |-
+                              ClientTLS configures a client certificate for mutual TLS authentication with the
+                              webhook server. When set, overrides any clientTLS from a matching connections entry.
+                            properties:
+                              certKey:
+                                default: tls.crt
+                                description: |-
+                                  CertKey is the key within the Secret
+                                  for the PEM-encoded client certificate.
+                                type: string
+                              privateKeyKey:
+                                default: tls.key
+                                description: |-
+                                  PrivateKeyKey is the key within the Secret
+                                  for the PEM-encoded client private key.
+                                type: string
+                              secretRef:
+                                description: |-
+                                  SecretRef references the Secret containing
+                                  the client certificate and private key.
+                                properties:
+                                  name:
+                                    description: |-
+                                      Name is the metadata.name of the
+                                      target Secret.
+                                    type: string
+                                  namespace:
+                                    description: |-
+                                      Namespace is the metadata.namespace
+                                      of the target Secret.
+                                    type: string
+                                required:
+                                - name
+                                - namespace
+                                type: object
+                            required:
+                            - secretRef
                             type: object
                           etag:
                             properties:
@@ -559,13 +1253,93 @@ spec:
                         type: string
                       webhook:
                         properties:
+                          authorization:
+                            description: |-
+                              Authorization configures the Authorization header credential sent with every
+                              request to this webhook. Mutually exclusive with basicAuth.
+                              When set, overrides any authorization or basicAuth from a matching connections entry.
+                            properties:
+                              secretRef:
+                                description: |-
+                                  SecretRef selects the key from a Secret
+                                  containing the credential value.
+                                properties:
+                                  key:
+                                    description: |-
+                                      Key is the key within the Secret's
+                                      data map.
+                                    type: string
+                                  name:
+                                    description: |-
+                                      Name is the metadata.name of the
+                                      target Secret.
+                                    type: string
+                                  namespace:
+                                    description: |-
+                                      Namespace is the metadata.namespace
+                                      of the target Secret.
+                                    type: string
+                                required:
+                                - key
+                                - name
+                                - namespace
+                                type: object
+                              type:
+                                default: Bearer
+                                description: |-
+                                  Type is the Authorization header scheme. The value is case-insensitive.
+                                  "Basic" is not a supported value; use the basicAuth field instead.
+                                type: string
+                            required:
+                            - secretRef
+                            type: object
+                          basicAuth:
+                            description: |-
+                              BasicAuth configures HTTP Basic Authentication credentials sent with every
+                              request to this webhook. Mutually exclusive with authorization.
+                              When set, overrides any authorization or basicAuth from a matching connections entry.
+                            properties:
+                              passwordKey:
+                                default: password
+                                description: |-
+                                  PasswordKey is the key within the Secret
+                                  for the password.
+                                type: string
+                              secretRef:
+                                description: |-
+                                  SecretRef references the Secret containing
+                                  the username and password.
+                                properties:
+                                  name:
+                                    description: |-
+                                      Name is the metadata.name of the
+                                      target Secret.
+                                    type: string
+                                  namespace:
+                                    description: |-
+                                      Namespace is the metadata.namespace
+                                      of the target Secret.
+                                    type: string
+                                required:
+                                - name
+                                - namespace
+                                type: object
+                              usernameKey:
+                                default: username
+                                description: |-
+                                  UsernameKey is the key within the Secret
+                                  for the username.
+                                type: string
+                            required:
+                            - secretRef
+                            type: object
                           caBundle:
                             description: |-
                               CABundle configures the CA certificate(s) used to verify the webhook server's
                               TLS certificate when the endpoint uses HTTPS with a private or self-signed CA.
-                              If not specified, the system trust roots are used (publicly-trusted CAs such as
-                              Let's Encrypt work without this field).
+                              If not specified, the system trust roots are used.
                               Exactly one of inline, secretRef, or configMapRef must be set when this field is present.
+                              When set, overrides any caBundle from a matching connections entry.
 
                               updated, and is not reloaded automatically if the underlying Secret or ConfigMap changes.
                               To pick up a rotated CA, update the controller CR (e.g. add/change an annotation) to
@@ -574,20 +1348,22 @@ spec:
                               configMapRef:
                                 description: |-
                                   ConfigMapRef references a key in a Kubernetes ConfigMap containing
-                                  PEM-encoded CA certificate(s). This is the idiomatic approach for
-                                  public CA data that does not need to be stored in a Secret.
+                                  PEM-encoded CA certificate(s).
                                 properties:
                                   key:
+                                    default: ca.crt
                                     description: |-
-                                      Key is the key within the Secret's or ConfigMap's data map.
-                                      Defaults to "ca.crt" if not specified.
+                                      Key is the key within the Secret's
+                                      or ConfigMap's data map.
                                     type: string
                                   name:
-                                    description: Name is the metadata.name of the
+                                    description: |-
+                                      Name is the metadata.name of the
                                       target Secret or ConfigMap.
                                     type: string
                                   namespace:
-                                    description: Namespace is the metadata.namespace
+                                    description: |-
+                                      Namespace is the metadata.namespace
                                       of the target Secret or ConfigMap.
                                     type: string
                                 required:
@@ -595,32 +1371,74 @@ spec:
                                 - namespace
                                 type: object
                               inline:
-                                description: Inline contains PEM-encoded CA certificate(s)
+                                description: |-
+                                  Inline contains PEM-encoded CA certificate(s)
                                   directly embedded in the spec.
                                 type: string
                               secretRef:
                                 description: |-
                                   SecretRef references a key in a Kubernetes Secret containing PEM-encoded
-                                  CA certificate(s). Useful when the CA is already stored in a Secret
-                                  (e.g. created by cert-manager alongside a TLS keypair).
+                                  CA certificate(s).
                                 properties:
                                   key:
+                                    default: ca.crt
                                     description: |-
-                                      Key is the key within the Secret's or ConfigMap's data map.
-                                      Defaults to "ca.crt" if not specified.
+                                      Key is the key within the Secret's
+                                      or ConfigMap's data map.
                                     type: string
                                   name:
-                                    description: Name is the metadata.name of the
+                                    description: |-
+                                      Name is the metadata.name of the
                                       target Secret or ConfigMap.
                                     type: string
                                   namespace:
-                                    description: Namespace is the metadata.namespace
+                                    description: |-
+                                      Namespace is the metadata.namespace
                                       of the target Secret or ConfigMap.
                                     type: string
                                 required:
                                 - name
                                 - namespace
                                 type: object
+                            type: object
+                          clientTLS:
+                            description: |-
+                              ClientTLS configures a client certificate for mutual TLS authentication with the
+                              webhook server. When set, overrides any clientTLS from a matching connections entry.
+                            properties:
+                              certKey:
+                                default: tls.crt
+                                description: |-
+                                  CertKey is the key within the Secret
+                                  for the PEM-encoded client certificate.
+                                type: string
+                              privateKeyKey:
+                                default: tls.key
+                                description: |-
+                                  PrivateKeyKey is the key within the Secret
+                                  for the PEM-encoded client private key.
+                                type: string
+                              secretRef:
+                                description: |-
+                                  SecretRef references the Secret containing
+                                  the client certificate and private key.
+                                properties:
+                                  name:
+                                    description: |-
+                                      Name is the metadata.name of the
+                                      target Secret.
+                                    type: string
+                                  namespace:
+                                    description: |-
+                                      Namespace is the metadata.namespace
+                                      of the target Secret.
+                                    type: string
+                                required:
+                                - name
+                                - namespace
+                                type: object
+                            required:
+                            - secretRef
                             type: object
                           etag:
                             properties:
@@ -679,7 +1497,8 @@ spec:
                       label selector matches no objects.
                     properties:
                       matchExpressions:
-                        description: matchExpressions is a list of label selector
+                        description: |-
+                          matchExpressions is a list of label selector
                           requirements. The requirements are ANDed.
                         items:
                           description: |-
@@ -687,7 +1506,8 @@ spec:
                             relates the key and values.
                           properties:
                             key:
-                              description: key is the label key that the selector
+                              description: |-
+                                key is the label key that the selector
                                 applies to.
                               type: string
                             operator:
@@ -884,6 +1704,204 @@ spec:
                   - resource
                   type: object
                 type: array
+              connections:
+                description: |-
+                  Connections defines connection settings (TLS, authentication) keyed by
+                  webhook host. When a webhook URL's host matches a connection entry, the
+                  entry's settings are used unless the webhook overrides them directly.
+                items:
+                  description: |-
+                    WebhookConnection defines connection settings applied to webhooks whose URL
+                    host matches the entry's host field. Settings are resolved once when the
+                    controller CR is created or updated.
+                  properties:
+                    authorization:
+                      description: |-
+                        Authorization configures the Authorization header credential. Mutually exclusive
+                        with basicAuth.
+                      properties:
+                        secretRef:
+                          description: |-
+                            SecretRef selects the key from a Secret containing
+                            the credential value.
+                          properties:
+                            key:
+                              description: |-
+                                Key is the key within the Secret's data
+                                map.
+                              type: string
+                            name:
+                              description: |-
+                                Name is the metadata.name of the target
+                                Secret.
+                              type: string
+                            namespace:
+                              description: |-
+                                Namespace is the metadata.namespace of
+                                the target Secret.
+                              type: string
+                          required:
+                          - key
+                          - name
+                          - namespace
+                          type: object
+                        type:
+                          default: Bearer
+                          description: |-
+                            Type is the Authorization header scheme. The value is case-insensitive.
+                            "Basic" is not a supported value; use the basicAuth field instead.
+                          type: string
+                      required:
+                      - secretRef
+                      type: object
+                    basicAuth:
+                      description: |-
+                        BasicAuth configures HTTP Basic Authentication credentials. Mutually exclusive
+                        with authorization.
+                      properties:
+                        passwordKey:
+                          default: password
+                          description: |-
+                            PasswordKey is the key within the Secret for
+                            the password.
+                          type: string
+                        secretRef:
+                          description: |-
+                            SecretRef references the Secret containing
+                            the username and password.
+                          properties:
+                            name:
+                              description: |-
+                                Name is the metadata.name of the target
+                                Secret.
+                              type: string
+                            namespace:
+                              description: |-
+                                Namespace is the metadata.namespace of
+                                the target Secret.
+                              type: string
+                          required:
+                          - name
+                          - namespace
+                          type: object
+                        usernameKey:
+                          default: username
+                          description: |-
+                            UsernameKey is the key within the Secret for
+                            the username.
+                          type: string
+                      required:
+                      - secretRef
+                      type: object
+                    caBundle:
+                      description: |-
+                        CABundle configures the CA certificate(s) used to verify the webhook server's
+                        TLS certificate.
+                      properties:
+                        configMapRef:
+                          description: |-
+                            ConfigMapRef references a key in a Kubernetes ConfigMap containing
+                            PEM-encoded CA certificate(s).
+                          properties:
+                            key:
+                              default: ca.crt
+                              description: |-
+                                Key is the key within the Secret's or ConfigMap's
+                                data map.
+                              type: string
+                            name:
+                              description: |-
+                                Name is the metadata.name of the target
+                                Secret or ConfigMap.
+                              type: string
+                            namespace:
+                              description: |-
+                                Namespace is the metadata.namespace of
+                                the target Secret or ConfigMap.
+                              type: string
+                          required:
+                          - name
+                          - namespace
+                          type: object
+                        inline:
+                          description: |-
+                            Inline contains PEM-encoded CA certificate(s)
+                            directly embedded in the spec.
+                          type: string
+                        secretRef:
+                          description: |-
+                            SecretRef references a key in a Kubernetes Secret containing PEM-encoded
+                            CA certificate(s).
+                          properties:
+                            key:
+                              default: ca.crt
+                              description: |-
+                                Key is the key within the Secret's or ConfigMap's
+                                data map.
+                              type: string
+                            name:
+                              description: |-
+                                Name is the metadata.name of the target
+                                Secret or ConfigMap.
+                              type: string
+                            namespace:
+                              description: |-
+                                Namespace is the metadata.namespace of
+                                the target Secret or ConfigMap.
+                              type: string
+                          required:
+                          - name
+                          - namespace
+                          type: object
+                      type: object
+                    clientTLS:
+                      description: |-
+                        ClientTLS configures a client certificate for mutual
+                        TLS authentication.
+                      properties:
+                        certKey:
+                          default: tls.crt
+                          description: |-
+                            CertKey is the key within the Secret for the
+                            PEM-encoded client certificate.
+                          type: string
+                        privateKeyKey:
+                          default: tls.key
+                          description: |-
+                            PrivateKeyKey is the key within the Secret
+                            for the PEM-encoded client private key.
+                          type: string
+                        secretRef:
+                          description: |-
+                            SecretRef references the Secret containing
+                            the client certificate and private key.
+                          properties:
+                            name:
+                              description: |-
+                                Name is the metadata.name of the target
+                                Secret.
+                              type: string
+                            namespace:
+                              description: |-
+                                Namespace is the metadata.namespace of
+                                the target Secret.
+                              type: string
+                          required:
+                          - name
+                          - namespace
+                          type: object
+                      required:
+                      - secretRef
+                      type: object
+                    host:
+                      description: |-
+                        Host is the host or host:port to match against webhook URLs.
+                        Examples: "my-webhook.svc", "my-webhook.svc:8443"
+                      type: string
+                  required:
+                  - host
+                  type: object
+                type: array
               hooks:
                 properties:
                   customize:
@@ -896,13 +1914,93 @@ spec:
                         type: string
                       webhook:
                         properties:
+                          authorization:
+                            description: |-
+                              Authorization configures the Authorization header credential sent with every
+                              request to this webhook. Mutually exclusive with basicAuth.
+                              When set, overrides any authorization or basicAuth from a matching connections entry.
+                            properties:
+                              secretRef:
+                                description: |-
+                                  SecretRef selects the key from a Secret
+                                  containing the credential value.
+                                properties:
+                                  key:
+                                    description: |-
+                                      Key is the key within the Secret's
+                                      data map.
+                                    type: string
+                                  name:
+                                    description: |-
+                                      Name is the metadata.name of the
+                                      target Secret.
+                                    type: string
+                                  namespace:
+                                    description: |-
+                                      Namespace is the metadata.namespace
+                                      of the target Secret.
+                                    type: string
+                                required:
+                                - key
+                                - name
+                                - namespace
+                                type: object
+                              type:
+                                default: Bearer
+                                description: |-
+                                  Type is the Authorization header scheme. The value is case-insensitive.
+                                  "Basic" is not a supported value; use the basicAuth field instead.
+                                type: string
+                            required:
+                            - secretRef
+                            type: object
+                          basicAuth:
+                            description: |-
+                              BasicAuth configures HTTP Basic Authentication credentials sent with every
+                              request to this webhook. Mutually exclusive with authorization.
+                              When set, overrides any authorization or basicAuth from a matching connections entry.
+                            properties:
+                              passwordKey:
+                                default: password
+                                description: |-
+                                  PasswordKey is the key within the Secret
+                                  for the password.
+                                type: string
+                              secretRef:
+                                description: |-
+                                  SecretRef references the Secret containing
+                                  the username and password.
+                                properties:
+                                  name:
+                                    description: |-
+                                      Name is the metadata.name of the
+                                      target Secret.
+                                    type: string
+                                  namespace:
+                                    description: |-
+                                      Namespace is the metadata.namespace
+                                      of the target Secret.
+                                    type: string
+                                required:
+                                - name
+                                - namespace
+                                type: object
+                              usernameKey:
+                                default: username
+                                description: |-
+                                  UsernameKey is the key within the Secret
+                                  for the username.
+                                type: string
+                            required:
+                            - secretRef
+                            type: object
                           caBundle:
                             description: |-
                               CABundle configures the CA certificate(s) used to verify the webhook server's
                               TLS certificate when the endpoint uses HTTPS with a private or self-signed CA.
-                              If not specified, the system trust roots are used (publicly-trusted CAs such as
-                              Let's Encrypt work without this field).
+                              If not specified, the system trust roots are used.
                               Exactly one of inline, secretRef, or configMapRef must be set when this field is present.
+                              When set, overrides any caBundle from a matching connections entry.
 
                               updated, and is not reloaded automatically if the underlying Secret or ConfigMap changes.
                               To pick up a rotated CA, update the controller CR (e.g. add/change an annotation) to
@@ -911,20 +2009,22 @@ spec:
                               configMapRef:
                                 description: |-
                                   ConfigMapRef references a key in a Kubernetes ConfigMap containing
-                                  PEM-encoded CA certificate(s). This is the idiomatic approach for
-                                  public CA data that does not need to be stored in a Secret.
+                                  PEM-encoded CA certificate(s).
                                 properties:
                                   key:
+                                    default: ca.crt
                                     description: |-
-                                      Key is the key within the Secret's or ConfigMap's data map.
-                                      Defaults to "ca.crt" if not specified.
+                                      Key is the key within the Secret's
+                                      or ConfigMap's data map.
                                     type: string
                                   name:
-                                    description: Name is the metadata.name of the
+                                    description: |-
+                                      Name is the metadata.name of the
                                       target Secret or ConfigMap.
                                     type: string
                                   namespace:
-                                    description: Namespace is the metadata.namespace
+                                    description: |-
+                                      Namespace is the metadata.namespace
                                       of the target Secret or ConfigMap.
                                     type: string
                                 required:
@@ -932,32 +2032,74 @@ spec:
                                 - namespace
                                 type: object
                               inline:
-                                description: Inline contains PEM-encoded CA certificate(s)
+                                description: |-
+                                  Inline contains PEM-encoded CA certificate(s)
                                   directly embedded in the spec.
                                 type: string
                               secretRef:
                                 description: |-
                                   SecretRef references a key in a Kubernetes Secret containing PEM-encoded
-                                  CA certificate(s). Useful when the CA is already stored in a Secret
-                                  (e.g. created by cert-manager alongside a TLS keypair).
+                                  CA certificate(s).
                                 properties:
                                   key:
+                                    default: ca.crt
                                     description: |-
-                                      Key is the key within the Secret's or ConfigMap's data map.
-                                      Defaults to "ca.crt" if not specified.
+                                      Key is the key within the Secret's
+                                      or ConfigMap's data map.
                                     type: string
                                   name:
-                                    description: Name is the metadata.name of the
+                                    description: |-
+                                      Name is the metadata.name of the
                                       target Secret or ConfigMap.
                                     type: string
                                   namespace:
-                                    description: Namespace is the metadata.namespace
+                                    description: |-
+                                      Namespace is the metadata.namespace
                                       of the target Secret or ConfigMap.
                                     type: string
                                 required:
                                 - name
                                 - namespace
                                 type: object
+                            type: object
+                          clientTLS:
+                            description: |-
+                              ClientTLS configures a client certificate for mutual TLS authentication with the
+                              webhook server. When set, overrides any clientTLS from a matching connections entry.
+                            properties:
+                              certKey:
+                                default: tls.crt
+                                description: |-
+                                  CertKey is the key within the Secret
+                                  for the PEM-encoded client certificate.
+                                type: string
+                              privateKeyKey:
+                                default: tls.key
+                                description: |-
+                                  PrivateKeyKey is the key within the Secret
+                                  for the PEM-encoded client private key.
+                                type: string
+                              secretRef:
+                                description: |-
+                                  SecretRef references the Secret containing
+                                  the client certificate and private key.
+                                properties:
+                                  name:
+                                    description: |-
+                                      Name is the metadata.name of the
+                                      target Secret.
+                                    type: string
+                                  namespace:
+                                    description: |-
+                                      Namespace is the metadata.namespace
+                                      of the target Secret.
+                                    type: string
+                                required:
+                                - name
+                                - namespace
+                                type: object
+                            required:
+                            - secretRef
                             type: object
                           etag:
                             properties:
@@ -1012,13 +2154,93 @@ spec:
                         type: string
                       webhook:
                         properties:
+                          authorization:
+                            description: |-
+                              Authorization configures the Authorization header credential sent with every
+                              request to this webhook. Mutually exclusive with basicAuth.
+                              When set, overrides any authorization or basicAuth from a matching connections entry.
+                            properties:
+                              secretRef:
+                                description: |-
+                                  SecretRef selects the key from a Secret
+                                  containing the credential value.
+                                properties:
+                                  key:
+                                    description: |-
+                                      Key is the key within the Secret's
+                                      data map.
+                                    type: string
+                                  name:
+                                    description: |-
+                                      Name is the metadata.name of the
+                                      target Secret.
+                                    type: string
+                                  namespace:
+                                    description: |-
+                                      Namespace is the metadata.namespace
+                                      of the target Secret.
+                                    type: string
+                                required:
+                                - key
+                                - name
+                                - namespace
+                                type: object
+                              type:
+                                default: Bearer
+                                description: |-
+                                  Type is the Authorization header scheme. The value is case-insensitive.
+                                  "Basic" is not a supported value; use the basicAuth field instead.
+                                type: string
+                            required:
+                            - secretRef
+                            type: object
+                          basicAuth:
+                            description: |-
+                              BasicAuth configures HTTP Basic Authentication credentials sent with every
+                              request to this webhook. Mutually exclusive with authorization.
+                              When set, overrides any authorization or basicAuth from a matching connections entry.
+                            properties:
+                              passwordKey:
+                                default: password
+                                description: |-
+                                  PasswordKey is the key within the Secret
+                                  for the password.
+                                type: string
+                              secretRef:
+                                description: |-
+                                  SecretRef references the Secret containing
+                                  the username and password.
+                                properties:
+                                  name:
+                                    description: |-
+                                      Name is the metadata.name of the
+                                      target Secret.
+                                    type: string
+                                  namespace:
+                                    description: |-
+                                      Namespace is the metadata.namespace
+                                      of the target Secret.
+                                    type: string
+                                required:
+                                - name
+                                - namespace
+                                type: object
+                              usernameKey:
+                                default: username
+                                description: |-
+                                  UsernameKey is the key within the Secret
+                                  for the username.
+                                type: string
+                            required:
+                            - secretRef
+                            type: object
                           caBundle:
                             description: |-
                               CABundle configures the CA certificate(s) used to verify the webhook server's
                               TLS certificate when the endpoint uses HTTPS with a private or self-signed CA.
-                              If not specified, the system trust roots are used (publicly-trusted CAs such as
-                              Let's Encrypt work without this field).
+                              If not specified, the system trust roots are used.
                               Exactly one of inline, secretRef, or configMapRef must be set when this field is present.
+                              When set, overrides any caBundle from a matching connections entry.
 
                               updated, and is not reloaded automatically if the underlying Secret or ConfigMap changes.
                               To pick up a rotated CA, update the controller CR (e.g. add/change an annotation) to
@@ -1027,20 +2249,22 @@ spec:
                               configMapRef:
                                 description: |-
                                   ConfigMapRef references a key in a Kubernetes ConfigMap containing
-                                  PEM-encoded CA certificate(s). This is the idiomatic approach for
-                                  public CA data that does not need to be stored in a Secret.
+                                  PEM-encoded CA certificate(s).
                                 properties:
                                   key:
+                                    default: ca.crt
                                     description: |-
-                                      Key is the key within the Secret's or ConfigMap's data map.
-                                      Defaults to "ca.crt" if not specified.
+                                      Key is the key within the Secret's
+                                      or ConfigMap's data map.
                                     type: string
                                   name:
-                                    description: Name is the metadata.name of the
+                                    description: |-
+                                      Name is the metadata.name of the
                                       target Secret or ConfigMap.
                                     type: string
                                   namespace:
-                                    description: Namespace is the metadata.namespace
+                                    description: |-
+                                      Namespace is the metadata.namespace
                                       of the target Secret or ConfigMap.
                                     type: string
                                 required:
@@ -1048,32 +2272,74 @@ spec:
                                 - namespace
                                 type: object
                               inline:
-                                description: Inline contains PEM-encoded CA certificate(s)
+                                description: |-
+                                  Inline contains PEM-encoded CA certificate(s)
                                   directly embedded in the spec.
                                 type: string
                               secretRef:
                                 description: |-
                                   SecretRef references a key in a Kubernetes Secret containing PEM-encoded
-                                  CA certificate(s). Useful when the CA is already stored in a Secret
-                                  (e.g. created by cert-manager alongside a TLS keypair).
+                                  CA certificate(s).
                                 properties:
                                   key:
+                                    default: ca.crt
                                     description: |-
-                                      Key is the key within the Secret's or ConfigMap's data map.
-                                      Defaults to "ca.crt" if not specified.
+                                      Key is the key within the Secret's
+                                      or ConfigMap's data map.
                                     type: string
                                   name:
-                                    description: Name is the metadata.name of the
+                                    description: |-
+                                      Name is the metadata.name of the
                                       target Secret or ConfigMap.
                                     type: string
                                   namespace:
-                                    description: Namespace is the metadata.namespace
+                                    description: |-
+                                      Namespace is the metadata.namespace
                                       of the target Secret or ConfigMap.
                                     type: string
                                 required:
                                 - name
                                 - namespace
                                 type: object
+                            type: object
+                          clientTLS:
+                            description: |-
+                              ClientTLS configures a client certificate for mutual TLS authentication with the
+                              webhook server. When set, overrides any clientTLS from a matching connections entry.
+                            properties:
+                              certKey:
+                                default: tls.crt
+                                description: |-
+                                  CertKey is the key within the Secret
+                                  for the PEM-encoded client certificate.
+                                type: string
+                              privateKeyKey:
+                                default: tls.key
+                                description: |-
+                                  PrivateKeyKey is the key within the Secret
+                                  for the PEM-encoded client private key.
+                                type: string
+                              secretRef:
+                                description: |-
+                                  SecretRef references the Secret containing
+                                  the client certificate and private key.
+                                properties:
+                                  name:
+                                    description: |-
+                                      Name is the metadata.name of the
+                                      target Secret.
+                                    type: string
+                                  namespace:
+                                    description: |-
+                                      Namespace is the metadata.namespace
+                                      of the target Secret.
+                                    type: string
+                                required:
+                                - name
+                                - namespace
+                                type: object
+                            required:
+                            - secretRef
                             type: object
                           etag:
                             properties:
@@ -1128,13 +2394,93 @@ spec:
                         type: string
                       webhook:
                         properties:
+                          authorization:
+                            description: |-
+                              Authorization configures the Authorization header credential sent with every
+                              request to this webhook. Mutually exclusive with basicAuth.
+                              When set, overrides any authorization or basicAuth from a matching connections entry.
+                            properties:
+                              secretRef:
+                                description: |-
+                                  SecretRef selects the key from a Secret
+                                  containing the credential value.
+                                properties:
+                                  key:
+                                    description: |-
+                                      Key is the key within the Secret's
+                                      data map.
+                                    type: string
+                                  name:
+                                    description: |-
+                                      Name is the metadata.name of the
+                                      target Secret.
+                                    type: string
+                                  namespace:
+                                    description: |-
+                                      Namespace is the metadata.namespace
+                                      of the target Secret.
+                                    type: string
+                                required:
+                                - key
+                                - name
+                                - namespace
+                                type: object
+                              type:
+                                default: Bearer
+                                description: |-
+                                  Type is the Authorization header scheme. The value is case-insensitive.
+                                  "Basic" is not a supported value; use the basicAuth field instead.
+                                type: string
+                            required:
+                            - secretRef
+                            type: object
+                          basicAuth:
+                            description: |-
+                              BasicAuth configures HTTP Basic Authentication credentials sent with every
+                              request to this webhook. Mutually exclusive with authorization.
+                              When set, overrides any authorization or basicAuth from a matching connections entry.
+                            properties:
+                              passwordKey:
+                                default: password
+                                description: |-
+                                  PasswordKey is the key within the Secret
+                                  for the password.
+                                type: string
+                              secretRef:
+                                description: |-
+                                  SecretRef references the Secret containing
+                                  the username and password.
+                                properties:
+                                  name:
+                                    description: |-
+                                      Name is the metadata.name of the
+                                      target Secret.
+                                    type: string
+                                  namespace:
+                                    description: |-
+                                      Namespace is the metadata.namespace
+                                      of the target Secret.
+                                    type: string
+                                required:
+                                - name
+                                - namespace
+                                type: object
+                              usernameKey:
+                                default: username
+                                description: |-
+                                  UsernameKey is the key within the Secret
+                                  for the username.
+                                type: string
+                            required:
+                            - secretRef
+                            type: object
                           caBundle:
                             description: |-
                               CABundle configures the CA certificate(s) used to verify the webhook server's
                               TLS certificate when the endpoint uses HTTPS with a private or self-signed CA.
-                              If not specified, the system trust roots are used (publicly-trusted CAs such as
-                              Let's Encrypt work without this field).
+                              If not specified, the system trust roots are used.
                               Exactly one of inline, secretRef, or configMapRef must be set when this field is present.
+                              When set, overrides any caBundle from a matching connections entry.
 
                               updated, and is not reloaded automatically if the underlying Secret or ConfigMap changes.
                               To pick up a rotated CA, update the controller CR (e.g. add/change an annotation) to
@@ -1143,20 +2489,22 @@ spec:
                               configMapRef:
                                 description: |-
                                   ConfigMapRef references a key in a Kubernetes ConfigMap containing
-                                  PEM-encoded CA certificate(s). This is the idiomatic approach for
-                                  public CA data that does not need to be stored in a Secret.
+                                  PEM-encoded CA certificate(s).
                                 properties:
                                   key:
+                                    default: ca.crt
                                     description: |-
-                                      Key is the key within the Secret's or ConfigMap's data map.
-                                      Defaults to "ca.crt" if not specified.
+                                      Key is the key within the Secret's
+                                      or ConfigMap's data map.
                                     type: string
                                   name:
-                                    description: Name is the metadata.name of the
+                                    description: |-
+                                      Name is the metadata.name of the
                                       target Secret or ConfigMap.
                                     type: string
                                   namespace:
-                                    description: Namespace is the metadata.namespace
+                                    description: |-
+                                      Namespace is the metadata.namespace
                                       of the target Secret or ConfigMap.
                                     type: string
                                 required:
@@ -1164,32 +2512,74 @@ spec:
                                 - namespace
                                 type: object
                               inline:
-                                description: Inline contains PEM-encoded CA certificate(s)
+                                description: |-
+                                  Inline contains PEM-encoded CA certificate(s)
                                   directly embedded in the spec.
                                 type: string
                               secretRef:
                                 description: |-
                                   SecretRef references a key in a Kubernetes Secret containing PEM-encoded
-                                  CA certificate(s). Useful when the CA is already stored in a Secret
-                                  (e.g. created by cert-manager alongside a TLS keypair).
+                                  CA certificate(s).
                                 properties:
                                   key:
+                                    default: ca.crt
                                     description: |-
-                                      Key is the key within the Secret's or ConfigMap's data map.
-                                      Defaults to "ca.crt" if not specified.
+                                      Key is the key within the Secret's
+                                      or ConfigMap's data map.
                                     type: string
                                   name:
-                                    description: Name is the metadata.name of the
+                                    description: |-
+                                      Name is the metadata.name of the
                                       target Secret or ConfigMap.
                                     type: string
                                   namespace:
-                                    description: Namespace is the metadata.namespace
+                                    description: |-
+                                      Namespace is the metadata.namespace
                                       of the target Secret or ConfigMap.
                                     type: string
                                 required:
                                 - name
                                 - namespace
                                 type: object
+                            type: object
+                          clientTLS:
+                            description: |-
+                              ClientTLS configures a client certificate for mutual TLS authentication with the
+                              webhook server. When set, overrides any clientTLS from a matching connections entry.
+                            properties:
+                              certKey:
+                                default: tls.crt
+                                description: |-
+                                  CertKey is the key within the Secret
+                                  for the PEM-encoded client certificate.
+                                type: string
+                              privateKeyKey:
+                                default: tls.key
+                                description: |-
+                                  PrivateKeyKey is the key within the Secret
+                                  for the PEM-encoded client private key.
+                                type: string
+                              secretRef:
+                                description: |-
+                                  SecretRef references the Secret containing
+                                  the client certificate and private key.
+                                properties:
+                                  name:
+                                    description: |-
+                                      Name is the metadata.name of the
+                                      target Secret.
+                                    type: string
+                                  namespace:
+                                    description: |-
+                                      Namespace is the metadata.namespace
+                                      of the target Secret.
+                                    type: string
+                                required:
+                                - name
+                                - namespace
+                                type: object
+                            required:
+                            - secretRef
                             type: object
                           etag:
                             properties:
@@ -1251,7 +2641,8 @@ spec:
                               relates the key and values.
                             properties:
                               key:
-                                description: key is the label key that the selector
+                                description: |-
+                                  key is the label key that the selector
                                   applies to.
                                 type: string
                               operator:
@@ -1286,7 +2677,8 @@ spec:
                         label selector matches no objects.
                       properties:
                         matchExpressions:
-                          description: matchExpressions is a list of label selector
+                          description: |-
+                            matchExpressions is a list of label selector
                             requirements. The requirements are ANDed.
                           items:
                             description: |-
@@ -1294,7 +2686,8 @@ spec:
                               relates the key and values.
                             properties:
                               key:
-                                description: key is the label key that the selector
+                                description: |-
+                                  key is the label key that the selector
                                   applies to.
                                 type: string
                               operator:
