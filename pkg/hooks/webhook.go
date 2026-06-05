@@ -310,20 +310,25 @@ func webhookTimeout(webhook *v1alpha1.Webhook) (time.Duration, error) {
 	return webhook.Timeout.Duration, nil
 }
 
-// buildTLSTransport creates an http.Transport that uses the given PEM-encoded
-// CA certificate(s) as the only trusted roots for TLS verification. If
-// clientCert is non-nil it is presented during the TLS handshake.
+// buildTLSTransport creates an http.Transport with custom TLS settings by
+// cloning http.DefaultTransport so that proxy, dial, keep-alive, and timeout
+// settings are preserved. If caBundle is non-empty the provided PEM-encoded
+// CA certificate(s) replace the system roots. If clientCert is non-nil it is
+// presented during the TLS handshake.
 func buildTLSTransport(caBundle []byte, clientCert *tls.Certificate) (*http.Transport, error) {
-	tlsCfg := &tls.Config{}
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	if transport.TLSClientConfig == nil {
+		transport.TLSClientConfig = &tls.Config{}
+	}
 	if len(caBundle) > 0 {
 		certPool := x509.NewCertPool()
 		if !certPool.AppendCertsFromPEM(caBundle) {
 			return nil, fmt.Errorf("caBundle: no valid PEM-encoded certificates found in the provided CA bundle")
 		}
-		tlsCfg.RootCAs = certPool
+		transport.TLSClientConfig.RootCAs = certPool
 	}
 	if clientCert != nil {
-		tlsCfg.Certificates = []tls.Certificate{*clientCert}
+		transport.TLSClientConfig.Certificates = []tls.Certificate{*clientCert}
 	}
-	return &http.Transport{TLSClientConfig: tlsCfg}, nil
+	return transport, nil
 }
