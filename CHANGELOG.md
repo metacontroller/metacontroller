@@ -1,3 +1,11 @@
+## [4.15.1](https://github.com/metacontroller/metacontroller/compare/v4.15.0...v4.15.1) (2026-06-29)
+
+
+### Bug Fixes
+
+* **deps:** update alpine docker tag to v3.24.1 ([b174d17](https://github.com/metacontroller/metacontroller/commit/b174d17d66667d9d9afeec04e2cbf598c45fb330))
+* Update go version and fix nancy action ([b143699](https://github.com/metacontroller/metacontroller/commit/b1436992a773a6a2d0aa022bcffdd65347c6f355))
+
 # [4.15.0](https://github.com/metacontroller/metacontroller/compare/v4.14.0...v4.15.0) (2026-03-23)
 
 
