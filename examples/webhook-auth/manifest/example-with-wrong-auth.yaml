@@ -1,0 +1,21 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: shareable-invalid
+  namespace: secure-omega
+data:
+  some: dmFsdWUK
+---
+apiVersion: examples.metacontroller.io/v1alpha1
+kind: SecureSecretPropagation
+metadata:
+  name: secure-secret-propagation-invalid
+  labels:
+    auth: invalid
+spec:
+  sourceName: shareable-invalid
+  sourceNamespace: secure-omega
+  targetNamespaceLabelSelector:
+    matchLabels:
+      propagate-secure: "true"
