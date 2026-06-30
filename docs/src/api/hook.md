@@ -231,16 +231,16 @@ webhook:
     privateKeyKey: tls.key # optional; defaults to "tls.key"
 ```
 
-## Connections
+## Endpoint Configs
 
-The `connections` field on a `CompositeController` or `DecoratorController` lets you define
+The `endpointConfigs` field on a `CompositeController` or `DecoratorController` lets you define
 per-host connection settings (CA bundle, client TLS, and authentication) that apply to all
 webhook hooks whose URL matches a given host. Per-hook fields (if any are set) fully override the
-matching connection entry for that hook — there is no field-level merging.
+matching endpointConfigs entry for that hook — there is no field-level merging.
 
 ```yaml
 spec:
-  connections:
+  endpointConfigs:
     - host: my-hook.my-ns
       caBundle:
         secretRef:
@@ -253,7 +253,7 @@ spec:
           key: token
 ```
 
-Each entry in `connections` supports the following fields:
+Each entry in `endpointConfigs` supports the following fields:
 
 | Field           | Description                                                                                                                                                                                                                                                                                                                                                   |
 | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

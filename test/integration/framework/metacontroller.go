@@ -203,12 +203,12 @@ func (f *Fixture) CreateCompositeControllerWithBasicAuth(
 	return cc
 }
 
-// CreateCompositeControllerWithConnections creates a CompositeController whose
-// TLS and authentication are configured via spec.connections rather than
+// CreateCompositeControllerWithEndpointConfigs creates a CompositeController whose
+// TLS and authentication are configured via spec.endpointConfigs rather than
 // per-hook fields. The sync webhook URL is used as-is with no per-hook auth.
-func (f *Fixture) CreateCompositeControllerWithConnections(
+func (f *Fixture) CreateCompositeControllerWithEndpointConfigs(
 	name, syncHookURL string,
-	connections []v1alpha1.WebhookConnection,
+	endpointConfigs []v1alpha1.EndpointConfig,
 	parentRule, childRule *v1alpha1.ResourceRule,
 ) *v1alpha1.CompositeController {
 	childResources := []v1alpha1.CompositeControllerChildResourceRule{}
@@ -226,8 +226,8 @@ func (f *Fixture) CreateCompositeControllerWithConnections(
 			ParentResource: v1alpha1.CompositeControllerParentResourceRule{
 				ResourceRule: *parentRule,
 			},
-			ChildResources: childResources,
-			Connections:    connections,
+			ChildResources:  childResources,
+			EndpointConfigs: endpointConfigs,
 			Hooks: &v1alpha1.CompositeControllerHooks{
 				Sync: &v1alpha1.Hook{
 					Webhook: &v1alpha1.Webhook{
@@ -358,11 +358,11 @@ func (f *Fixture) CreateDecoratorControllerWithBasicAuth(
 	return dc
 }
 
-// CreateDecoratorControllerWithConnections creates a DecoratorController where
-// TLS and auth are configured via spec.connections rather than per-hook fields.
-func (f *Fixture) CreateDecoratorControllerWithConnections(
+// CreateDecoratorControllerWithEndpointConfigs creates a DecoratorController where
+// TLS and auth are configured via spec.endpointConfigs rather than per-hook fields.
+func (f *Fixture) CreateDecoratorControllerWithEndpointConfigs(
 	name, syncHookURL string,
-	connections []v1alpha1.WebhookConnection,
+	endpointConfigs []v1alpha1.EndpointConfig,
 	parentRule, childRule *v1alpha1.ResourceRule,
 ) *v1alpha1.DecoratorController {
 	childResources := []v1alpha1.DecoratorControllerAttachmentRule{}
@@ -380,8 +380,8 @@ func (f *Fixture) CreateDecoratorControllerWithConnections(
 			Resources: []v1alpha1.DecoratorControllerResourceRule{
 				{ResourceRule: *parentRule},
 			},
-			Attachments: childResources,
-			Connections: connections,
+			Attachments:     childResources,
+			EndpointConfigs: endpointConfigs,
 			Hooks: &v1alpha1.DecoratorControllerHooks{
 				Sync: &v1alpha1.Hook{
 					Webhook: &v1alpha1.Webhook{

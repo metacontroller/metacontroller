@@ -64,7 +64,7 @@ func NewWebhookExecutor(
 	controllerName string,
 	controllerType common.ControllerType,
 	hookType common.HookType,
-	conn *ResolvedConnection) (WebhookExecutor, error) {
+	conn *ResolvedEndpointConfig) (WebhookExecutor, error) {
 	if webhook == nil {
 		return nil, nil
 	}
