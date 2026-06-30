@@ -27,9 +27,9 @@ spec:
     resource: secrets
     updateStrategy:
       method: InPlace
-  # All hooks share the same host; the single connections entry supplies
+  # All hooks share the same host; the single endpointConfigs entry supplies
   # caBundle, bearer-token authorization, and clientTLS to all of them.
-  connections:
+  endpointConfigs:
   - host: webhook-auth-controller.metacontroller
     caBundle:
       configMapRef:

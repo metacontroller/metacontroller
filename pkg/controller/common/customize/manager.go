@@ -113,11 +113,11 @@ func NewCustomizeManager(
 		if customizeHook.Webhook != nil {
 			webhookSpec = customizeHook.Webhook
 		}
-		conn, connErr := hooks.ResolveConnectionConfig(context.Background(), k8sClient, webhookSpec, controller.GetConnections())
-		if connErr != nil {
-			return nil, fmt.Errorf("can't resolve connection config for customize hook: %w", connErr)
+		cfg, cfgErr := hooks.ResolveEndpointConfig(context.Background(), k8sClient, webhookSpec, controller.GetEndpointConfigs())
+		if cfgErr != nil {
+			return nil, fmt.Errorf("can't resolve endpoint config for customize hook: %w", cfgErr)
 		}
-		hook, err = hooks.NewHook(customizeHook, name, controllerType, common.CustomizeHook, conn)
+		hook, err = hooks.NewHook(customizeHook, name, controllerType, common.CustomizeHook, cfg)
 		if err != nil {
 			return nil, err
 		}

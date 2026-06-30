@@ -352,9 +352,9 @@ func TestNewWebhookExecutor_TLSEnforcement(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			webhook := &v1alpha1.Webhook{URL: &url}
-			var conn *ResolvedConnection
+			var conn *ResolvedEndpointConfig
 			if len(tt.caBundle) > 0 {
-				conn = &ResolvedConnection{CABundle: tt.caBundle}
+				conn = &ResolvedEndpointConfig{CABundle: tt.caBundle}
 			}
 			executor, err := NewWebhookExecutor(webhook, nil, "test-controller", common.CompositeController, "sync", conn)
 			require.NoError(t, err)
@@ -382,7 +382,7 @@ func TestNewWebhookExecutor_AuthHeader_sentToServer(t *testing.T) {
 
 	url := srv.URL + "/sync"
 	webhook := &v1alpha1.Webhook{URL: &url}
-	conn := &ResolvedConnection{AuthHeader: "Bearer secret-token"}
+	conn := &ResolvedEndpointConfig{AuthHeader: "Bearer secret-token"}
 	executor, err := NewWebhookExecutor(webhook, nil, "test-controller", common.CompositeController, common.SyncHook, conn)
 	require.NoError(t, err)
 
@@ -420,7 +420,7 @@ func TestNewWebhookExecutor_ClientTLS_presentedDuringHandshake(t *testing.T) {
 
 	url := srv.URL + "/sync"
 	webhook := &v1alpha1.Webhook{URL: &url}
-	conn := &ResolvedConnection{
+	conn := &ResolvedEndpointConfig{
 		CABundle:   pemBuf.Bytes(),
 		ClientCert: &clientCert,
 	}

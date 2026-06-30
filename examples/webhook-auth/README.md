@@ -7,17 +7,17 @@ metacontroller, using a `CompositeController` that propagates a Kubernetes
 server running over HTTPS and enforcing mutual TLS and bearer-token
 authentication.
 
-All three security mechanisms are configured via a single `spec.connections[]`
+All three security mechanisms are configured via a single `spec.endpointConfigs[]`
 entry on the controller, which applies to both the `sync` and `customize`
 hooks automatically.
 
 ## What is exercised
 
-| Feature                         | Configuration                                                  |
-| ------------------------------- | -------------------------------------------------------------- |
-| Server TLS verification         | `connections[].caBundle.configMapRef` — CA cert in a ConfigMap |
-| Bearer token authentication     | `connections[].authorization.secretRef` — token in a Secret    |
-| Mutual TLS (client certificate) | `connections[].clientTLS.secretRef` — cert + key in a Secret   |
+| Feature                         | Configuration                                                      |
+| ------------------------------- | ------------------------------------------------------------------ |
+| Server TLS verification         | `endpointConfigs[].caBundle.configMapRef` — CA cert in a ConfigMap |
+| Bearer token authentication     | `endpointConfigs[].authorization.secretRef` — token in a Secret    |
+| Mutual TLS (client certificate) | `endpointConfigs[].clientTLS.secretRef` — cert + key in a Secret   |
 
 ## How it works
 

@@ -42,8 +42,8 @@ func (cc *CompositeController) GetCustomizeHook() *Hook {
 	return cc.Spec.Hooks.Customize
 }
 
-func (cc *CompositeController) GetConnections() []WebhookConnection {
-	return cc.Spec.Connections
+func (cc *CompositeController) GetEndpointConfigs() []EndpointConfig {
+	return cc.Spec.EndpointConfigs
 }
 
 type CompositeControllerSpec struct {
@@ -52,11 +52,11 @@ type CompositeControllerSpec struct {
 
 	Hooks *CompositeControllerHooks `json:"hooks,omitempty"`
 
-	// Connections defines connection settings (TLS, authentication) keyed by
-	// webhook host. When a webhook URL's host matches a connection entry, the
+	// EndpointConfigs defines connection settings (TLS, authentication) keyed by
+	// webhook host. When a webhook URL's host matches an endpointConfigs entry, the
 	// entry's settings are used unless the webhook overrides them directly.
 	// +optional
-	Connections []WebhookConnection `json:"connections,omitempty"`
+	EndpointConfigs []EndpointConfig `json:"endpointConfigs,omitempty"`
 
 	ResyncPeriodSeconds *int32 `json:"resyncPeriodSeconds,omitempty"`
 	GenerateSelector    *bool  `json:"generateSelector,omitempty"`
@@ -168,7 +168,7 @@ type Webhook struct {
 	// TLS certificate when the endpoint uses HTTPS with a private or self-signed CA.
 	// If not specified, the system trust roots are used.
 	// Exactly one of inline, secretRef, or configMapRef must be set when this field is present.
-	// When set, overrides any caBundle from a matching connections entry.
+	// When set, overrides any caBundle from a matching endpointConfigs entry.
 	//
 	// TODO(hot-reload): The CA bundle is resolved once when the controller CR is created or
 	// updated, and is not reloaded automatically if the underlying Secret or ConfigMap changes.
@@ -178,19 +178,19 @@ type Webhook struct {
 	CABundle *CABundle `json:"caBundle,omitempty"`
 
 	// ClientTLS configures a client certificate for mutual TLS authentication with the
-	// webhook server. When set, overrides any clientTLS from a matching connections entry.
+	// webhook server. When set, overrides any clientTLS from a matching endpointConfigs entry.
 	// +optional
 	ClientTLS *ClientTLS `json:"clientTLS,omitempty"`
 
 	// Authorization configures the Authorization header credential sent with every
 	// request to this webhook. Mutually exclusive with basicAuth.
-	// When set, overrides any authorization or basicAuth from a matching connections entry.
+	// When set, overrides any authorization or basicAuth from a matching endpointConfigs entry.
 	// +optional
 	Authorization *Authorization `json:"authorization,omitempty"`
 
 	// BasicAuth configures HTTP Basic Authentication credentials sent with every
 	// request to this webhook. Mutually exclusive with authorization.
-	// When set, overrides any authorization or basicAuth from a matching connections entry.
+	// When set, overrides any authorization or basicAuth from a matching endpointConfigs entry.
 	// +optional
 	BasicAuth *BasicAuth `json:"basicAuth,omitempty"`
 }
@@ -260,10 +260,10 @@ type ClientTLS struct {
 	PrivateKeyKey string `json:"privateKeyKey,omitempty"`
 }
 
-// WebhookConnection defines connection settings applied to webhooks whose URL
+// EndpointConfig defines connection settings applied to webhooks whose URL
 // host matches the entry's host field. Settings are resolved once when the
 // controller CR is created or updated.
-type WebhookConnection struct {
+type EndpointConfig struct {
 	// Host is the host or host:port to match against webhook URLs.
 	// Examples: "my-webhook.svc", "my-webhook.svc:8443"
 	Host string `json:"host"`
@@ -386,8 +386,8 @@ func (dc *DecoratorController) GetCustomizeHook() *Hook {
 	return dc.Spec.Hooks.Customize
 }
 
-func (dc *DecoratorController) GetConnections() []WebhookConnection {
-	return dc.Spec.Connections
+func (dc *DecoratorController) GetEndpointConfigs() []EndpointConfig {
+	return dc.Spec.EndpointConfigs
 }
 
 type DecoratorControllerSpec struct {
@@ -396,11 +396,11 @@ type DecoratorControllerSpec struct {
 
 	Hooks *DecoratorControllerHooks `json:"hooks,omitempty"`
 
-	// Connections defines connection settings (TLS, authentication) keyed by
-	// webhook host. When a webhook URL's host matches a connection entry, the
+	// EndpointConfigs defines connection settings (TLS, authentication) keyed by
+	// webhook host. When a webhook URL's host matches an endpointConfigs entry, the
 	// entry's settings are used unless the webhook overrides them directly.
 	// +optional
-	Connections []WebhookConnection `json:"connections,omitempty"`
+	EndpointConfigs []EndpointConfig `json:"endpointConfigs,omitempty"`
 
 	ResyncPeriodSeconds *int32 `json:"resyncPeriodSeconds,omitempty"`
 }
@@ -456,6 +456,6 @@ type CustomizableController interface {
 	// GetCustomizeHook returns the customize Hook or nil if not defined.
 	GetCustomizeHook() *Hook
 
-	// GetConnections returns the webhook connection entries defined on the controller.
-	GetConnections() []WebhookConnection
+	// GetEndpointConfigs returns the webhook endpoint config entries defined on the controller.
+	GetEndpointConfigs() []EndpointConfig
 }

@@ -91,7 +91,7 @@ func (cc *NilCustomizableController) GetCustomizeHook() *v1alpha1.Hook {
 	return nil
 }
 
-func (cc *NilCustomizableController) GetConnections() []v1alpha1.WebhookConnection {
+func (cc *NilCustomizableController) GetEndpointConfigs() []v1alpha1.EndpointConfig {
 	return nil
 }
 
@@ -107,7 +107,7 @@ func (cc *FakeCustomizableController) GetCustomizeHook() *v1alpha1.Hook {
 	}
 }
 
-func (cc *FakeCustomizableController) GetConnections() []v1alpha1.WebhookConnection {
+func (cc *FakeCustomizableController) GetEndpointConfigs() []v1alpha1.EndpointConfig {
 	return nil
 }
 

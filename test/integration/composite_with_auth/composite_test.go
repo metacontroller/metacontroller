@@ -208,11 +208,11 @@ func TestBasicAuth(t *testing.T) {
 	}
 }
 
-// TestConnectionsBearerToken verifies that connection-level bearer token auth
+// TestEndpointConfigsBearerToken verifies that endpointConfigs-level bearer token auth
 // is applied to a webhook that carries no per-hook auth fields.
 // The happy path confirms the child is created when credentials match.
 // The unhappy path confirms the child is never created when they do not.
-func TestConnectionsBearerToken(t *testing.T) {
+func TestEndpointConfigsBearerToken(t *testing.T) {
 	cases := []struct {
 		name        string
 		secretToken string
@@ -257,7 +257,7 @@ func TestConnectionsBearerToken(t *testing.T) {
 			}
 
 			inlinePEM := string(caPEM)
-			connections := []v1alpha1.WebhookConnection{
+			endpointConfigs := []v1alpha1.EndpointConfig{
 				{
 					Host: parsedURL.Host,
 					CABundle: &v1alpha1.CABundle{
@@ -274,10 +274,10 @@ func TestConnectionsBearerToken(t *testing.T) {
 				},
 			}
 
-			f.CreateCompositeControllerWithConnections(
+			f.CreateCompositeControllerWithEndpointConfigs(
 				parentName,
 				srv.URL+"/sync",
-				connections,
+				endpointConfigs,
 				framework.CRDResourceRule(parentCRD),
 				framework.CRDResourceRule(childCRD),
 			)

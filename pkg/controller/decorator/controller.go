@@ -113,19 +113,19 @@ func newDecoratorController(
 	if dc.Spec.Hooks == nil {
 		return nil, fmt.Errorf("no hooks defined")
 	}
-	syncConn, err := hooks.ResolveConnectionConfig(context.Background(), k8sClient, syncWebhook(dc), dc.GetConnections())
+	syncCfg, err := hooks.ResolveEndpointConfig(context.Background(), k8sClient, syncWebhook(dc), dc.GetEndpointConfigs())
 	if err != nil {
-		return nil, fmt.Errorf("can't resolve connection config for sync hook: %w", err)
+		return nil, fmt.Errorf("can't resolve endpoint config for sync hook: %w", err)
 	}
-	syncHook, err := hooks.NewHook(dc.Spec.Hooks.Sync, dc.Name, common.DecoratorController, common.SyncHook, syncConn)
+	syncHook, err := hooks.NewHook(dc.Spec.Hooks.Sync, dc.Name, common.DecoratorController, common.SyncHook, syncCfg)
 	if err != nil {
 		return nil, err
 	}
-	finalizeConn, err := hooks.ResolveConnectionConfig(context.Background(), k8sClient, finalizeWebhook(dc), dc.GetConnections())
+	finalizeCfg, err := hooks.ResolveEndpointConfig(context.Background(), k8sClient, finalizeWebhook(dc), dc.GetEndpointConfigs())
 	if err != nil {
-		return nil, fmt.Errorf("can't resolve connection config for finalize hook: %w", err)
+		return nil, fmt.Errorf("can't resolve endpoint config for finalize hook: %w", err)
 	}
-	finalizeHook, err := hooks.NewHook(dc.Spec.Hooks.Finalize, dc.Name, common.DecoratorController, common.FinalizeHook, finalizeConn)
+	finalizeHook, err := hooks.NewHook(dc.Spec.Hooks.Finalize, dc.Name, common.DecoratorController, common.FinalizeHook, finalizeCfg)
 	if err != nil {
 		return nil, err
 	}

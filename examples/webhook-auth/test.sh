@@ -2,7 +2,7 @@
 # End-to-end test for webhook TLS verification and authentication.
 #
 # This test exercises the caBundle, authorization (bearer token), and
-# clientTLS (mutual TLS) fields configured via spec.connections[] on a
+# clientTLS (mutual TLS) fields configured via spec.endpointConfigs[] on a
 # CompositeController. The webhook server enforces all three simultaneously.
 #
 # Requirements:

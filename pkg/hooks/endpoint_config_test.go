@@ -34,103 +34,103 @@ const (
 	connTestHost = "example.com"
 )
 
-// --- matchConnection tests ---
+// --- matchEndpointConfig tests ---
 
-func TestMatchConnection_whenNoConnections_returnsNil(t *testing.T) {
-	result := matchConnection("https://example.com/path", nil)
+func TestMatchEndpointConfig_whenNoEndpointConfigs_returnsNil(t *testing.T) {
+	result := matchEndpointConfig("https://example.com/path", nil)
 	assert.Nil(t, result)
 }
 
-func TestMatchConnection_whenExactHostMatch_returnsConnection(t *testing.T) {
-	conns := []v1alpha1.WebhookConnection{{Host: connTestHost}}
-	result := matchConnection("https://example.com/path", conns)
+func TestMatchEndpointConfig_whenExactHostMatch_returnsEndpointConfig(t *testing.T) {
+	cfgs := []v1alpha1.EndpointConfig{{Host: connTestHost}}
+	result := matchEndpointConfig("https://example.com/path", cfgs)
 	require.NotNil(t, result)
 	assert.Equal(t, connTestHost, result.Host)
 }
 
-func TestMatchConnection_whenHostWithPortMatchesDefaultHTTPSPort_returnsConnection(t *testing.T) {
-	// Connection specifies "example.com"; URL has explicit :443 — they match.
-	conns := []v1alpha1.WebhookConnection{{Host: connTestHost}}
-	result := matchConnection("https://example.com:443/path", conns)
+func TestMatchEndpointConfig_whenHostWithPortMatchesDefaultHTTPSPort_returnsEndpointConfig(t *testing.T) {
+	// EndpointConfig specifies "example.com"; URL has explicit :443 — they match.
+	cfgs := []v1alpha1.EndpointConfig{{Host: connTestHost}}
+	result := matchEndpointConfig("https://example.com:443/path", cfgs)
 	require.NotNil(t, result)
 }
 
-func TestMatchConnection_whenConnectionHasPortAndURLOmitsDefaultPort_returnsConnection(t *testing.T) {
-	// Connection specifies "example.com:443"; URL omits port — they match.
-	conns := []v1alpha1.WebhookConnection{{Host: "example.com:443"}}
-	result := matchConnection("https://example.com/path", conns)
+func TestMatchEndpointConfig_whenEndpointConfigHasPortAndURLOmitsDefaultPort_returnsEndpointConfig(t *testing.T) {
+	// EndpointConfig specifies "example.com:443"; URL omits port — they match.
+	cfgs := []v1alpha1.EndpointConfig{{Host: "example.com:443"}}
+	result := matchEndpointConfig("https://example.com/path", cfgs)
 	require.NotNil(t, result)
 }
 
-func TestMatchConnection_whenCaseInsensitiveHost_returnsConnection(t *testing.T) {
-	conns := []v1alpha1.WebhookConnection{{Host: "EXAMPLE.COM"}}
-	result := matchConnection("https://example.com/path", conns)
+func TestMatchEndpointConfig_whenCaseInsensitiveHost_returnsEndpointConfig(t *testing.T) {
+	cfgs := []v1alpha1.EndpointConfig{{Host: "EXAMPLE.COM"}}
+	result := matchEndpointConfig("https://example.com/path", cfgs)
 	require.NotNil(t, result)
 }
 
-func TestMatchConnection_whenNoHostMatch_returnsNil(t *testing.T) {
-	conns := []v1alpha1.WebhookConnection{{Host: "other.com"}}
-	result := matchConnection("https://example.com/path", conns)
+func TestMatchEndpointConfig_whenNoHostMatch_returnsNil(t *testing.T) {
+	cfgs := []v1alpha1.EndpointConfig{{Host: "other.com"}}
+	result := matchEndpointConfig("https://example.com/path", cfgs)
 	assert.Nil(t, result)
 }
 
-func TestMatchConnection_whenFirstOfMultipleMatches_returnsFirst(t *testing.T) {
-	conns := []v1alpha1.WebhookConnection{
+func TestMatchEndpointConfig_whenFirstOfMultipleMatches_returnsFirst(t *testing.T) {
+	cfgs := []v1alpha1.EndpointConfig{
 		{Host: connTestHost, CABundle: &v1alpha1.CABundle{Inline: ptr.To("first")}},
 		{Host: connTestHost, CABundle: &v1alpha1.CABundle{Inline: ptr.To("second")}},
 	}
-	result := matchConnection("https://example.com/path", conns)
+	result := matchEndpointConfig("https://example.com/path", cfgs)
 	require.NotNil(t, result)
 	require.NotNil(t, result.CABundle)
 	assert.Equal(t, "first", *result.CABundle.Inline)
 }
 
-// --- ResolveConnectionConfig tests ---
+// --- ResolveEndpointConfig tests ---
 
-func TestResolveConnectionConfig_whenNilWebhook_returnsNil(t *testing.T) {
-	result, err := ResolveConnectionConfig(context.Background(), newFakeK8sClient(), nil, nil)
+func TestResolveEndpointConfig_whenNilWebhook_returnsNil(t *testing.T) {
+	result, err := ResolveEndpointConfig(context.Background(), newFakeK8sClient(), nil, nil)
 	require.NoError(t, err)
 	assert.Nil(t, result)
 }
 
-func TestResolveConnectionConfig_whenNoFieldsAndNoConnections_returnsNil(t *testing.T) {
+func TestResolveEndpointConfig_whenNoFieldsAndNoEndpointConfigs_returnsNil(t *testing.T) {
 	url := connTestURL
 	webhook := &v1alpha1.Webhook{URL: &url}
-	result, err := ResolveConnectionConfig(context.Background(), newFakeK8sClient(), webhook, nil)
+	result, err := ResolveEndpointConfig(context.Background(), newFakeK8sClient(), webhook, nil)
 	require.NoError(t, err)
 	assert.Nil(t, result)
 }
 
-func TestResolveConnectionConfig_whenPerHookCABundle_usesHookSettings(t *testing.T) {
+func TestResolveEndpointConfig_whenPerHookCABundle_usesHookSettings(t *testing.T) {
 	caPEM := generateSelfSignedCACert(t)
 	url := connTestURL
 	webhook := &v1alpha1.Webhook{
 		URL:      &url,
 		CABundle: &v1alpha1.CABundle{Inline: ptr.To(string(caPEM))},
 	}
-	// Connections are present but should be ignored because the webhook sets caBundle.
-	conns := []v1alpha1.WebhookConnection{{Host: connTestHost}}
-	result, err := ResolveConnectionConfig(context.Background(), newFakeK8sClient(), webhook, conns)
+	// EndpointConfigs are present but should be ignored because the webhook sets caBundle.
+	cfgs := []v1alpha1.EndpointConfig{{Host: connTestHost}}
+	result, err := ResolveEndpointConfig(context.Background(), newFakeK8sClient(), webhook, cfgs)
 	require.NoError(t, err)
 	require.NotNil(t, result)
 	assert.Equal(t, caPEM, result.CABundle)
 }
 
-func TestResolveConnectionConfig_whenMatchingConnection_resolvesCABundle(t *testing.T) {
+func TestResolveEndpointConfig_whenMatchingEndpointConfig_resolvesCABundle(t *testing.T) {
 	caPEM := generateSelfSignedCACert(t)
 	url := connTestURL
 	webhook := &v1alpha1.Webhook{URL: &url}
-	conns := []v1alpha1.WebhookConnection{{
+	cfgs := []v1alpha1.EndpointConfig{{
 		Host:     "example.com",
 		CABundle: &v1alpha1.CABundle{Inline: ptr.To(string(caPEM))},
 	}}
-	result, err := ResolveConnectionConfig(context.Background(), newFakeK8sClient(), webhook, conns)
+	result, err := ResolveEndpointConfig(context.Background(), newFakeK8sClient(), webhook, cfgs)
 	require.NoError(t, err)
 	require.NotNil(t, result)
 	assert.Equal(t, caPEM, result.CABundle)
 }
 
-func TestResolveConnectionConfig_whenAuthAndBasicAuthBothSet_returnsError(t *testing.T) {
+func TestResolveEndpointConfig_whenAuthAndBasicAuthBothSet_returnsError(t *testing.T) {
 	url := connTestURL
 	webhook := &v1alpha1.Webhook{
 		URL: &url,
@@ -141,31 +141,31 @@ func TestResolveConnectionConfig_whenAuthAndBasicAuthBothSet_returnsError(t *tes
 			SecretRef: v1alpha1.SecretRef{Name: "s", Namespace: authNamespace},
 		},
 	}
-	_, err := ResolveConnectionConfig(context.Background(), newFakeK8sClient(), webhook, nil)
+	_, err := ResolveEndpointConfig(context.Background(), newFakeK8sClient(), webhook, nil)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "mutually exclusive")
 }
 
-func TestResolveConnectionConfig_whenAuthorizationOnConnection_resolvesAuthHeader(t *testing.T) {
+func TestResolveEndpointConfig_whenAuthorizationOnEndpointConfig_resolvesAuthHeader(t *testing.T) {
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{Name: authSecretName, Namespace: authNamespace},
 		Data:       map[string][]byte{authTokenKey: []byte("abc123")},
 	}
 	url := connTestURL
 	webhook := &v1alpha1.Webhook{URL: &url}
-	conns := []v1alpha1.WebhookConnection{{
+	cfgs := []v1alpha1.EndpointConfig{{
 		Host: connTestHost,
 		Authorization: &v1alpha1.Authorization{
 			SecretRef: v1alpha1.SecretKeyRef{Name: authSecretName, Namespace: authNamespace, Key: authTokenKey},
 		},
 	}}
-	result, err := ResolveConnectionConfig(context.Background(), newFakeK8sClient(secret), webhook, conns)
+	result, err := ResolveEndpointConfig(context.Background(), newFakeK8sClient(secret), webhook, cfgs)
 	require.NoError(t, err)
 	require.NotNil(t, result)
 	assert.Equal(t, "Bearer abc123", result.AuthHeader)
 }
 
-func TestResolveConnectionConfig_whenServiceFormWebhook_matchesConnectionByConstructedHost(t *testing.T) {
+func TestResolveEndpointConfig_whenServiceFormWebhook_matchesEndpointConfigByConstructedHost(t *testing.T) {
 	caPEM := generateSelfSignedCACert(t)
 	name := "my-hook"
 	ns := "my-ns"
@@ -176,13 +176,13 @@ func TestResolveConnectionConfig_whenServiceFormWebhook_matchesConnectionByConst
 		Path:    &path,
 	}
 	// webhookURL constructs "http://my-hook.my-ns:80/sync"; host is "my-hook.my-ns:80".
-	// The connection entry uses "my-hook.my-ns" which should match via default-port
+	// The endpoint config entry uses "my-hook.my-ns" which should match via default-port
 	// normalisation (port 80 on http is treated as equivalent to no port).
-	conns := []v1alpha1.WebhookConnection{{
+	cfgs := []v1alpha1.EndpointConfig{{
 		Host:     "my-hook.my-ns",
 		CABundle: &v1alpha1.CABundle{Inline: ptr.To(string(caPEM))},
 	}}
-	result, err := ResolveConnectionConfig(context.Background(), newFakeK8sClient(), webhook, conns)
+	result, err := ResolveEndpointConfig(context.Background(), newFakeK8sClient(), webhook, cfgs)
 	require.NoError(t, err)
 	require.NotNil(t, result)
 	assert.Equal(t, caPEM, result.CABundle)
