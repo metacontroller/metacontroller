@@ -32,6 +32,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
+const testETag = "000-000-000-001" //nolint:gosec
+
 type MockResponse struct {
 	resp *http.Response
 	err  error
@@ -176,34 +178,34 @@ func TestHookETag(t *testing.T) {
 		}`
 	RunHookTest(t, TestSteps{
 		{
-			httpResponse: httpResponse200(body1, "000-000-000-001"),
+			httpResponse: httpResponse200(body1, testETag),
 			hookResult:   hookResultFromJson(body1),
 		},
 		{
 			httpResponse: httpResponse304NotModified(),
 			expectedHeaders: map[string]string{
-				"If-None-Match": "000-000-000-001",
+				headerIfNoneMatch: testETag,
 			},
 			hookResult: hookResultFromJson(body1),
 		},
 		{
 			httpResponse: httpResponse412NotModified(),
 			expectedHeaders: map[string]string{
-				"If-None-Match": "000-000-000-001",
+				headerIfNoneMatch: testETag,
 			},
 			hookResult: hookResultFromJson(body1),
 		},
 		{
 			httpResponse: httpResponse200(body2, "000-000-000-002"),
 			expectedHeaders: map[string]string{
-				"If-None-Match": "000-000-000-001",
+				headerIfNoneMatch: testETag,
 			},
 			hookResult: hookResultFromJson(body2),
 		},
 		{
 			httpResponse: httpResponse200(body2, "000-000-000-002"),
 			expectedHeaders: map[string]string{
-				"If-None-Match": "000-000-000-002",
+				headerIfNoneMatch: "000-000-000-002",
 			},
 			hookResult: hookResultFromJson(body2),
 		},

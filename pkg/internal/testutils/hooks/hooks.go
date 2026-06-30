@@ -91,6 +91,10 @@ func (cc *NilCustomizableController) GetCustomizeHook() *v1alpha1.Hook {
 	return nil
 }
 
+func (cc *NilCustomizableController) GetEndpointConfigs() []v1alpha1.EndpointConfig {
+	return nil
+}
+
 type FakeCustomizableController struct {
 }
 
@@ -101,6 +105,10 @@ func (cc *FakeCustomizableController) GetCustomizeHook() *v1alpha1.Hook {
 			URL: &url,
 		},
 	}
+}
+
+func (cc *FakeCustomizableController) GetEndpointConfigs() []v1alpha1.EndpointConfig {
+	return nil
 }
 
 func NewSerializingExecutorStub(responseJson string) hooks.Hook {

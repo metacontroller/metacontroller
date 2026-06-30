@@ -1,0 +1,53 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webhook-auth-controller
+  namespace: metacontroller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: webhook-auth-controller
+  template:
+    metadata:
+      labels:
+        app: webhook-auth-controller
+    spec:
+      containers:
+      - name: hooks
+        image: python:3.11
+        command: ["python", "/hooks/sync.py"]
+        ports:
+        - containerPort: 8443
+        volumeMounts:
+        - name: hooks
+          mountPath: /hooks
+        - name: server-certs
+          mountPath: /certs
+          readOnly: true
+        - name: token
+          mountPath: /token
+          readOnly: true
+      volumes:
+      - name: hooks
+        configMap:
+          name: webhook-auth-hooks
+      - name: server-certs
+        secret:
+          secretName: webhook-auth-server
+      - name: token
+        secret:
+          secretName: webhook-auth-token
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: webhook-auth-controller
+  namespace: metacontroller
+spec:
+  selector:
+    app: webhook-auth-controller
+  ports:
+  - port: 443
+    targetPort: 8443

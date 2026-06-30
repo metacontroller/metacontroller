@@ -1,0 +1,11 @@
+resources:
+- crd.yaml
+- namespaces.yaml
+- controller-with-good-auth.yaml
+- controller-with-wrong-auth.yaml
+- webhook-endpoint.yaml
+configMapGenerator:
+- name: webhook-auth-hooks
+  namespace: metacontroller
+  files:
+  - sync.py

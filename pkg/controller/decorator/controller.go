@@ -20,13 +20,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"metacontroller/pkg/controller/common/api"
-	commonv2 "metacontroller/pkg/controller/common/api/v2"
-	"metacontroller/pkg/hooks"
 	"reflect"
 	"strings"
 	"sync"
 	"time"
+
+	"metacontroller/pkg/controller/common/api"
+	commonv2 "metacontroller/pkg/controller/common/api/v2"
+	"metacontroller/pkg/hooks"
 
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -58,6 +59,8 @@ import (
 	"metacontroller/pkg/controller/common/finalizer"
 	dynamicclientset "metacontroller/pkg/dynamic/clientset"
 	dynamicdiscovery "metacontroller/pkg/dynamic/discovery"
+
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -105,15 +108,24 @@ func newDecoratorController(
 	numWorkers int,
 	ssaOptions *common.ApplyOptions,
 	logger logr.Logger,
+	k8sClient client.Client,
 ) (controller *decoratorController, newErr error) {
 	if dc.Spec.Hooks == nil {
 		return nil, fmt.Errorf("no hooks defined")
 	}
-	syncHook, err := hooks.NewHook(dc.Spec.Hooks.Sync, dc.Name, common.DecoratorController, common.SyncHook)
+	syncCfg, err := hooks.ResolveEndpointConfig(context.Background(), k8sClient, syncWebhook(dc), dc.GetEndpointConfigs())
+	if err != nil {
+		return nil, fmt.Errorf("can't resolve endpoint config for sync hook: %w", err)
+	}
+	syncHook, err := hooks.NewHook(dc.Spec.Hooks.Sync, dc.Name, common.DecoratorController, common.SyncHook, syncCfg)
 	if err != nil {
 		return nil, err
 	}
-	finalizeHook, err := hooks.NewHook(dc.Spec.Hooks.Finalize, dc.Name, common.DecoratorController, common.FinalizeHook)
+	finalizeCfg, err := hooks.ResolveEndpointConfig(context.Background(), k8sClient, finalizeWebhook(dc), dc.GetEndpointConfigs())
+	if err != nil {
+		return nil, fmt.Errorf("can't resolve endpoint config for finalize hook: %w", err)
+	}
+	finalizeHook, err := hooks.NewHook(dc.Spec.Hooks.Finalize, dc.Name, common.DecoratorController, common.FinalizeHook, finalizeCfg)
 	if err != nil {
 		return nil, err
 	}
@@ -153,6 +165,7 @@ func newDecoratorController(
 		c.parentKinds,
 		c.logger,
 		common.DecoratorController,
+		k8sClient,
 	)
 	if err != nil {
 		return nil, err
@@ -218,6 +231,22 @@ func newDecoratorController(
 	}
 
 	return c, nil
+}
+
+// syncWebhook extracts the Webhook from the sync hook spec.
+func syncWebhook(dc *v1alpha1.DecoratorController) *v1alpha1.Webhook {
+	if dc.Spec.Hooks == nil || dc.Spec.Hooks.Sync == nil {
+		return nil
+	}
+	return dc.Spec.Hooks.Sync.Webhook
+}
+
+// finalizeWebhook extracts the Webhook from the finalize hook spec.
+func finalizeWebhook(dc *v1alpha1.DecoratorController) *v1alpha1.Webhook {
+	if dc.Spec.Hooks == nil || dc.Spec.Hooks.Finalize == nil {
+		return nil
+	}
+	return dc.Spec.Hooks.Finalize.Webhook
 }
 
 func (c *decoratorController) Start() {

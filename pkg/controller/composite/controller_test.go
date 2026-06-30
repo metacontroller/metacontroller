@@ -63,6 +63,7 @@ func defaultCustomizeManager() *customize.Manager {
 		common.NewGroupKindMap(),
 		logging.Logger,
 		common.CompositeController,
+		nil,
 	)
 	return customizeManager
 }

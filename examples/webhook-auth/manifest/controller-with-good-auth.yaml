@@ -1,0 +1,57 @@
+---
+# Secret holding the bearer token presented by metacontroller when calling the
+# webhook server. The server reads this same value from its /token mount, so
+# any mismatch will produce a 401.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: webhook-auth-token
+  namespace: metacontroller
+stringData:
+  token: e2e-integration-bearer-token
+---
+apiVersion: metacontroller.k8s.io/v1alpha1
+kind: CompositeController
+metadata:
+  name: webhook-auth-controller
+spec:
+  generateSelector: true
+  parentResource:
+    apiVersion: examples.metacontroller.io/v1alpha1
+    resource: securesecretpropagations
+    labelSelector:
+      matchLabels:
+        auth: valid
+  childResources:
+  - apiVersion: v1
+    resource: secrets
+    updateStrategy:
+      method: InPlace
+  # All hooks share the same host; the single endpointConfigs entry supplies
+  # caBundle, bearer-token authorization, and clientTLS to all of them.
+  endpointConfigs:
+  - host: webhook-auth-controller.metacontroller
+    caBundle:
+      configMapRef:
+        name: webhook-auth-ca
+        namespace: metacontroller
+        key: ca.crt
+    authorization:
+      type: Bearer
+      secretRef:
+        name: webhook-auth-token
+        namespace: metacontroller
+        key: token
+    clientTLS:
+      secretRef:
+        name: webhook-auth-client
+        namespace: metacontroller
+      certKey: tls.crt
+      privateKeyKey: tls.key
+  hooks:
+    sync:
+      webhook:
+        url: https://webhook-auth-controller.metacontroller/sync
+    customize:
+      webhook:
+        url: https://webhook-auth-controller.metacontroller/customize
