@@ -4,6 +4,11 @@ TAG?= dev
 ADDITIONAL_BUILD_ARGUMENTS?=""
 DOCKERFILE?="Dockerfile"
 
+E2E_CLUSTER_NAME            ?= metacontroller-e2e
+E2E_NODE_IMAGE              ?= kindest/node:v1.35.0
+E2E_VARIANT                 ?= dev
+E2E_KEEP_CLUSTER_ON_FAILURE ?=
+
 PKG		:= metacontroller
 API_GROUPS := metacontroller/v1alpha1
 
@@ -49,6 +54,30 @@ image_debug: TAG=debug
 image_debug: DOCKERFILE=Dockerfile.debug
 image_debug: build_debug
 image_debug: image
+
+# e2e-test spins up a throwaway kind cluster, installs the freshly built image,
+# and runs the full example suite against it.
+#
+# The suite is run with stdin redirected from /dev/null: some example tests use
+# `kubectl run -i`, which otherwise keeps the terminal's stdin open and hangs
+# after the container exits. CI does not hit this because its stdin is already a
+# closed pipe.
+.PHONY: e2e-test
+e2e-test: image
+	@set -e; \
+	trap 'code=$$?; \
+	  if [ $$code -ne 0 ] && [ -n "$(E2E_KEEP_CLUSTER_ON_FAILURE)" ]; then \
+	    echo "e2e failed (exit $$code): keeping cluster $(E2E_CLUSTER_NAME) for debugging"; \
+	    kubectl --context kind-$(E2E_CLUSTER_NAME) logs metacontroller-0 -n metacontroller --tail=200 || true; \
+	  else \
+	    kind delete cluster --name $(E2E_CLUSTER_NAME) || true; \
+	  fi; \
+	  exit $$code' EXIT; \
+	kind create cluster --name $(E2E_CLUSTER_NAME) --image "$(E2E_NODE_IMAGE)" --wait 120s; \
+	kind load docker-image localhost/metacontroller:$(TAG) --name $(E2E_CLUSTER_NAME); \
+	kubectl --context kind-$(E2E_CLUSTER_NAME) apply -k manifests/$(E2E_VARIANT); \
+	kubectl --context kind-$(E2E_CLUSTER_NAME) rollout status --watch --timeout=180s statefulset/metacontroller -n metacontroller; \
+	cd examples && CI_MODE=true ./test.sh </dev/null
 
 
 # CRD generation
