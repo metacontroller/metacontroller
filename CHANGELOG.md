@@ -1,3 +1,16 @@
+# [4.16.0](https://github.com/metacontroller/metacontroller/compare/v4.15.1...v4.16.0) (2026-07-03)
+
+
+### Bug Fixes
+
+* **webhook:** preserve DefaultTransport settings in buildTLSTransport ([3d3b699](https://github.com/metacontroller/metacontroller/commit/3d3b699cfc9adb17311aabbccc615fcd553e41e4))
+
+
+### Features
+
+* **webhook:** add caBundle support for HTTPS webhook endpoints ([2b9657f](https://github.com/metacontroller/metacontroller/commit/2b9657f5f2ba1aaeb47f67862d2154aab5bfff5b)), closes [#255](https://github.com/metacontroller/metacontroller/issues/255)
+* **webhook:** add per-webhook and per-host auth and mTLS support ([d76f280](https://github.com/metacontroller/metacontroller/commit/d76f280655a8184200e34afd0f1f8fb24f996192)), closes [#255](https://github.com/metacontroller/metacontroller/issues/255)
+
 ## [4.15.1](https://github.com/metacontroller/metacontroller/compare/v4.15.0...v4.15.1) (2026-06-29)
 
 
