@@ -1,3 +1,10 @@
+## [4.16.2](https://github.com/metacontroller/metacontroller/compare/v4.16.1...v4.16.2) (2026-07-03)
+
+
+### Bug Fixes
+
+* **endpoints Config:** Add min tls 1.2, few after review fixes ([#1211](https://github.com/metacontroller/metacontroller/issues/1211)) ([0f0b8f7](https://github.com/metacontroller/metacontroller/commit/0f0b8f75aa9ae885ddb270a861729654b3477003))
+
 ## [4.16.1](https://github.com/metacontroller/metacontroller/compare/v4.16.0...v4.16.1) (2026-07-03)
 
 
