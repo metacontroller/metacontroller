@@ -152,6 +152,33 @@ func TestResolveAuthorization_whenExplicitType_returnsHeaderWithThatType(t *test
 	assert.Equal(t, "Token "+authTokenValue, result)
 }
 
+func TestResolveAuthorization_whenEmptyToken_returnsBearerWithEmptyValue(t *testing.T) {
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: authSecretName, Namespace: authNamespace},
+		Data:       map[string][]byte{authTokenKey: []byte("")},
+	}
+	spec := &v1alpha1.Authorization{
+		SecretRef: v1alpha1.SecretKeyRef{Name: authSecretName, Namespace: authNamespace, Key: authTokenKey},
+	}
+	result, err := ResolveAuthorization(context.Background(), newFakeK8sClient(secret), spec)
+	require.NoError(t, err)
+	assert.Equal(t, "Bearer ", result)
+}
+
+func TestResolveAuthorization_whenWhitespaceType_returnsBearerHeader(t *testing.T) {
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: authSecretName, Namespace: authNamespace},
+		Data:       map[string][]byte{authTokenKey: []byte(authTokenValue)},
+	}
+	spec := &v1alpha1.Authorization{
+		Type:      "   ",
+		SecretRef: v1alpha1.SecretKeyRef{Name: authSecretName, Namespace: authNamespace, Key: authTokenKey},
+	}
+	result, err := ResolveAuthorization(context.Background(), newFakeK8sClient(secret), spec)
+	require.NoError(t, err)
+	assert.Equal(t, "Bearer "+authTokenValue, result)
+}
+
 func TestResolveBasicAuth_whenNilSpec_returnsEmpty(t *testing.T) {
 	result, err := ResolveBasicAuth(context.Background(), newFakeK8sClient(), nil)
 	require.NoError(t, err)
@@ -227,6 +254,22 @@ func TestResolveBasicAuth_whenCustomKeys_returnsBasicHeader(t *testing.T) {
 	require.NoError(t, err)
 	expected := "Basic " + base64.StdEncoding.EncodeToString([]byte("bob:hunter2"))
 	assert.Equal(t, expected, result)
+}
+
+func TestResolveBasicAuth_whenUsernameContainsColon_returnsError(t *testing.T) {
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: authSecretName, Namespace: authNamespace},
+		Data: map[string][]byte{
+			"username": []byte("user:name"),
+			"password": []byte("pass"),
+		},
+	}
+	spec := &v1alpha1.BasicAuth{
+		SecretRef: v1alpha1.SecretRef{Name: authSecretName, Namespace: authNamespace},
+	}
+	_, err := ResolveBasicAuth(context.Background(), newFakeK8sClient(secret), spec)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "must not contain ':'")
 }
 
 func TestResolveClientTLS_whenNilSpec_returnsNil(t *testing.T) {

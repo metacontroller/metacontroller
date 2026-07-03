@@ -63,7 +63,7 @@ func ResolveAuthorization(ctx context.Context, k8sClient client.Client, spec *v1
 			spec.SecretRef.Namespace, spec.SecretRef.Name, spec.SecretRef.Key)
 	}
 
-	authType := spec.Type
+	authType := strings.TrimSpace(spec.Type)
 	if authType == "" {
 		authType = "Bearer"
 	}
@@ -107,6 +107,10 @@ func ResolveBasicAuth(ctx context.Context, k8sClient client.Client, spec *v1alph
 	if !ok {
 		return "", fmt.Errorf("basicAuth secret %s/%s does not contain key %q",
 			spec.SecretRef.Namespace, spec.SecretRef.Name, passwordKey)
+	}
+
+	if strings.Contains(string(username), ":") {
+		return "", fmt.Errorf("basicAuth username must not contain ':'")
 	}
 
 	encoded := base64.StdEncoding.EncodeToString(

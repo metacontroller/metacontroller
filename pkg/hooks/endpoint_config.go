@@ -19,6 +19,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net/url"
+	"strings"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -166,13 +167,13 @@ func matchEndpointConfig(webhookURL string, endpointConfigs []v1alpha1.EndpointC
 	for i := range endpointConfigs {
 		c := &endpointConfigs[i]
 		// Match against both the raw host and the canonical host:port form.
-		if stringsEqualFold(c.Host, urlHost) || stringsEqualFold(c.Host, canonicalHost) {
+		if strings.EqualFold(c.Host, urlHost) || strings.EqualFold(c.Host, canonicalHost) {
 			return c
 		}
 		// Also allow the endpoint config to be specified without port when the URL
 		// has an explicit default port, e.g. endpoint config host "example.com"
 		// matching URL "https://example.com:443/path".
-		if u.Port() != "" && stringsEqualFold(c.Host, u.Hostname()) {
+		if u.Port() != "" && strings.EqualFold(c.Host, u.Hostname()) {
 			switch u.Scheme {
 			case "https":
 				if u.Port() == "443" {
@@ -187,31 +188,4 @@ func matchEndpointConfig(webhookURL string, endpointConfigs []v1alpha1.EndpointC
 	}
 
 	return nil
-}
-
-// stringsEqualFold reports whether a and b are equal under Unicode case-folding.
-func stringsEqualFold(a, b string) bool {
-	return len(a) == len(b) && foldEqual(a, b)
-}
-
-// foldEqual is a simple ASCII case-insensitive comparison sufficient for
-// hostnames (which are always ASCII).
-func foldEqual(a, b string) bool {
-	for i := 0; i < len(a); i++ {
-		ca, cb := a[i], b[i]
-		if ca == cb {
-			continue
-		}
-		// Convert uppercase to lowercase for comparison.
-		if ca >= 'A' && ca <= 'Z' {
-			ca += 'a' - 'A'
-		}
-		if cb >= 'A' && cb <= 'Z' {
-			cb += 'a' - 'A'
-		}
-		if ca != cb {
-			return false
-		}
-	}
-	return true
 }

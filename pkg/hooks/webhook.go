@@ -320,6 +320,9 @@ func buildTLSTransport(caBundle []byte, clientCert *tls.Certificate) (*http.Tran
 	if transport.TLSClientConfig == nil {
 		transport.TLSClientConfig = &tls.Config{}
 	}
+	if transport.TLSClientConfig.MinVersion == 0 || transport.TLSClientConfig.MinVersion < tls.VersionTLS12 {
+		transport.TLSClientConfig.MinVersion = tls.VersionTLS12
+	}
 	if len(caBundle) > 0 {
 		certPool := x509.NewCertPool()
 		if !certPool.AppendCertsFromPEM(caBundle) {
