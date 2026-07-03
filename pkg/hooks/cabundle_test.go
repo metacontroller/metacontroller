@@ -279,3 +279,33 @@ func TestBuildTLSTransport_whenCABundleAndClientCert_setsRootCAsAndCertificates(
 	assert.NotNil(t, transport.TLSClientConfig.RootCAs)
 	assert.Len(t, transport.TLSClientConfig.Certificates, 1)
 }
+
+func TestResolveCABundle_whenSecretRefEmptyValue_returnsError(t *testing.T) {
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: testSecretName, Namespace: testNamespace},
+		Data:       map[string][]byte{"ca.crt": []byte("")},
+	}
+	spec := &v1alpha1.CABundle{
+		SecretRef: &v1alpha1.ResourceKeyRef{Name: testSecretName, Namespace: testNamespace},
+	}
+
+	_, err := ResolveCABundle(context.Background(), newFakeK8sClient(secret), spec)
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "is empty")
+}
+
+func TestResolveCABundle_whenConfigMapRefEmptyValue_returnsError(t *testing.T) {
+	cm := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{Name: testCABundleName, Namespace: testNamespace},
+		Data:       map[string]string{"ca.crt": ""},
+	}
+	spec := &v1alpha1.CABundle{
+		ConfigMapRef: &v1alpha1.ResourceKeyRef{Name: testCABundleName, Namespace: testNamespace},
+	}
+
+	_, err := ResolveCABundle(context.Background(), newFakeK8sClient(cm), spec)
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "is empty")
+}
