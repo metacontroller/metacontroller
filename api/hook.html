@@ -161,8 +161,29 @@ has the following fields:</p>
 <ul>
 <li><a href="#service-reference">Service Reference</a></li>
 <li><a href="#etag-reference">Etag Reference</a></li>
+<li><a href="#cabundle-reference">CABundle Reference</a>
+<ul>
+<li><a href="#examples">Examples</a></li>
 </ul>
 </li>
+<li><a href="#authorization-reference">Authorization Reference</a>
+<ul>
+<li><a href="#example-1">Example</a></li>
+</ul>
+</li>
+<li><a href="#basicauth-reference">BasicAuth Reference</a>
+<ul>
+<li><a href="#example-2">Example</a></li>
+</ul>
+</li>
+<li><a href="#clienttls-reference">ClientTLS Reference</a>
+<ul>
+<li><a href="#example-3">Example</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a href="#endpoint-configs">Endpoint Configs</a></li>
 </ul>
 <h2 id="example"><a class="header" href="#example">Example</a></h2>
 <pre><code class="language-yaml">webhook:
@@ -177,6 +198,10 @@ has the following fields:</p>
 <tr><td>path</td><td>A path to be appended to the accompanying <code>service</code> to reach this hook (e.g. <code>/hook</code>). Ignored if full <code>url</code> is specified.</td></tr>
 <tr><td><a href="#service-reference">service</a></td><td>A reference to a Kubernetes Service through which this hook can be reached.</td></tr>
 <tr><td>responseUnMarshallMode</td><td>Sets the JSON unmarshall mode. One of <code>loose</code> or <code>strict</code>. In <code>strict</code> mode, additional checks are performed to detect unknown and duplicated fields. <strong>Default:</strong> <code>loose</code> for <code>v1</code> hooks, <code>strict</code> for <code>v2</code> hooks.</td></tr>
+<tr><td><a href="#cabundle-reference">caBundle</a></td><td>Configures the CA certificate(s) used to verify the webhook server's TLS certificate when the endpoint uses HTTPS with a private or self-signed CA. If omitted, the system trust roots are used.</td></tr>
+<tr><td><a href="#authorization-reference">authorization</a></td><td>Configures a token-based <code>Authorization</code> request header (e.g. Bearer). Mutually exclusive with <code>basicAuth</code>.</td></tr>
+<tr><td><a href="#basicauth-reference">basicAuth</a></td><td>Configures HTTP Basic Authentication. Mutually exclusive with <code>authorization</code>.</td></tr>
+<tr><td><a href="#clienttls-reference">clientTLS</a></td><td>Configures a client TLS certificate for mutual TLS (mTLS). Can be combined with any authentication method or used alone.</td></tr>
 </tbody></table>
 <h3 id="service-reference"><a class="header" href="#service-reference">Service Reference</a></h3>
 <p>Within a <code>webhook</code>, the <code>service</code> field has the following subfields:</p>
@@ -201,6 +226,154 @@ CacheCleanupSeconds *int32 `json:&quot;cacheCleanupSeconds,omitempty&quot;`
 <tr><td>Enabled</td><td>true or false. Default is false</td></tr>
 <tr><td>CacheTimeoutSeconds</td><td>Time in seconds after which ETag cache record is forgotten</td></tr>
 <tr><td>CacheCleanupSeconds</td><td>How often ETag is running garbage collector to cleanup forgotten records</td></tr>
+</tbody></table>
+<h3 id="cabundle-reference"><a class="header" href="#cabundle-reference">CABundle Reference</a></h3>
+<p>The <code>caBundle</code> field configures the CA certificate(s) used to verify the TLS certificate presented
+by the webhook server. It is only needed when the webhook endpoint uses HTTPS with a <strong>private or
+self-signed CA</strong>. For publicly-trusted CAs (e.g. Let's Encrypt), omit this field entirely.</p>
+<p>Exactly one of the following sources must be specified:</p>
+<table><thead><tr><th>Field</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>inline</code></td><td>PEM-encoded CA certificate(s) embedded directly in the spec.</td></tr>
+<tr><td><code>secretRef</code></td><td>A reference to a key in a Kubernetes Secret containing PEM-encoded CA certificate(s).</td></tr>
+<tr><td><code>configMapRef</code></td><td>A reference to a key in a Kubernetes ConfigMap containing PEM-encoded CA certificate(s).</td></tr>
+</tbody></table>
+<p>For both <code>secretRef</code> and <code>configMapRef</code>, the referenced object has the following subfields:</p>
+<table><thead><tr><th>Field</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>name</code></td><td>The <code>metadata.name</code> of the Secret or ConfigMap.</td></tr>
+<tr><td><code>namespace</code></td><td>The <code>metadata.namespace</code> of the Secret or ConfigMap.</td></tr>
+<tr><td><code>key</code></td><td>The key within the resource's <code>data</code> map. Defaults to <code>ca.crt</code> if not specified.</td></tr>
+</tbody></table>
+<h4 id="examples"><a class="header" href="#examples">Examples</a></h4>
+<p><strong>Inline PEM</strong>:</p>
+<pre><code class="language-yaml">webhook:
+  url: https://my-hook.my-ns:8443/sync
+  caBundle:
+    inline: |
+      -----BEGIN CERTIFICATE-----
+      MIIDxTCCAq2gAwIB...
+      -----END CERTIFICATE-----
+</code></pre>
+<p><strong>Secret reference</strong>:</p>
+<pre><code class="language-yaml">webhook:
+  url: https://my-hook.my-ns:8443/sync
+  caBundle:
+    secretRef:
+      name: my-tls-secret # Secret of type kubernetes.io/tls
+      namespace: my-ns
+      key: ca.crt # optional; defaults to &quot;ca.crt&quot;
+</code></pre>
+<p><strong>ConfigMap reference</strong>:</p>
+<pre><code class="language-yaml">webhook:
+  url: https://my-hook.my-ns:8443/sync
+  caBundle:
+    configMapRef:
+      name: my-ca-bundle
+      namespace: my-ns
+      key: ca.crt # optional; defaults to &quot;ca.crt&quot;
+</code></pre>
+<blockquote>
+<p><strong>Note on CA rotation:</strong> The CA bundle is resolved once when the controller CR is created or
+updated. If the referenced Secret or ConfigMap changes (e.g. due to certificate rotation),
+metacontroller will not automatically pick up the new value. To force a reload, update the
+controller CR (e.g. add or change an annotation) to trigger re-creation of the webhook executor.</p>
+</blockquote>
+<h3 id="authorization-reference"><a class="header" href="#authorization-reference">Authorization Reference</a></h3>
+<p>The <code>authorization</code> field adds a token-based <code>Authorization</code> header to every webhook request.
+<code>authorization</code> and <code>basicAuth</code> are mutually exclusive — only one may be set per webhook or
+connection entry.</p>
+<p>The <code>type</code> field sets the scheme prefix (e.g. <code>Bearer</code>, <code>Token</code>).
+// +kubebuilder:default=&quot;Bearer&quot;</p>
+<table><thead><tr><th>Field</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>type</code></td><td>The authorization scheme, e.g. <code>Bearer</code> or <code>Token</code>. Defaults to <code>Bearer</code>. Must not be <code>Basic</code> — use the <code>basicAuth</code> field for Basic authentication.</td></tr>
+<tr><td><code>secretRef</code></td><td>Reference to a Kubernetes Secret key containing the credential value.</td></tr>
+</tbody></table>
+<p>The <code>secretRef</code> sub-object has the following fields:</p>
+<table><thead><tr><th>Field</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>name</code></td><td>The <code>metadata.name</code> of the Secret.</td></tr>
+<tr><td><code>namespace</code></td><td>The <code>metadata.namespace</code> of the Secret.</td></tr>
+<tr><td><code>key</code></td><td>The key within the Secret's <code>data</code> map whose value is the credential. Required — no default.</td></tr>
+</tbody></table>
+<h4 id="example-1"><a class="header" href="#example-1">Example</a></h4>
+<pre><code class="language-yaml">webhook:
+  url: https://my-hook.my-ns:8443/sync
+  authorization:
+    type: Bearer
+    secretRef:
+      name: my-token-secret
+      namespace: my-ns
+      key: token
+</code></pre>
+<h3 id="basicauth-reference"><a class="header" href="#basicauth-reference">BasicAuth Reference</a></h3>
+<p>The <code>basicAuth</code> field configures HTTP Basic Authentication. The username and password are read
+from a single Kubernetes Secret. <code>basicAuth</code> and <code>authorization</code> are mutually exclusive.</p>
+<table><thead><tr><th>Field</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>secretRef</code></td><td>Reference to the Kubernetes Secret containing the credentials.</td></tr>
+<tr><td><code>usernameKey</code></td><td>The key within the Secret's <code>data</code> map whose value is the username. Defaults to <code>username</code>.</td></tr>
+<tr><td><code>passwordKey</code></td><td>The key within the Secret's <code>data</code> map whose value is the password. Defaults to <code>password</code>.</td></tr>
+</tbody></table>
+<p>The <code>secretRef</code> sub-object has the following fields:</p>
+<table><thead><tr><th>Field</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>name</code></td><td>The <code>metadata.name</code> of the Secret.</td></tr>
+<tr><td><code>namespace</code></td><td>The <code>metadata.namespace</code> of the Secret.</td></tr>
+</tbody></table>
+<h4 id="example-2"><a class="header" href="#example-2">Example</a></h4>
+<pre><code class="language-yaml">webhook:
+  url: https://my-hook.my-ns:8443/sync
+  basicAuth:
+    secretRef:
+      name: my-basic-auth-secret
+      namespace: my-ns
+    usernameKey: username # optional; defaults to &quot;username&quot;
+    passwordKey: password # optional; defaults to &quot;password&quot;
+</code></pre>
+<h3 id="clienttls-reference"><a class="header" href="#clienttls-reference">ClientTLS Reference</a></h3>
+<p>The <code>clientTLS</code> field configures a client certificate presented during the TLS handshake for
+mutual TLS (mTLS). It can be combined with any authentication method or used alone.</p>
+<table><thead><tr><th>Field</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>secretRef</code></td><td>Reference to the Kubernetes Secret containing the certificate and private key.</td></tr>
+<tr><td><code>certKey</code></td><td>The key within the Secret's <code>data</code> map whose value is the PEM-encoded client certificate. Defaults to <code>tls.crt</code>.</td></tr>
+<tr><td><code>privateKeyKey</code></td><td>The key within the Secret's <code>data</code> map whose value is the PEM-encoded private key. Defaults to <code>tls.key</code>.</td></tr>
+</tbody></table>
+<p>The <code>secretRef</code> sub-object has the following fields:</p>
+<table><thead><tr><th>Field</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>name</code></td><td>The <code>metadata.name</code> of the Secret.</td></tr>
+<tr><td><code>namespace</code></td><td>The <code>metadata.namespace</code> of the Secret.</td></tr>
+</tbody></table>
+<h4 id="example-3"><a class="header" href="#example-3">Example</a></h4>
+<pre><code class="language-yaml">webhook:
+  url: https://my-hook.my-ns:8443/sync
+  clientTLS:
+    secretRef:
+      name: my-client-tls-secret
+      namespace: my-ns
+    certKey: tls.crt # optional; defaults to &quot;tls.crt&quot;
+    privateKeyKey: tls.key # optional; defaults to &quot;tls.key&quot;
+</code></pre>
+<h2 id="endpoint-configs"><a class="header" href="#endpoint-configs">Endpoint Configs</a></h2>
+<p>The <code>endpointConfigs</code> field on a <code>CompositeController</code> or <code>DecoratorController</code> lets you define
+per-host connection settings (CA bundle, client TLS, and authentication) that apply to all
+webhook hooks whose URL matches a given host. Per-hook fields (if any are set) fully override the
+matching endpointConfigs entry for that hook — there is no field-level merging.</p>
+<pre><code class="language-yaml">spec:
+  endpointConfigs:
+    - host: my-hook.my-ns
+      caBundle:
+        secretRef:
+          name: my-ca-secret
+          namespace: my-ns
+      authorization:
+        secretRef:
+          name: my-token-secret
+          namespace: my-ns
+          key: token
+</code></pre>
+<p>Each entry in <code>endpointConfigs</code> supports the following fields:</p>
+<table><thead><tr><th>Field</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>host</code></td><td>The hostname (optionally with port) of the webhook endpoint, e.g. <code>my-hook.my-ns</code> or <code>my-hook.my-ns:8443</code>. Matching is case-insensitive. Default HTTPS port (443) and HTTP port (80) are treated as equivalent to omitting the port. Applies to both <code>url</code>-form and <code>service</code>-form webhooks — for the latter, the host is derived as <code>name.namespace[:port]</code>.</td></tr>
+<tr><td><code>caBundle</code></td><td>See <a href="#cabundle-reference">CABundle Reference</a>.</td></tr>
+<tr><td><code>authorization</code></td><td>See <a href="#authorization-reference">Authorization Reference</a>.</td></tr>
+<tr><td><code>basicAuth</code></td><td>See <a href="#basicauth-reference">BasicAuth Reference</a>.</td></tr>
+<tr><td><code>clientTLS</code></td><td>See <a href="#clienttls-reference">ClientTLS Reference</a>.</td></tr>
 </tbody></table>
 
                     </main>
