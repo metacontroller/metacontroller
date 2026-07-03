@@ -1,3 +1,10 @@
+## [4.16.1](https://github.com/metacontroller/metacontroller/compare/v4.16.0...v4.16.1) (2026-07-03)
+
+
+### Bug Fixes
+
+* **update:** Update packages dependencies ([ef4913a](https://github.com/metacontroller/metacontroller/commit/ef4913a3705767d17f0c2def683e1cec5e74c80c))
+
 # [4.16.0](https://github.com/metacontroller/metacontroller/compare/v4.15.1...v4.16.0) (2026-07-03)
 
 
