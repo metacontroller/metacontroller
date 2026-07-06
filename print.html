@@ -3654,6 +3654,14 @@ cd $GOPATH/src
 git clone git@github.com:metacontroller/metacontroller.git metacontroller
 cd metacontroller
 </code></pre>
+<p>Metacontroller pins the versions of the tools its <code>Makefile</code> targets need
+(Go, golangci-lint, goreleaser, kind, helm, kubectl, gotestsum, controller-gen,
+etc.) via <a href="https://mise.jdx.dev">mise</a>. Before running any <code>make</code> target,
+install <code>mise</code> and run <code>mise install</code> in the repo root to download the
+expected tool versions. If you use <a href="https://direnv.net">direnv</a>, running
+<code>direnv allow</code> (a <code>.envrc</code> is provided) will auto-activate those tools on your
+<code>PATH</code> whenever you <code>cd</code> into the repo — but it does not install them, so you
+still need to run <code>mise install</code> at least once.</p>
 <p>Then you can build a <code>metacontroller</code> binary like so:</p>
 <pre><code class="language-sh">make build
 </code></pre>
