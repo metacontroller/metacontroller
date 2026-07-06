@@ -26,16 +26,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           fetch-depth: "5"
-      - uses: actions/setup-go@v6
-        with:
-          go-version-file: "go.mod"
-          cache: true
-      - name: Install GoReleaser
-        uses: goreleaser/goreleaser-action@v7
-        with:
-          distribution: goreleaser
-          version: latest
-          install-only: true
+      - uses: jdx/mise-action@v4
       - name: build image
         run: |
           make ${{ matrix.target.command }}
@@ -87,11 +78,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           fetch-depth: "5"
-      - name: Set up Go
-        uses: actions/setup-go@v6
-        with:
-          go-version-file: "go.mod"
-          cache: true
+      - uses: jdx/mise-action@v4
       - name: Prepare integration test environment
         shell: bash
         if: matrix.target == 'integration-test'
@@ -123,13 +110,10 @@ jobs:
         uses: actions/checkout@v7
         with:
           fetch-depth: "5"
+      - uses: jdx/mise-action@v4
       - name: Setup kind
-        uses: helm/kind-action@v1
-        with:
-          version: ${{ matrix.configuration.kind }}
-          node_image: ${{ matrix.configuration.image }}
-          cluster_name: kind
-          wait: 120s
+        run: |
+          kind create cluster --name kind --image ${{ matrix.configuration.image }} --wait 120s
 
       - name: Download metacontroller images
         uses: actions/download-artifact@v8
@@ -178,25 +162,11 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up Helm
-        uses: Azure/setup-helm@v5
-        with:
-          version: v3.8.1
-
-      - uses: actions/setup-python@v6
-        with:
-          python-version: "3.14.6"
-
-      - name: Set up chart-testing
-        uses: helm/chart-testing-action@v2
+      - uses: jdx/mise-action@v4
 
       - name: Setup kind
-        uses: helm/kind-action@v1
-        with:
-          version: ${{ matrix.configuration.kind }}
-          node_image: ${{ matrix.configuration.image }}
-          cluster_name: kind
-          wait: 120s
+        run: |
+          kind create cluster --name kind --image ${{ matrix.configuration.image }} --wait 120s
 
       - name: Download metacontroller images
         uses: actions/download-artifact@v8
@@ -239,12 +209,9 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: "24"
+      - uses: jdx/mise-action@v4
       - name: Install dependencies
-        run: npm install ci
+        run: npm ci
       - uses: rlespinasse/github-slug-action@v5
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v4
@@ -263,17 +230,6 @@ jobs:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Set up Go
-        uses: actions/setup-go@v6
-        with:
-          go-version-file: "go.mod"
-          cache: true
-      - name: Install GoReleaser
-        uses: goreleaser/goreleaser-action@v7
-        with:
-          distribution: goreleaser
-          version: latest
-          install-only: true
       - name: Release
         env:
           GH_TOKEN: ${{ secrets.PAT }}

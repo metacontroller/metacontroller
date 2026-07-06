@@ -11,30 +11,73 @@
 
 Metacontroller is an add-on for Kubernetes that makes it easy to write and
 deploy [custom controllers](https://kubernetes.io/docs/concepts/api-extension/custom-resources/#custom-controllers)
-in the form of [simple scripts](https://metacontroller.github.io/metacontroller/). This is a continuation of great work started by [GKE](https://cloud.google.com/kubernetes-engine/) [here](https://github.com/GoogleCloudPlatform/metacontroller). We are excited to move forward with Metacontroller as a community maintained project. 
-A big thank you to all of the wonderful Metacontroller community members that made this happen!
+in the form of [simple scripts](https://metacontroller.github.io/metacontroller/).
 
+Instead of writing and maintaining a full Go controller with client libraries,
+informers, and boilerplate, you describe what resources to watch declaratively
+and provide a webhook (in any language) that receives the current state as
+JSON and returns the desired state as JSON. Metacontroller takes care of the
+rest: watches, caching, work queues, retries, and level-triggered
+reconciliation.
 
-## Documentation
+This is a continuation of great work started by [GKE](https://cloud.google.com/kubernetes-engine/)
+[here](https://github.com/GoogleCloudPlatform/metacontroller). We are excited
+to move forward with Metacontroller as a community maintained project. A big
+thank you to all of the wonderful Metacontroller community members that made
+this happen!
 
-Please see the [documentation site](https://metacontroller.github.io/metacontroller/) for details
-on how to install, use, or contribute to Metacontroller.
+## Why Metacontroller?
+
+* **Write controllers in any language** - all you need is a webhook that
+  speaks JSON, so Python, JavaScript, Jsonnet, Go, or anything else works.
+* **No boilerplate** - no schema/IDL, no generated code, no client library
+  dependencies.
+* **Production-ready behavior for free** - label selectors, adopt/orphan
+  semantics, garbage collection, watches, caching, work queues, optimistic
+  concurrency, and retries with backoff all come built in.
+* **Build reusable abstractions** - compose existing Kubernetes APIs into
+  higher-level operators, or reimplement APIs like `StatefulSet` as
+  Metacontroller hooks.
+
+See the [Features](https://metacontroller.github.io/metacontroller/features.html)
+page for the full picture.
+
+## Getting Started
+
+* :book: Read the [documentation site](https://metacontroller.github.io/metacontroller/)
+  for a full introduction, concepts, and API reference.
+* :rocket: Follow the [install guide](https://metacontroller.github.io/metacontroller/guide/install.html)
+  (via `kubectl apply -k` or [Helm](https://metacontroller.github.io/metacontroller/guide/helm-install.html)).
+* :bulb: Browse [examples](https://metacontroller.github.io/metacontroller/examples.html)
+  to see working controllers you can adapt.
+* :hammer_and_wrench: Walk through [creating your first controller](https://metacontroller.github.io/metacontroller/guide/create.html).
+
+### Quick install
+
+```sh
+kubectl apply -k https://github.com/metacontroller/metacontroller/manifests/production
+```
+
+See the [install guide](https://metacontroller.github.io/metacontroller/guide/install.html)
+for prerequisites, the Helm alternative, and notes on migrating from the
+original GKE project.
 
 ## Migrating from https://github.com/GoogleCloudPlatform/metacontroller
-Please follow [this](https://metacontroller.github.io/metacontroller/guide/install.html?highlight=migrat#migrating-from-googlecloudplatformmetacontroller)
 
-## Contact
+Please follow [this guide](https://metacontroller.github.io/metacontroller/guide/install.html?highlight=migrat#migrating-from-googlecloudplatformmetacontroller).
 
-Please file [GitHub issues](https://github.com/metacontroller/metacontroller/issues) for bugs, feature requests, and proposals.
+## Community & Contact
 
-Join the [#metacontroller](https://kubernetes.slack.com/messages/metacontroller/) channel on
-[Kubernetes Slack](http://slack.kubernetes.io).
-
+* File [GitHub issues](https://github.com/metacontroller/metacontroller/issues)
+  for bugs, feature requests, and proposals.
+* Join the [#metacontroller](https://kubernetes.slack.com/messages/metacontroller/)
+  channel on [Kubernetes Slack](http://slack.kubernetes.io).
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) and the
-[contributor guide](https://metacontroller.github.io/metacontroller/contrib.html).
+Contributions are very welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) and the
+[contributor guide](https://metacontroller.github.io/metacontroller/contrib.html)
+for how to build the project, run tests, and submit changes.
 
 ## Licensing
 

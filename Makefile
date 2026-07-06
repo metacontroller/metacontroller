@@ -10,8 +10,6 @@ API_GROUPS := metacontroller/v1alpha1
 export GO111MODULE=on
 export GOTESTSUM_FORMAT=pkgname
 
-CODE_GENERATOR_VERSION="v0.36.2"
-
 PKGS = $(shell go list ./... | grep -v '/test/integration/\|/examples/')
 COVER_PKGS = $(shell echo ${PKGS} | tr " " ",")
 
@@ -31,7 +29,7 @@ unit-test: test-setup
 
 .PHONY: lint
 lint:
-	go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest run --timeout 10m ./...
+	golangci-lint run --timeout 10m ./...
 
 .PHONY: integration-test
 integration-test: test-setup
@@ -40,7 +38,6 @@ integration-test: test-setup
 
 .PHONY: test-setup
 test-setup:
-	./test/integration/hack/setup.sh; \
 	./test/integration/hack/get-kube-binaries.sh; \
 	mkdir -p ./test/integration/hack/tmp; \
 
@@ -59,7 +56,6 @@ image_debug: image
 .PHONY: generate_crds
 generate_crds:
 	@echo "+ Generating crds"
-	@go install sigs.k8s.io/controller-tools/cmd/controller-gen@latest
 	@controller-gen +crd +paths="./pkg/apis/..." +output:crd:stdout > manifests/production/metacontroller-crds-v1.yaml
 	@cp manifests/production/metacontroller-crds-v1.yaml deploy/helm/metacontroller/crds/
 
@@ -69,20 +65,16 @@ generate_crds:
 .PHONY: generated_files
 generated_files: deepcopy clientset lister informer
 
-# also builds vendored version of deepcopy-gen tool
 .PHONY: deepcopy
 deepcopy:
-	@go install k8s.io/code-generator/cmd/deepcopy-gen@"${CODE_GENERATOR_VERSION}"
 	@echo "+ Generating deepcopy funcs for $(API_GROUPS)"
 	@deepcopy-gen \
 		--go-header-file ./hack/boilerplate.go.txt \
 		--output-file zz_generated.deepcopy.go \
 		./pkg/apis/$(API_GROUPS)
 
-# also builds vendored version of client-gen tool
 .PHONY: clientset
 clientset:
-	@go install k8s.io/code-generator/cmd/client-gen@"${CODE_GENERATOR_VERSION}"
 	@echo "+ Generating clientsets for $(API_GROUPS)"
 	@client-gen \
 		--fake-clientset=false \
@@ -93,10 +85,8 @@ clientset:
 		--output-pkg $(PKG)/pkg/client/generated/clientset \
 		--clientset-name internalclientset
 
-# also builds vendored version of lister-gen tool
 .PHONY: lister
 lister:
-	@go install k8s.io/code-generator/cmd/lister-gen@"${CODE_GENERATOR_VERSION}"
 	@echo "+ Generating lister for $(API_GROUPS)"
 	@lister-gen \
 		--go-header-file ./hack/boilerplate.go.txt \
@@ -104,10 +94,8 @@ lister:
 		--output-pkg $(PKG)/pkg/client/generated/lister \
 		./pkg/apis/$(API_GROUPS)
 
-# also builds vendored version of informer-gen tool
 .PHONY: informer
 informer:
-	@go install k8s.io/code-generator/cmd/informer-gen@"${CODE_GENERATOR_VERSION}"
 	@echo "+ Generating informer for $(API_GROUPS)"
 	@informer-gen \
 		--go-header-file ./hack/boilerplate.go.txt \

@@ -14,10 +14,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         name: Checkout
-      - name: install helm
-        uses: Azure/setup-helm@v5
-        with:
-          version: 3.8.0
+      - uses: jdx/mise-action@v4
       - name: login to ghcr.io using helm
         run: |
           echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io/metacontroller/metacontroller-helm --username "${{ github.repository_owner }}" --password-stdin
