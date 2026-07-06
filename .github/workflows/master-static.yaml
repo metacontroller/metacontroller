@@ -9,16 +9,7 @@ jobs:
     steps:
     - name: checkout
       uses: actions/checkout@v7
-    - uses: actions/setup-go@v6
-      with:
-        go-version-file: 'go.mod'
-        cache: true
-    - name: Install GoReleaser
-      uses: goreleaser/goreleaser-action@v7
-      with:
-        distribution: goreleaser
-        version: latest
-        install-only: true
+    - uses: jdx/mise-action@v4
     - name: build image
       run: make image
     - name: Save image

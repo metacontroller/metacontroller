@@ -31,6 +31,16 @@ Please be aware that new release will be triggered for:
 
 where minor/patch as in semantic versioning definition.
 
+## Local development
+
+This repo pins its build/lint/test tool versions (Go, golangci-lint, goreleaser,
+kind, helm, kubectl, etc.) via [mise](https://mise.jdx.dev). Before running any
+`make` target, install `mise` and then run `mise install` in the repo root to
+download every tool at its pinned version. If you have [direnv](https://direnv.net)
+set up, running `direnv allow` (a `.envrc` is provided) will auto-activate
+those tools on your `PATH` whenever you `cd` into the repo — but it does not
+install them, so you still need to run `mise install` at least once.
+
 ## Contributor Guide
 
 Aside from the above administrative requirements, you can find more
