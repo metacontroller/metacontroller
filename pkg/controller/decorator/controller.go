@@ -334,6 +334,11 @@ func (c *decoratorController) Start() {
 
 func (c *decoratorController) Stop() {
 	c.stopOnce.Do(func() {
+		// Clean up finalizers on all parent resources before stopping.
+		// This ensures that when a DecoratorController is deleted, its finalizers
+		// are removed from parent resources so they can be garbage collected normally.
+		c.cleanupParentFinalizers()
+
 		close(c.stopCh)
 		c.queue.ShutDown()
 		<-c.doneCh
@@ -349,6 +354,56 @@ func (c *decoratorController) Stop() {
 			informer.Close()
 		})
 		c.customize.Stop()
+	})
+}
+
+// cleanupParentFinalizers removes the controller's finalizer from all parent
+// resources that have it. This is called when the DecoratorController is
+// deleted to allow parent resources to be garbage collected normally.
+func (c *decoratorController) cleanupParentFinalizers() {
+	c.logger.V(4).Info("Cleaning up finalizers on parent resources", "controller", c.dc.Name)
+
+	c.parentInformers.ForEach(func(gvr schema.GroupVersionResource, informer *dynamicinformer.ResourceInformer) {
+		// List all objects of this parent resource type
+		var all []*unstructured.Unstructured
+		var err error
+		if informer.Lister() != nil {
+			all, err = informer.Lister().List(labels.Everything())
+		}
+		if err != nil {
+			c.logger.Error(err, "Failed to list parent resources for finalizer cleanup", "resource", gvr)
+			return
+		}
+
+		// Get the API resource to determine the correct group/version/kind
+		resource := c.resources.Get(gvr.Group, gvr.Resource)
+		if resource == nil {
+			c.logger.V(4).Info("No resource info found for parent, skipping finalizer cleanup", "resource", gvr)
+			return
+		}
+
+		parentClient, err := c.dynClient.Kind(resource.APIVersion, resource.Kind)
+		if err != nil {
+			c.logger.Error(err, "Failed to get client for parent resource", "resource", gvr)
+			return
+		}
+
+		for _, parent := range all {
+			if controllerutil.ContainsFinalizer(parent, c.finalizer.Name) {
+				updatedParent := parent.DeepCopy()
+				controllerutil.RemoveFinalizer(updatedParent, c.finalizer.Name)
+				_, err := parentClient.Namespace(parent.GetNamespace()).Update(context.TODO(), updatedParent, metav1.UpdateOptions{})
+				if err != nil {
+					if apierrors.IsNotFound(err) {
+						// Parent already deleted, nothing to do
+						continue
+					}
+					c.logger.Error(err, "Failed to remove finalizer from parent", "parent", parent.GetName(), "namespace", parent.GetNamespace())
+				} else {
+					c.logger.V(4).Info("Removed finalizer from parent resource", "controller", c.dc.Name, "parent", parent.GetName(), "namespace", parent.GetNamespace())
+				}
+			}
+		}
 	})
 }
 
