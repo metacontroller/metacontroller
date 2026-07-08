@@ -235,6 +235,4 @@ jobs:
           GH_TOKEN: ${{ secrets.PAT }}
           GITHUB_TOKEN: ${{ secrets.PAT }}
           REPOSITORY_OWNER: ${{github.repository_owner}}
-        run: |
-          npm install @semantic-release/git @semantic-release/changelog @google/semantic-release-replace-plugin @semantic-release/exec -D
-          npx semantic-release
+        run: npx semantic-release
