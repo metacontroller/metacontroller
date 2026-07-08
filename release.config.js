@@ -70,5 +70,14 @@ module.exports = {
         "publishCmd": "./.release.sh \"${nextRelease.notes}\""
       }
     ],
-  ]
+    "@semantic-release/github",
+  ],
+  // goreleaser (invoked via @semantic-release/exec above) already creates the
+  // GitHub Release, so keep @semantic-release/github out of the "publish" step
+  // to avoid creating a duplicate release. It still runs its other steps
+  // (verifyConditions, success, fail), which is what comments on merged PRs
+  // and closed issues with the version that released the fix.
+  "publish": [
+    "@semantic-release/exec",
+  ],
 }

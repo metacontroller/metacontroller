@@ -93,7 +93,7 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
           files: test/integration/hack/tmp/${{ matrix.target }}-coverage.out
           flags: ${{ matrix.target }}
-          fail_ci_if_error: true # optional (default = false)
+          fail_ci_if_error: false # don't fail the job on codecov infra/upload issues
   e2etests:
     env:
       CI_MODE: true
