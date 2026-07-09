@@ -9,6 +9,15 @@ jobs:
     steps:
     - name: checkout
       uses: actions/checkout@v7
+    - name: Cache Go modules
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/go/pkg/mod
+          ~/.cache/go-build
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-
     - uses: jdx/mise-action@v4
     - name: build image
       run: make image
