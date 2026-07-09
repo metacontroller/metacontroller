@@ -10,6 +10,6 @@
     "@semantic-release/git": "^10.0.1",
     "@semantic-release/github": "^12.0.9",
     "@semantic-release/release-notes-generator": "^14.0.3",
-    "semantic-release": "^24.2.3"
+    "semantic-release": "^25.0.0"
   }
 }
