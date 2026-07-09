@@ -1,3 +1,10 @@
+## [4.16.5](https://github.com/metacontroller/metacontroller/compare/v4.16.4...v4.16.5) (2026-07-09)
+
+
+### Bug Fixes
+
+* **hooks:** log invalid webhook configuration instead of failing silently ([#1231](https://github.com/metacontroller/metacontroller/issues/1231)) ([499a078](https://github.com/metacontroller/metacontroller/commit/499a0788135b5e71c7b29cccd2a110de34700cbd))
+
 ## [4.16.4](https://github.com/metacontroller/metacontroller/compare/v4.16.3...v4.16.4) (2026-07-09)
 
 
