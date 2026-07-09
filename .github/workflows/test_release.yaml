@@ -27,7 +27,7 @@ jobs:
         with:
           fetch-depth: "5"
       - name: Cache Go modules
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             ~/go/pkg/mod
@@ -88,7 +88,7 @@ jobs:
         with:
           fetch-depth: "5"
       - name: Cache Go modules
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             ~/go/pkg/mod
@@ -228,7 +228,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - name: Cache Go modules
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             ~/go/pkg/mod
