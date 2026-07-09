@@ -1,3 +1,10 @@
+## [4.16.4](https://github.com/metacontroller/metacontroller/compare/v4.16.3...v4.16.4) (2026-07-09)
+
+
+### Bug Fixes
+
+* **release:** Fix semantic release process ([#1232](https://github.com/metacontroller/metacontroller/issues/1232)) ([dc6e44c](https://github.com/metacontroller/metacontroller/commit/dc6e44cdac2a11e9eeb9c2e17bccb3a585e4ba57))
+
 ## [4.16.3](https://github.com/metacontroller/metacontroller/compare/v4.16.2...v4.16.3) (2026-07-09)
 
 
