@@ -441,3 +441,31 @@ func mustParsePEMBlock(t *testing.T, data []byte) *pem.Block {
 	require.NotNil(t, block, "no PEM block found")
 	return block
 }
+
+// TestNewWebhookExecutor_InvalidConfig verifies that a webhook with neither a
+// full URL nor both service and path fails construction with a clear error
+// rather than silently producing an unusable executor. It also checks that
+// each distinct misconfiguration produces a specific message so operators
+// are not misdirected by a single generic hint.
+func TestNewWebhookExecutor_InvalidConfig(t *testing.T) {
+	t.Run("missing url and service/path", func(t *testing.T) {
+		webhook := &v1alpha1.Webhook{} // no URL, no Service, no Path
+		executor, err := NewWebhookExecutor(webhook, nil, "test-controller", common.CompositeController, common.SyncHook, nil)
+		require.Error(t, err)
+		assert.Nil(t, executor)
+		assert.Contains(t, err.Error(), "invalid webhook config")
+	})
+
+	t.Run("service missing name/namespace", func(t *testing.T) {
+		webhook := &v1alpha1.Webhook{
+			Service: &v1alpha1.ServiceReference{},
+			Path:    ptr.To[string]("/hook"),
+		}
+		executor, err := NewWebhookExecutor(webhook, nil, "test-controller", common.CompositeController, common.SyncHook, nil)
+		require.Error(t, err)
+		assert.Nil(t, executor)
+		assert.Contains(t, err.Error(), "invalid webhook config")
+		assert.Contains(t, err.Error(), "name")
+		assert.Contains(t, err.Error(), "namespace")
+	})
+}
