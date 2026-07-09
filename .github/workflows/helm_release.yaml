@@ -17,7 +17,7 @@ jobs:
       - uses: jdx/mise-action@v4
       - name: login to ghcr.io using helm
         run: |
-          echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io/metacontroller/metacontroller-helm --username "${{ github.repository_owner }}" --password-stdin
+          echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io --username "${{ github.repository_owner }}" --password-stdin
       - name: save helm chart to local registry
         run: |
           helm package "${{ github.workspace }}/deploy/helm/metacontroller/"
