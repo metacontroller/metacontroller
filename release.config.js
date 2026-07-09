@@ -1,3 +1,10 @@
+const execPlugin = [
+  "@semantic-release/exec",
+  {
+    "publishCmd": "./.release.sh \"${nextRelease.notes}\""
+  }
+];
+
 module.exports = {
   "branches": ["master"],
   "plugins": [
@@ -65,11 +72,7 @@ module.exports = {
         "message": "chore(release): ${nextRelease.version}\n\n${nextRelease.notes}"
       }
     ],
-    ["@semantic-release/exec",
-      {
-        "publishCmd": "./.release.sh \"${nextRelease.notes}\""
-      }
-    ],
+    execPlugin,
     "@semantic-release/github",
   ],
   // goreleaser (invoked via @semantic-release/exec above) already creates the
@@ -77,7 +80,13 @@ module.exports = {
   // to avoid creating a duplicate release. It still runs its other steps
   // (verifyConditions, success, fail), which is what comments on merged PRs
   // and closed issues with the version that released the fix.
+  //
+  // NOTE: the plugin must be repeated here as the same [name, config] tuple
+  // (not just "@semantic-release/exec") - referencing it by bare name drops
+  // the publishCmd option, silently turning this step into a no-op and
+  // skipping goreleaser entirely (see v4.16.3, which shipped a tag/commit but
+  // no Docker images or GitHub release).
   "publish": [
-    "@semantic-release/exec",
+    execPlugin,
   ],
 }
