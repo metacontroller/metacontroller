@@ -441,3 +441,14 @@ func mustParsePEMBlock(t *testing.T, data []byte) *pem.Block {
 	require.NotNil(t, block, "no PEM block found")
 	return block
 }
+
+// TestNewWebhookExecutor_InvalidConfig verifies that a webhook with neither a
+// full URL nor both service and path fails construction with a clear error
+// rather than silently producing an unusable executor.
+func TestNewWebhookExecutor_InvalidConfig(t *testing.T) {
+	webhook := &v1alpha1.Webhook{} // no URL, no Service, no Path
+	executor, err := NewWebhookExecutor(webhook, nil, "test-controller", common.CompositeController, common.SyncHook, nil)
+	require.Error(t, err)
+	assert.Nil(t, executor)
+	assert.Contains(t, err.Error(), "invalid webhook config")
+}

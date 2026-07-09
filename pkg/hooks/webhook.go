@@ -70,6 +70,7 @@ func NewWebhookExecutor(
 	}
 	url, err := webhookURL(webhook)
 	if err != nil {
+		logging.Logger.Error(err, "invalid webhook configuration; check the hook url/service/path", "controller", controllerName, "hookType", hookType)
 		return nil, err
 	}
 	hookTimeout, err := webhookTimeout(webhook)
