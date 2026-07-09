@@ -70,7 +70,7 @@ func NewWebhookExecutor(
 	}
 	url, err := webhookURL(webhook)
 	if err != nil {
-		logging.Logger.Error(err, "invalid webhook configuration; check the hook url/service/path", "controller", controllerName, "hookType", hookType)
+		logging.Logger.Error(err, "invalid webhook configuration", "controller", controllerName, "hookType", hookType)
 		return nil, err
 	}
 	hookTimeout, err := webhookTimeout(webhook)
@@ -278,13 +278,13 @@ func webhookURL(webhook *v1alpha1.Webhook) (string, error) {
 		return *webhook.URL, nil
 	}
 	if webhook.Service == nil || webhook.Path == nil {
-		return "", fmt.Errorf("invalid webhook config: must specify either full 'url', or both 'service' and 'path'")
+		return "", fmt.Errorf("invalid webhook config: must specify either a full 'url', or both 'service' and 'path'")
 	}
 
 	// For now, just use cluster DNS to resolve Services.
 	// If necessary, we can use a Lister to get more info about Services.
 	if webhook.Service.Name == "" || webhook.Service.Namespace == "" {
-		return "", fmt.Errorf("invalid client config: must specify service 'name' and 'namespace'")
+		return "", fmt.Errorf("invalid webhook config: 'service' must specify both 'name' and 'namespace'")
 	}
 	port := int32(80)
 	if webhook.Service.Port != nil {
