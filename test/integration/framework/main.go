@@ -158,7 +158,7 @@ func testMain(tests func() int, configuration options.Configuration) error {
 	}
 
 	// In this integration test environment, there are no Nodes, so the
-	// metacontroller StatefulSet will not actually run anything.
+	// metacontroller Deployment will not actually run anything.
 	// Instead, we start the Metacontroller server locally inside the test binary,
 	// since that's part of the code under test.
 	port, err := getAvailablePort()

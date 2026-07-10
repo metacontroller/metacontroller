@@ -1,6 +1,6 @@
 # Override args for development mode.
 apiVersion: apps/v1
-kind: StatefulSet
+kind: Deployment
 metadata:
   name: metacontroller
   namespace: metacontroller
