@@ -1,41 +1,36 @@
 package profile
 
 import (
+	"context"
 	"net"
-	"os"
-	"syscall"
 	"testing"
 	"time"
 )
 
-func TestEnablePprof_DoubleClose_Simulated(t *testing.T) {
-	// We can't easily trigger the internal closeOnce from outside,
-	// but we can test that our EnablePprof handles the error case correctly.
-
-	// 1. Listen on a port to cause ListenAndServe to fail later
+func TestEnablePprof_GracefulShutdown(t *testing.T) {
+	// 1. Listen on a port to get a free address
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatalf("failed to listen: %v", err)
 	}
-	defer ln.Close()
 	addr := ln.Addr().String()
+	ln.Close() // Close it so EnablePprof can use it
 
-	// 2. Call EnablePprof with the same address.
-	stopChan := EnablePprof(addr)
+	ctx, cancel := context.WithCancel(context.Background())
+	// 2. Call EnablePprof
+	stopChan := EnablePprof(ctx, addr)
 
-	// 3. Wait for it to close due to error.
+	// Wait a bit for it to start
+	time.Sleep(100 * time.Millisecond)
+
+	// 3. Cancel context to trigger shutdown
+	cancel()
+
+	// 4. Wait for it to close.
 	select {
 	case <-stopChan:
 		t.Log("Channel closed as expected")
 	case <-time.After(5 * time.Second):
 		t.Fatal("Timed out waiting for pprofStopChan to be closed")
 	}
-
-	// 4. Send signal to trigger the other close.
-	// Since we are using sync.Once now, this should NOT panic.
-	p, _ := os.FindProcess(os.Getpid())
-	_ = p.Signal(syscall.SIGINT)
-
-	// Wait to see if it panics.
-	time.Sleep(500 * time.Millisecond)
 }

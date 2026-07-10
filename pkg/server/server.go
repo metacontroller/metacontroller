@@ -51,7 +51,7 @@ import (
 
 // New returns a new controller manager and a function which can be used
 // to release resources after the manager is stopped.
-func New(configuration options.Configuration) (controllerruntime.Manager, error) {
+func New(ctx context.Context, configuration options.Configuration) (controllerruntime.Manager, error) {
 	// Create informer factory for metacontroller API objects.
 	mcClient, err := mcclientset.NewForConfig(configuration.RestConfig)
 	if err != nil {
@@ -60,7 +60,7 @@ func New(configuration options.Configuration) (controllerruntime.Manager, error)
 
 	// Check if metacontroller can successfully communicate with the K8s API server
 	// If metacontroller is in a service mesh, this serves as a check that the sidecar is healthy
-	err = k8sCommunicationCheck(mcClient.DiscoveryClient)
+	err = k8sCommunicationCheck(ctx, mcClient.DiscoveryClient)
 	if err != nil {
 		return nil, err
 	}
@@ -138,7 +138,7 @@ func New(configuration options.Configuration) (controllerruntime.Manager, error)
 		Strategy:     strategy,
 	}
 
-	compositeReconciler := composite.NewMetacontroller(*controllerContext, mcClient, configuration.Workers, applyOptions)
+	compositeReconciler := composite.NewMetacontroller(ctx, *controllerContext, mcClient, configuration.Workers, applyOptions)
 	compositeCtrl, err := controller.New("composite-metacontroller", mgr, controller.Options{
 		Reconciler: compositeReconciler,
 	})
@@ -150,7 +150,7 @@ func New(configuration options.Configuration) (controllerruntime.Manager, error)
 	if err != nil {
 		return nil, err
 	}
-	decoratorReconciler := decorator.NewMetacontroller(*controllerContext, configuration.Workers, applyOptions)
+	decoratorReconciler := decorator.NewMetacontroller(ctx, *controllerContext, configuration.Workers, applyOptions)
 	decoratorCtrl, err := controller.New("decorator-metacontroller", mgr, controller.Options{
 		Reconciler: decoratorReconciler,
 	})
@@ -164,24 +164,33 @@ func New(configuration options.Configuration) (controllerruntime.Manager, error)
 
 	// We need to call Start after initializing the controllers
 	// to make sure all the needed informers are already created
-	controllerContext.Start()
+	controllerContext.Start(ctx)
 
 	return mgr, nil
 }
 
-func k8sCommunicationCheck(client *discovery.DiscoveryClient) (err error) {
+func k8sCommunicationCheck(ctx context.Context, client *discovery.DiscoveryClient) (err error) {
 	// retry 6 times with a delay of 5 seconds each retry
 	// the retry and sleep intervals were observed anecdotally that service mesh sidecars
 	// take up to ~20 seconds to allow requests to successfully communicate with the api server
 	for range [6]int{} {
-		_, err = client.RESTClient().Get().AbsPath("/api").DoRaw(context.TODO())
+		err = func() error {
+			attemptCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			defer cancel()
+			_, attemptErr := client.RESTClient().Get().AbsPath("/api").DoRaw(attemptCtx)
+			return attemptErr
+		}()
 		if err == nil {
 			logging.Logger.Info("Communication with K8s API server successful")
 			break
 		}
 
 		logging.Logger.Info("Communication with K8s API server failed. Retrying...")
-		time.Sleep(5 * time.Second)
+		select {
+		case <-time.After(5 * time.Second):
+		case <-ctx.Done():
+			return ctx.Err()
+		}
 	}
 	return err
 }

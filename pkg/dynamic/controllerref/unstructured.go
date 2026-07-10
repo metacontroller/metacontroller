@@ -17,6 +17,7 @@ limitations under the License.
 package controllerref
 
 import (
+	"context"
 	"fmt"
 	"metacontroller/pkg/logging"
 
@@ -53,7 +54,7 @@ func NewUnstructuredManager(client *dynamicclientset.ResourceClient, parent meta
 	}
 }
 
-func (m *UnstructuredManager) ClaimChildren(children []*unstructured.Unstructured) ([]*unstructured.Unstructured, error) {
+func (m *UnstructuredManager) ClaimChildren(ctx context.Context, children []*unstructured.Unstructured) ([]*unstructured.Unstructured, error) {
 	var claimed []*unstructured.Unstructured
 	var errlist []error
 
@@ -61,10 +62,10 @@ func (m *UnstructuredManager) ClaimChildren(children []*unstructured.Unstructure
 		return m.Selector.Matches(labels.Set(obj.GetLabels()))
 	}
 	adopt := func(obj metav1.Object) error {
-		return m.adoptChild(obj.(*unstructured.Unstructured))
+		return m.adoptChild(ctx, obj.(*unstructured.Unstructured))
 	}
 	release := func(obj metav1.Object) error {
-		return m.releaseChild(obj.(*unstructured.Unstructured))
+		return m.releaseChild(ctx, obj.(*unstructured.Unstructured))
 	}
 
 	for _, child := range children {
@@ -80,16 +81,16 @@ func (m *UnstructuredManager) ClaimChildren(children []*unstructured.Unstructure
 	return claimed, utilerrors.NewAggregate(errlist)
 }
 
-func atomicUpdate(rc *dynamicclientset.ResourceClient, obj *unstructured.Unstructured, updateFunc func(obj *unstructured.Unstructured) bool) error {
+func atomicUpdate(ctx context.Context, rc *dynamicclientset.ResourceClient, obj *unstructured.Unstructured, updateFunc func(obj *unstructured.Unstructured) bool) error {
 	// We can't use strategic merge patch because we want this to work with custom resources.
 	// We can't use merge patch because that would replace the whole list.
 	// We can't use JSON patch ops because that wouldn't be idempotent.
 	// The only option is GET/PUT with ResourceVersion.
-	_, err := rc.Namespace(obj.GetNamespace()).AtomicUpdate(obj, updateFunc)
+	_, err := rc.Namespace(obj.GetNamespace()).AtomicUpdate(ctx, obj, updateFunc)
 	return err
 }
 
-func (m *UnstructuredManager) adoptChild(child *unstructured.Unstructured) error {
+func (m *UnstructuredManager) adoptChild(ctx context.Context, child *unstructured.Unstructured) error {
 	if err := m.CanAdopt(); err != nil {
 		return fmt.Errorf("can't adopt %v %v/%v (%v): %w", m.childKind.Kind, child.GetNamespace(), child.GetName(), child.GetUID(), err)
 	}
@@ -102,16 +103,16 @@ func (m *UnstructuredManager) adoptChild(child *unstructured.Unstructured) error
 		Controller:         ptr.To[bool](true),
 		BlockOwnerDeletion: ptr.To[bool](true),
 	}
-	return atomicUpdate(m.client, child, func(obj *unstructured.Unstructured) bool {
+	return atomicUpdate(ctx, m.client, child, func(obj *unstructured.Unstructured) bool {
 		ownerRefs := addOwnerReference(obj.GetOwnerReferences(), controllerRef)
 		obj.SetOwnerReferences(ownerRefs)
 		return true
 	})
 }
 
-func (m *UnstructuredManager) releaseChild(obj *unstructured.Unstructured) error {
+func (m *UnstructuredManager) releaseChild(ctx context.Context, obj *unstructured.Unstructured) error {
 	logging.Logger.Info("Releasing", "parent", m.Controller, "child", obj)
-	err := atomicUpdate(m.client, obj, func(obj *unstructured.Unstructured) bool {
+	err := atomicUpdate(ctx, m.client, obj, func(obj *unstructured.Unstructured) bool {
 		ownerRefs := removeOwnerReference(obj.GetOwnerReferences(), m.Controller.GetUID())
 		obj.SetOwnerReferences(ownerRefs)
 		return true

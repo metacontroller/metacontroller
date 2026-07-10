@@ -28,13 +28,13 @@ import (
 )
 
 type ControllerRevisionExpansion interface {
-	UpdateWithRetries(orig *v1alpha1.ControllerRevision, updateFn func(*v1alpha1.ControllerRevision) bool) (result *v1alpha1.ControllerRevision, err error)
+	UpdateWithRetries(ctx context.Context, orig *v1alpha1.ControllerRevision, updateFn func(*v1alpha1.ControllerRevision) bool) (result *v1alpha1.ControllerRevision, err error)
 }
 
-func (c *controllerRevisions) UpdateWithRetries(orig *v1alpha1.ControllerRevision, updateFn func(*v1alpha1.ControllerRevision) bool) (result *v1alpha1.ControllerRevision, err error) {
+func (c *controllerRevisions) UpdateWithRetries(ctx context.Context, orig *v1alpha1.ControllerRevision, updateFn func(*v1alpha1.ControllerRevision) bool) (result *v1alpha1.ControllerRevision, err error) {
 	name := orig.GetName()
 	err = retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-		current, err := c.Get(context.TODO(), name, metav1.GetOptions{})
+		current, err := c.Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
@@ -45,7 +45,7 @@ func (c *controllerRevisions) UpdateWithRetries(orig *v1alpha1.ControllerRevisio
 			// There's nothing to do.
 			return nil
 		}
-		result, err = c.Update(context.TODO(), current, metav1.UpdateOptions{})
+		result, err = c.Update(ctx, current, metav1.UpdateOptions{})
 		return err
 	})
 	return result, err

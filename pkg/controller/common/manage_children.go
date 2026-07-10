@@ -138,6 +138,7 @@ type ChildUpdateStrategy interface {
 }
 
 func ManageChildren(
+	ctx context.Context,
 	dynClient *dynamicclientset.Clientset,
 	updateStrategy ChildUpdateStrategy,
 	parent *unstructured.Unstructured,
@@ -165,7 +166,7 @@ func ManageChildren(
 			if desiredChildren != nil {
 				desiredObjects = desiredChildren.GetObjectsByGVK(gvk)
 			}
-			if err := deleteChildren(client, parent, objects, desiredObjects); err != nil {
+			if err := deleteChildren(ctx, client, parent, objects, desiredObjects); err != nil {
 				errs = append(errs, err)
 				continue
 			}
@@ -191,7 +192,7 @@ func ManageChildren(
 			if observedChildren != nil {
 				observedObjects = observedChildren.GetObjectsByGVK(gvk)
 			}
-			if err := updateChildren(client, updateStrategy, parent, observedObjects, objects, ssaOptions); err != nil {
+			if err := updateChildren(ctx, client, updateStrategy, parent, observedObjects, objects, ssaOptions); err != nil {
 				errs = append(errs, err)
 				continue
 			}
@@ -201,7 +202,7 @@ func ManageChildren(
 	return utilerrors.NewAggregate(errs)
 }
 
-func deleteChildren(client *dynamicclientset.ResourceClient, parent *unstructured.Unstructured, observed, desired map[string]*unstructured.Unstructured) error {
+func deleteChildren(ctx context.Context, client *dynamicclientset.ResourceClient, parent *unstructured.Unstructured, observed, desired map[string]*unstructured.Unstructured) error {
 	var errs []error
 	for name, obj := range observed {
 		if obj.GetDeletionTimestamp() != nil {
@@ -217,7 +218,7 @@ func deleteChildren(client *dynamicclientset.ResourceClient, parent *unstructure
 			// since some objects default to orphaning for backwards compatibility.
 			propagation := metav1.DeletePropagationBackground
 			err := client.Namespace(obj.GetNamespace()).Delete(
-				context.TODO(),
+				ctx,
 				obj.GetName(),
 				metav1.DeleteOptions{
 					Preconditions:     &metav1.Preconditions{UID: &uid},
@@ -334,15 +335,13 @@ func sanitizeForSSACompare(obj *unstructured.Unstructured) *unstructured.Unstruc
 	return c
 }
 
-func updateChildren(client *dynamicclientset.ResourceClient, updateStrategy ChildUpdateStrategy, parent *unstructured.Unstructured, observed, desired map[string]*unstructured.Unstructured, ssaOptions *ApplyOptions) error {
+func updateChildren(ctx context.Context, client *dynamicclientset.ResourceClient, updateStrategy ChildUpdateStrategy, parent *unstructured.Unstructured, observed, desired map[string]*unstructured.Unstructured, ssaOptions *ApplyOptions) error {
 	var errs []error
 
 	applier, err := NewApplier(client, ssaOptions)
 	if err != nil {
 		return err
 	}
-
-	ctx := context.TODO()
 
 	for name, obj := range desired {
 		operation := &ApplyOperation{
