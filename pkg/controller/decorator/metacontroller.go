@@ -88,7 +88,7 @@ func (mc *Metacontroller) Reconcile(ctx context.Context, request reconcile.Reque
 		mc.logger.V(4).Info("DecoratorController has been deleted", "name", decoratorControllerName)
 		// Stop and remove the controller if it exists.
 		if c, ok := mc.decoratorControllers.LoadAndDelete(decoratorControllerName); ok {
-			c.Stop()
+			c.Stop(true)
 			c.eventRecorder.Eventf(
 				c.dc,
 				v1.EventTypeNormal,
@@ -120,7 +120,7 @@ func (mc *Metacontroller) reconcileDecoratorController(dc *v1alpha1.DecoratorCon
 	}
 	// Stop and remove the controller so it can be recreated.
 	if c, ok := mc.decoratorControllers.LoadAndDelete(dc.Name); ok {
-		c.Stop()
+		c.Stop(false)
 		mc.eventRecorder.Eventf(
 			dc,
 			v1.EventTypeNormal,
