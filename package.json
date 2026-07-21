@@ -4,10 +4,10 @@
   "private": true,
   "devDependencies": {
     "@google/semantic-release-replace-plugin": "^1.2.7",
-    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/changelog": "^7.0.0",
     "@semantic-release/commit-analyzer": "^13.0.1",
     "@semantic-release/exec": "^7.0.3",
-    "@semantic-release/git": "^10.0.1",
+    "@semantic-release/git": "^11.0.0",
     "@semantic-release/github": "^12.0.9",
     "@semantic-release/release-notes-generator": "^14.0.3",
     "semantic-release": "^25.0.0"
