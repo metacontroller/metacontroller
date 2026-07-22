@@ -1,3 +1,10 @@
+## [4.16.6](https://github.com/metacontroller/metacontroller/compare/v4.16.5...v4.16.6) (2026-07-22)
+
+
+### Bug Fixes
+
+* **deps:** Update golang dependencies ([#1242](https://github.com/metacontroller/metacontroller/issues/1242)) ([05ae79d](https://github.com/metacontroller/metacontroller/commit/05ae79d31c9e155924814b9a4ba4ab6941aa049a)) — @grzesuav
+
 ## [4.16.5](https://github.com/metacontroller/metacontroller/compare/v4.16.4...v4.16.5) (2026-07-09)
 
 
