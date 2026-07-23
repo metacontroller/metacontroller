@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "devDependencies": {
-    "@google/semantic-release-replace-plugin": "^1.2.7",
+    "semantic-release-replace-plugin": "^1.2.1",
     "@semantic-release/changelog": "^7.0.0",
     "@semantic-release/commit-analyzer": "^13.0.1",
     "@semantic-release/exec": "^7.0.3",
