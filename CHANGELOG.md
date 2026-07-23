@@ -1,3 +1,10 @@
+## [4.16.7](https://github.com/metacontroller/metacontroller/compare/v4.16.6...v4.16.7) (2026-07-23)
+
+
+### Bug Fixes
+
+* **deps:** Update golang deps ([#1245](https://github.com/metacontroller/metacontroller/issues/1245)) ([bf28a29](https://github.com/metacontroller/metacontroller/commit/bf28a293593476197d5277652d7a7b3d6ba87547)) — @grzesuav
+
 ## [4.16.6](https://github.com/metacontroller/metacontroller/compare/v4.16.5...v4.16.6) (2026-07-22)
 
 
