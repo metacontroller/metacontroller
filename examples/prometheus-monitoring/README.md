@@ -16,11 +16,11 @@ a [Prometheus](https://prometheus.io/) instance for monitoring metacontroller.
 ### Helm Installation
     helm install metacontoller deploy/helm/metacontroller -n metacontroller --create-namespace -f deploy/helm/metacontroller/ci/service-values.yaml
     kubectl apply -f examples/prometheus-monitoring/manifest/serviceMonitor.yaml
-    kubectl rollout status --watch --timeout=180s statefulset/metacontroller -n metacontroller
+    kubectl rollout status --watch --timeout=180s deployment/metacontroller -n metacontroller
 
 ### Kubectl Installation
     kubectl apply -k examples/prometheus-monitoring/manifest
-    kubectl rollout status --watch --timeout=180s statefulset/metacontroller -n metacontroller
+    kubectl rollout status --watch --timeout=180s deployment/metacontroller -n metacontroller
 
 ## Viewing metrics
 - port forward prometheus UI port to localhost 
