@@ -1,5 +1,8 @@
 ---
 name: Release helm chart
+concurrency:
+  group: ${{ github.ref }}
+  cancel-in-progress: true
 on:
   push:
     tags:
