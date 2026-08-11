@@ -1,3 +1,10 @@
+# [4.17.0](https://github.com/metacontroller/metacontroller/compare/v4.16.7...v4.17.0) (2026-08-11)
+
+
+### Features
+
+* Improve context handling ([#1202](https://github.com/metacontroller/metacontroller/issues/1202)) ([6c6dd89](https://github.com/metacontroller/metacontroller/commit/6c6dd892651aace7c3b38cde68c40e1d865d84cc)) — @grzesuav
+
 ## [4.16.7](https://github.com/metacontroller/metacontroller/compare/v4.16.6...v4.16.7) (2026-07-23)
 
 
