@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"metacontroller/pkg/apis/metacontroller/v1alpha1"
 	"metacontroller/pkg/controller/common"
 	"metacontroller/pkg/controller/common/api"
@@ -25,7 +26,7 @@ import (
 // Hook an execute Hook requests
 type Hook interface {
 	IsEnabled() bool
-	Call(request api.WebhookRequest, response interface{}) error
+	Call(ctx context.Context, request api.WebhookRequest, response interface{}) error
 	GetVersion() v1alpha1.HookVersion
 }
 
@@ -66,6 +67,6 @@ func (h *hookExecutorImpl) GetVersion() v1alpha1.HookVersion {
 	return v1alpha1.HookVersionV1
 }
 
-func (h *hookExecutorImpl) Call(request api.WebhookRequest, response interface{}) error {
-	return h.webhookExecutor.Call(request, response)
+func (h *hookExecutorImpl) Call(ctx context.Context, request api.WebhookRequest, response interface{}) error {
+	return h.webhookExecutor.Call(ctx, request, response)
 }

@@ -69,9 +69,10 @@ type Metacontroller struct {
 	numWorkers int
 	ssaOptions *common.ApplyOptions
 	logger     logr.Logger
+	ctx        context.Context
 }
 
-func NewMetacontroller(controllerContext common.ControllerContext, mcClient mcclientset.Interface, numWorkers int, ssaOptions *common.ApplyOptions) *Metacontroller {
+func NewMetacontroller(ctx context.Context, controllerContext common.ControllerContext, mcClient mcclientset.Interface, numWorkers int, ssaOptions *common.ApplyOptions) *Metacontroller {
 	mc := &Metacontroller{
 		k8sClient:     controllerContext.K8sClient,
 		resources:     controllerContext.Resources,
@@ -87,6 +88,7 @@ func NewMetacontroller(controllerContext common.ControllerContext, mcClient mccl
 		numWorkers: numWorkers,
 		ssaOptions: ssaOptions,
 		logger:     logging.Logger.WithName("composite"),
+		ctx:        ctx,
 	}
 
 	return mc
@@ -149,11 +151,14 @@ func (mc *Metacontroller) Reconcile(ctx context.Context, request reconcile.Reque
 		// returning, as we cannot do anything until 'Status' subresource is added to parent parentCRD
 		return reconcile.Result{}, nil
 	}
-	reconcileErr := mc.reconcileCompositeController(&cc)
+	reconcileErr := mc.reconcileCompositeController(ctx, &cc)
 	return reconcile.Result{}, reconcileErr
 }
 
-func (mc *Metacontroller) reconcileCompositeController(cc *v1alpha1.CompositeController) error {
+func (mc *Metacontroller) reconcileCompositeController(ctx context.Context, cc *v1alpha1.CompositeController) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	if pc, ok := mc.parentControllers.Load(cc.Name); ok {
 		// The controller was already started.
 		if apiequality.Semantic.DeepEqual(cc.Spec, pc.cc.Spec) {
@@ -167,7 +172,8 @@ func (mc *Metacontroller) reconcileCompositeController(cc *v1alpha1.CompositeCon
 		mc.eventRecorder.Eventf(cc, v1.EventTypeNormal, events.ReasonStopped, "Stopped controller: %s", cc.Name)
 	}
 
-	pc, err := newParentController(
+	pc, err := newParentController( //nolint:contextcheck // long-lived controller must use root context, not per-reconcile ctx
+		mc.ctx,
 		mc.resources,
 		mc.dynClient,
 		mc.dynInformers,

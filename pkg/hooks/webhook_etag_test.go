@@ -18,6 +18,7 @@ package hooks
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"metacontroller/pkg/cache"
@@ -255,7 +256,7 @@ func RunHookTest(t *testing.T, steps TestSteps) {
 	for id := range steps {
 		expected := steps[id].hookResult
 		response := compositev1.CompositeHookResponse{}
-		err := hook.Call(request, &response)
+		err := hook.Call(context.TODO(), request, &response)
 		assert.Equal(t, expected.err, err)
 		assert.Equal(t, expected.res, response)
 	}

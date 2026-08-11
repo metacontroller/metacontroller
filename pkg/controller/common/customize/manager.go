@@ -74,7 +74,15 @@ type Manager struct {
 	relatedInformers *common.InformerMap
 	customizeCache   *cache.Cache[customizeKey, *v1.CustomizeHookResponse]
 
-	stopCh chan struct{}
+	ctx context.Context
+
+	// informerCtx is used exclusively for creating related-resource informers.
+	// Unlike ctx, it is not replaced on Start() with a controller-scoped
+	// context: shared informers are cached process-wide by (apiVersion,
+	// resource) and reuse the context of whichever caller created them, so a
+	// controller-scoped context here could cancel List/Watch for other
+	// controllers still subscribed to the same shared informer.
+	informerCtx context.Context
 
 	enqueueParent func(interface{})
 
@@ -94,6 +102,7 @@ func newResponseCache() *cache.Cache[customizeKey, *v1.CustomizeHookResponse] {
 }
 
 func NewCustomizeManager(
+	ctx context.Context,
 	name string,
 	enqueueParent func(interface{}),
 	controller v1alpha1.CustomizableController,
@@ -113,7 +122,7 @@ func NewCustomizeManager(
 		if customizeHook.Webhook != nil {
 			webhookSpec = customizeHook.Webhook
 		}
-		cfg, cfgErr := hooks.ResolveEndpointConfig(context.Background(), k8sClient, webhookSpec, controller.GetEndpointConfigs())
+		cfg, cfgErr := hooks.ResolveEndpointConfig(ctx, k8sClient, webhookSpec, controller.GetEndpointConfigs())
 		if cfgErr != nil {
 			return nil, fmt.Errorf("can't resolve endpoint config for customize hook: %w", cfgErr)
 		}
@@ -132,7 +141,7 @@ func NewCustomizeManager(
 	}
 	var nsInformer *dynamicinformer.ResourceInformer
 	if dynInformers.IsInitialized() {
-		nsInformer, err = dynInformers.Resource("v1", "namespaces")
+		nsInformer, err = dynInformers.Resource(ctx, "v1", "namespaces")
 		if err != nil {
 			return nil, fmt.Errorf("can't create namespace informer for customize manager: %w", err)
 		}
@@ -151,6 +160,8 @@ func NewCustomizeManager(
 		enqueueParent:    enqueueParent,
 		customizeHook:    hook,
 		logger:           logger,
+		ctx:              ctx,
+		informerCtx:      ctx,
 	}, nil
 }
 
@@ -158,8 +169,8 @@ func (rm *Manager) IsEnabled() bool {
 	return rm.customizeHook != nil && rm.customizeHook.IsEnabled()
 }
 
-func (rm *Manager) Start(stopCh chan struct{}) {
-	rm.stopCh = stopCh
+func (rm *Manager) Start(ctx context.Context) {
+	rm.ctx = ctx
 }
 
 func (rm *Manager) Stop() {
@@ -176,7 +187,7 @@ func (rm *Manager) getCachedCustomizeHookResponse(parent *unstructured.Unstructu
 	return rm.customizeCache.Get(customizeKey{parent.GetUID(), parent.GetGeneration()})
 }
 
-func (rm *Manager) getCustomizeHookResponse(parent *unstructured.Unstructured) (*v1.CustomizeHookResponse, error) {
+func (rm *Manager) getCustomizeHookResponse(ctx context.Context, parent *unstructured.Unstructured) (*v1.CustomizeHookResponse, error) {
 	if !rm.IsEnabled() {
 		return nil, nil
 	}
@@ -202,13 +213,13 @@ func (rm *Manager) getCustomizeHookResponse(parent *unstructured.Unstructured) (
 	var v1Response *v1.CustomizeHookResponse
 	if hookVersion == v1alpha1.HookVersionV2 {
 		var v2Response v2.CustomizeHookResponse
-		if err := rm.customizeHook.Call(request, &v2Response); err != nil {
+		if err := rm.customizeHook.Call(ctx, request, &v2Response); err != nil {
 			return nil, err
 		}
 		v1Response = rm.convertV2ToV1Response(v2Response)
 	} else {
 		v1Response = &v1.CustomizeHookResponse{}
-		if err := rm.customizeHook.Call(request, v1Response); err != nil {
+		if err := rm.customizeHook.Call(ctx, request, v1Response); err != nil {
 			return nil, err
 		}
 	}
@@ -227,6 +238,10 @@ func (rm *Manager) convertV2ToV1Response(v2Response v2.CustomizeHookResponse) *v
 var ErrRelatedInformerNotSynced = errors.New("related informer not synced yet")
 
 func (rm *Manager) getRelatedClient(apiVersion, resource string) (*dynamicclientset.ResourceClient, *dynamicinformer.ResourceInformer, error) {
+	if rm.ctx == nil {
+		return nil, nil, fmt.Errorf("customize Manager not started")
+	}
+
 	client, err := rm.dynClient.Resource(apiVersion, resource)
 	if err != nil {
 		return nil, nil, err
@@ -237,10 +252,6 @@ func (rm *Manager) getRelatedClient(apiVersion, resource string) (*dynamicclient
 	informer, err := rm.getOrCreateRelatedInformer(apiVersion, resource, gvr)
 	if err != nil {
 		return nil, nil, err
-	}
-
-	if rm.stopCh == nil {
-		return nil, nil, fmt.Errorf("customize Manager not started")
 	}
 
 	if !informer.Informer().HasSynced() {
@@ -256,7 +267,7 @@ func (rm *Manager) getOrCreateRelatedInformer(apiVersion, resource string, gvr s
 		return informer, nil
 	}
 
-	informer, err := rm.dynInformers.Resource(apiVersion, resource)
+	informer, err := rm.dynInformers.Resource(rm.informerCtx, apiVersion, resource)
 	if err != nil {
 		return nil, fmt.Errorf("can't create informer for related resource: %w", err)
 	}
@@ -350,7 +361,7 @@ func (rm *Manager) findRelatedParents(relatedSlice ...*unstructured.Unstructured
 
 	MATCHPARENTS:
 		for _, parent := range parents {
-			customizeHookResponse, err := rm.getCustomizeHookResponse(parent)
+			customizeHookResponse, err := rm.getCustomizeHookResponse(rm.ctx, parent)
 			if err != nil || customizeHookResponse == nil {
 				// skip for now, the informer relist interval will try again later.
 				continue
@@ -548,7 +559,7 @@ func listObjects(selector labels.Selector, namespace string, informer *dynamicin
 	return informer.Lister().List(selector)
 }
 
-func (rm *Manager) GetRelatedObjects(parent *unstructured.Unstructured) (api.ObjectMap, error) {
+func (rm *Manager) GetRelatedObjects(ctx context.Context, parent *unstructured.Unstructured) (api.ObjectMap, error) {
 	childMap := make(commonv2.UniformObjectMap)
 	if !rm.IsEnabled() {
 		return childMap, nil
@@ -561,7 +572,7 @@ func (rm *Manager) GetRelatedObjects(parent *unstructured.Unstructured) (api.Obj
 
 	parentNamespace := parent.GetNamespace()
 
-	customizeHookResponse, err := rm.getCustomizeHookResponse(parent)
+	customizeHookResponse, err := rm.getCustomizeHookResponse(ctx, parent)
 	if err != nil {
 		return nil, err
 	}

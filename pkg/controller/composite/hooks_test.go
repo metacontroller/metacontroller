@@ -1,6 +1,7 @@
 package composite
 
 import (
+	"context"
 	"metacontroller/pkg/apis/metacontroller/v1alpha1"
 	commonv1 "metacontroller/pkg/controller/common/api/v1"
 	commonv2 "metacontroller/pkg/controller/common/api/v2"
@@ -99,7 +100,7 @@ func TestWhenChildrenArrayIsNullThenDeserializeToEmptySlice(t *testing.T) {
 	parent.SetNamespace("some")
 	parent.SetDeletionTimestamp(nil)
 
-	response, err := parentController.callHook(parent, make(commonv2.UniformObjectMap), make(commonv2.UniformObjectMap))
+	response, err := parentController.callHook(context.TODO(), parent, make(commonv2.UniformObjectMap), make(commonv2.UniformObjectMap))
 
 	if err != nil {
 		t.Error(err)
@@ -124,7 +125,7 @@ func TestWhenChildrenArrayHasInvalidValueShouldFail(t *testing.T) {
 	parent.SetNamespace("some")
 	parent.SetDeletionTimestamp(nil)
 
-	response, err := parentController.callHook(parent, make(commonv2.UniformObjectMap), make(commonv2.UniformObjectMap))
+	response, err := parentController.callHook(context.TODO(), parent, make(commonv2.UniformObjectMap), make(commonv2.UniformObjectMap))
 
 	if err == nil {
 		t.Error("Should fail with invalid input")
@@ -147,7 +148,7 @@ func TestWhenChildrenArrayHasInvalidJSONValueShouldFail(t *testing.T) {
 	parent.SetNamespace("some")
 	parent.SetDeletionTimestamp(nil)
 
-	response, err := parentController.callHook(parent, make(commonv2.UniformObjectMap), make(commonv2.UniformObjectMap))
+	response, err := parentController.callHook(context.TODO(), parent, make(commonv2.UniformObjectMap), make(commonv2.UniformObjectMap))
 
 	if err == nil {
 		t.Error("Should fail with invalid input")

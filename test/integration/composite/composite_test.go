@@ -159,7 +159,7 @@ func TestCascadingDelete(t *testing.T) {
 
 	// Now that child exists, tell parent to delete it.
 	t.Logf("Updating parent to set replicas=0...")
-	_, err = parentClient.Namespace(ns).AtomicUpdate(parent, func(obj *unstructured.Unstructured) bool {
+	_, err = parentClient.Namespace(ns).AtomicUpdate(context.Background(), parent, func(obj *unstructured.Unstructured) bool {
 		unstructured.SetNestedField(obj.Object, int64(0), "spec", "replicas")
 		return true
 	})
