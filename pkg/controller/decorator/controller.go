@@ -399,9 +399,8 @@ func (c *decoratorController) cleanupParentFinalizers() {
 			if !controllerutil.ContainsFinalizer(parent, c.finalizer.Name) {
 				continue
 			}
-			updatedParent := parent.DeepCopy()
-			controllerutil.RemoveFinalizer(updatedParent, c.finalizer.Name)
-			if _, err := parentClient.Namespace(parent.GetNamespace()).Update(context.TODO(), updatedParent, metav1.UpdateOptions{}); err != nil {
+			// Use RemoveFinalizer which retries on conflict to avoid stale finalizers
+			if _, err := parentClient.RemoveFinalizer(parent, c.finalizer.Name); err != nil {
 				if apierrors.IsNotFound(err) {
 					// Parent already deleted, nothing to do.
 					continue
