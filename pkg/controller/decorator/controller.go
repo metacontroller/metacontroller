@@ -429,14 +429,12 @@ func (c *decoratorController) updateParentObject(old, cur interface{}) {
 				// allow it through to avoid silently dropping periodic reconciles.
 				if parent.IgnoreStatusChanges != nil && *parent.IgnoreStatusChanges {
 					if parentCur, ok := cur.(*unstructured.Unstructured); ok {
-						if parentOld == parentCur {
-							// resync event — pass through
-						} else if parentOld.GetGeneration() == parentCur.GetGeneration() {
-							if reflect.DeepEqual(parentOld.GetLabels(), parentCur.GetLabels()) &&
-								reflect.DeepEqual(parentOld.GetAnnotations(), parentCur.GetAnnotations()) &&
-								parentCur.GetDeletionTimestamp() == nil {
-								return
-							}
+						if parentOld != parentCur &&
+							parentOld.GetGeneration() == parentCur.GetGeneration() &&
+							reflect.DeepEqual(parentOld.GetLabels(), parentCur.GetLabels()) &&
+							reflect.DeepEqual(parentOld.GetAnnotations(), parentCur.GetAnnotations()) &&
+							parentCur.GetDeletionTimestamp() == nil {
+							return
 						}
 					}
 				}
