@@ -1,3 +1,10 @@
+## [4.17.1](https://github.com/metacontroller/metacontroller/compare/v4.17.0...v4.17.1) (2026-08-12)
+
+
+### Bug Fixes
+
+* **deps:** Upgrade k8s dependencies to 1.36 ([#1257](https://github.com/metacontroller/metacontroller/issues/1257)) ([7f47156](https://github.com/metacontroller/metacontroller/commit/7f4715624ee519b32f398b003c9f184fc5c3836c)) — @grzesuav
+
 # [4.17.0](https://github.com/metacontroller/metacontroller/compare/v4.16.7...v4.17.0) (2026-08-11)
 
 
