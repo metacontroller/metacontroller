@@ -430,14 +430,16 @@ func (c *decoratorController) updateParentObject(old, cur interface{}) {
 				// if ignoreStatusChanges is set to true in the decorator controller, a parent object should only be
 				// enqueued if there is a change in the generation or if there is a change in its labels/annotations,
 				// or if there is a deletion timestamp attached to the object, otherwise it will be ignored.
+				// However, a resync event passes the same pointer for both old and cur (eh.resync()), so we must
+				// allow it through to avoid silently dropping periodic reconciles.
 				if parent.IgnoreStatusChanges != nil && *parent.IgnoreStatusChanges {
 					if parentCur, ok := cur.(*unstructured.Unstructured); ok {
-						if parentOld.GetGeneration() == parentCur.GetGeneration() {
-							if reflect.DeepEqual(parentOld.GetLabels(), parentCur.GetLabels()) &&
-								reflect.DeepEqual(parentOld.GetAnnotations(), parentCur.GetAnnotations()) &&
-								parentCur.GetDeletionTimestamp() == nil {
-								return
-							}
+						if parentOld != parentCur &&
+							parentOld.GetGeneration() == parentCur.GetGeneration() &&
+							reflect.DeepEqual(parentOld.GetLabels(), parentCur.GetLabels()) &&
+							reflect.DeepEqual(parentOld.GetAnnotations(), parentCur.GetAnnotations()) &&
+							parentCur.GetDeletionTimestamp() == nil {
+							return
 						}
 					}
 				}
