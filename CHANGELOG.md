@@ -1,3 +1,10 @@
+## [4.17.2](https://github.com/metacontroller/metacontroller/compare/v4.17.1...v4.17.2) (2026-08-13)
+
+
+### Bug Fixes
+
+* allow resync events through ignoreStatusChanges filter ([#1252](https://github.com/metacontroller/metacontroller/issues/1252)) ([0dbb2ed](https://github.com/metacontroller/metacontroller/commit/0dbb2ed4380253725d48608fb5578f11f4449526)) — @AruneshDwivedi
+
 ## [4.17.1](https://github.com/metacontroller/metacontroller/compare/v4.17.0...v4.17.1) (2026-08-12)
 
 
