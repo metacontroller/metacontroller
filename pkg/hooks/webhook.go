@@ -18,6 +18,7 @@ package hooks
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
@@ -53,7 +54,7 @@ type HttpClientInterface interface {
 
 // WebhookExecutor executes a call to a webhook
 type WebhookExecutor interface {
-	Call(request api.WebhookRequest, response interface{}) error
+	Call(ctx context.Context, request api.WebhookRequest, response interface{}) error
 	GetVersion() v1alpha1.HookVersion
 }
 
@@ -70,6 +71,7 @@ func NewWebhookExecutor(
 	}
 	url, err := webhookURL(webhook)
 	if err != nil {
+		logging.Logger.Error(err, "invalid webhook configuration", "controller", controllerName, "hookType", hookType)
 		return nil, err
 	}
 	hookTimeout, err := webhookTimeout(webhook)
@@ -186,7 +188,7 @@ func (w *webhookExecutor) GetVersion() v1alpha1.HookVersion {
 	return w.effectiveHookVersion()
 }
 
-func (w *webhookExecutor) Call(webhookRequest api.WebhookRequest, webhookResponse interface{}) error {
+func (w *webhookExecutor) Call(ctx context.Context, webhookRequest api.WebhookRequest, webhookResponse interface{}) error {
 	// Encode webhookRequest.
 	requestBody, err := k8sjson.Marshal(webhookRequest)
 	if err != nil {
@@ -197,7 +199,7 @@ func (w *webhookExecutor) Call(webhookRequest api.WebhookRequest, webhookRespons
 		rawRequest := json.RawMessage(requestBody)
 		logging.Logger.V(6).Info("Webhook request", "version", requestAPIVersion, "type", w.hookType, "url", w.url, "body", rawRequest)
 	}
-	request, err := http.NewRequest("POST", w.url, bytes.NewReader(requestBody))
+	request, err := http.NewRequestWithContext(ctx, "POST", w.url, bytes.NewReader(requestBody))
 	if err != nil {
 		return err
 	}
@@ -277,13 +279,13 @@ func webhookURL(webhook *v1alpha1.Webhook) (string, error) {
 		return *webhook.URL, nil
 	}
 	if webhook.Service == nil || webhook.Path == nil {
-		return "", fmt.Errorf("invalid webhook config: must specify either full 'url', or both 'service' and 'path'")
+		return "", fmt.Errorf("invalid webhook config: must specify either a full 'url', or both 'service' and 'path'")
 	}
 
 	// For now, just use cluster DNS to resolve Services.
 	// If necessary, we can use a Lister to get more info about Services.
 	if webhook.Service.Name == "" || webhook.Service.Namespace == "" {
-		return "", fmt.Errorf("invalid client config: must specify service 'name' and 'namespace'")
+		return "", fmt.Errorf("invalid webhook config: 'service' must specify both 'name' and 'namespace'")
 	}
 	port := int32(80)
 	if webhook.Service.Port != nil {

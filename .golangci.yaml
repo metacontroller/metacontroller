@@ -2,6 +2,7 @@ version: "2"
 linters:
   enable:
     - bodyclose
+    - contextcheck
     - copyloopvar
     - dogsled
     - durationcheck
@@ -10,6 +11,7 @@ linters:
     - goconst
     - gocritic
     - gosec
+    - govet
     - importas
     - misspell
     - nilerr

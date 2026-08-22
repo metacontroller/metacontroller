@@ -17,6 +17,7 @@ limitations under the License.
 package informer
 
 import (
+	"context"
 	"fmt"
 	"metacontroller/pkg/logging"
 	"sync"
@@ -56,7 +57,7 @@ func NewSharedInformerFactory(clientset *dynamicclientset.Clientset, defaultResy
 // Close() on the returned ResourceInformer when they no longer need it.
 // Shared informers that become unused will be stopped to minimize our load on
 // the API server.
-func (f *SharedInformerFactory) Resource(apiVersion, resource string) (*ResourceInformer, error) {
+func (f *SharedInformerFactory) Resource(ctx context.Context, apiVersion, resource string) (*ResourceInformer, error) {
 	f.mutex.Lock()
 	defer f.mutex.Unlock()
 
@@ -101,7 +102,7 @@ func (f *SharedInformerFactory) Resource(apiVersion, resource string) (*Resource
 	}
 
 	logging.Logger.V(4).Info("Starting shared informer", "resource", resource, "api_version", apiVersion)
-	sharedInformer, err := newSharedResourceInformer(client, f.defaultResync, closeFn)
+	sharedInformer, err := newSharedResourceInformer(ctx, client, f.defaultResync, closeFn)
 	if err != nil {
 		return nil, fmt.Errorf("can't create client for %v shared informer: %w", key, err)
 	}

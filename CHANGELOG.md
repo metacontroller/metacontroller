@@ -1,3 +1,59 @@
+## [4.17.2](https://github.com/metacontroller/metacontroller/compare/v4.17.1...v4.17.2) (2026-08-13)
+
+
+### Bug Fixes
+
+* allow resync events through ignoreStatusChanges filter ([#1252](https://github.com/metacontroller/metacontroller/issues/1252)) ([0dbb2ed](https://github.com/metacontroller/metacontroller/commit/0dbb2ed4380253725d48608fb5578f11f4449526)) — @AruneshDwivedi
+
+## [4.17.1](https://github.com/metacontroller/metacontroller/compare/v4.17.0...v4.17.1) (2026-08-12)
+
+
+### Bug Fixes
+
+* **deps:** Upgrade k8s dependencies to 1.36 ([#1257](https://github.com/metacontroller/metacontroller/issues/1257)) ([7f47156](https://github.com/metacontroller/metacontroller/commit/7f4715624ee519b32f398b003c9f184fc5c3836c)) — @grzesuav
+
+# [4.17.0](https://github.com/metacontroller/metacontroller/compare/v4.16.7...v4.17.0) (2026-08-11)
+
+
+### Features
+
+* Improve context handling ([#1202](https://github.com/metacontroller/metacontroller/issues/1202)) ([6c6dd89](https://github.com/metacontroller/metacontroller/commit/6c6dd892651aace7c3b38cde68c40e1d865d84cc)) — @grzesuav
+
+## [4.16.7](https://github.com/metacontroller/metacontroller/compare/v4.16.6...v4.16.7) (2026-07-23)
+
+
+### Bug Fixes
+
+* **deps:** Update golang deps ([#1245](https://github.com/metacontroller/metacontroller/issues/1245)) ([bf28a29](https://github.com/metacontroller/metacontroller/commit/bf28a293593476197d5277652d7a7b3d6ba87547)) — @grzesuav
+
+## [4.16.6](https://github.com/metacontroller/metacontroller/compare/v4.16.5...v4.16.6) (2026-07-22)
+
+
+### Bug Fixes
+
+* **deps:** Update golang dependencies ([#1242](https://github.com/metacontroller/metacontroller/issues/1242)) ([05ae79d](https://github.com/metacontroller/metacontroller/commit/05ae79d31c9e155924814b9a4ba4ab6941aa049a)) — @grzesuav
+
+## [4.16.5](https://github.com/metacontroller/metacontroller/compare/v4.16.4...v4.16.5) (2026-07-09)
+
+
+### Bug Fixes
+
+* **hooks:** log invalid webhook configuration instead of failing silently ([#1231](https://github.com/metacontroller/metacontroller/issues/1231)) ([499a078](https://github.com/metacontroller/metacontroller/commit/499a0788135b5e71c7b29cccd2a110de34700cbd))
+
+## [4.16.4](https://github.com/metacontroller/metacontroller/compare/v4.16.3...v4.16.4) (2026-07-09)
+
+
+### Bug Fixes
+
+* **release:** Fix semantic release process ([#1232](https://github.com/metacontroller/metacontroller/issues/1232)) ([dc6e44c](https://github.com/metacontroller/metacontroller/commit/dc6e44cdac2a11e9eeb9c2e17bccb3a585e4ba57))
+
+## [4.16.3](https://github.com/metacontroller/metacontroller/compare/v4.16.2...v4.16.3) (2026-07-09)
+
+
+### Bug Fixes
+
+* **deps:** update golang docker tag to v1.26.5 ([#1227](https://github.com/metacontroller/metacontroller/issues/1227)) ([6b9fce2](https://github.com/metacontroller/metacontroller/commit/6b9fce24f0a75d07de990b7f4bb27dbb2327c012))
+
 ## [4.16.2](https://github.com/metacontroller/metacontroller/compare/v4.16.1...v4.16.2) (2026-07-03)
 
 

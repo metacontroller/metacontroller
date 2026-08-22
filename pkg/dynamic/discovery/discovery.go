@@ -17,6 +17,7 @@ limitations under the License.
 package discovery
 
 import (
+	"context"
 	"fmt"
 	"metacontroller/pkg/logging"
 	"strings"
@@ -68,8 +69,7 @@ type ResourceMap struct {
 	groupVersions map[string]groupVersionEntry
 
 	discoveryClient discovery.DiscoveryInterface
-	stopCh, doneCh  chan struct{}
-	stopOnce        sync.Once
+	doneCh          chan struct{}
 }
 
 func (rm *ResourceMap) Get(apiVersion, resource string) (result *APIResource) {
@@ -169,8 +169,7 @@ func (rm *ResourceMap) refresh() {
 	rm.mutex.Unlock()
 }
 
-func (rm *ResourceMap) Start(refreshInterval time.Duration) {
-	rm.stopCh = make(chan struct{})
+func (rm *ResourceMap) Start(ctx context.Context, refreshInterval time.Duration) {
 	rm.doneCh = make(chan struct{})
 
 	go func() {
@@ -183,19 +182,12 @@ func (rm *ResourceMap) Start(refreshInterval time.Duration) {
 			rm.refresh()
 
 			select {
-			case <-rm.stopCh:
+			case <-ctx.Done():
 				return
 			case <-ticker.C:
 			}
 		}
 	}()
-}
-
-func (rm *ResourceMap) Stop() {
-	rm.stopOnce.Do(func() {
-		close(rm.stopCh)
-		<-rm.doneCh
-	})
 }
 
 func (rm *ResourceMap) HasSynced() bool {

@@ -17,6 +17,7 @@ limitations under the License.
 package decorator
 
 import (
+	"context"
 	"fmt"
 	"metacontroller/pkg/apis/metacontroller/v1alpha1"
 	"metacontroller/pkg/controller/common"
@@ -52,6 +53,7 @@ import (
 
 func defaultCustomizeManager() *customize.Manager {
 	customizeManager, _ := customize.NewCustomizeManager(
+		context.TODO(),
 		"name",
 		func(obj interface{}) {},
 		&NilCustomizableController{},
@@ -101,7 +103,7 @@ func newDefaultControllerClientsAndInformers(fakeDynamicClientFn func(client *fa
 	testClientset := NewClientset(restConfig, resourceMap, simpleDynClient)
 	parentResourceClient, _ := testClientset.Resource(TestAPIVersion, TestResource)
 	informerFactory := dynamicinformer.NewSharedInformerFactory(testClientset, 5*time.Minute)
-	resourceInformer, _ := informerFactory.Resource(TestAPIVersion, TestResource)
+	resourceInformer, _ := informerFactory.Resource(context.TODO(), TestAPIVersion, TestResource)
 	stopCh := make(chan struct{})
 	time.AfterFunc(1*time.Second, func() { close(stopCh) })
 	if syncCache && !cache.WaitForNamedCacheSync("controllerName", stopCh, resourceInformer.Informer().HasSynced) {
@@ -172,8 +174,6 @@ func Test_decoratorController_sync(t *testing.T) {
 		dc             *v1alpha1.DecoratorController
 		parentKinds    *common.GroupKindMap
 		parentSelector *decoratorSelector
-		stopCh         chan struct{}
-		doneCh         chan struct{}
 		queue          workqueue.TypedRateLimitingInterface[string]
 		updateStrategy updateStrategyMap
 		childInformers *common.InformerMap
@@ -215,8 +215,6 @@ func Test_decoratorController_sync(t *testing.T) {
 				dc:             newDefaultDecoratorController(),
 				parentKinds:    defaultGroupKindMap,
 				parentSelector: defaultParentSelector,
-				stopCh:         NewCh(),
-				doneCh:         NewCh(),
 				queue:          NewDefaultWorkQueue(),
 				updateStrategy: nil,
 				childInformers: common.NewInformerMap(),
@@ -239,8 +237,6 @@ func Test_decoratorController_sync(t *testing.T) {
 				dc:             newDefaultDecoratorController(),
 				parentKinds:    defaultGroupKindMap,
 				parentSelector: defaultParentSelector,
-				stopCh:         NewCh(),
-				doneCh:         NewCh(),
 				queue:          NewDefaultWorkQueue(),
 				updateStrategy: nil,
 				childInformers: common.NewInformerMap(),
@@ -271,8 +267,6 @@ func Test_decoratorController_sync(t *testing.T) {
 				dc:             newDefaultDecoratorController(),
 				parentKinds:    defaultGroupKindMap,
 				parentSelector: defaultParentSelector,
-				stopCh:         NewCh(),
-				doneCh:         NewCh(),
 				queue:          NewDefaultWorkQueue(),
 				updateStrategy: nil,
 				childInformers: common.NewInformerMap(),
@@ -303,8 +297,6 @@ func Test_decoratorController_sync(t *testing.T) {
 				dc:             newDefaultDecoratorController(),
 				parentKinds:    defaultGroupKindMap,
 				parentSelector: defaultParentSelector,
-				stopCh:         NewCh(),
-				doneCh:         NewCh(),
 				queue:          NewDefaultWorkQueue(),
 				updateStrategy: nil,
 				childInformers: common.NewInformerMap(),
@@ -335,8 +327,6 @@ func Test_decoratorController_sync(t *testing.T) {
 				dc:             newDefaultDecoratorController(),
 				parentKinds:    defaultGroupKindMap,
 				parentSelector: defaultParentSelector,
-				stopCh:         NewCh(),
-				doneCh:         NewCh(),
 				queue:          NewDefaultWorkQueue(),
 				updateStrategy: nil,
 				childInformers: common.NewInformerMap(),
@@ -367,8 +357,6 @@ func Test_decoratorController_sync(t *testing.T) {
 				dc:             newDefaultDecoratorController(),
 				parentKinds:    defaultGroupKindMap,
 				parentSelector: defaultParentSelector,
-				stopCh:         NewCh(),
-				doneCh:         NewCh(),
 				queue:          NewDefaultWorkQueue(),
 				updateStrategy: nil,
 				childInformers: common.NewInformerMap(),
@@ -396,8 +384,6 @@ func Test_decoratorController_sync(t *testing.T) {
 				dc:             newDefaultDecoratorController(),
 				parentKinds:    defaultGroupKindMap,
 				parentSelector: defaultParentSelector,
-				stopCh:         NewCh(),
-				doneCh:         NewCh(),
 				queue:          NewDefaultWorkQueue(),
 				updateStrategy: nil,
 				childInformers: common.NewInformerMap(),
@@ -426,8 +412,6 @@ func Test_decoratorController_sync(t *testing.T) {
 				dc:             newDefaultDecoratorController(),
 				parentKinds:    defaultGroupKindMap,
 				parentSelector: defaultParentSelector,
-				stopCh:         NewCh(),
-				doneCh:         NewCh(),
 				queue:          NewDefaultWorkQueue(),
 				updateStrategy: nil,
 				childInformers: common.NewInformerMap(),
@@ -456,8 +440,6 @@ func Test_decoratorController_sync(t *testing.T) {
 				parentKinds:     tt.fields.parentKinds,
 				parentSelector:  tt.fields.parentSelector,
 				dynClient:       dynClient,
-				stopCh:          tt.fields.stopCh,
-				doneCh:          tt.fields.doneCh,
 				queue:           tt.fields.queue,
 				updateStrategy:  tt.fields.updateStrategy,
 				parentInformers: parentInformers,
@@ -470,7 +452,7 @@ func Test_decoratorController_sync(t *testing.T) {
 				finalizeHook:    tt.fields.finalizeHook,
 				logger:          tt.fields.logger,
 			}
-			if err := c.sync(tt.args.key); (err != nil) != tt.wantErr {
+			if err := c.sync(context.TODO(), tt.args.key); (err != nil) != tt.wantErr {
 				t.Errorf("sync() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})

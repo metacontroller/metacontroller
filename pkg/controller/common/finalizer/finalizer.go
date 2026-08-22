@@ -17,6 +17,8 @@ limitations under the License.
 package finalizer
 
 import (
+	"context"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -40,7 +42,7 @@ func NewManager(name string, enabled bool) *Manager {
 }
 
 // SyncObject adds or removes the finalizer on the given object as necessary.
-func (m *Manager) SyncObject(client *dynamicclientset.ResourceClient, obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
+func (m *Manager) SyncObject(ctx context.Context, client *dynamicclientset.ResourceClient, obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
 	// If the cached object passed in is already in the right state,
 	// we'll assume we don't need to check the live object.
 	if controllerutil.ContainsFinalizer(obj, m.Name) == m.Enabled {
@@ -53,9 +55,9 @@ func (m *Manager) SyncObject(client *dynamicclientset.ResourceClient, obj *unstr
 		if obj.GetDeletionTimestamp() != nil {
 			return obj, nil
 		}
-		return client.Namespace(obj.GetNamespace()).AddFinalizer(obj, m.Name)
+		return client.Namespace(obj.GetNamespace()).AddFinalizer(ctx, obj, m.Name)
 	} else {
-		return client.Namespace(obj.GetNamespace()).RemoveFinalizer(obj, m.Name)
+		return client.Namespace(obj.GetNamespace()).RemoveFinalizer(ctx, obj, m.Name)
 	}
 }
 

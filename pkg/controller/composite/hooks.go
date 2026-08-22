@@ -17,6 +17,7 @@ limitations under the License.
 package composite
 
 import (
+	"context"
 	"fmt"
 	"metacontroller/pkg/apis/metacontroller/v1alpha1"
 	"metacontroller/pkg/controller/common/api"
@@ -35,6 +36,7 @@ type hookCallInfo struct {
 }
 
 func (pc *parentController) callHook(
+	ctx context.Context,
 	parent *unstructured.Unstructured,
 	observedChildren, related api.ObjectMap,
 ) (*v1.CompositeHookResponse, error) {
@@ -46,7 +48,7 @@ func (pc *parentController) callHook(
 
 	// Step 2: Build and execute the hook request
 	request := pc.buildHookRequest(hookInfo, parent, observedChildren, related)
-	return pc.executeHook(hookInfo, request, parent)
+	return pc.executeHook(ctx, hookInfo, request, parent)
 }
 
 // determineHookToCall decides which hook should be called based on parent state
@@ -106,6 +108,7 @@ func (pc *parentController) buildHookRequest(
 
 // executeHook handles both V1 and V2 hook execution and response conversion
 func (pc *parentController) executeHook(
+	ctx context.Context,
 	hookInfo *hookCallInfo,
 	request api.WebhookRequest,
 	parent *unstructured.Unstructured,
@@ -114,13 +117,13 @@ func (pc *parentController) executeHook(
 
 	if hookInfo.version == v1alpha1.HookVersionV2 {
 		var v2Response v2.CompositeHookResponse
-		if err := pc.callHookExecutor(hookInfo, request, &v2Response); err != nil {
+		if err := pc.callHookExecutor(ctx, hookInfo, request, &v2Response); err != nil {
 			return nil, fmt.Errorf("%s hook failed (version=v2): %w", hookInfo.hookType, err)
 		}
 		v1Response = pc.convertV2ToV1Response(v2Response)
 	} else {
 		v1Response = &v1.CompositeHookResponse{Children: []*unstructured.Unstructured{}}
-		if err := pc.callHookExecutor(hookInfo, request, v1Response); err != nil {
+		if err := pc.callHookExecutor(ctx, hookInfo, request, v1Response); err != nil {
 			return nil, fmt.Errorf("%s hook failed (version=v1): %w", hookInfo.hookType, err)
 		}
 	}
@@ -130,11 +133,11 @@ func (pc *parentController) executeHook(
 }
 
 // callHookExecutor performs the actual hook call (unified logic for both V1 and V2)
-func (pc *parentController) callHookExecutor(hookInfo *hookCallInfo, request api.WebhookRequest, response interface{}) error {
+func (pc *parentController) callHookExecutor(ctx context.Context, hookInfo *hookCallInfo, request api.WebhookRequest, response interface{}) error {
 	if hookInfo.isFinalizing {
-		return pc.finalizeHook.Call(request, response)
+		return pc.finalizeHook.Call(ctx, request, response)
 	}
-	return pc.syncHook.Call(request, response)
+	return pc.syncHook.Call(ctx, request, response)
 }
 
 // convertV2ToV1Response converts V2 response format to V1 for internal consistency
