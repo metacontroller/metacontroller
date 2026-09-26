@@ -1,4 +1,4 @@
-/*
+/* 
 Copyright 2018 Google Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -57,16 +57,16 @@ func newDecoratorSelector(resources *dynamicdiscovery.ResourceMap, dc *v1alpha1.
 			ds.labelSelectors.Store(key, labels.Everything())
 		}
 
-		// Convert the annotation selector to a label selector, then to internal form.
+		// Convert the annotation selector to internal form.
+		// Annotation selectors use matchAnnotations which is different from label matchLabels.
+		// We build a label selector from the matchAnnotations map directly.
 		if parent.AnnotationSelector != nil {
-			labelSelector := &metav1.LabelSelector{
-				MatchLabels:      parent.AnnotationSelector.MatchAnnotations,
-				MatchExpressions: parent.AnnotationSelector.MatchExpressions,
+			// Build a label selector from matchAnnotations - each annotation key becomes a label match
+			labelMatch := labels.Set{}
+			for k, v := range parent.AnnotationSelector.MatchAnnotations {
+				labelMatch[k] = v
 			}
-			selector, err := metav1.LabelSelectorAsSelector(labelSelector)
-			if err != nil {
-				return nil, fmt.Errorf("can't convert annotation selector for parent resource %q in apiVersion %q: %w", parent.Resource, parent.APIVersion, err)
-			}
+			selector := labels.NewSelectorFromSet(labelMatch)
 			ds.annotationSelectors.Store(key, selector)
 		} else {
 			// Add an explicit selector so we can tell the difference between
