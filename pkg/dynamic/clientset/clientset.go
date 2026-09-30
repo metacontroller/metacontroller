@@ -18,13 +18,16 @@ package clientset
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"reflect"
 
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/util/retry"
@@ -164,12 +167,23 @@ func (rc *ResourceClient) AtomicUpdate(ctx context.Context, orig *unstructured.U
 			// The original object was deleted and replaced with a new one.
 			return apierrors.NewNotFound(rc.GroupResource(), name)
 		}
+		before := current.DeepCopy()
 		if changed := update(current); !changed {
 			// There's nothing to do.
 			result = current
 			return nil
 		}
-		result, err = rc.Update(ctx, current, metav1.UpdateOptions{})
+		patch, err := metadataJSONMergePatch(before, current)
+		if err != nil {
+			return err
+		}
+		if patch == nil {
+			// The update() func modified something other than the supported
+			// metadata fields; fall back to a full object update.
+			result, err = rc.Update(ctx, current, metav1.UpdateOptions{})
+			return err
+		}
+		result, err = rc.Patch(ctx, name, types.MergePatchType, patch, metav1.PatchOptions{})
 		return err
 	})
 	return result, err
@@ -231,4 +245,34 @@ func (rc *ResourceClient) AtomicStatusUpdate(ctx context.Context, orig *unstruct
 		return err
 	})
 	return result, err
+}
+
+// metadataJSONMergePatch returns a JSON merge patch carrying only the
+// metadata fields of `newer` that differ from `older`, plus the live
+// resourceVersion so concurrent changes are still rejected with a conflict.
+// Supported fields are labels, annotations, finalizers and ownerReferences.
+// It returns nil when none of those fields changed, which callers can use as
+// a signal that the change lives outside the supported metadata fields.
+func metadataJSONMergePatch(older, newer *unstructured.Unstructured) ([]byte, error) {
+	patchMetadata := map[string]interface{}{}
+	if !reflect.DeepEqual(older.GetLabels(), newer.GetLabels()) {
+		patchMetadata["labels"] = newer.GetLabels()
+	}
+	if !reflect.DeepEqual(older.GetAnnotations(), newer.GetAnnotations()) {
+		patchMetadata["annotations"] = newer.GetAnnotations()
+	}
+	if !reflect.DeepEqual(older.GetFinalizers(), newer.GetFinalizers()) {
+		patchMetadata["finalizers"] = newer.GetFinalizers()
+	}
+	if !reflect.DeepEqual(older.GetOwnerReferences(), newer.GetOwnerReferences()) {
+		patchMetadata["ownerReferences"] = newer.GetOwnerReferences()
+	}
+	if len(patchMetadata) == 0 {
+		return nil, nil
+	}
+	patchMetadata["resourceVersion"] = newer.GetResourceVersion()
+	patch := map[string]interface{}{
+		"metadata": patchMetadata,
+	}
+	return json.Marshal(patch)
 }

@@ -314,7 +314,7 @@ func Test_decoratorController_sync(t *testing.T) {
 			name: "no error on update parent with conflict api error",
 			clientsAndInformers: func() (*fake.FakeDynamicClient, *dynamicdiscovery.ResourceMap, *dynamicclientset.Clientset, *dynamicclientset.ResourceClient, map[schema.GroupVersionResource]*dynamicinformer.ResourceInformer) {
 				fakeDynamicClientFn := func(fakeDynamicClient *fake.FakeDynamicClient) {
-					fakeDynamicClient.PrependReactor("update", "*", func(action clientgotesting.Action) (handled bool, ret runtime.Object, err error) {
+					fakeDynamicClient.PrependReactor("patch", "*", func(action clientgotesting.Action) (handled bool, ret runtime.Object, err error) {
 						return true, nil, apierrors.NewConflict(schema.GroupResource{
 							Group:    TestGroup,
 							Resource: TestResource,
@@ -374,7 +374,7 @@ func Test_decoratorController_sync(t *testing.T) {
 			name: "error on update parent with unexpected api error",
 			clientsAndInformers: func() (*fake.FakeDynamicClient, *dynamicdiscovery.ResourceMap, *dynamicclientset.Clientset, *dynamicclientset.ResourceClient, map[schema.GroupVersionResource]*dynamicinformer.ResourceInformer) {
 				fakeDynamicClientFn := func(fakeDynamicClient *fake.FakeDynamicClient) {
-					fakeDynamicClient.PrependReactor("update", "*", func(action clientgotesting.Action) (handled bool, ret runtime.Object, err error) {
+					fakeDynamicClient.PrependReactor("patch", "*", func(action clientgotesting.Action) (handled bool, ret runtime.Object, err error) {
 						return true, nil, apierrors.NewBadRequest("bad request")
 					})
 				}
