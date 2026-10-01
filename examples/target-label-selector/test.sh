@@ -21,8 +21,10 @@ set -euo
 kubectl apply -k ./instance
 kubectl rollout status --watch --timeout=180s deployment/metacontroller -n metacontroller
 
-# wait for metacontroller pod to be ready
-kubectl wait --timeout=180s --for=condition=ready pod -l app.kubernetes.io/name=metacontroller -n metacontroller
+# wait for the metacontroller Deployment to become available (waiting on Pods
+# by label can also match a Pod from the previous ReplicaSet that is still
+# terminating, which would never become ready)
+kubectl wait --timeout=180s --for=condition=available deployment/metacontroller -n metacontroller
 
 # install the the secretpropagation example and applies a patch to add labels to the CompositeController instance.
 kubectl apply -k ./manifest

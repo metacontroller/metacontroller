@@ -20,11 +20,17 @@ previous_replicas=$(kubectl get deployment metacontroller -n metacontroller -o=j
 kubectl apply -k ./manifest
 kubectl rollout status --watch --timeout=180s deployment/metacontroller -n metacontroller
 
-# both pods must be ready before checking logs
-kubectl wait --timeout=180s --for=condition=ready pod -l app.kubernetes.io/name=metacontroller -n metacontroller
+# Both replicas must be ready before checking logs. Wait on the Deployment's
+# readyReplicas instead of `kubectl wait --for=condition=ready pod -l`: the
+# latter also matches the previous ReplicaSet's Pod while it is terminating,
+# and a terminating Pod never becomes ready, so the wait would time out.
+replicas=$(kubectl get deployment metacontroller -n metacontroller -o jsonpath='{.spec.replicas}')
+kubectl wait --timeout=180s --for=jsonpath='{.status.readyReplicas}'="$replicas" deployment/metacontroller -n metacontroller
 
-# get pod names dynamically (Deployments have random pod names)
-readarray -t pods < <(kubectl get pods -l app.kubernetes.io/name=metacontroller -n metacontroller -ojsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}')
+# Get the names of the running Pods (Deployments use generated, random names),
+# skipping any Pod left over from a previous ReplicaSet that is still terminating.
+readarray -t pods < <(kubectl get pods -l app.kubernetes.io/name=metacontroller -n metacontroller \
+  -o go-template='{{range .items}}{{if and (eq .status.phase "Running") (not .metadata.deletionTimestamp)}}{{.metadata.name}}{{"\n"}}{{end}}{{end}}')
 pod0="${pods[0]}"
 pod1="${pods[1]}"
 

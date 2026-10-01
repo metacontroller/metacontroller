@@ -7,7 +7,6 @@ metadata:
     {{- include "metacontroller.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.replicas | default 1 }}
-  serviceName: ''
   selector:
     matchLabels:
       {{- include "metacontroller.selectorLabels" . | nindent 6 }}

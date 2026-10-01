@@ -16,7 +16,7 @@ The main difference it that image defined in manifest is `localhost/metacontroll
 * apply dev manifests - `kubectl apply -k manifests/dev`
 * build docker image with command - `make image` - this will compile the binary and build the container image
 * load image into cluster (i.e. `kind load docker-image localhost/metacontroller:dev` in kind)
-* restart pod (i.e. `kubectl delete pod/metacontroller-0 --namespace metacontroller`)
+* restart pod (i.e. `kubectl rollout restart deployment/metacontroller --namespace metacontroller`)
 
 ### Debug build
 
@@ -28,5 +28,5 @@ built with the `Dockerfile.debug` dockerfile will then add it to the debug Docke
 * load image into cluster (i.e. `kind load docker-image localhost/metacontroller:debug` in kind)
 * restart pod
 * on startup, `go` process will wait for debugger on port 40000
-* port forward port 40000 from container into localhost, i.e. `kubectl port-forward metacontroller-0 40000:40000`
+* port forward port 40000 from container into localhost, i.e. `kubectl port-forward deployment/metacontroller 40000:40000`
 * attach `go` debugger to port 40000 on localhost
