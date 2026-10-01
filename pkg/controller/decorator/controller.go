@@ -738,23 +738,29 @@ func (c *decoratorController) syncParentObject(ctx context.Context, parent *unst
 		// hook that set our finalizer needs this write to succeed in order to
 		// remove it. The resourceVersion is included so optimistic
 		// concurrency conflicts are still detected.
+		// The merge patch carries diffs with explicit null entries for keys
+		// the hook removed (labels/annotations/status), so applying the
+		// patch deletes them exactly like the full update this replaces;
+		// finalizers are arrays, which a merge patch replaces wholesale.
 		patchMetadata := map[string]interface{}{}
 		if labelsChanged {
-			patchMetadata["labels"] = updatedParent.GetLabels()
+			patchMetadata["labels"] = dynamicclientset.StringMapMergePatchValue(parent.GetLabels(), updatedParent.GetLabels())
 		}
 		if annotationsChanged {
-			patchMetadata["annotations"] = updatedParent.GetAnnotations()
+			patchMetadata["annotations"] = dynamicclientset.StringMapMergePatchValue(parent.GetAnnotations(), updatedParent.GetAnnotations())
 		}
 		if syncResult.Finalized {
 			patchMetadata["finalizers"] = updatedParent.GetFinalizers()
 		}
+		patchMetadata["resourceVersion"] = updatedParent.GetResourceVersion()
+		patch := map[string]interface{}{"metadata": patchMetadata}
 		if statusChanged && !parentClient.HasSubresource("status") {
 			// Objects without a status subresource carry their status in the
-			// main object, so it has to travel in the same patch.
-			patchMetadata["status"] = syncResult.Status
+			// main object, so it travels as a top-level field of the patch,
+			// not under metadata.
+			patch["status"] = dynamicclientset.MergePatchValue(parentStatus, syncResult.Status)
 		}
-		patchMetadata["resourceVersion"] = updatedParent.GetResourceVersion()
-		mergePatch, err := json.Marshal(map[string]interface{}{"metadata": patchMetadata})
+		mergePatch, err := json.Marshal(patch)
 		if err != nil {
 			return err
 		}

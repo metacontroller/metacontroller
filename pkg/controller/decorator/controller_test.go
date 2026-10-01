@@ -18,6 +18,7 @@ package decorator
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"metacontroller/pkg/apis/metacontroller/v1alpha1"
 	"metacontroller/pkg/controller/common"
@@ -33,6 +34,7 @@ import (
 	. "metacontroller/pkg/internal/testutils/dynamic/discovery"
 	. "metacontroller/pkg/internal/testutils/hooks"
 	"metacontroller/pkg/logging"
+	"reflect"
 	"testing"
 	"time"
 
@@ -455,6 +457,144 @@ func Test_decoratorController_sync(t *testing.T) {
 			if err := c.sync(context.TODO(), tt.args.key); (err != nil) != tt.wantErr {
 				t.Errorf("sync() error = %v, wantErr %v", err, tt.wantErr)
 			}
+		})
+	}
+}
+
+// Test_decoratorController_syncPatchBody asserts the exact merge-patch bodies
+// the decorator controller sends when syncing a parent.
+func Test_decoratorController_syncPatchBody(t *testing.T) {
+	logging.InitLogging(&zap.Options{})
+
+	tests := []struct {
+		name                 string
+		hasStatusSubresource bool
+		syncResponse         *v1.DecoratorHookResponse
+		assert               func(t *testing.T, patch map[string]interface{})
+	}{
+		{
+			name:                 "status without subresource is patched at top level, not under metadata",
+			hasStatusSubresource: false,
+			syncResponse:         changedStatusSyncResponse,
+			assert: func(t *testing.T, patch map[string]interface{}) {
+				status, ok := patch["status"].(map[string]interface{})
+				if !ok {
+					t.Fatalf("patch body: want top-level status object, got %v", patch)
+				}
+				if !reflect.DeepEqual(status, map[string]interface{}{"changed": "true"}) {
+					t.Errorf("patch body: want status {\"changed\":\"true\"}, got %v", status)
+				}
+				md, ok := patch["metadata"].(map[string]interface{})
+				if !ok {
+					t.Fatalf("patch body: want metadata object, got %v", patch)
+				}
+				if _, exists := md["status"]; exists {
+					t.Errorf("patch body: status must not be nested under metadata, got %v", md)
+				}
+			},
+		},
+		{
+			name:                 "status with subresource is not part of the main patch",
+			hasStatusSubresource: true,
+			syncResponse:         changedStatusSyncResponse,
+			assert: func(t *testing.T, patch map[string]interface{}) {
+				if _, exists := patch["status"]; exists {
+					t.Errorf("patch body: want no top-level status when the parent has a status subresource, got %v", patch)
+				}
+			},
+		},
+		{
+			name:                 "hook-requested label deletion is patched as explicit null",
+			hasStatusSubresource: false,
+			syncResponse: &v1.DecoratorHookResponse{
+				Labels: map[string]*string{"key": nil},
+			},
+			assert: func(t *testing.T, patch map[string]interface{}) {
+				md, ok := patch["metadata"].(map[string]interface{})
+				if !ok {
+					t.Fatalf("patch body: want metadata object, got %v", patch)
+				}
+				labels, ok := md["labels"].(map[string]interface{})
+				if !ok {
+					t.Fatalf("patch body: want labels in metadata, got %v", md)
+				}
+				if v, exists := labels["key"]; !exists || v != nil {
+					t.Errorf("patch body: want labels.key = null (delete), got %v (patch: %v)", v, patch)
+				}
+			},
+		},
+		{
+			name:                 "hook-requested label addition and modification are patched with new values",
+			hasStatusSubresource: false,
+			syncResponse: &v1.DecoratorHookResponse{
+				Labels: func() map[string]*string {
+					val := "newval"
+					return map[string]*string{"key": &val, "added": &val}
+				}(),
+			},
+			assert: func(t *testing.T, patch map[string]interface{}) {
+				md, ok := patch["metadata"].(map[string]interface{})
+				if !ok {
+					t.Fatalf("patch body: want metadata object, got %v", patch)
+				}
+				labels, ok := md["labels"].(map[string]interface{})
+				if !ok {
+					t.Fatalf("patch body: want labels in metadata, got %v", md)
+				}
+				want := map[string]interface{}{"key": "newval", "added": "newval"}
+				if !reflect.DeepEqual(labels, want) {
+					t.Errorf("patch body: want labels %v, got %v", want, labels)
+				}
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var patchBodies [][]byte
+			fakeDynamicClientFn := func(fakeDynamicClient *fake.FakeDynamicClient) {
+				fakeDynamicClient.PrependReactor("patch", "*", func(action clientgotesting.Action) (handled bool, ret runtime.Object, err error) {
+					patchAction, ok := action.(clientgotesting.PatchAction)
+					if !ok {
+						return true, nil, fmt.Errorf("unexpected action type %T", action)
+					}
+					patchBodies = append(patchBodies, patchAction.GetPatch())
+					return true, nil, nil
+				})
+			}
+			_, resources, dynClient, _, parentInformersMap := newDefaultControllerClientsAndInformers(fakeDynamicClientFn, true, tt.hasStatusSubresource)
+			parentInformers := common.NewInformerMap()
+			for gvr, informer := range parentInformersMap {
+				parentInformers.Set(gvr, informer)
+			}
+			c := &decoratorController{
+				dc:              newDefaultDecoratorController(),
+				resources:       resources,
+				parentKinds:     defaultGroupKindMap,
+				parentSelector:  defaultParentSelector,
+				dynClient:       dynClient,
+				queue:           NewDefaultWorkQueue(),
+				updateStrategy:  nil,
+				parentInformers: parentInformers,
+				childInformers:  common.NewInformerMap(),
+				numWorkers:      1,
+				eventRecorder:   NewFakeRecorder(),
+				finalizer:       DefaultFinalizerManager,
+				customize:       defaultCustomizeManager(),
+				syncHook:        NewHookExecutorStub(tt.syncResponse),
+				finalizeHook:    NewHookExecutorStub(defaultSyncResponse),
+				logger:          logging.Logger,
+			}
+			if err := c.sync(context.TODO(), defaultTestKey); err != nil {
+				t.Fatalf("sync() error = %v", err)
+			}
+			if len(patchBodies) == 0 {
+				t.Fatalf("sync() recorded no patch actions; want the parent patched")
+			}
+			var patch map[string]interface{}
+			if err := json.Unmarshal(patchBodies[0], &patch); err != nil {
+				t.Fatalf("can't parse patch body %s: %v", patchBodies[0], err)
+			}
+			tt.assert(t, patch)
 		})
 	}
 }
