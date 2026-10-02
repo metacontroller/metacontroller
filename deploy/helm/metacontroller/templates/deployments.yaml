@@ -1,5 +1,5 @@
 apiVersion: apps/v1
-kind: StatefulSet
+kind: Deployment
 metadata:
   name: {{ include "metacontroller.fullname" . }}
   namespace: {{ include "metacontroller.namespace" . }}
@@ -7,7 +7,6 @@ metadata:
     {{- include "metacontroller.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.replicas | default 1 }}
-  serviceName: ''
   selector:
     matchLabels:
       {{- include "metacontroller.selectorLabels" . | nindent 6 }}

@@ -6,8 +6,8 @@ cleanup() {
   echo "Killing port-forward for prometheus..."
   pkill kubectl
   echo "Rollback metacontroller..."
-  kubectl rollout undo statefulset metacontroller -n metacontroller
-  kubectl rollout status --watch --timeout=180s statefulset/metacontroller -n metacontroller
+  kubectl rollout undo deployment metacontroller -n metacontroller
+  kubectl rollout status --watch --timeout=180s deployment/metacontroller -n metacontroller
   echo "Uninstall prometheus..."
   kubectl delete -f ./manifest/prometheus.yaml
   kubectl delete -k github.com/prometheus-operator/prometheus-operator?ref=v0.49.0
@@ -31,7 +31,7 @@ kubectl rollout status --watch --timeout=180s statefulset/prometheus-prometheus
 
 echo "Enable prometheus monitoring on metacontroller..."
 kubectl apply -k ./manifest
-kubectl rollout status --watch --timeout=180s statefulset/metacontroller -n metacontroller
+kubectl rollout status --watch --timeout=180s deployment/metacontroller -n metacontroller
 
 echo "Starting port-forward for prometheus..."
 kubectl port-forward statefulset/prometheus-prometheus 9090 &

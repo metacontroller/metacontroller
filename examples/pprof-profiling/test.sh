@@ -4,8 +4,8 @@ cleanup() {
   exit_code=$?
   set +e
   echo "Rollback metacontroller..."
-  kubectl rollout undo statefulset metacontroller -n metacontroller
-  kubectl rollout status --watch --timeout=180s statefulset/metacontroller -n metacontroller
+  kubectl rollout undo deployment metacontroller -n metacontroller
+  kubectl rollout status --watch --timeout=180s deployment/metacontroller -n metacontroller
   kubectl delete -f manifest/service.yaml
   exit $exit_code
 }
@@ -25,7 +25,7 @@ set -euo
 
 echo "Enable pprof on metacontroller..."
 kubectl apply -k ./manifest
-kubectl rollout status --watch --timeout=180s statefulset/metacontroller -n metacontroller
+kubectl rollout status --watch --timeout=180s deployment/metacontroller -n metacontroller
 
 echo "Test profiling metacontroller..."
 sleep 5
