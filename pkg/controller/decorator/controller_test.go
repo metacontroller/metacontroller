@@ -56,6 +56,7 @@ func defaultCustomizeManager() *customize.Manager {
 		context.TODO(),
 		"name",
 		func(obj interface{}) {},
+		nil,
 		&NilCustomizableController{},
 		&dynamicclientset.Clientset{},
 		&dynamicinformer.SharedInformerFactory{},
@@ -454,6 +455,76 @@ func Test_decoratorController_sync(t *testing.T) {
 			}
 			if err := c.sync(context.TODO(), tt.args.key); (err != nil) != tt.wantErr {
 				t.Errorf("sync() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func Test_decoratorController_matchesParent(t *testing.T) {
+	const finalizerName = "metacontroller.io/decoratorcontroller-test"
+
+	annotationSelector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
+		MatchLabels: map[string]string{"transform": "true"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	selector := &decoratorSelector{}
+	selector.labelSelectors.Store(selectorMapKey(TestGroup, TestKind), labels.Everything())
+	selector.annotationSelectors.Store(selectorMapKey(TestGroup, TestKind), annotationSelector)
+
+	c := &decoratorController{
+		parentSelector: selector,
+		finalizer:      finalizer.NewManager(finalizerName, true),
+	}
+
+	tests := []struct {
+		name        string
+		kind        string
+		annotations map[string]string
+		finalizers  []string
+		want        bool
+	}{
+		{
+			name:        "matches selector",
+			kind:        TestKind,
+			annotations: map[string]string{"transform": "true"},
+			want:        true,
+		},
+		{
+			name: "does not match selector",
+			kind: TestKind,
+			want: false,
+		},
+		{
+			name:       "does not match selector but has our finalizer",
+			kind:       TestKind,
+			finalizers: []string{finalizerName},
+			want:       true,
+		},
+		{
+			name:       "does not match selector and has other finalizer",
+			kind:       TestKind,
+			finalizers: []string{"other"},
+			want:       false,
+		},
+		{
+			name:        "kind is not a parent resource",
+			kind:        "Other",
+			annotations: map[string]string{"transform": "true"},
+			want:        false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			parent := &unstructured.Unstructured{}
+			parent.SetAPIVersion(TestAPIVersion)
+			parent.SetKind(tt.kind)
+			parent.SetAnnotations(tt.annotations)
+			parent.SetFinalizers(tt.finalizers)
+
+			if got := c.matchesParent(parent); got != tt.want {
+				t.Errorf("matchesParent() = %v, want %v", got, tt.want)
 			}
 		})
 	}
