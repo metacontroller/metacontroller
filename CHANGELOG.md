@@ -1,3 +1,10 @@
+## [4.17.4](https://github.com/metacontroller/metacontroller/compare/v4.17.3...v4.17.4) (2026-10-13)
+
+
+### Bug Fixes
+
+* **customize:** [#1253](https://github.com/metacontroller/metacontroller/issues/1253) - call customize hook only for parents that match the selector ([#1271](https://github.com/metacontroller/metacontroller/issues/1271)) ([06bc718](https://github.com/metacontroller/metacontroller/commit/06bc71894fe54c54ae3016521a26100cedc35a5e)) — @grzesuav
+
 ## [4.17.3](https://github.com/metacontroller/metacontroller/compare/v4.17.2...v4.17.3) (2026-10-13)
 
 
