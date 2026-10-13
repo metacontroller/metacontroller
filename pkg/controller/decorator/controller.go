@@ -405,8 +405,8 @@ func (c *decoratorController) cleanupParentFinalizers() {
 			if !controllerutil.ContainsFinalizer(parent, c.finalizer.Name) {
 				continue
 			}
-			// Use RemoveFinalizer which retries on conflict to avoid stale finalizers
-			if _, err := parentClient.RemoveFinalizer(parent, c.finalizer.Name); err != nil {
+			// RemoveFinalizer tries again when there is an update conflict.
+			if _, err := parentClient.Namespace(parent.GetNamespace()).RemoveFinalizer(c.ctx, parent, c.finalizer.Name); err != nil {
 				if apierrors.IsNotFound(err) {
 					// Parent already deleted, nothing to do.
 					continue
