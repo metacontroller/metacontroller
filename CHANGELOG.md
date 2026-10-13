@@ -1,3 +1,10 @@
+## [4.17.3](https://github.com/metacontroller/metacontroller/compare/v4.17.2...v4.17.3) (2026-10-13)
+
+
+### Bug Fixes
+
+* **dependency:** Updates several dependencies ([#1273](https://github.com/metacontroller/metacontroller/issues/1273)) ([9632316](https://github.com/metacontroller/metacontroller/commit/96323165faaaa400d55e8e4f05a57c90ae1502c5)) — @grzesuav
+
 ## [4.17.2](https://github.com/metacontroller/metacontroller/compare/v4.17.1...v4.17.2) (2026-08-13)
 
 
