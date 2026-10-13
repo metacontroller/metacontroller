@@ -83,6 +83,15 @@ func (rm *ResourceMap) Get(apiVersion, resource string) (result *APIResource) {
 	return gv.resources[resource]
 }
 
+// HasGroupVersion returns true if the discovery data has the given apiVersion.
+func (rm *ResourceMap) HasGroupVersion(apiVersion string) bool {
+	rm.mutex.RLock()
+	defer rm.mutex.RUnlock()
+
+	_, ok := rm.groupVersions[apiVersion]
+	return ok
+}
+
 func (rm *ResourceMap) GetKind(apiVersion, kind string) (result *APIResource) {
 	rm.mutex.RLock()
 	defer rm.mutex.RUnlock()

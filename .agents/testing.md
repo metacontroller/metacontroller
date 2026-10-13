@@ -66,6 +66,7 @@ Framework files in `test/integration/framework/`:
 | `metacontroller.go` | `CreateCompositeController`, `CreateDecoratorController`, `CRDResourceRule` |
 | `webhook.go` | `ServeWebhook` |
 | `secret.go` | Secrets for the authorization suites |
+| `finalizer.go` | `RunFinalizerCleanupOnDelete`, `RunFinalizerCleanupNotInOperation`; shared tests for the two controller kinds |
 
 Pattern for a new test (see `test/integration/composite/composite_v2_test.go`):
 ```go

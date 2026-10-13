@@ -22,12 +22,20 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	dynamicclientset "metacontroller/pkg/dynamic/clientset"
+	dynamicdiscovery "metacontroller/pkg/dynamic/discovery"
+	"metacontroller/pkg/events"
 )
 
 const (
@@ -39,9 +47,9 @@ const (
 
 	// CleanupBudget is the maximum time that one reconcile uses for the
 	// updates that remove parent finalizers. After this time, the reconcile
-	// stops and the
-	// controller object goes back to the queue. Thus a cleanup of many parent
-	// objects does not block the reconcile of the other controller objects.
+	// stops and the controller object goes back to the queue. Thus a cleanup
+	// of many parent objects does not block the reconcile of the other
+	// controller objects.
 	CleanupBudget = 5 * time.Second
 
 	// cleanupPageSize is the number of objects in one list call.
@@ -82,6 +90,153 @@ func RemoveControllerFinalizer(ctx context.Context, c client.Client, controller 
 	return client.IgnoreNotFound(c.Patch(ctx, controller, client.MergeFromWithOptions(orig, client.MergeFromWithOptimisticLock{})))
 }
 
+// ControllerCleaner does the cleanup for a CompositeController or a
+// DecoratorController that is pending deletion. The two controller kinds use
+// it, thus they have the same behavior.
+type ControllerCleaner struct {
+	K8sClient     client.Client
+	DynClient     *dynamicclientset.Clientset
+	Resources     *dynamicdiscovery.ResourceMap
+	EventRecorder record.EventRecorder
+	Logger        logr.Logger
+}
+
+// Finalize does the work for a controller object that is pending deletion.
+// It stops the controller, removes the parent finalizer from all parent
+// objects, and then removes ControllerFinalizer, which lets the API server
+// delete the controller object.
+//
+// The stop function stops the controller of the object, if there is one, and
+// returns true if it stopped a controller.
+//
+// One call removes parent finalizers for CleanupBudget at most. If parent
+// objects are left, the controller object goes back to the queue. The finalize
+// hook is not called.
+func (c *ControllerCleaner) Finalize(ctx context.Context, controller client.Object, parentFinalizer string, parents []ParentResource, stop func() bool) (reconcile.Result, error) {
+	name := controller.GetName()
+	// Stop the controller first. A worker that is in operation adds the
+	// parent finalizer again.
+	if stop() {
+		c.EventRecorder.Eventf(controller, corev1.EventTypeNormal, events.ReasonStopped, "Stopped controller: %s", name)
+	}
+	if !controllerutil.ContainsFinalizer(controller, ControllerFinalizer) {
+		return reconcile.Result{}, nil
+	}
+
+	// A parent resource that is not in discovery needs a check. The cleanup
+	// must not complete while objects of the resource can exist.
+	parents, err := c.resolveParents(ctx, parents)
+	if err != nil {
+		c.EventRecorder.Eventf(controller, corev1.EventTypeWarning, events.ReasonSyncError, "[%s] can't remove the parent finalizer - %s", name, err)
+		return reconcile.Result{}, err
+	}
+
+	removed, done, err := NewManager(parentFinalizer, true).RemoveFromResources(ctx, c.DynClient, parents, CleanupBudget)
+	if removed > 0 || done {
+		c.Logger.Info("Removed the parent finalizer from parent objects", "name", name, "removed", removed, "done", done)
+	}
+	if err != nil {
+		c.EventRecorder.Eventf(controller, corev1.EventTypeWarning, events.ReasonSyncError, "[%s] can't remove the parent finalizer - %s", name, err)
+		return reconcile.Result{}, err
+	}
+	if !done {
+		// Go to the end of the queue, so that the other controller objects
+		// get their reconcile.
+		return reconcile.Result{RequeueAfter: time.Millisecond}, nil
+	}
+	return reconcile.Result{}, RemoveControllerFinalizer(ctx, c.K8sClient, controller)
+}
+
+var (
+	crdGVK        = schema.GroupVersionKind{Group: "apiextensions.k8s.io", Version: "v1", Kind: "CustomResourceDefinition"}
+	apiServiceGVK = schema.GroupVersionKind{Group: "apiregistration.k8s.io", Version: "v1", Kind: "APIService"}
+)
+
+// resolveParents returns the parent resources that the cleanup must do. It
+// returns each resource that is in discovery without a change.
+//
+// The discovery data is a cache, and a resource that is not in it can have
+// objects. For such a resource, resolveParents asks the API server:
+//   - If the CRD of the resource exists, it uses a served version of the CRD
+//     that is in discovery. The finalizers are the same in all versions. If
+//     no served version is in discovery, it returns an error.
+//   - If there is no CRD and discovery has the apiVersion, the resource does
+//     not exist, and resolveParents removes it from the result.
+//   - If there is no CRD and no APIService for the apiVersion, the API does
+//     not exist, and resolveParents removes the resource from the result.
+//   - If the APIService exists, the API is not in discovery at this time, and
+//     resolveParents returns an error.
+//
+// An error makes the reconcile fail, and the reconcile is done again later.
+func (c *ControllerCleaner) resolveParents(ctx context.Context, parents []ParentResource) ([]ParentResource, error) {
+	resolved := make([]ParentResource, 0, len(parents))
+	for _, parent := range parents {
+		if _, err := c.DynClient.Resource(parent.APIVersion, parent.Resource); err == nil {
+			resolved = append(resolved, parent)
+			continue
+		}
+		served, err := c.servedParent(ctx, parent)
+		if err != nil {
+			return nil, err
+		}
+		if served != nil {
+			resolved = append(resolved, *served)
+		}
+	}
+	return resolved, nil
+}
+
+// servedParent finds a version in discovery for a parent resource that is not
+// in discovery with the version of the controller spec. It returns nil when
+// the resource does not exist.
+func (c *ControllerCleaner) servedParent(ctx context.Context, parent ParentResource) (*ParentResource, error) {
+	gv, err := schema.ParseGroupVersion(parent.APIVersion)
+	if err != nil {
+		// No controller can start with this apiVersion, thus no parent object
+		// has the finalizer.
+		return nil, nil //nolint:nilerr // an invalid apiVersion has no objects
+	}
+
+	crd := &unstructured.Unstructured{}
+	crd.SetGroupVersionKind(crdGVK)
+	err = c.K8sClient.Get(ctx, client.ObjectKey{Name: parent.Resource + "." + gv.Group}, crd)
+	if err == nil {
+		versions, _, _ := unstructured.NestedSlice(crd.Object, "spec", "versions")
+		for _, v := range versions {
+			version, ok := v.(map[string]interface{})
+			if !ok {
+				continue
+			}
+			name, _, _ := unstructured.NestedString(version, "name")
+			served, _, _ := unstructured.NestedBool(version, "served")
+			apiVersion := schema.GroupVersion{Group: gv.Group, Version: name}.String()
+			if !served || c.Resources.Get(apiVersion, parent.Resource) == nil {
+				continue
+			}
+			return &ParentResource{APIVersion: apiVersion, Resource: parent.Resource}, nil
+		}
+		return nil, fmt.Errorf("the CRD of resource %s exists, but no served version of it is in discovery", parent.Resource)
+	}
+	if !apierrors.IsNotFound(err) {
+		return nil, fmt.Errorf("can't get the CRD of resource %s: %w", parent.Resource, err)
+	}
+
+	if c.Resources.HasGroupVersion(parent.APIVersion) {
+		// The API is in discovery and does not have the resource.
+		return nil, nil
+	}
+	apiService := &unstructured.Unstructured{}
+	apiService.SetGroupVersionKind(apiServiceGVK)
+	err = c.K8sClient.Get(ctx, client.ObjectKey{Name: gv.Version + "." + gv.Group}, apiService)
+	if apierrors.IsNotFound(err) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("can't get the APIService of apiVersion %s: %w", parent.APIVersion, err)
+	}
+	return nil, fmt.Errorf("apiVersion %s is registered, but it is not in discovery", parent.APIVersion)
+}
+
 // cleanupClock measures the time budget of one cleanup. The time starts at
 // the first update, not at the first list call. Thus each cleanup removes the
 // finalizer from one object at least, also when the list calls are slow.
@@ -90,6 +245,11 @@ type cleanupClock struct {
 	deadline time.Time
 }
 
+func (c *cleanupClock) started() bool {
+	return !c.deadline.IsZero()
+}
+
+// expired starts the clock at the first call.
 func (c *cleanupClock) expired() bool {
 	if c.deadline.IsZero() {
 		c.deadline = time.Now().Add(c.budget)
@@ -108,8 +268,8 @@ func (c *cleanupClock) expired() bool {
 // the budget was not sufficient or an object changed during the update. Call
 // it again in these conditions.
 //
-// A resource that is not in discovery is ignored. The resource is deleted,
-// thus it has no objects.
+// It returns an error for a resource that is not in discovery, because
+// objects of that resource can exist.
 func (m *Manager) RemoveFromResources(ctx context.Context, dynClient *dynamicclientset.Clientset, parents []ParentResource, budget time.Duration) (removed int, done bool, err error) {
 	if !dynClient.HasSynced() {
 		return 0, false, errors.New("discovery is not synced")
@@ -118,8 +278,15 @@ func (m *Manager) RemoveFromResources(ctx context.Context, dynClient *dynamiccli
 	done = true
 	var errs []error
 	for _, parent := range parents {
+		if clock.started() && clock.expired() {
+			// Do not list the other resources. The next call does them.
+			done = false
+			break
+		}
 		client, clientErr := dynClient.Resource(parent.APIVersion, parent.Resource)
 		if clientErr != nil {
+			done = false
+			errs = append(errs, clientErr)
 			continue
 		}
 		count, resourceDone, resourceErr := m.removeFromAll(ctx, client, clock)

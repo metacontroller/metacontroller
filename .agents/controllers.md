@@ -33,6 +33,7 @@ Each kind has the same shape:
 | Object maps | `common/api/` | `v1` `RelativeObjectMap`, `v2` `UniformObjectMap` |
 | v1 to v2 conversion | `common/api/v2/` | `MakeUniformObjectMap`, `MakeRelativeObjectMap` |
 | Finalizers | `common/finalizer/` | `ShouldFinalize` decides if a sync is a finalize sync |
+| Cleanup when a controller object is deleted | `common/finalizer/cleanup.go`, `{composite,decorator}/controller_finalizer.go` | `ControllerCleaner.Finalize` removes the parent finalizer from all parents; `ControllerFinalizer` keeps the controller object until then |
 | Diff and equality | `common/diff.go`, `common/equality.go` | shared update primitives; use them, do not write new ones |
 
 ## RULES

@@ -466,9 +466,13 @@ and no hooks will be called.
 If the `finalize` hook is defined, Metacontroller also adds the finalizer
 `metacontroller.io/parent-finalizer-cleanup` to the CompositeController object.
 When you delete the CompositeController, Metacontroller stops the controller,
-removes its finalizer from all parent objects, and then lets the
-CompositeController be deleted. Thus the delete command can take some time when
-there are many parent objects.
+removes its finalizer from all objects of the parent resource in the spec, and
+then lets the CompositeController be deleted. Thus the delete command can take
+some time when there are many parent objects. The rate is approximately
+`--client-go-qps` objects for each second.
+
+If you change the parent resource in the spec, Metacontroller does not remove
+its finalizer from the objects of the old resource. Remove it manually.
 
 Metacontroller does not call your `finalize` hook during this cleanup.
 Your children stay until the parent object is deleted.
@@ -480,9 +484,22 @@ CompositeController.
 
 Metacontroller must be in operation to do this cleanup. If it is not, the
 CompositeController stays pending deletion until Metacontroller starts again.
+The same occurs in these conditions:
+
+- You use `--target-label-selector` and no Metacontroller instance selects the
+  CompositeController, for example because you removed its label. Put the label
+  back, or remove the finalizer manually.
+- You go back to a Metacontroller version that does not have this cleanup.
+  Remove the finalizer manually.
+
 Delete your CompositeController objects before you uninstall Metacontroller.
 If you uninstall Metacontroller first, you must remove the finalizer from the
-CompositeController objects and from the parent objects manually.
+CompositeController objects and from the parent objects manually. Until you do
+that, the deletion of the Metacontroller CRDs does not complete.
+
+If you use your own ClusterRole for Metacontroller, it must permit the `patch`
+verb on `compositecontrollers` and `decoratorcontrollers`. Without it, a
+CompositeController that has a `finalize` hook does not start.
 
 The semantics of the `finalize` hook are mostly equivalent to those of
 the [`sync` hook](#sync-hook).

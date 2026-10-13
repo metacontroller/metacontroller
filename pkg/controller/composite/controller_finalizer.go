@@ -18,15 +18,11 @@ package composite
 
 import (
 	"context"
-	"time"
 
-	v1 "k8s.io/api/core/v1"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"metacontroller/pkg/apis/metacontroller/v1alpha1"
 	"metacontroller/pkg/controller/common/finalizer"
-	"metacontroller/pkg/events"
 )
 
 // parentFinalizerName returns the name of the finalizer that the
@@ -46,40 +42,24 @@ func (mc *Metacontroller) ensureControllerFinalizer(ctx context.Context, cc *v1a
 }
 
 // finalizeCompositeController does the work for a CompositeController that is pending
-// deletion. It stops the controller, removes the parent finalizer from all
-// parent objects, and then removes finalizer.ControllerFinalizer, which lets
-// the API server delete the CompositeController.
-//
-// One call removes parent finalizers for finalizer.CleanupBudget at most. If
-// parent objects are left, the CompositeController goes back to the queue.
-// The finalize hook is not called.
+// deletion. See finalizer.ControllerCleaner for the procedure.
 func (mc *Metacontroller) finalizeCompositeController(ctx context.Context, cc *v1alpha1.CompositeController) (reconcile.Result, error) {
-	// Stop the controller first. A worker that is in operation adds the
-	// parent finalizer again.
-	if pc, ok := mc.parentControllers.LoadAndDelete(cc.Name); ok {
-		pc.Stop()
-		mc.eventRecorder.Eventf(cc, v1.EventTypeNormal, events.ReasonStopped, "Stopped controller: %s", cc.Name)
+	cleaner := &finalizer.ControllerCleaner{
+		K8sClient:     mc.k8sClient,
+		DynClient:     mc.dynClient,
+		Resources:     mc.resources,
+		EventRecorder: mc.eventRecorder,
+		Logger:        mc.logger,
 	}
-	if !controllerutil.ContainsFinalizer(cc, finalizer.ControllerFinalizer) {
-		return reconcile.Result{}, nil
-	}
-
 	parents := []finalizer.ParentResource{
 		{APIVersion: cc.Spec.ParentResource.APIVersion, Resource: cc.Spec.ParentResource.Resource},
 	}
-	manager := finalizer.NewManager(parentFinalizerName(cc.Name), true)
-	removed, done, err := manager.RemoveFromResources(ctx, mc.dynClient, parents, finalizer.CleanupBudget)
-	if removed > 0 || done {
-		mc.logger.Info("Removed the parent finalizer from parent objects", "name", cc.Name, "removed", removed, "done", done)
+	stop := func() bool {
+		pc, ok := mc.parentControllers.LoadAndDelete(cc.Name)
+		if ok {
+			pc.Stop()
+		}
+		return ok
 	}
-	if err != nil {
-		mc.eventRecorder.Eventf(cc, v1.EventTypeWarning, events.ReasonSyncError, "[%s] can't remove the parent finalizer - %s", cc.Name, err)
-		return reconcile.Result{}, err
-	}
-	if !done {
-		// Go to the end of the queue, so that the other controller objects
-		// get their reconcile.
-		return reconcile.Result{RequeueAfter: time.Millisecond}, nil
-	}
-	return reconcile.Result{}, finalizer.RemoveControllerFinalizer(ctx, mc.k8sClient, cc)
+	return cleaner.Finalize(ctx, cc, parentFinalizerName(cc.Name), parents, stop)
 }
