@@ -90,7 +90,7 @@ func (mc *Metacontroller) Reconcile(ctx context.Context, request reconcile.Reque
 		mc.logger.V(4).Info("DecoratorController has been deleted", "name", decoratorControllerName)
 		// Stop and remove the controller if it exists.
 		if c, ok := mc.decoratorControllers.LoadAndDelete(decoratorControllerName); ok {
-			c.Stop(true)
+			c.Stop()
 			c.eventRecorder.Eventf(
 				c.dc,
 				v1.EventTypeNormal,
@@ -105,6 +105,18 @@ func (mc *Metacontroller) Reconcile(ctx context.Context, request reconcile.Reque
 			v1.EventTypeNormal,
 			events.ReasonSyncError,
 			"[%s] sync error - %s", dc.Name, err)
+		return reconcile.Result{}, err
+	}
+
+	if dc.GetDeletionTimestamp() != nil {
+		return mc.finalizeDecoratorController(ctx, &dc)
+	}
+	if err := mc.ensureControllerFinalizer(ctx, &dc); err != nil {
+		mc.eventRecorder.Eventf(
+			&dc,
+			v1.EventTypeWarning,
+			events.ReasonSyncError,
+			"[%s] can't add finalizer - %s", dc.Name, err)
 		return reconcile.Result{}, err
 	}
 
@@ -125,7 +137,7 @@ func (mc *Metacontroller) reconcileDecoratorController(ctx context.Context, dc *
 	}
 	// Stop and remove the controller so it can be recreated.
 	if c, ok := mc.decoratorControllers.LoadAndDelete(dc.Name); ok {
-		c.Stop(false)
+		c.Stop()
 		mc.eventRecorder.Eventf(
 			dc,
 			v1.EventTypeNormal,

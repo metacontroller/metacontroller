@@ -27,9 +27,11 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/json"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"metacontroller/pkg/apis/metacontroller/v1alpha1"
+	"metacontroller/pkg/controller/common/finalizer"
 	v1 "metacontroller/pkg/controller/composite/api/v1"
 	"metacontroller/test/integration/framework"
 )
@@ -55,7 +57,8 @@ func TestFinalizerRemovedWhenCompositeControllerDeleted(t *testing.T) {
 		return json.Marshal(v1.CompositeHookResponse{})
 	})
 
-	// The finalize hook makes Metacontroller add the finalizer to the parents.
+	// The finalize hook makes Metacontroller add a finalizer to the parents
+	// and to the controller object.
 	cc := &v1alpha1.CompositeController{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "default",
@@ -122,8 +125,20 @@ func TestFinalizerRemovedWhenCompositeControllerDeleted(t *testing.T) {
 		})
 	}()
 
-	t.Logf("Waiting for the finalizer on all parent objects...")
+	t.Logf("Waiting for the finalizer on the CompositeController...")
 	err := f.Wait(func() (bool, error) {
+		live := &v1alpha1.CompositeController{}
+		if err := f.MetacontrollerClient().Get(context.TODO(), client.ObjectKeyFromObject(cc), live); err != nil {
+			return false, err
+		}
+		return controllerutil.ContainsFinalizer(live, finalizer.ControllerFinalizer), nil
+	})
+	if err != nil {
+		t.Fatalf("the CompositeController did not get the finalizer: %v", err)
+	}
+
+	t.Logf("Waiting for the finalizer on all parent objects...")
+	err = f.Wait(func() (bool, error) {
 		count, err := parentsWithFinalizer()
 		return count == parentCount, err
 	})
@@ -143,5 +158,99 @@ func TestFinalizerRemovedWhenCompositeControllerDeleted(t *testing.T) {
 	if err != nil {
 		count, _ := parentsWithFinalizer()
 		t.Fatalf("%d of %d parent objects still have the finalizer: %v", count, parentCount, err)
+	}
+
+	// The CompositeController must stay until the parent objects are clean, and
+	// then it must go away.
+	t.Logf("Waiting for the CompositeController to be deleted...")
+	err = f.Wait(func() (bool, error) {
+		live := &v1alpha1.CompositeController{}
+		err := f.MetacontrollerClient().Get(context.TODO(), client.ObjectKeyFromObject(cc), live)
+		return apierrors.IsNotFound(err), nil
+	})
+	if err != nil {
+		t.Errorf("the CompositeController was not deleted: %v", err)
+	}
+	count, err := parentsWithFinalizer()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if count != 0 {
+		t.Errorf("%d of %d parent objects have the finalizer after the CompositeController was deleted", count, parentCount)
+	}
+}
+
+// TestFinalizerRemovedWhenCompositeControllerIsNotInOperation tests the cleanup for
+// a CompositeController that has no controller in operation. This is the
+// condition after a restart of Metacontroller, or when the controller did not
+// start. The CompositeController has no hooks, thus its controller cannot start.
+func TestFinalizerRemovedWhenCompositeControllerIsNotInOperation(t *testing.T) {
+	ns := "test-finalizer-cleanup-stopped"
+	name := "cc-finalizer-cleanup-stopped"
+	finalizerName := "metacontroller.io/compositecontroller-" + name
+
+	f := framework.NewFixture(t)
+	defer f.TearDown()
+
+	f.CreateNamespace(ns)
+	parentCRD, parentClient := f.CreateCRD("FinalizerCleanupStoppedParent", apiextensions.NamespaceScoped)
+
+	// This parent has the finalizer from an earlier controller.
+	parent := framework.UnstructuredCRD(parentCRD, "parent")
+	parent.SetFinalizers([]string{finalizerName})
+	if _, err := parentClient.Namespace(ns).Create(context.TODO(), parent, metav1.CreateOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		live, err := parentClient.Namespace(ns).Get(context.TODO(), "parent", metav1.GetOptions{})
+		if err == nil && controllerutil.RemoveFinalizer(live, finalizerName) {
+			_, _ = parentClient.Namespace(ns).Update(context.TODO(), live, metav1.UpdateOptions{})
+		}
+	}()
+
+	cc := &v1alpha1.CompositeController{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace:  "default",
+			Name:       name,
+			Finalizers: []string{finalizer.ControllerFinalizer},
+		},
+		Spec: v1alpha1.CompositeControllerSpec{
+			ParentResource: v1alpha1.CompositeControllerParentResourceRule{
+				ResourceRule: *framework.CRDResourceRule(parentCRD),
+			},
+		},
+	}
+	if err := f.MetacontrollerClient().Create(context.TODO(), cc); err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		live := &v1alpha1.CompositeController{}
+		if err := f.MetacontrollerClient().Get(context.TODO(), client.ObjectKeyFromObject(cc), live); err != nil {
+			return
+		}
+		live.SetFinalizers(nil)
+		_ = f.MetacontrollerClient().Update(context.TODO(), live)
+		_ = f.MetacontrollerClient().Delete(context.TODO(), live)
+	}()
+	if err := f.MetacontrollerClient().Delete(context.TODO(), cc); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Logf("Waiting for the CompositeController to be deleted...")
+	err := f.Wait(func() (bool, error) {
+		live := &v1alpha1.CompositeController{}
+		err := f.MetacontrollerClient().Get(context.TODO(), client.ObjectKeyFromObject(cc), live)
+		return apierrors.IsNotFound(err), nil
+	})
+	if err != nil {
+		t.Fatalf("the CompositeController was not deleted: %v", err)
+	}
+
+	live, err := parentClient.Namespace(ns).Get(context.TODO(), "parent", metav1.GetOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if controllerutil.ContainsFinalizer(live, finalizerName) {
+		t.Errorf("the parent object has the finalizer after the CompositeController was deleted")
 	}
 }

@@ -26,9 +26,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/json"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"metacontroller/pkg/apis/metacontroller/v1alpha1"
+	"metacontroller/pkg/controller/common/finalizer"
 	v1 "metacontroller/pkg/controller/decorator/api/v1"
 	"metacontroller/test/integration/framework"
 )
@@ -54,7 +56,8 @@ func TestFinalizerRemovedWhenDecoratorControllerDeleted(t *testing.T) {
 		return json.Marshal(v1.DecoratorHookResponse{})
 	})
 
-	// The finalize hook makes Metacontroller add the finalizer to the parents.
+	// The finalize hook makes Metacontroller add a finalizer to the parents
+	// and to the controller object.
 	dc := &v1alpha1.DecoratorController{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "default",
@@ -120,8 +123,20 @@ func TestFinalizerRemovedWhenDecoratorControllerDeleted(t *testing.T) {
 		})
 	}()
 
-	t.Logf("Waiting for the finalizer on all parent objects...")
+	t.Logf("Waiting for the finalizer on the DecoratorController...")
 	err := f.Wait(func() (bool, error) {
+		live := &v1alpha1.DecoratorController{}
+		if err := f.MetacontrollerClient().Get(context.TODO(), client.ObjectKeyFromObject(dc), live); err != nil {
+			return false, err
+		}
+		return controllerutil.ContainsFinalizer(live, finalizer.ControllerFinalizer), nil
+	})
+	if err != nil {
+		t.Fatalf("the DecoratorController did not get the finalizer: %v", err)
+	}
+
+	t.Logf("Waiting for the finalizer on all parent objects...")
+	err = f.Wait(func() (bool, error) {
 		count, err := parentsWithFinalizer()
 		return count == parentCount, err
 	})
@@ -141,5 +156,99 @@ func TestFinalizerRemovedWhenDecoratorControllerDeleted(t *testing.T) {
 	if err != nil {
 		count, _ := parentsWithFinalizer()
 		t.Fatalf("%d of %d parent objects still have the finalizer: %v", count, parentCount, err)
+	}
+
+	// The DecoratorController must stay until the parent objects are clean, and
+	// then it must go away.
+	t.Logf("Waiting for the DecoratorController to be deleted...")
+	err = f.Wait(func() (bool, error) {
+		live := &v1alpha1.DecoratorController{}
+		err := f.MetacontrollerClient().Get(context.TODO(), client.ObjectKeyFromObject(dc), live)
+		return apierrors.IsNotFound(err), nil
+	})
+	if err != nil {
+		t.Errorf("the DecoratorController was not deleted: %v", err)
+	}
+	count, err := parentsWithFinalizer()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if count != 0 {
+		t.Errorf("%d of %d parent objects have the finalizer after the DecoratorController was deleted", count, parentCount)
+	}
+}
+
+// TestFinalizerRemovedWhenDecoratorControllerIsNotInOperation tests the cleanup for
+// a DecoratorController that has no controller in operation. This is the
+// condition after a restart of Metacontroller, or when the controller did not
+// start. The DecoratorController has no hooks, thus its controller cannot start.
+func TestFinalizerRemovedWhenDecoratorControllerIsNotInOperation(t *testing.T) {
+	ns := "test-finalizer-cleanup-stopped"
+	name := "dc-finalizer-cleanup-stopped"
+	finalizerName := "metacontroller.io/decoratorcontroller-" + name
+
+	f := framework.NewFixture(t)
+	defer f.TearDown()
+
+	f.CreateNamespace(ns)
+	parentCRD, parentClient := f.CreateCRD("FinalizerCleanupStoppedParent", apiextensions.NamespaceScoped)
+
+	// This parent has the finalizer from an earlier controller.
+	parent := framework.UnstructuredCRD(parentCRD, "parent")
+	parent.SetFinalizers([]string{finalizerName})
+	if _, err := parentClient.Namespace(ns).Create(context.TODO(), parent, metav1.CreateOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		live, err := parentClient.Namespace(ns).Get(context.TODO(), "parent", metav1.GetOptions{})
+		if err == nil && controllerutil.RemoveFinalizer(live, finalizerName) {
+			_, _ = parentClient.Namespace(ns).Update(context.TODO(), live, metav1.UpdateOptions{})
+		}
+	}()
+
+	dc := &v1alpha1.DecoratorController{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace:  "default",
+			Name:       name,
+			Finalizers: []string{finalizer.ControllerFinalizer},
+		},
+		Spec: v1alpha1.DecoratorControllerSpec{
+			Resources: []v1alpha1.DecoratorControllerResourceRule{
+				{ResourceRule: *framework.CRDResourceRule(parentCRD)},
+			},
+		},
+	}
+	if err := f.MetacontrollerClient().Create(context.TODO(), dc); err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		live := &v1alpha1.DecoratorController{}
+		if err := f.MetacontrollerClient().Get(context.TODO(), client.ObjectKeyFromObject(dc), live); err != nil {
+			return
+		}
+		live.SetFinalizers(nil)
+		_ = f.MetacontrollerClient().Update(context.TODO(), live)
+		_ = f.MetacontrollerClient().Delete(context.TODO(), live)
+	}()
+	if err := f.MetacontrollerClient().Delete(context.TODO(), dc); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Logf("Waiting for the DecoratorController to be deleted...")
+	err := f.Wait(func() (bool, error) {
+		live := &v1alpha1.DecoratorController{}
+		err := f.MetacontrollerClient().Get(context.TODO(), client.ObjectKeyFromObject(dc), live)
+		return apierrors.IsNotFound(err), nil
+	})
+	if err != nil {
+		t.Fatalf("the DecoratorController was not deleted: %v", err)
+	}
+
+	live, err := parentClient.Namespace(ns).Get(context.TODO(), "parent", metav1.GetOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if controllerutil.ContainsFinalizer(live, finalizerName) {
+		t.Errorf("the parent object has the finalizer after the DecoratorController was deleted")
 	}
 }

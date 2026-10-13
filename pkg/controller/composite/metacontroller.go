@@ -104,7 +104,7 @@ func (mc *Metacontroller) Reconcile(ctx context.Context, request reconcile.Reque
 		mc.logger.Info("CompositeController has been deleted", "name", compositeControllerName)
 		// Stop and remove the controller if it exists.
 		if pc, ok := mc.parentControllers.LoadAndDelete(compositeControllerName); ok {
-			pc.Stop(true)
+			pc.Stop()
 			pc.eventRecorder.Eventf(
 				pc.cc,
 				v1.EventTypeNormal,
@@ -121,6 +121,12 @@ func (mc *Metacontroller) Reconcile(ctx context.Context, request reconcile.Reque
 			events.ReasonSyncError,
 			"[%s] Sync error - %s", cc.Name, err)
 		return reconcile.Result{}, err
+	}
+
+	// Do this before the checks of the parent CRD. The parent CRD can be
+	// deleted before the CompositeController.
+	if cc.GetDeletionTimestamp() != nil {
+		return mc.finalizeCompositeController(ctx, &cc)
 	}
 
 	groupVersion, err := schema.ParseGroupVersion(cc.Spec.ParentResource.APIVersion)
@@ -151,6 +157,14 @@ func (mc *Metacontroller) Reconcile(ctx context.Context, request reconcile.Reque
 		// returning, as we cannot do anything until 'Status' subresource is added to parent parentCRD
 		return reconcile.Result{}, nil
 	}
+	if err := mc.ensureControllerFinalizer(ctx, &cc); err != nil {
+		mc.eventRecorder.Eventf(
+			&cc,
+			v1.EventTypeWarning,
+			events.ReasonSyncError,
+			"[%s] can't add finalizer - %s", cc.Name, err)
+		return reconcile.Result{}, err
+	}
 	reconcileErr := mc.reconcileCompositeController(ctx, &cc)
 	return reconcile.Result{}, reconcileErr
 }
@@ -168,7 +182,7 @@ func (mc *Metacontroller) reconcileCompositeController(ctx context.Context, cc *
 	}
 	// Stop and remove the controller so it can be recreated.
 	if pc, ok := mc.parentControllers.LoadAndDelete(cc.Name); ok {
-		pc.Stop(false)
+		pc.Stop()
 		mc.eventRecorder.Eventf(cc, v1.EventTypeNormal, events.ReasonStopped, "Stopped controller: %s", cc.Name)
 	}
 

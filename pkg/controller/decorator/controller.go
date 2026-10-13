@@ -97,12 +97,8 @@ type decoratorController struct {
 	finalizeHook hooks.Hook
 
 	logger logr.Logger
-	// rootCtx is the context that newDecoratorController gets. Stop() does
-	// not cancel it, thus the work that Stop() does after the workers stop
-	// can use it.
-	rootCtx context.Context
-	ctx     context.Context
-	cancel  context.CancelFunc
+	ctx    context.Context
+	cancel context.CancelFunc
 }
 
 func newDecoratorController(
@@ -153,14 +149,13 @@ func newDecoratorController(
 		numWorkers:    numWorkers,
 		eventRecorder: eventRecorder,
 		finalizer: finalizer.NewManager(
-			"metacontroller.io/decoratorcontroller-"+dc.Name,
+			parentFinalizerName(dc.Name),
 			dc.Spec.Hooks.Finalize != nil,
 		),
 		syncHook:     syncHook,
 		finalizeHook: finalizeHook,
 		logger:       logger.WithName(dc.Name),
 		ssaOptions:   ssaOptions,
-		rootCtx:      ctx,
 		ctx:          ctx,
 	}
 
@@ -343,21 +338,11 @@ func (c *decoratorController) Start() {
 	}()
 }
 
-func (c *decoratorController) Stop(deleted bool) {
+func (c *decoratorController) Stop() {
 	c.stopOnce.Do(func() {
 		c.cancel()
 		c.queue.ShutDown()
 		<-c.doneCh
-
-		// Remove the finalizer from the parent objects only when the
-		// DecoratorController is deleted. A spec change stops the controller
-		// and starts it again, and the new controller keeps the finalizer.
-		// Do this after the workers stop. A worker that is in operation adds
-		// the finalizer again. Do this before the parent informers close,
-		// because the cleanup reads their caches.
-		if deleted {
-			c.cleanupParentFinalizers(c.rootCtx)
-		}
 
 		// Remove event handlers and close informers for all child resources.
 		c.childInformers.ForEach(func(_ schema.GroupVersionResource, informer *dynamicinformer.ResourceInformer) {

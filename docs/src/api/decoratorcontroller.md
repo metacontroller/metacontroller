@@ -390,17 +390,26 @@ If you don't define a `finalize` hook, then when the object opts out, any
 attachments you added will remain until the object is deleted,
 and no hooks will be called.
 
-When you delete the DecoratorController, Metacontroller removes its finalizer
-from all parent objects. Metacontroller does not call your `finalize` hook for
-these objects. Your attachments stay until the parent object is deleted.
+If the `finalize` hook is defined, Metacontroller also adds the finalizer
+`metacontroller.io/parent-finalizer-cleanup` to the DecoratorController object.
+When you delete the DecoratorController, Metacontroller stops the controller,
+removes its finalizer from all parent objects, and then lets the
+DecoratorController be deleted. Thus the delete command can take some time when
+there are many parent objects.
+
+Metacontroller does not call your `finalize` hook during this cleanup.
+Your attachments stay until the parent object is deleted.
 A parent object that is already pending deletion and has no other finalizer
 is deleted immediately, without a `finalize` call. The garbage collector then
 deletes its attachments. If your `finalize` hook cleans up resources in an
-external system, delete the parent objects before you delete the DecoratorController.
+external system, delete the parent objects before you delete the
+DecoratorController.
 
-Metacontroller must be in operation when you delete the DecoratorController.
-If it is not, the finalizer stays on the parent objects and you must remove it
-manually.
+Metacontroller must be in operation to do this cleanup. If it is not, the
+DecoratorController stays pending deletion until Metacontroller starts again.
+Delete your DecoratorController objects before you uninstall Metacontroller.
+If you uninstall Metacontroller first, you must remove the finalizer from the
+DecoratorController objects and from the parent objects manually.
 
 The semantics of the `finalize` hook are mostly equivalent to those of
 the [`sync` hook](#sync-hook).

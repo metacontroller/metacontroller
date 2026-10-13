@@ -97,12 +97,8 @@ type parentController struct {
 	finalizeHook hooks.Hook
 
 	logger logr.Logger
-	// rootCtx is the context that newParentController gets. Stop() does
-	// not cancel it, thus the work that Stop() does after the workers stop
-	// can use it.
-	rootCtx context.Context
-	ctx     context.Context
-	cancel  context.CancelFunc
+	ctx    context.Context
+	cancel context.CancelFunc
 }
 
 func newParentController(
@@ -216,13 +212,12 @@ func newParentController(
 		ssaOptions:    ssaOptions,
 		eventRecorder: eventRecorder,
 		finalizer: finalizer.NewManager(
-			"metacontroller.io/compositecontroller-"+cc.Name,
+			parentFinalizerName(cc.Name),
 			cc.Spec.Hooks.Finalize != nil,
 		),
 		syncHook:     syncHook,
 		finalizeHook: finalizeHook,
 		logger:       logger.WithName(cc.Name),
-		rootCtx:      ctx,
 		ctx:          ctx,
 	}
 
@@ -339,21 +334,11 @@ func (pc *parentController) Start() {
 	}()
 }
 
-func (pc *parentController) Stop(deleted bool) {
+func (pc *parentController) Stop() {
 	pc.stopOnce.Do(func() {
 		pc.cancel()
 		pc.queue.ShutDown()
 		<-pc.doneCh
-
-		// Remove the finalizer from the parent objects only when the
-		// CompositeController is deleted. A spec change stops the controller
-		// and starts it again, and the new controller keeps the finalizer.
-		// Do this after the workers stop. A worker that is in operation adds
-		// the finalizer again. Do this before the parent informer closes,
-		// because the cleanup reads its cache.
-		if deleted {
-			pc.cleanupParentFinalizers(pc.rootCtx)
-		}
 
 		// Remove event handlers and close informers for all child resources.
 		pc.childInformers.ForEach(func(_ schema.GroupVersionResource, informer *dynamicinformer.ResourceInformer) {
