@@ -463,6 +463,12 @@ If you don't define a `finalize` hook, then when a parent object is deleted,
 the garbage collector will delete all your children immediately,
 and no hooks will be called.
 
+When you delete the CompositeController, Metacontroller removes its finalizer
+from all parent objects. Metacontroller does not call your `finalize` hook for
+these objects, and your children stay. Metacontroller must be in operation
+when you delete the CompositeController. If it is not, the finalizer stays on
+the parent objects and you must remove it manually.
+
 The semantics of the `finalize` hook are mostly equivalent to those of
 the [`sync` hook](#sync-hook).
 Metacontroller will attempt to reconcile the desired states you return in the
