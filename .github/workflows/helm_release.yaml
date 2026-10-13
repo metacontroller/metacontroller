@@ -14,7 +14,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         name: Checkout
-      - uses: jdx/mise-action@v4
+      - uses: jdx/mise-action@v5
       - name: login to ghcr.io using helm
         run: |
           echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io --username "${{ github.repository_owner }}" --password-stdin

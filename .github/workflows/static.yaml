@@ -15,7 +15,7 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
-      - uses: jdx/mise-action@v4
+      - uses: jdx/mise-action@v5
       - name: golangci-lint
         run: golangci-lint run --timeout 10m ./...
   actionlint:
@@ -31,7 +31,7 @@ jobs:
     steps:
       - name: checkout
         uses: actions/checkout@v7
-      - uses: jdx/mise-action@v4
+      - uses: jdx/mise-action@v5
       - name: build image
         run: make image
       - name: Save image
