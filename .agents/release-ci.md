@@ -25,6 +25,9 @@ chore: regenerate client code with code-generator v0.37.1
 
 Remove the template text from the PR body before you submit a PR.
 
+Write the subject, the commit body, and the PR description in Simplified
+Technical English. See WRITING STYLE in [AGENTS.md](../AGENTS.md).
+
 ## CI WORKFLOWS (`.github/workflows/`)
 | File | Trigger | Jobs |
 |------|---------|------|

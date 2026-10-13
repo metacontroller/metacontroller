@@ -71,6 +71,20 @@ A change is complete only when these commands pass:
 
 If you cannot run a step, say so. Do not report it as passed.
 
+## WRITING STYLE
+Write all text in ASD-STE100 Simplified Technical English. This applies to
+agent docs (`AGENTS.md`, `.agents/`), user docs (`docs/src/`), README files,
+code comments, commit messages, and PR titles and descriptions.
+
+- Write short sentences. Put one idea in each sentence.
+- Use the active voice.
+- Use common words. Explain a technical term the first time you use it.
+- Use the same term for the same thing each time.
+- Write instructions as commands: "Run `make lint`."
+
+Do not rewrite existing text only to change its style. Apply the rules to
+text that you add or change.
+
 ## HARD RULES
 - Do not edit generated files: `zz_generated.deepcopy.go`, `pkg/client/generated/`,
   `metacontroller-crds-v1.yaml` (in `manifests/production/` and in the chart `crds/`).

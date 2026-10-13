@@ -30,6 +30,7 @@ A feature is frequently more than Go code. Do each row that applies.
    metacontroller is API objects in, API objects out, so this level is the
    important one. See [testing.md](testing.md).
 5. Update docs in `docs/src/`. If you add a page, add it to `docs/src/SUMMARY.md`.
+   Write new text in Simplified Technical English (see [AGENTS.md](../AGENTS.md)).
 6. Run `make lint`, `make unit-test`, `make integration-test`, `make build`.
 
 ## CODE RULES
