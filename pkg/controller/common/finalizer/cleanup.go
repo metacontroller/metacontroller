@@ -39,22 +39,28 @@ import (
 )
 
 const (
-	// ControllerFinalizer is the finalizer that Metacontroller puts on a
+	// ControllerFinalizer is the finalizer that Metacontroller adds to a
 	// CompositeController or DecoratorController that has a finalize hook.
 	// It keeps the controller object until Metacontroller has removed the
 	// parent finalizer from all parent objects.
 	ControllerFinalizer = "metacontroller.io/parent-finalizer-cleanup"
 
-	// CleanupBudget is the maximum time that one reconcile uses for the
-	// updates that remove parent finalizers. After this time, the reconcile
-	// stops and the controller object goes back to the queue. Thus a cleanup
-	// of many parent objects does not block the reconcile of the other
-	// controller objects.
+	// CleanupBudget limits the time that one reconcile uses to remove parent
+	// finalizers. The clock starts at the first update. The code examines the
+	// budget only between calls, thus the last call can end later. Then the
+	// controller object goes back to the queue. Thus a cleanup of many parent
+	// objects does not block the reconcile of the other controller objects.
 	CleanupBudget = 5 * time.Second
 
 	// cleanupPageSize is the number of objects in one list call.
 	cleanupPageSize = 500
 )
+
+// cleanupCallTimeout is the maximum time of one list call or one update call
+// of the cleanup. The code examines CleanupBudget only between calls, thus a
+// slow call needs its own limit. The time includes the wait for the client
+// rate limiter. It is a variable so that a test can change it.
+var cleanupCallTimeout = 15 * time.Second
 
 // ParentResource identifies one parent resource of a controller.
 type ParentResource struct {
@@ -101,21 +107,23 @@ type ControllerCleaner struct {
 	Logger        logr.Logger
 }
 
-// Finalize does the work for a controller object that is pending deletion.
-// It stops the controller, removes the parent finalizer from all parent
-// objects, and then removes ControllerFinalizer, which lets the API server
-// delete the controller object.
+// Finalize does the cleanup for a controller object that is pending deletion.
+// It stops the controller. Then it removes the parent finalizer from all parent
+// objects. Then it removes ControllerFinalizer, so that the API server can
+// delete the object. If the object does not have ControllerFinalizer, Finalize
+// only stops the controller.
 //
 // The stop function stops the controller of the object, if there is one, and
-// returns true if it stopped a controller.
+// returns true if it stopped a controller. It must return only after all
+// workers of the controller have ended. Otherwise a worker can add the parent
+// finalizer again after the cleanup.
 //
-// One call removes parent finalizers for CleanupBudget at most. If parent
-// objects are left, the controller object goes back to the queue. The finalize
-// hook is not called.
+// One call removes parent finalizers for approximately CleanupBudget. If parent
+// objects are left, the controller object goes back to the queue. Finalize
+// does not call the finalize hook.
 func (c *ControllerCleaner) Finalize(ctx context.Context, controller client.Object, parentFinalizer string, parents []ParentResource, stop func() bool) (reconcile.Result, error) {
 	name := controller.GetName()
-	// Stop the controller first. A worker that is in operation adds the
-	// parent finalizer again.
+	// Stop first, so that no worker adds the parent finalizer again.
 	if stop() {
 		c.EventRecorder.Eventf(controller, corev1.EventTypeNormal, events.ReasonStopped, "Stopped controller: %s", name)
 	}
@@ -152,13 +160,13 @@ var (
 	apiServiceGVK = schema.GroupVersionKind{Group: "apiregistration.k8s.io", Version: "v1", Kind: "APIService"}
 )
 
-// resolveParents returns the parent resources that the cleanup must do. It
-// returns each resource that is in discovery without a change.
+// resolveParents returns the parent resources to clean. It returns a resource
+// that is in discovery without a change.
 //
 // The discovery data is a cache, and a resource that is not in it can have
 // objects. For such a resource, resolveParents asks the API server:
 //   - If the CRD of the resource exists, it uses a served version of the CRD
-//     that is in discovery. The finalizers are the same in all versions. If
+//     that is in discovery. An object has the same finalizers in all versions. If
 //     no served version is in discovery, it returns an error.
 //   - If there is no CRD and discovery has the apiVersion, the resource does
 //     not exist, and resolveParents removes it from the result.
@@ -186,9 +194,9 @@ func (c *ControllerCleaner) resolveParents(ctx context.Context, parents []Parent
 	return resolved, nil
 }
 
-// servedParent finds a version in discovery for a parent resource that is not
-// in discovery with the version of the controller spec. It returns nil when
-// the resource does not exist.
+// servedParent finds a served version of the parent resource that is in
+// discovery. resolveParents calls it when the apiVersion of the controller
+// spec is not in discovery. It returns nil when the resource does not exist.
 func (c *ControllerCleaner) servedParent(ctx context.Context, parent ParentResource) (*ParentResource, error) {
 	gv, err := schema.ParseGroupVersion(parent.APIVersion)
 	if err != nil {
@@ -238,8 +246,9 @@ func (c *ControllerCleaner) servedParent(ctx context.Context, parent ParentResou
 }
 
 // cleanupClock measures the time budget of one cleanup. The time starts at
-// the first update, not at the first list call. Thus each cleanup removes the
-// finalizer from one object at least, also when the list calls are slow.
+// the first update, not at the first list call. Thus each call of
+// RemoveFromResources does one update at least, also when the list calls are
+// slow.
 type cleanupClock struct {
 	budget   time.Duration
 	deadline time.Time
@@ -262,7 +271,8 @@ func (c *cleanupClock) expired() bool {
 // parent resources, in all namespaces. It reads the objects from the API
 // server, not from an informer cache, thus it does not miss an object.
 //
-// It makes updates for the time of the budget at most. It returns the number
+// It makes updates for the time of the budget at most. Each list call and
+// each update call has a time limit of cleanupCallTimeout. It returns the number
 // of objects that it changed. It returns done == true only when no object of
 // the resources has the finalizer. It returns done == false and no error when
 // the budget was not sufficient or an object changed during the update. Call
@@ -306,7 +316,7 @@ func (m *Manager) removeFromAll(ctx context.Context, client *dynamicclientset.Re
 	var errs []error
 	opts := metav1.ListOptions{Limit: cleanupPageSize}
 	for {
-		list, listErr := client.List(ctx, opts)
+		list, listErr := listWithTimeout(ctx, client, opts)
 		if listErr != nil {
 			errs = append(errs, fmt.Errorf("can't list %s: %w", client.Name, listErr))
 			return removed, false, errors.Join(errs...)
@@ -319,7 +329,7 @@ func (m *Manager) removeFromAll(ctx context.Context, client *dynamicclientset.Re
 			if clock.expired() {
 				return removed, false, errors.Join(errs...)
 			}
-			_, updateErr := client.Namespace(obj.GetNamespace()).Update(ctx, obj, metav1.UpdateOptions{})
+			timedOut, updateErr := updateWithTimeout(ctx, client.Namespace(obj.GetNamespace()), obj)
 			switch {
 			case updateErr == nil:
 				removed++
@@ -333,10 +343,34 @@ func (m *Manager) removeFromAll(ctx context.Context, client *dynamicclientset.Re
 				done = false
 				errs = append(errs, fmt.Errorf("can't remove finalizer from %s %s/%s: %w", client.Kind, obj.GetNamespace(), obj.GetName(), updateErr))
 			}
+			if timedOut {
+				// The API server or the rate limiter is slow. Stop, so that
+				// this reconcile does not do more slow calls.
+				return removed, false, errors.Join(errs...)
+			}
 		}
 		if list.GetContinue() == "" {
 			return removed, done, errors.Join(errs...)
 		}
+		if clock.started() && clock.expired() {
+			// Do not list the next page. The next call does it.
+			return removed, false, errors.Join(errs...)
+		}
 		opts.Continue = list.GetContinue()
 	}
+}
+
+func listWithTimeout(ctx context.Context, client *dynamicclientset.ResourceClient, opts metav1.ListOptions) (*unstructured.UnstructuredList, error) {
+	callCtx, cancel := context.WithTimeout(ctx, cleanupCallTimeout)
+	defer cancel()
+	return client.List(callCtx, opts)
+}
+
+// updateWithTimeout returns timedOut == true when the update failed and the
+// call context is done: cleanupCallTimeout is over, or ctx is canceled.
+func updateWithTimeout(ctx context.Context, client *dynamicclientset.ResourceClient, obj *unstructured.Unstructured) (timedOut bool, err error) {
+	callCtx, cancel := context.WithTimeout(ctx, cleanupCallTimeout)
+	defer cancel()
+	_, err = client.Update(callCtx, obj, metav1.UpdateOptions{})
+	return err != nil && callCtx.Err() != nil, err
 }

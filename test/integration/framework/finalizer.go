@@ -35,7 +35,7 @@ type FinalizerCleanupCase struct {
 	// Controller is the CompositeController or DecoratorController. The test
 	// creates it.
 	Controller client.Object
-	// ParentFinalizer is the finalizer that the controller puts on its parents.
+	// ParentFinalizer is the finalizer that the controller adds to its parents.
 	ParentFinalizer string
 	// Namespace is the namespace of the parent objects.
 	Namespace string
@@ -46,10 +46,11 @@ type FinalizerCleanupCase struct {
 	Parents []*unstructured.Unstructured
 }
 
-// RunFinalizerCleanupOnDelete does a test that Metacontroller removes its finalizer
-// from the parent objects when the controller object is deleted, and that the
-// controller object stays until the parent objects are clean. The controller
-// must have a finalize hook.
+// RunFinalizerCleanupOnDelete creates the controller object and the parent
+// objects, and waits until they have their finalizers. Then it deletes the
+// controller object. It makes sure that Metacontroller removes the parent
+// finalizer from all parent objects, and that the controller object stays until
+// the parents are clean. The controller must have a finalize hook.
 func (f *Fixture) RunFinalizerCleanupOnDelete(c FinalizerCleanupCase) {
 	t := f.t
 	defer f.cleanupFinalizerCase(c)
@@ -179,13 +180,13 @@ func (f *Fixture) waitForControllerDeleted(c FinalizerCleanupCase) {
 }
 
 // cleanupFinalizerCase removes what a failed test leaves, so that the fixture
-// can delete the parent objects. It does nothing after a test that passed.
+// can delete the parent objects. It changes nothing after a test that passed.
 func (f *Fixture) cleanupFinalizerCase(c FinalizerCleanupCase) {
 	if err := f.metacontroller.Delete(context.TODO(), c.Controller); err != nil && !apierrors.IsNotFound(err) {
 		f.t.Logf("can't delete the controller object during teardown: %v", err)
 	}
-	// Do the removal again until no parent has the finalizer, because the
-	// controller can add it again while it stops.
+	// Remove the finalizer again until no parent has it. The controller can
+	// add it again until it stops.
 	_ = f.Wait(func() (bool, error) {
 		if c.ParentClient == nil {
 			return true, nil

@@ -238,6 +238,46 @@ func TestRemoveFromResources_whenListHasTwoPages_removesFinalizerFromAllPages(t 
 	assert.Empty(t, liveFinalizers(t, fakeClient, "b"))
 }
 
+func TestRemoveFromResources_whenUpdateIsSlowerThanCallTimeout_returnsErrorAndStops(t *testing.T) {
+	finalizer.SetCleanupCallTimeout(t, 10*time.Millisecond)
+	dynClient, fakeClient := newCleanupClients(newParent("a", parentFinalizer), newParent("b", parentFinalizer))
+	// The fake client does not obey the context. The reactor does what a
+	// real client does: it returns an error after the time limit.
+	fakeClient.PrependReactor("update", "*", func(clientgotesting.Action) (bool, runtime.Object, error) {
+		time.Sleep(50 * time.Millisecond)
+		return true, nil, context.DeadlineExceeded
+	})
+	manager := finalizer.NewManager(parentFinalizer, true)
+
+	removed, done, err := manager.RemoveFromResources(context.TODO(), dynClient, testParents, largeBudget)
+
+	require.ErrorIs(t, err, context.DeadlineExceeded)
+	assert.False(t, done)
+	assert.Equal(t, 0, removed)
+	// The second parent must not get an update in this call.
+	assert.Equal(t, 1, countUpdates(fakeClient))
+}
+
+func TestRemoveFromResources_whenBudgetEndsBetweenPages_doesNotListNextPage(t *testing.T) {
+	dynClient, fakeClient := newCleanupClients(newParent("a", parentFinalizer), newParent("b", parentFinalizer))
+	listCalls := 0
+	fakeClient.PrependReactor("list", "*", func(clientgotesting.Action) (bool, runtime.Object, error) {
+		listCalls++
+		page := &unstructured.UnstructuredList{Object: map[string]interface{}{"apiVersion": TestAPIVersion, "kind": TestResourceList}}
+		page.Items = []unstructured.Unstructured{*newParent("a", parentFinalizer)}
+		page.SetContinue("page-2")
+		return true, page, nil
+	})
+	manager := finalizer.NewManager(parentFinalizer, true)
+
+	removed, done, err := manager.RemoveFromResources(context.TODO(), dynClient, testParents, -time.Second)
+
+	require.NoError(t, err)
+	assert.False(t, done)
+	assert.Equal(t, 1, removed)
+	assert.Equal(t, 1, listCalls)
+}
+
 func newControllerClient(t *testing.T, objects ...client.Object) client.Client {
 	t.Helper()
 	scheme := runtime.NewScheme()

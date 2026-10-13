@@ -108,7 +108,7 @@ func TestFinalizerRemovedWhenCompositeControllerIsNotInOperation(t *testing.T) {
 }
 
 // TestFinalizerRemovedWhenCompositeControllerParentAPIDoesNotExist tests that a
-// CompositeController whose parent resource does not exist can be deleted.
+// CompositeController whose parent API does not exist can be deleted.
 func TestFinalizerRemovedWhenCompositeControllerParentAPIDoesNotExist(t *testing.T) {
 	name := "finalizer-cleanup-no-api"
 

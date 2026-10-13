@@ -468,11 +468,25 @@ If the `finalize` hook is defined, Metacontroller also adds the finalizer
 When you delete the CompositeController, Metacontroller stops the controller,
 removes its finalizer from all objects of the parent resource in the spec, and
 then lets the CompositeController be deleted. Thus the delete command can take
-some time when there are many parent objects. The rate is approximately
-`--client-go-qps` objects for each second.
+some time when there are many parent objects. The cleanup removes the
+finalizer from approximately `--client-go-qps` objects each second. This
+[flag](../guide/configuration.md) sets the maximum number of requests that
+Metacontroller sends to the API server each second. The cleanup and all
+controllers share this limit.
 
-If you change the parent resource in the spec, Metacontroller does not remove
-its finalizer from the objects of the old resource. Remove it manually.
+**Known limitation:** the cleanup uses only the resources that are in the
+spec at the time of the deletion. If you change the resource in `spec.parentResource`,
+Metacontroller does not remove its finalizer from the objects of the old
+resource, at the time of the change or later. These objects cannot be deleted
+until you remove the finalizer `metacontroller.io/compositecontroller-<name>`
+manually. Use `kubectl edit <resource> <object>` and delete the line of the
+finalizer from `metadata.finalizers`. Issue
+[#1286](https://github.com/metacontroller/metacontroller/issues/1286) tracks
+this limitation.
+
+To prevent this, delete the CompositeController and create it again with the
+new spec. Do not change `spec.parentResource` of a CompositeController that has
+a `finalize` hook.
 
 Metacontroller does not call your `finalize` hook during this cleanup.
 Your children stay until the parent object is deleted.
@@ -497,9 +511,19 @@ If you uninstall Metacontroller first, you must remove the finalizer from the
 CompositeController objects and from the parent objects manually. Until you do
 that, the deletion of the Metacontroller CRDs does not complete.
 
-If you use your own ClusterRole for Metacontroller, it must permit the `patch`
-verb on `compositecontrollers` and `decoratorcontrollers`. Without it, a
-CompositeController that has a `finalize` hook does not start.
+If you use your own ClusterRole for Metacontroller, it must permit these
+operations for the cleanup:
+
+- `patch` on `compositecontrollers` and `decoratorcontrollers`
+  (`metacontroller.k8s.io`). Without it, a CompositeController that has a
+  `finalize` hook does not start.
+- `list` and `update` on the parent resources.
+- `get` on `customresourcedefinitions` (`apiextensions.k8s.io`) and on
+  `apiservices` (`apiregistration.k8s.io`). Metacontroller uses them only when
+  a parent resource is not in the discovery data.
+
+Without these permissions, the CompositeController stays pending deletion, and
+Metacontroller records a `SyncError` event on it.
 
 The semantics of the `finalize` hook are mostly equivalent to those of
 the [`sync` hook](#sync-hook).

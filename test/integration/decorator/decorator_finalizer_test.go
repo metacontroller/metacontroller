@@ -108,7 +108,7 @@ func TestFinalizerRemovedWhenDecoratorControllerIsNotInOperation(t *testing.T) {
 }
 
 // TestFinalizerRemovedWhenDecoratorControllerParentAPIDoesNotExist tests that a
-// DecoratorController whose parent resource does not exist can be deleted.
+// DecoratorController whose parent API does not exist can be deleted.
 func TestFinalizerRemovedWhenDecoratorControllerParentAPIDoesNotExist(t *testing.T) {
 	name := "finalizer-cleanup-no-api"
 

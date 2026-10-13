@@ -26,14 +26,14 @@ import (
 )
 
 // parentFinalizerName returns the name of the finalizer that the
-// DecoratorController with the given name puts on its parent objects.
+// DecoratorController with the given name adds to its parent objects.
 func parentFinalizerName(controllerName string) string {
 	return "metacontroller.io/decoratorcontroller-" + controllerName
 }
 
-// ensureControllerFinalizer puts finalizer.ControllerFinalizer on a
-// DecoratorController that has a finalize hook. Only such a controller puts a
-// finalizer on its parent objects.
+// ensureControllerFinalizer adds finalizer.ControllerFinalizer to a
+// DecoratorController that has a finalize hook. Only such a controller adds a
+// finalizer to its parent objects.
 func (mc *Metacontroller) ensureControllerFinalizer(ctx context.Context, dc *v1alpha1.DecoratorController) error {
 	if dc.Spec.Hooks == nil || dc.Spec.Hooks.Finalize == nil {
 		return nil
@@ -41,8 +41,8 @@ func (mc *Metacontroller) ensureControllerFinalizer(ctx context.Context, dc *v1a
 	return finalizer.EnsureControllerFinalizer(ctx, mc.k8sClient, dc)
 }
 
-// finalizeDecoratorController does the work for a DecoratorController that is pending
-// deletion. See finalizer.ControllerCleaner for the procedure.
+// finalizeDecoratorController does the cleanup for a DecoratorController that is
+// pending deletion. See finalizer.ControllerCleaner.Finalize.
 func (mc *Metacontroller) finalizeDecoratorController(ctx context.Context, dc *v1alpha1.DecoratorController) (reconcile.Result, error) {
 	cleaner := &finalizer.ControllerCleaner{
 		K8sClient:     mc.k8sClient,

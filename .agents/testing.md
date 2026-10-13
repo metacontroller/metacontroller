@@ -38,7 +38,14 @@ cd test/integration && PATH="$PWD/hack/bin:$PATH" \
 
 ## UNIT TESTS
 - Name: `Test<Func>_when<Condition>_<expected>`, for example
-  `TestResolveCABundle_whenSecretRefKeyNotFound_returnsError`.
+  `TestResolveCABundle_whenSecretRefKeyNotFound_returnsError`. This is the
+  given-when-then format: `<Func>` is the subject, `when<Condition>` is the
+  start state or the input, and `<expected>` is the result. Start
+  `<expected>` with a verb: `returnsError`, `removesFinalizer`, `isNotDone`.
+  Some old tests use other names. Do not rename them only to change the style.
+- Body: put the setup, the call, and the assertions in three blocks. Put one
+  empty line between the blocks. See
+  `pkg/controller/common/finalizer/cleanup_test.go`.
 - Assertions: `github.com/stretchr/testify` and `github.com/google/go-cmp`.
 - Shared fakes and builders: `pkg/internal/testutils/{common,dynamic,hooks}`.
   Use them before you write a new fake.
@@ -84,6 +91,10 @@ err := f.Wait(func() (bool, error) { /* poll until the expected state */ })
 ```
 
 Rules:
+- Name a new test in the given-when-then format of unit tests:
+  `Test<Feature>_when<Condition>_<expected>`. `<Feature>` is the behavior
+  that the test examines, not a function. For example:
+  `TestFinalizerCleanup_whenControllerIsDeleted_removesParentFinalizers`.
 - Use a namespace and CRD kinds that are unique for each test. All tests in
   a suite share one apiserver.
 - Poll with `f.Wait`. Do not use `time.Sleep`.

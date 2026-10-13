@@ -26,14 +26,14 @@ import (
 )
 
 // parentFinalizerName returns the name of the finalizer that the
-// CompositeController with the given name puts on its parent objects.
+// CompositeController with the given name adds to its parent objects.
 func parentFinalizerName(controllerName string) string {
 	return "metacontroller.io/compositecontroller-" + controllerName
 }
 
-// ensureControllerFinalizer puts finalizer.ControllerFinalizer on a
-// CompositeController that has a finalize hook. Only such a controller puts a
-// finalizer on its parent objects.
+// ensureControllerFinalizer adds finalizer.ControllerFinalizer to a
+// CompositeController that has a finalize hook. Only such a controller adds a
+// finalizer to its parent objects.
 func (mc *Metacontroller) ensureControllerFinalizer(ctx context.Context, cc *v1alpha1.CompositeController) error {
 	if cc.Spec.Hooks == nil || cc.Spec.Hooks.Finalize == nil {
 		return nil
@@ -41,8 +41,8 @@ func (mc *Metacontroller) ensureControllerFinalizer(ctx context.Context, cc *v1a
 	return finalizer.EnsureControllerFinalizer(ctx, mc.k8sClient, cc)
 }
 
-// finalizeCompositeController does the work for a CompositeController that is pending
-// deletion. See finalizer.ControllerCleaner for the procedure.
+// finalizeCompositeController does the cleanup for a CompositeController that is
+// pending deletion. See finalizer.ControllerCleaner.Finalize.
 func (mc *Metacontroller) finalizeCompositeController(ctx context.Context, cc *v1alpha1.CompositeController) (reconcile.Result, error) {
 	cleaner := &finalizer.ControllerCleaner{
 		K8sClient:     mc.k8sClient,
