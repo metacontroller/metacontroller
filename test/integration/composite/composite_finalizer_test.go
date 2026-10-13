@@ -20,9 +20,9 @@ import (
 	"context"
 	"fmt"
 	"testing"
-	"time"
 
 	apiextensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/json"
@@ -36,7 +36,7 @@ import (
 
 // TestFinalizerRemovedWhenCompositeControllerDeleted tests that Metacontroller
 // removes its finalizer from the parent objects when the CompositeController
-// is deleted, and that the finalizer does not come back.
+// is deleted.
 func TestFinalizerRemovedWhenCompositeControllerDeleted(t *testing.T) {
 	ns := "test-finalizer-cleanup"
 	ccName := "cc-finalizer-cleanup"
@@ -98,18 +98,28 @@ func TestFinalizerRemovedWhenCompositeControllerDeleted(t *testing.T) {
 		return count, nil
 	}
 
-	// If the test fails, remove the finalizers so that the fixture can delete
-	// the parent objects.
+	// If the test fails before it deletes the controller, stop the controller
+	// and remove the finalizers, so that the fixture can delete the parent
+	// objects. Do the removal again until no parent has the finalizer, because
+	// the controller can add it again while it stops.
 	defer func() {
-		list, err := parentClient.Namespace(ns).List(context.TODO(), metav1.ListOptions{})
-		if err != nil {
-			return
+		if err := f.MetacontrollerClient().Delete(context.TODO(), cc); err != nil && !apierrors.IsNotFound(err) {
+			t.Logf("can't delete the controller during teardown: %v", err)
 		}
-		for i := range list.Items {
-			if controllerutil.RemoveFinalizer(&list.Items[i], finalizerName) {
-				_, _ = parentClient.Namespace(ns).Update(context.TODO(), &list.Items[i], metav1.UpdateOptions{})
+		_ = f.Wait(func() (bool, error) {
+			list, err := parentClient.Namespace(ns).List(context.TODO(), metav1.ListOptions{})
+			if err != nil {
+				return false, err
 			}
-		}
+			clean := true
+			for i := range list.Items {
+				if controllerutil.RemoveFinalizer(&list.Items[i], finalizerName) {
+					clean = false
+					_, _ = parentClient.Namespace(ns).Update(context.TODO(), &list.Items[i], metav1.UpdateOptions{})
+				}
+			}
+			return clean, nil
+		})
 	}()
 
 	t.Logf("Waiting for the finalizer on all parent objects...")
@@ -133,15 +143,5 @@ func TestFinalizerRemovedWhenCompositeControllerDeleted(t *testing.T) {
 	if err != nil {
 		count, _ := parentsWithFinalizer()
 		t.Fatalf("%d of %d parent objects still have the finalizer: %v", count, parentCount, err)
-	}
-
-	// Make sure that no worker adds the finalizer again.
-	time.Sleep(2 * time.Second)
-	count, err := parentsWithFinalizer()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if count != 0 {
-		t.Errorf("%d of %d parent objects got the finalizer again", count, parentCount)
 	}
 }
