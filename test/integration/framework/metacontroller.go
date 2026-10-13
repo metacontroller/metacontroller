@@ -404,6 +404,22 @@ func (f *Fixture) CreateDecoratorControllerWithEndpointConfigs(
 // CreateDecoratorController generates a test DecoratorController and installs
 // it in the test API server.
 func (f *Fixture) CreateDecoratorController(name, syncHookURL, customizeHookUrl string, parentRule, childRule *v1alpha1.ResourceRule, labels *map[string]string) *v1alpha1.DecoratorController {
+	parentResource := v1alpha1.DecoratorControllerResourceRule{ResourceRule: *parentRule}
+	return f.createDecoratorController(name, syncHookURL, customizeHookUrl, parentResource, childRule, labels)
+}
+
+// CreateDecoratorControllerWithAnnotationSelector generates a test
+// DecoratorController with an annotationSelector on the parent resource rule
+// and installs it in the test API server.
+func (f *Fixture) CreateDecoratorControllerWithAnnotationSelector(name, syncHookURL, customizeHookUrl string, annotationSelector *v1alpha1.AnnotationSelector, parentRule, childRule *v1alpha1.ResourceRule) *v1alpha1.DecoratorController {
+	parentResource := v1alpha1.DecoratorControllerResourceRule{
+		ResourceRule:       *parentRule,
+		AnnotationSelector: annotationSelector,
+	}
+	return f.createDecoratorController(name, syncHookURL, customizeHookUrl, parentResource, childRule, nil)
+}
+
+func (f *Fixture) createDecoratorController(name, syncHookURL, customizeHookUrl string, parentResource v1alpha1.DecoratorControllerResourceRule, childRule *v1alpha1.ResourceRule, labels *map[string]string) *v1alpha1.DecoratorController {
 	childResources := []v1alpha1.DecoratorControllerAttachmentRule{}
 	if childRule != nil {
 		childResources = append(childResources, v1alpha1.DecoratorControllerAttachmentRule{ResourceRule: *childRule})
@@ -428,12 +444,8 @@ func (f *Fixture) CreateDecoratorController(name, syncHookURL, customizeHookUrl 
 		Spec: v1alpha1.DecoratorControllerSpec{
 			// Set a big resyncPeriod so tests can precisely control when syncs happen.
 			ResyncPeriodSeconds: ptr.To[int32](3600),
-			Resources: []v1alpha1.DecoratorControllerResourceRule{
-				{
-					ResourceRule: *parentRule,
-				},
-			},
-			Attachments: childResources,
+			Resources:           []v1alpha1.DecoratorControllerResourceRule{parentResource},
+			Attachments:         childResources,
 			Hooks: &v1alpha1.DecoratorControllerHooks{
 				Sync: &v1alpha1.Hook{
 					Webhook: &v1alpha1.Webhook{

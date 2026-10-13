@@ -21,6 +21,8 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"slices"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -30,9 +32,11 @@ import (
 
 	"metacontroller/pkg/apis/metacontroller/v1alpha1"
 	"metacontroller/pkg/controller/common"
+	"metacontroller/pkg/controller/common/api"
 	dynamicclientset "metacontroller/pkg/dynamic/clientset"
 	dynamicdiscovery "metacontroller/pkg/dynamic/discovery"
 	dynamicinformer "metacontroller/pkg/dynamic/informer"
+	"metacontroller/pkg/hooks"
 
 	"metacontroller/pkg/internal/testutils/dynamic/discovery"
 	. "metacontroller/pkg/internal/testutils/hooks"
@@ -58,6 +62,8 @@ const (
 	someNS               = "some-ns"
 	resourceSecrets      = "secrets"
 	kindSecret           = "Secret"
+	resourceConfigMaps   = "configmaps"
+	kindConfigMap        = "ConfigMap"
 	resourceNamespaces   = "namespaces"
 	rbacAPIVersion       = "rbac.authorization.k8s.io/v1"
 	resourceClusterRoles = "clusterroles"
@@ -84,6 +90,7 @@ var customizeManagerWithNilController, _ = NewCustomizeManager(
 	context.TODO(),
 	"test",
 	fakeEnqueueParent,
+	nil,
 	&NilCustomizableController{},
 	&dynClient,
 	&dynInformers,
@@ -98,6 +105,7 @@ var customizeManagerWithFakeController, _ = NewCustomizeManager(
 	context.TODO(),
 	"test",
 	fakeEnqueueParent,
+	nil,
 	&FakeCustomizableController{},
 	&dynClient,
 	&dynInformers,
@@ -734,6 +742,152 @@ func Test_matchRelatedRule(t *testing.T) {
 			}
 			if matches != tt.wantMatch {
 				t.Errorf("Expected match: %v, actual match: %v", tt.wantMatch, matches)
+			}
+		})
+	}
+}
+
+// countingHookExecutorStub counts the calls to the hook that it wraps.
+type countingHookExecutorStub struct {
+	hooks.Hook
+	calls atomic.Int32
+}
+
+func (h *countingHookExecutorStub) Call(ctx context.Context, request api.WebhookRequest, response interface{}) error {
+	h.calls.Add(1)
+	return h.Hook.Call(ctx, request, response)
+}
+
+// Test_findRelatedParents makes sure that the customize webhook is called
+// only for parents that satisfy matchesParent. If matchesParent is nil, the
+// webhook is called for all parents.
+func Test_findRelatedParents(t *testing.T) {
+	const (
+		selectorAnnotation    = "transform"
+		matchingParentName    = "matching-secret"
+		nonMatchingParentName = "non-matching-secret"
+	)
+
+	// Setup fake discovery
+	simple := fakeclientset.NewClientset()
+	fakeDiscovery := simple.Discovery().(*fakediscovery.FakeDiscovery)
+	fakeDiscovery.Resources = []*metav1.APIResourceList{
+		{
+			GroupVersion: "v1",
+			APIResources: []metav1.APIResource{
+				{Name: resourceSecrets, Kind: kindSecret, Namespaced: true, Group: "", Version: "v1", Verbs: []string{"get", "list", "watch"}},
+				{Name: resourceConfigMaps, Kind: kindConfigMap, Namespaced: true, Group: "", Version: "v1", Verbs: []string{"get", "list", "watch"}},
+			},
+		},
+	}
+	resourceMap := discovery.NewFakeResourceMap(simple)
+
+	// Create parent objects. Only the first one has the annotation.
+	matchingParent := &unstructured.Unstructured{}
+	matchingParent.SetAPIVersion("v1")
+	matchingParent.SetKind(kindSecret)
+	matchingParent.SetNamespace(someNS)
+	matchingParent.SetName(matchingParentName)
+	matchingParent.SetUID("matching-uid")
+	matchingParent.SetAnnotations(map[string]string{selectorAnnotation: "true"})
+
+	nonMatchingParent := &unstructured.Unstructured{}
+	nonMatchingParent.SetAPIVersion("v1")
+	nonMatchingParent.SetKind(kindSecret)
+	nonMatchingParent.SetNamespace(someNS)
+	nonMatchingParent.SetName(nonMatchingParentName)
+	nonMatchingParent.SetUID("non-matching-uid")
+
+	// Setup fake dynamic client
+	scheme := runtime.NewScheme()
+	fakeDynClient := fake.NewSimpleDynamicClientWithCustomListKinds(scheme, map[schema.GroupVersionResource]string{
+		{Group: "", Version: "v1", Resource: resourceSecrets}: "SecretList",
+	}, matchingParent, nonMatchingParent)
+	dynClient := dynamicclientset.NewClientset(&rest.Config{}, resourceMap, fakeDynClient)
+
+	// Setup parent informer and wait for sync
+	dynInformers := dynamicinformer.NewSharedInformerFactory(dynClient, 0)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	parentInformer, err := dynInformers.Resource(ctx, "v1", resourceSecrets)
+	if err != nil {
+		t.Fatalf("can't create parent informer: %v", err)
+	}
+	defer parentInformer.Close()
+	if !waitForSync(ctx, parentInformer) {
+		t.Fatal("timed out waiting for parent informer sync")
+	}
+
+	parentInformers := common.NewInformerMap()
+	parentInformers.Set(schema.GroupVersionResource{Group: "", Version: "v1", Resource: resourceSecrets}, parentInformer)
+
+	parentKinds := common.NewGroupKindMap()
+	parentKinds.Set(schema.GroupKind{Group: "", Kind: kindSecret}, &dynamicdiscovery.APIResource{
+		APIResource: metav1.APIResource{Name: resourceSecrets, Namespaced: true, Kind: kindSecret, Group: "", Version: "v1"},
+	})
+
+	// Setup customize hook response. The rule selects all ConfigMaps.
+	customizeResponse := &v1.CustomizeHookResponse{
+		Version: v1alpha1.HookVersionV1,
+		RelatedResourceRules: []*v1alpha1.RelatedResourceRule{{
+			ResourceRule:  v1alpha1.ResourceRule{APIVersion: "v1", Resource: resourceConfigMaps},
+			LabelSelector: &metav1.LabelSelector{},
+		}},
+	}
+
+	// Create related object
+	relatedConfigMap := &unstructured.Unstructured{}
+	relatedConfigMap.SetAPIVersion("v1")
+	relatedConfigMap.SetKind(kindConfigMap)
+	relatedConfigMap.SetNamespace(someNS)
+	relatedConfigMap.SetName("some-configmap")
+
+	tests := []struct {
+		name          string
+		matchesParent func(*unstructured.Unstructured) bool
+		wantParents   []string
+	}{
+		{
+			name: "selector filters out non-matching parent",
+			matchesParent: func(parent *unstructured.Unstructured) bool {
+				return parent.GetAnnotations()[selectorAnnotation] == "true"
+			},
+			wantParents: []string{matchingParentName},
+		},
+		{
+			name:          "nil matchesParent considers every parent",
+			matchesParent: nil,
+			wantParents:   []string{matchingParentName, nonMatchingParentName},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			customizeHook := &countingHookExecutorStub{Hook: NewHookExecutorStub(customizeResponse)}
+			rm := &Manager{
+				parentKinds:      parentKinds,
+				dynClient:        dynClient,
+				dynInformers:     dynInformers,
+				parentInformers:  parentInformers,
+				relatedInformers: common.NewInformerMap(),
+				customizeCache:   newResponseCache(),
+				customizeHook:    customizeHook,
+				matchesParent:    tt.matchesParent,
+				logger:           fakeLogger,
+				ctx:              ctx,
+			}
+
+			matches := rm.findRelatedParents(relatedConfigMap)
+
+			if got, want := int(customizeHook.calls.Load()), len(tt.wantParents); got != want {
+				t.Errorf("expected customize hook to be called %d time(s), got %d", want, got)
+			}
+			gotParents := make([]string, 0, len(matches))
+			for _, match := range matches {
+				gotParents = append(gotParents, match.GetName())
+			}
+			slices.Sort(gotParents)
+			if !slices.Equal(gotParents, tt.wantParents) {
+				t.Errorf("expected related parents %v, got %v", tt.wantParents, gotParents)
 			}
 		})
 	}

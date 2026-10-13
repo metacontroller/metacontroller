@@ -75,7 +75,7 @@ func (pc *parentController) determineHookToCall(parent *unstructured.Unstructure
 // shouldCallFinalizeHook determines if finalize hook should be called
 func (pc *parentController) shouldCallFinalizeHook(parent *unstructured.Unstructured) bool {
 	return pc.finalizeHook.IsEnabled() &&
-		(parent.GetDeletionTimestamp() != nil || pc.doNotMatchLabels(parent.GetLabels()))
+		(parent.GetDeletionTimestamp() != nil || !pc.matchesLabels(parent.GetLabels()))
 }
 
 // buildHookRequest creates the appropriate webhook request based on hook version

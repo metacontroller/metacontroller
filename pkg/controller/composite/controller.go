@@ -225,6 +225,7 @@ func newParentController(
 		ctx,
 		cc.Name,
 		pc.enqueueParentObject,
+		pc.matchesParent,
 		cc,
 		dynClient,
 		dynInformers,
@@ -386,7 +387,7 @@ func (pc *parentController) enqueueParentObject(obj interface{}) {
 	// If the parent doesn't match our selector, and it doesn't have our
 	// finalizer, we don't care about it.
 	if parent, ok := obj.(*unstructured.Unstructured); ok {
-		if !controllerutil.ContainsFinalizer(parent, pc.finalizer.Name) && pc.doNotMatchLabels(parent.GetLabels()) {
+		if !pc.matchesParent(parent) {
 			return
 		}
 	}
@@ -463,7 +464,7 @@ func (pc *parentController) resolveControllerRef(childNamespace string, controll
 		// ControllerRef points to.
 		return nil
 	}
-	if !controllerutil.ContainsFinalizer(parent, pc.finalizer.Name) && pc.doNotMatchLabels(parent.GetLabels()) {
+	if !pc.matchesParent(parent) {
 		// If the parent doesn't match our selector and doesn't have our finalizer,
 		// we don't care about it.
 		return nil
@@ -626,7 +627,7 @@ func (pc *parentController) syncParentObject(ctx context.Context, parent *unstru
 
 	// If the parent doesn't match our selector, and it doesn't have our
 	// finalizer, we don't care about it.
-	if !controllerutil.ContainsFinalizer(parent, pc.finalizer.Name) && pc.doNotMatchLabels(parent.GetLabels()) {
+	if !pc.matchesParent(parent) {
 		return nil
 	}
 
@@ -640,7 +641,7 @@ func (pc *parentController) syncParentObject(ctx context.Context, parent *unstru
 	parent = updatedParent
 
 	// Check the finalizer again in case we just removed it.
-	if !controllerutil.ContainsFinalizer(parent, pc.finalizer.Name) && pc.doNotMatchLabels(parent.GetLabels()) {
+	if !pc.matchesParent(parent) {
 		return nil
 	}
 
@@ -898,6 +899,13 @@ func (pc *parentController) updateParentStatus(ctx context.Context, parent *unst
 	})
 }
 
-func (pc *parentController) doNotMatchLabels(labelsMap map[string]string) bool {
-	return pc.parentSelector != nil && !pc.parentSelector.Matches(labels.Set(labelsMap))
+// matchesParent tells if this controller must handle the parent. The parent
+// must satisfy our label selector or have our finalizer. The finalizer lets
+// us clean up a parent that no longer satisfies the selector.
+func (pc *parentController) matchesParent(parent *unstructured.Unstructured) bool {
+	return pc.matchesLabels(parent.GetLabels()) || controllerutil.ContainsFinalizer(parent, pc.finalizer.Name)
+}
+
+func (pc *parentController) matchesLabels(labelsMap map[string]string) bool {
+	return pc.parentSelector == nil || pc.parentSelector.Matches(labels.Set(labelsMap))
 }

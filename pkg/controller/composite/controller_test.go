@@ -43,6 +43,8 @@ import (
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic/fake"
@@ -58,6 +60,7 @@ func defaultCustomizeManager() *customize.Manager {
 		context.TODO(),
 		"name",
 		func(obj interface{}) {},
+		nil,
 		&NilCustomizableController{},
 		&dynamicclientset.Clientset{},
 		&dynamicinformer.SharedInformerFactory{},
@@ -359,4 +362,67 @@ func Test_parentController_sync_requeue_item_when_hook_throw_TooManyRequestError
 	pc.queue.Add(defaultTestKey)
 	pc.processNextWorkItem(context.TODO())
 	assert.Equal(t, 1, pc.queue.Len())
+}
+
+func Test_parentController_matchesParent(t *testing.T) {
+	const finalizerName = "metacontroller.io/compositecontroller-test"
+
+	selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
+		MatchLabels: map[string]string{"transform": "true"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		name       string
+		selector   labels.Selector
+		labels     map[string]string
+		finalizers []string
+		want       bool
+	}{
+		{
+			name:     "matches selector",
+			selector: selector,
+			labels:   map[string]string{"transform": "true"},
+			want:     true,
+		},
+		{
+			name:     "does not match selector",
+			selector: selector,
+			want:     false,
+		},
+		{
+			name:       "does not match selector but has our finalizer",
+			selector:   selector,
+			finalizers: []string{finalizerName},
+			want:       true,
+		},
+		{
+			name:       "does not match selector and has other finalizer",
+			selector:   selector,
+			finalizers: []string{"other"},
+			want:       false,
+		},
+		{
+			name:     "nil selector matches every parent",
+			selector: nil,
+			want:     true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			pc := &parentController{
+				parentSelector: tt.selector,
+				finalizer:      finalizer.NewManager(finalizerName, true),
+			}
+			parent := &unstructured.Unstructured{}
+			parent.SetLabels(tt.labels)
+			parent.SetFinalizers(tt.finalizers)
+
+			if got := pc.matchesParent(parent); got != tt.want {
+				t.Errorf("matchesParent() = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }

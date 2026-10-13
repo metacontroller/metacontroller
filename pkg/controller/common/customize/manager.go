@@ -86,6 +86,10 @@ type Manager struct {
 
 	enqueueParent func(interface{})
 
+	// matchesParent tells if a parent object satisfies the selector of the
+	// controller. If it is nil, all parents match.
+	matchesParent func(*unstructured.Unstructured) bool
+
 	customizeHook hooks.Hook
 
 	logger logr.Logger
@@ -105,6 +109,7 @@ func NewCustomizeManager(
 	ctx context.Context,
 	name string,
 	enqueueParent func(interface{}),
+	matchesParent func(*unstructured.Unstructured) bool,
 	controller v1alpha1.CustomizableController,
 	dynClient *dynamicclientset.Clientset,
 	dynInformers *dynamicinformer.SharedInformerFactory,
@@ -158,6 +163,7 @@ func NewCustomizeManager(
 		relatedInformers: common.NewInformerMap(),
 		nsInformer:       nsInformer,
 		enqueueParent:    enqueueParent,
+		matchesParent:    matchesParent,
 		customizeHook:    hook,
 		logger:           logger,
 		ctx:              ctx,
@@ -361,6 +367,12 @@ func (rm *Manager) findRelatedParents(relatedSlice ...*unstructured.Unstructured
 
 	MATCHPARENTS:
 		for _, parent := range parents {
+			if rm.matchesParent != nil && !rm.matchesParent(parent) {
+				// Do not call the customize webhook for a parent that the
+				// controller does not select.
+				continue
+			}
+
 			customizeHookResponse, err := rm.getCustomizeHookResponse(rm.ctx, parent)
 			if err != nil || customizeHookResponse == nil {
 				// skip for now, the informer relist interval will try again later.

@@ -2,6 +2,7 @@
 /vendor/
 /metacontroller
 **/hack/bin/
+/test/integration/bin/
 .*.swp
 .*.swo
 .history

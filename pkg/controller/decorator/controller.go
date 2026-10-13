@@ -159,10 +159,16 @@ func newDecoratorController(
 		ctx:          ctx,
 	}
 
+	c.parentSelector, err = newDecoratorSelector(resources, dc)
+	if err != nil {
+		return nil, err
+	}
+
 	customize, err := customize.NewCustomizeManager(
 		ctx,
 		dc.Name,
 		c.enqueueParentObject,
+		c.matchesParent,
 		dc,
 		dynClient,
 		dynInformers,
@@ -176,11 +182,6 @@ func newDecoratorController(
 		return nil, err
 	}
 	c.customize = customize
-
-	c.parentSelector, err = newDecoratorSelector(resources, dc)
-	if err != nil {
-		return nil, err
-	}
 
 	// Keep a list of parent resource info from discovery.
 	for _, parent := range dc.Spec.Resources {
@@ -388,11 +389,18 @@ func (c *decoratorController) processNextWorkItem(ctx context.Context) bool {
 	return true
 }
 
+// matchesParent tells if this controller must handle the parent. The parent
+// must satisfy our label and annotation selectors or have our finalizer. The
+// finalizer lets us clean up a parent that no longer satisfies the selectors.
+func (c *decoratorController) matchesParent(parent *unstructured.Unstructured) bool {
+	return c.parentSelector.Matches(parent) || controllerutil.ContainsFinalizer(parent, c.finalizer.Name)
+}
+
 func (c *decoratorController) enqueueParentObject(obj interface{}) {
 	// If the parent doesn't match our selector, and it doesn't have our
 	// finalizer, we don't care about it.
 	if parent, ok := obj.(*unstructured.Unstructured); ok {
-		if !c.parentSelector.Matches(parent) && !controllerutil.ContainsFinalizer(parent, c.finalizer.Name) {
+		if !c.matchesParent(parent) {
 			return
 		}
 	}
@@ -485,7 +493,7 @@ func (c *decoratorController) resolveControllerRef(childNamespace string, contro
 		// ControllerRef points to.
 		return nil
 	}
-	if !c.parentSelector.Matches(parent) && !controllerutil.ContainsFinalizer(parent, c.finalizer.Name) {
+	if !c.matchesParent(parent) {
 		// If the parent doesn't match our selector and doesn't have our finalizer,
 		// we don't care about it.
 		return nil
@@ -618,7 +626,7 @@ func (c *decoratorController) syncParentObject(ctx context.Context, parent *unst
 	}
 
 	// If it doesn't match our selector, and it doesn't have our finalizer, ignore it.
-	if !c.parentSelector.Matches(parent) && !controllerutil.ContainsFinalizer(parent, c.finalizer.Name) {
+	if !c.matchesParent(parent) {
 		return nil
 	}
 
@@ -639,7 +647,7 @@ func (c *decoratorController) syncParentObject(ctx context.Context, parent *unst
 	parent = updatedParent
 
 	// Check the finalizer again in case we just removed it.
-	if !c.parentSelector.Matches(parent) && !controllerutil.ContainsFinalizer(parent, c.finalizer.Name) {
+	if !c.matchesParent(parent) {
 		return nil
 	}
 
