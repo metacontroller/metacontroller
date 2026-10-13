@@ -28,7 +28,7 @@ import (
 )
 
 type Interface interface {
-	Discovery() discovery.DiscoveryInterface
+	Discovery() discovery.DiscoveryInterfaces
 	MetacontrollerV1alpha1() metacontrollerv1alpha1.MetacontrollerV1alpha1Interface
 }
 
@@ -44,7 +44,7 @@ func (c *Clientset) MetacontrollerV1alpha1() metacontrollerv1alpha1.Metacontroll
 }
 
 // Discovery retrieves the DiscoveryClient
-func (c *Clientset) Discovery() discovery.DiscoveryInterface {
+func (c *Clientset) Discovery() discovery.DiscoveryInterfaces {
 	if c == nil {
 		return nil
 	}
