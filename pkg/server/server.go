@@ -73,9 +73,12 @@ func New(ctx context.Context, configuration options.Configuration) (controllerru
 	mgr, err := controllerruntime.NewManager(configuration.RestConfig, manager.Options{
 		// Disables serving built-in metrics.
 		// We already start a standalone metrics server in parallel to the manager.
-		Metrics:                    server.Options{BindAddress: configuration.MetricsEndpoint},
-		HealthProbeBindAddress:     configuration.HealthProbeBindAddress,
-		EventBroadcaster:           controllerContext.Broadcaster,
+		Metrics:                server.Options{BindAddress: configuration.MetricsEndpoint},
+		HealthProbeBindAddress: configuration.HealthProbeBindAddress,
+		// Deprecated in controller-runtime because of possible goroutine leaks when the manager
+		// lives shorter than the process. Our manager lives as long as the process, and there is
+		// no other option to set the custom event correlator options.
+		EventBroadcaster:           controllerContext.Broadcaster, //nolint:staticcheck
 		LeaderElection:             configuration.LeaderElectionOptions.LeaderElection,
 		LeaderElectionResourceLock: configuration.LeaderElectionOptions.LeaderElectionResourceLock,
 		LeaderElectionNamespace:    configuration.LeaderElectionOptions.LeaderElectionNamespace,
