@@ -205,14 +205,14 @@ type sharedResourceInformer struct {
 	close func()
 }
 
-func newSharedResourceInformer(ctx context.Context, client *dynamicclientset.ResourceClient, defaultResyncPeriod time.Duration, close func()) (*sharedResourceInformer, error) {
+func newSharedResourceInformer(client *dynamicclientset.ResourceClient, defaultResyncPeriod time.Duration, close func()) (*sharedResourceInformer, error) {
 	informer := cache.NewSharedIndexInformer(
 		cache.ToListWatcherWithWatchListSemantics(
 			&cache.ListWatch{
-				ListFunc: func(opts metav1.ListOptions) (runtime.Object, error) {
+				ListWithContextFunc: func(ctx context.Context, opts metav1.ListOptions) (runtime.Object, error) {
 					return client.List(ctx, opts)
 				},
-				WatchFunc: func(opts metav1.ListOptions) (watch.Interface, error) {
+				WatchFuncWithContext: func(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 					return client.Watch(ctx, opts)
 				},
 			},
