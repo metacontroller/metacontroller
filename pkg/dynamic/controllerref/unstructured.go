@@ -83,9 +83,13 @@ func (m *UnstructuredManager) ClaimChildren(ctx context.Context, children []*uns
 
 func atomicUpdate(ctx context.Context, rc *dynamicclientset.ResourceClient, obj *unstructured.Unstructured, updateFunc func(obj *unstructured.Unstructured) bool) error {
 	// We can't use strategic merge patch because we want this to work with custom resources.
-	// We can't use merge patch because that would replace the whole list.
 	// We can't use JSON patch ops because that wouldn't be idempotent.
-	// The only option is GET/PUT with ResourceVersion.
+	// AtomicUpdate sends a JSON merge patch when the change only touches
+	// metadata fields (labels, annotations, finalizers, ownerReferences):
+	// the patch always carries the full new list for list-typed fields,
+	// built from a fresh live GET, and includes the live resourceVersion so
+	// concurrent changes are rejected with a conflict, which gives the same
+	// safety as GET/PUT. Anything else falls back to a full PUT.
 	_, err := rc.Namespace(obj.GetNamespace()).AtomicUpdate(ctx, obj, updateFunc)
 	return err
 }

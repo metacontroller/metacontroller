@@ -18,6 +18,7 @@ package decorator
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"reflect"
@@ -48,6 +49,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/cache"
@@ -726,8 +728,44 @@ func (c *decoratorController) syncParentObject(ctx context.Context, parent *unst
 			controllerutil.RemoveFinalizer(updatedParent, c.finalizer.Name)
 		}
 
-		c.logger.V(4).Info("DecoratorController updating", "controller", c.dc, "parent", parent)
-		_, err = parentClient.Namespace(parent.GetNamespace()).Update(ctx, updatedParent, metav1.UpdateOptions{})
+		// DecoratorController hooks can only change the parent's labels,
+		// annotations, finalizers and status. Apply those with a metadata-only
+		// patch rather than a full object update: a full update round-trips
+		// the object's spec through mutating admission webhooks, where webhook
+		// configurations that inject content on UPDATE (e.g. sidecar
+		// injection into pods) would otherwise reject the write by trying to
+		// mutate immutable spec fields — wedging the parent forever, since a
+		// hook that set our finalizer needs this write to succeed in order to
+		// remove it. The resourceVersion is included so optimistic
+		// concurrency conflicts are still detected.
+		// The merge patch carries diffs with explicit null entries for keys
+		// the hook removed (labels/annotations/status), so applying the
+		// patch deletes them exactly like the full update this replaces;
+		// finalizers are arrays, which a merge patch replaces wholesale.
+		patchMetadata := map[string]interface{}{}
+		if labelsChanged {
+			patchMetadata["labels"] = dynamicclientset.StringMapMergePatchValue(parent.GetLabels(), updatedParent.GetLabels())
+		}
+		if annotationsChanged {
+			patchMetadata["annotations"] = dynamicclientset.StringMapMergePatchValue(parent.GetAnnotations(), updatedParent.GetAnnotations())
+		}
+		if syncResult.Finalized {
+			patchMetadata["finalizers"] = updatedParent.GetFinalizers()
+		}
+		patchMetadata["resourceVersion"] = updatedParent.GetResourceVersion()
+		patch := map[string]interface{}{"metadata": patchMetadata}
+		if statusChanged && !parentClient.HasSubresource("status") {
+			// Objects without a status subresource carry their status in the
+			// main object, so it travels as a top-level field of the patch,
+			// not under metadata.
+			patch["status"] = dynamicclientset.MergePatchValue(parentStatus, syncResult.Status)
+		}
+		mergePatch, err := json.Marshal(patch)
+		if err != nil {
+			return err
+		}
+		c.logger.V(4).Info("DecoratorController patching", "controller", c.dc, "parent", parent)
+		_, err = parentClient.Namespace(parent.GetNamespace()).Patch(ctx, parent.GetName(), types.MergePatchType, mergePatch, metav1.PatchOptions{})
 		if err != nil {
 			if apierrors.IsNotFound(err) {
 				// Swallow the error since there's no point retrying if the parent is gone.
@@ -738,7 +776,7 @@ func (c *decoratorController) syncParentObject(ctx context.Context, parent *unst
 				c.logger.V(4).Info("DecoratorController ignoring update due to outdated resourceVersion", "controller", c.dc, "parent", parent)
 				return nil
 			}
-			return fmt.Errorf("can't update %v %v/%v: %w", parent.GetKind(), parent.GetNamespace(), parent.GetName(), err)
+			return fmt.Errorf("can't patch %v %v/%v: %w", parent.GetKind(), parent.GetNamespace(), parent.GetName(), err)
 		}
 	}
 
