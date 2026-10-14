@@ -100,7 +100,11 @@ for test in */test.sh; do
   testDirectory="$(dirname "${test}")"
   mkdir "${logdir}/${testDirectory}"
   metacontrollerLogFile="${logdir}/${test}-metacontroller.txt"
-  kubectl logs metacontroller-0 --follow -n metacontroller > "${metacontrollerLogFile}" &
+  # Metacontroller runs as a Deployment, so its Pod names are generated and can
+  # change during a rollout. Follow the logs of every matching Pod instead of
+  # assuming a fixed Pod name.
+  kubectl logs -l app.kubernetes.io/name=metacontroller -n metacontroller \
+    --follow --max-log-requests=10 --tail=-1 > "${metacontrollerLogFile}" 2>/dev/null &
   serverPID=$!
   testLogFile="${logdir}/${test}.txt"
   start=$SECONDS
