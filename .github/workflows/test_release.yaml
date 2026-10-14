@@ -63,8 +63,8 @@ jobs:
         name: setconfigmatrix
         # assume that kind-matrix-config.json is in ascending order and the latest version is the last element
         run: |
-          full_json=$(cat ./.github/config/kind-matrix-config.json | jq -rc .)
-          latest_json=$(cat ./.github/config/kind-matrix-config.json  | jq -rc '.configuration |= [last]')
+          full_json=$(jq -rc . ./.github/config/kind-matrix-config.json)
+          latest_json=$(jq -rc '.configuration |= [last]' ./.github/config/kind-matrix-config.json)
           {
             echo 'matrix<<EOF'
             echo "${full_json}"
