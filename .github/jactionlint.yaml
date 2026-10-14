@@ -1,0 +1,6 @@
+---
+# Configuration of jactionlint. See https://jactionlint.jdx.dev/config.
+# The "correctness" profile does the same checks as actionlint, plus the bug
+# detectors of jactionlint. It does not include the security and policy rules
+# of the "default" profile.
+profile: correctness

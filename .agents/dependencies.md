@@ -14,7 +14,7 @@ update by hand, or when you complete a Renovate PR that needs more work.
 | Test apiserver and etcd | `KUBE_VERSION`, `ETCD_VERSION` in `test/integration/hack/get-kube-binaries.sh` | binaries are cached in `test/integration/hack/bin/` |
 | e2e Kubernetes versions | `.github/config/kind-matrix-config.json` | ascending order; the last entry is used for the Helm tests |
 | Release tooling (npm) | `package.json`, `package-lock.json` | semantic-release only; not part of the binary |
-| GitHub Actions | `.github/workflows/*.yaml` | `actionlint` checks them in CI |
+| GitHub Actions | `.github/workflows/*.yaml` | `jactionlint` checks them in CI (config: `.github/jactionlint.yaml`) |
 
 ## PROCEDURE: ONE GO MODULE
 1. In the repo root: `go get <module>@<version>`, then `go mod tidy`.

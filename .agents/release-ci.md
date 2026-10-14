@@ -31,7 +31,7 @@ Technical English. See WRITING STYLE in [AGENTS.md](../AGENTS.md).
 ## CI WORKFLOWS (`.github/workflows/`)
 | File | Trigger | Jobs |
 |------|---------|------|
-| `static.yaml` | pull request | golangci-lint, actionlint, image build, trivy, dockle, mdbook build, nancy |
+| `static.yaml` | pull request | golangci-lint, jactionlint, image build, trivy, dockle, mdbook build, nancy |
 | `test_release.yaml` | pull request, push to `master` | image build (dev, debug), `make unit-test`, `make integration-test`, e2e on kind (matrix), helm `ct lint-and-install`, release |
 | `master-static.yaml` | push to `master` | image build, trivy, dockle |
 | `helm_release.yaml` | tag `v*.*.*` | package the chart, push to `oci://ghcr.io/metacontroller` |

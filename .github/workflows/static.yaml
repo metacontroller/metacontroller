@@ -18,14 +18,21 @@ jobs:
       - uses: jdx/mise-action@v5
       - name: golangci-lint
         run: golangci-lint run --timeout 10m ./...
-  actionlint:
+  jactionlint:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pull-requests: write
     steps:
       - uses: actions/checkout@v7
-      - uses: devops-actions/actionlint@v0.1.13
+      - uses: jdx/mise-action@v5
+        with:
+          install_args: github:jdx/jactionlint shellcheck
+      - name: Find the jactionlint executable
+        id: mise
+        run: echo "jactionlint=$(mise which jactionlint)" >> "$GITHUB_OUTPUT"
+      - uses: jdx/jactionlint@v2.1.0
+        with:
+          executable: ${{ steps.mise.outputs.jactionlint }}
   docker-image-for-linting:
     runs-on: ubuntu-24.04
     steps:
