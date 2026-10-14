@@ -393,6 +393,13 @@ func (m *Manager) removeFromAll(ctx context.Context, client *dynamicclientset.Re
 			cursor.Continue, cursor.Skip = "", 0
 			return removed, false, errors.Join(errs...)
 		}
+		if apierrors.IsNotFound(listErr) {
+			// The resource does not exist, but discovery is not refreshed yet.
+			// For example, the CRD is deleted. No object can have the
+			// finalizer.
+			cursor.Continue, cursor.Skip = "", 0
+			return removed, true, errors.Join(errs...)
+		}
 		if listErr != nil {
 			errs = append(errs, fmt.Errorf("can't list %s: %w", client.Name, listErr))
 			return removed, false, errors.Join(errs...)

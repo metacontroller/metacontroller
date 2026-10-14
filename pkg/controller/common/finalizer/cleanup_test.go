@@ -198,6 +198,22 @@ func TestRemoveFromResources_whenListFails_returnsError(t *testing.T) {
 	assert.False(t, done)
 }
 
+func TestRemoveFromResources_whenListReturnsNotFound_isDone(t *testing.T) {
+	dynClient, fakeClient := newCleanupClients(newParent("a", parentFinalizer))
+	fakeClient.PrependReactor("list", "*", func(clientgotesting.Action) (bool, runtime.Object, error) {
+		return true, nil, apierrors.NewNotFound(testGVR.GroupResource(), "")
+	})
+	manager := finalizer.NewManager(parentFinalizer, true)
+	cursor := &finalizer.Cursor{Parent: testParents[0], Continue: "next"}
+
+	removed, done, err := manager.RemoveFromResources(context.TODO(), dynClient, testParents, largeBudget, cursor)
+
+	require.NoError(t, err)
+	assert.True(t, done)
+	assert.Equal(t, 0, removed)
+	assert.Equal(t, finalizer.Cursor{}, *cursor)
+}
+
 func TestRemoveFromResources_whenResourceIsNotInDiscovery_returnsError(t *testing.T) {
 	dynClient, fakeClient := newCleanupClients(newParent("a", parentFinalizer))
 	manager := finalizer.NewManager(parentFinalizer, true)
