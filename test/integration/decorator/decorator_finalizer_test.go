@@ -31,10 +31,10 @@ import (
 	"metacontroller/test/integration/framework"
 )
 
-// TestFinalizerRemovedWhenDecoratorControllerDeleted tests that Metacontroller
+// TestFinalizerCleanup_whenControllerIsDeleted_removesParentFinalizers tests that Metacontroller
 // removes its finalizer from the parent objects when the DecoratorController
 // is deleted.
-func TestFinalizerRemovedWhenDecoratorControllerDeleted(t *testing.T) {
+func TestFinalizerCleanup_whenControllerIsDeleted_removesParentFinalizers(t *testing.T) {
 	ns := "test-finalizer-cleanup"
 	name := "finalizer-cleanup"
 	// Use more than one parent. With one parent, a finalizer that a worker
@@ -76,10 +76,10 @@ func TestFinalizerRemovedWhenDecoratorControllerDeleted(t *testing.T) {
 	})
 }
 
-// TestFinalizerRemovedWhenDecoratorControllerIsNotInOperation tests the cleanup for
+// TestFinalizerCleanup_whenControllerIsNotInOperation_removesParentFinalizers tests the cleanup for
 // a DecoratorController that has no controller in operation. The
 // DecoratorController has no hooks, thus its controller cannot start.
-func TestFinalizerRemovedWhenDecoratorControllerIsNotInOperation(t *testing.T) {
+func TestFinalizerCleanup_whenControllerIsNotInOperation_removesParentFinalizers(t *testing.T) {
 	ns := "test-finalizer-cleanup-stopped"
 	name := "finalizer-cleanup-stopped"
 
@@ -107,9 +107,9 @@ func TestFinalizerRemovedWhenDecoratorControllerIsNotInOperation(t *testing.T) {
 	})
 }
 
-// TestFinalizerRemovedWhenDecoratorControllerParentAPIDoesNotExist tests that a
+// TestFinalizerCleanup_whenParentAPIDoesNotExist_deletesController tests that a
 // DecoratorController whose parent API does not exist can be deleted.
-func TestFinalizerRemovedWhenDecoratorControllerParentAPIDoesNotExist(t *testing.T) {
+func TestFinalizerCleanup_whenParentAPIDoesNotExist_deletesController(t *testing.T) {
 	name := "finalizer-cleanup-no-api"
 
 	f := framework.NewFixture(t)
