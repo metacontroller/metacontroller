@@ -1,3 +1,4 @@
+{{- if eq (include "metacontroller.workloadKind" .) "StatefulSet" }}
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -66,3 +67,4 @@ spec:
       {{- if .Values.priorityClassName }}
       priorityClassName: {{ .Values.priorityClassName }}
       {{- end }}
+{{- end }}

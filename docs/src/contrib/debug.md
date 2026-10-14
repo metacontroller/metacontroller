@@ -10,6 +10,12 @@ There are different flavours of manifests shipped to help with local development
 - manifests/dev
 - manifests/debug
 
+Metacontroller runs as a `StatefulSet` by default. The same flavours are also
+available as a `Deployment` (`manifests/dev-deployment`, `manifests/debug-deployment`).
+With those, Pod names are generated, so use
+`kubectl get pods -l app.kubernetes.io/name=metacontroller` instead of
+`metacontroller-0`.
+
 ### Development build
 
 The main difference it that image defined in manifest is `localhost/metacontroller:dev`, therefore:

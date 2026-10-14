@@ -81,6 +81,15 @@ clusterRole:
       verbs:
         - "*"
 
+# Kind of workload used to run metacontroller: StatefulSet (default) or
+# Deployment.
+#
+# Metacontroller is stateless, so a Deployment lets the scheduler place its
+# Pods more freely. StatefulSet stays the default for backward compatibility
+# (stable Pod name such as `metacontroller-0` and ordered rollout), and
+# `helm upgrade` cannot change the kind of an existing release in place.
+kind: StatefulSet
+
 replicas: 1
 
 # podDisruptionBudget which can be enabled when running more than one replica

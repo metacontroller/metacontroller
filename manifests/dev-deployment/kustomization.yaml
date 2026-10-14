@@ -1,0 +1,6 @@
+# Development manifests (localhost/metacontroller:dev) deployed as a Deployment
+# instead of the default StatefulSet.
+resources:
+  - ../dev
+components:
+  - ../components/deployment
