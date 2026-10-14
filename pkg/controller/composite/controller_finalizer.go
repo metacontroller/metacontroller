@@ -50,6 +50,7 @@ func (mc *Metacontroller) finalizeCompositeController(ctx context.Context, cc *v
 		Resources:     mc.resources,
 		EventRecorder: mc.eventRecorder,
 		Logger:        mc.logger,
+		Cursors:       &mc.cleanupCursors,
 	}
 	parents := []finalizer.ParentResource{
 		{APIVersion: cc.Spec.ParentResource.APIVersion, Resource: cc.Spec.ParentResource.Resource},

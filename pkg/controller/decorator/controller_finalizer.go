@@ -50,6 +50,7 @@ func (mc *Metacontroller) finalizeDecoratorController(ctx context.Context, dc *v
 		Resources:     mc.resources,
 		EventRecorder: mc.eventRecorder,
 		Logger:        mc.logger,
+		Cursors:       &mc.cleanupCursors,
 	}
 	parents := make([]finalizer.ParentResource, 0, len(dc.Spec.Resources))
 	for _, resource := range dc.Spec.Resources {

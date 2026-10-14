@@ -26,6 +26,7 @@ import (
 	"github.com/go-logr/logr"
 
 	"metacontroller/pkg/controller/common"
+	"metacontroller/pkg/controller/common/finalizer"
 
 	"k8s.io/client-go/tools/record"
 
@@ -65,6 +66,8 @@ type Metacontroller struct {
 	revisionInformer cache.SharedIndexInformer
 
 	parentControllers common.SyncMap[string, *parentController]
+	// cleanupCursors keeps the position of each finalizer cleanup.
+	cleanupCursors finalizer.Cursors
 
 	numWorkers int
 	ssaOptions *common.ApplyOptions

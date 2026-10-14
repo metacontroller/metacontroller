@@ -104,7 +104,7 @@ func TestRemoveFromResources_whenParentsHaveFinalizer_removesOnlyThatFinalizer(t
 	)
 	manager := finalizer.NewManager(parentFinalizer, true)
 
-	removed, done, err := manager.RemoveFromResources(context.TODO(), dynClient, testParents, largeBudget)
+	removed, done, err := manager.RemoveFromResources(context.TODO(), dynClient, testParents, largeBudget, &finalizer.Cursor{})
 
 	require.NoError(t, err)
 	assert.True(t, done)
@@ -118,8 +118,9 @@ func TestRemoveFromResources_whenParentsHaveFinalizer_removesOnlyThatFinalizer(t
 func TestRemoveFromResources_whenBudgetIsNotSufficient_removesOneFinalizerAndIsNotDone(t *testing.T) {
 	dynClient, fakeClient := newCleanupClients(newParent("a", parentFinalizer), newParent("b", parentFinalizer))
 	manager := finalizer.NewManager(parentFinalizer, true)
+	cursor := &finalizer.Cursor{}
 
-	removed, done, err := manager.RemoveFromResources(context.TODO(), dynClient, testParents, -time.Second)
+	removed, done, err := manager.RemoveFromResources(context.TODO(), dynClient, testParents, -time.Second, cursor)
 
 	require.NoError(t, err)
 	assert.False(t, done)
@@ -127,7 +128,7 @@ func TestRemoveFromResources_whenBudgetIsNotSufficient_removesOneFinalizerAndIsN
 	assert.Equal(t, 1, countUpdates(fakeClient))
 
 	// The second call completes the work.
-	removed, done, err = manager.RemoveFromResources(context.TODO(), dynClient, testParents, -time.Second)
+	removed, done, err = manager.RemoveFromResources(context.TODO(), dynClient, testParents, -time.Second, cursor)
 
 	require.NoError(t, err)
 	assert.True(t, done)
@@ -147,7 +148,7 @@ func TestRemoveFromResources_whenUpdateFails_returnsErrorAndDoesOtherParents(t *
 	})
 	manager := finalizer.NewManager(parentFinalizer, true)
 
-	removed, done, err := manager.RemoveFromResources(context.TODO(), dynClient, testParents, largeBudget)
+	removed, done, err := manager.RemoveFromResources(context.TODO(), dynClient, testParents, largeBudget, &finalizer.Cursor{})
 
 	require.ErrorContains(t, err, "update refused")
 	assert.False(t, done)
@@ -163,7 +164,7 @@ func TestRemoveFromResources_whenUpdateHasConflict_isNotDoneWithoutError(t *test
 	})
 	manager := finalizer.NewManager(parentFinalizer, true)
 
-	removed, done, err := manager.RemoveFromResources(context.TODO(), dynClient, testParents, largeBudget)
+	removed, done, err := manager.RemoveFromResources(context.TODO(), dynClient, testParents, largeBudget, &finalizer.Cursor{})
 
 	require.NoError(t, err)
 	assert.False(t, done)
@@ -177,7 +178,7 @@ func TestRemoveFromResources_whenParentIsDeletedDuringCleanup_isDone(t *testing.
 	})
 	manager := finalizer.NewManager(parentFinalizer, true)
 
-	removed, done, err := manager.RemoveFromResources(context.TODO(), dynClient, testParents, largeBudget)
+	removed, done, err := manager.RemoveFromResources(context.TODO(), dynClient, testParents, largeBudget, &finalizer.Cursor{})
 
 	require.NoError(t, err)
 	assert.True(t, done)
@@ -191,7 +192,7 @@ func TestRemoveFromResources_whenListFails_returnsError(t *testing.T) {
 	})
 	manager := finalizer.NewManager(parentFinalizer, true)
 
-	_, done, err := manager.RemoveFromResources(context.TODO(), dynClient, testParents, largeBudget)
+	_, done, err := manager.RemoveFromResources(context.TODO(), dynClient, testParents, largeBudget, &finalizer.Cursor{})
 
 	require.ErrorContains(t, err, "list refused")
 	assert.False(t, done)
@@ -202,7 +203,7 @@ func TestRemoveFromResources_whenResourceIsNotInDiscovery_returnsError(t *testin
 	manager := finalizer.NewManager(parentFinalizer, true)
 	parents := []finalizer.ParentResource{{APIVersion: TestAPIVersion, Resource: "unknown"}}
 
-	removed, done, err := manager.RemoveFromResources(context.TODO(), dynClient, parents, largeBudget)
+	removed, done, err := manager.RemoveFromResources(context.TODO(), dynClient, parents, largeBudget, &finalizer.Cursor{})
 
 	require.Error(t, err)
 	assert.False(t, done)
@@ -228,7 +229,7 @@ func TestRemoveFromResources_whenListHasTwoPages_removesFinalizerFromAllPages(t 
 	})
 	manager := finalizer.NewManager(parentFinalizer, true)
 
-	removed, done, err := manager.RemoveFromResources(context.TODO(), dynClient, testParents, largeBudget)
+	removed, done, err := manager.RemoveFromResources(context.TODO(), dynClient, testParents, largeBudget, &finalizer.Cursor{})
 
 	require.NoError(t, err)
 	assert.True(t, done)
@@ -249,7 +250,7 @@ func TestRemoveFromResources_whenUpdateIsSlowerThanCallTimeout_returnsErrorAndSt
 	})
 	manager := finalizer.NewManager(parentFinalizer, true)
 
-	removed, done, err := manager.RemoveFromResources(context.TODO(), dynClient, testParents, largeBudget)
+	removed, done, err := manager.RemoveFromResources(context.TODO(), dynClient, testParents, largeBudget, &finalizer.Cursor{})
 
 	require.ErrorIs(t, err, context.DeadlineExceeded)
 	assert.False(t, done)
@@ -269,13 +270,113 @@ func TestRemoveFromResources_whenBudgetEndsBetweenPages_doesNotListNextPage(t *t
 		return true, page, nil
 	})
 	manager := finalizer.NewManager(parentFinalizer, true)
+	cursor := &finalizer.Cursor{}
 
-	removed, done, err := manager.RemoveFromResources(context.TODO(), dynClient, testParents, -time.Second)
+	removed, done, err := manager.RemoveFromResources(context.TODO(), dynClient, testParents, -time.Second, cursor)
 
 	require.NoError(t, err)
 	assert.False(t, done)
 	assert.Equal(t, 1, removed)
 	assert.Equal(t, 1, listCalls)
+	assert.Equal(t, "page-2", cursor.Continue)
+}
+
+func TestRemoveFromResources_whenPagesHaveNoFinalizerAndBudgetEnds_continuesAtNextPage(t *testing.T) {
+	dynClient, fakeClient := newCleanupClients()
+	listCalls := 0
+	fakeClient.PrependReactor("list", "*", func(clientgotesting.Action) (bool, runtime.Object, error) {
+		listCalls++
+		page := &unstructured.UnstructuredList{Object: map[string]interface{}{"apiVersion": TestAPIVersion, "kind": TestResourceList}}
+		page.Items = []unstructured.Unstructured{*newParent("a")}
+		if listCalls == 1 {
+			page.SetContinue("page-2")
+		}
+		return true, page, nil
+	})
+	manager := finalizer.NewManager(parentFinalizer, true)
+	cursor := &finalizer.Cursor{}
+
+	_, done, err := manager.RemoveFromResources(context.TODO(), dynClient, testParents, -time.Second, cursor)
+
+	require.NoError(t, err)
+	assert.False(t, done)
+	assert.Equal(t, 1, listCalls)
+	assert.Equal(t, "page-2", cursor.Continue)
+
+	// The second call reads the last page.
+	_, done, err = manager.RemoveFromResources(context.TODO(), dynClient, testParents, -time.Second, cursor)
+
+	require.NoError(t, err)
+	assert.True(t, done)
+	assert.Equal(t, 2, listCalls)
+	assert.Equal(t, finalizer.Cursor{}, *cursor)
+}
+
+func TestRemoveFromResources_whenBudgetEndsInSnapshotPage_skipsDoneObjects(t *testing.T) {
+	dynClient, fakeClient := newCleanupClients(newParent("b", parentFinalizer), newParent("c", parentFinalizer))
+	// A page with a continue token is a snapshot. The reactor gives the same
+	// objects with the finalizer each time.
+	listCalls := 0
+	fakeClient.PrependReactor("list", "*", func(clientgotesting.Action) (bool, runtime.Object, error) {
+		listCalls++
+		page := &unstructured.UnstructuredList{Object: map[string]interface{}{"apiVersion": TestAPIVersion, "kind": TestResourceList}}
+		if listCalls == 1 {
+			page.SetContinue("page-2")
+		} else {
+			page.Items = []unstructured.Unstructured{*newParent("b", parentFinalizer), *newParent("c", parentFinalizer)}
+		}
+		return true, page, nil
+	})
+	manager := finalizer.NewManager(parentFinalizer, true)
+	cursor := &finalizer.Cursor{}
+
+	// Each call does one list call or one update.
+	for range 2 {
+		_, done, err := manager.RemoveFromResources(context.TODO(), dynClient, testParents, -time.Second, cursor)
+		require.NoError(t, err)
+		require.False(t, done)
+	}
+	_, done, err := manager.RemoveFromResources(context.TODO(), dynClient, testParents, -time.Second, cursor)
+
+	require.NoError(t, err)
+	assert.True(t, done)
+	assert.Equal(t, 2, countUpdates(fakeClient))
+	assert.Empty(t, liveFinalizers(t, fakeClient, "b"))
+	assert.Empty(t, liveFinalizers(t, fakeClient, "c"))
+}
+
+func TestRemoveFromResources_whenContinueTokenExpired_startsAgainAtFirstPage(t *testing.T) {
+	dynClient, fakeClient := newCleanupClients(newParent("a", parentFinalizer))
+	fakeClient.PrependReactor("list", "*", func(clientgotesting.Action) (bool, runtime.Object, error) {
+		return true, nil, apierrors.NewResourceExpired("continue token is too old")
+	})
+	manager := finalizer.NewManager(parentFinalizer, true)
+	cursor := &finalizer.Cursor{Parent: testParents[0], Continue: "old"}
+
+	_, done, err := manager.RemoveFromResources(context.TODO(), dynClient, testParents, largeBudget, cursor)
+
+	require.NoError(t, err)
+	assert.False(t, done)
+	assert.Equal(t, finalizer.Cursor{Parent: testParents[0]}, *cursor)
+}
+
+func TestRemoveFromResources_whenPassNeedsRetry_isNotDoneAndStartsNewPass(t *testing.T) {
+	dynClient, fakeClient := newCleanupClients(newParent("a", parentFinalizer))
+	manager := finalizer.NewManager(parentFinalizer, true)
+	cursor := &finalizer.Cursor{Parent: testParents[0], Retry: true}
+
+	_, done, err := manager.RemoveFromResources(context.TODO(), dynClient, testParents, largeBudget, cursor)
+
+	require.NoError(t, err)
+	assert.False(t, done)
+	assert.Equal(t, finalizer.Cursor{}, *cursor)
+	assert.Empty(t, liveFinalizers(t, fakeClient, "a"))
+
+	// The new pass finds no object with the finalizer.
+	_, done, err = manager.RemoveFromResources(context.TODO(), dynClient, testParents, largeBudget, cursor)
+
+	require.NoError(t, err)
+	assert.True(t, done)
 }
 
 func newControllerClient(t *testing.T, objects ...client.Object) client.Client {
@@ -323,6 +424,7 @@ func newCleaner(k8sClient client.Client, dynClient *dynamicclientset.Clientset, 
 		Resources:     resources,
 		EventRecorder: NewFakeRecorder(),
 		Logger:        logr.Discard(),
+		Cursors:       &finalizer.Cursors{},
 	}
 }
 

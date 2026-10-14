@@ -38,6 +38,7 @@ import (
 
 	"metacontroller/pkg/apis/metacontroller/v1alpha1"
 	"metacontroller/pkg/controller/common"
+	"metacontroller/pkg/controller/common/finalizer"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -53,6 +54,8 @@ type Metacontroller struct {
 	eventRecorder record.EventRecorder
 
 	decoratorControllers common.SyncMap[string, *decoratorController]
+	// cleanupCursors keeps the position of each finalizer cleanup.
+	cleanupCursors finalizer.Cursors
 
 	numWorkers int
 
