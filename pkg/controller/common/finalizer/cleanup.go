@@ -345,6 +345,10 @@ func (m *Manager) RemoveFromResources(ctx context.Context, dynClient *dynamiccli
 	if !dynClient.HasSynced() {
 		return 0, false, errors.New("discovery is not synced")
 	}
+	// Remove duplicate parents. The cursor finds its parent by value. Thus
+	// with a duplicate, the second copy starts again at its first page on
+	// each call.
+	parents = uniqueParents(parents)
 	start := slices.Index(parents, cursor.Parent)
 	if start < 0 {
 		// A new pass, or the parent resources changed. Start at the first one.
@@ -375,6 +379,19 @@ func (m *Manager) RemoveFromResources(ctx context.Context, dynClient *dynamiccli
 	done = !cursor.Retry
 	*cursor = Cursor{}
 	return removed, done, errors.Join(errs...)
+}
+
+// uniqueParents returns the parents without duplicates, in the same order.
+func uniqueParents(parents []ParentResource) []ParentResource {
+	seen := make(map[ParentResource]bool, len(parents))
+	unique := make([]ParentResource, 0, len(parents))
+	for _, parent := range parents {
+		if !seen[parent] {
+			seen[parent] = true
+			unique = append(unique, parent)
+		}
+	}
+	return unique
 }
 
 // removeFromAll removes the finalizer from the objects of the resource of the

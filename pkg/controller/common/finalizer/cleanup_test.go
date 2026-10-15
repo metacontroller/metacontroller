@@ -312,6 +312,38 @@ func TestRemoveFromResources_whenPagesHaveNoFinalizerAndBudgetEnds_continuesAtNe
 	assert.Equal(t, finalizer.Cursor{}, *cursor)
 }
 
+func TestRemoveFromResources_whenParentIsListedTwice_cleansItOnce(t *testing.T) {
+	dynClient, fakeClient := newCleanupClients(newParent("a", parentFinalizer), newParent("b", parentFinalizer))
+	listCalls := 0
+	fakeClient.PrependReactor("list", "*", func(clientgotesting.Action) (bool, runtime.Object, error) {
+		listCalls++
+		page := &unstructured.UnstructuredList{Object: map[string]interface{}{"apiVersion": TestAPIVersion, "kind": TestResourceList}}
+		if listCalls%2 == 1 {
+			page.Items = []unstructured.Unstructured{*newParent("a", parentFinalizer)}
+			page.SetContinue("page-2")
+		} else {
+			page.Items = []unstructured.Unstructured{*newParent("b", parentFinalizer)}
+		}
+		return true, page, nil
+	})
+	manager := finalizer.NewManager(parentFinalizer, true)
+	parents := []finalizer.ParentResource{testParents[0], testParents[0]}
+	cursor := &finalizer.Cursor{}
+
+	// The budget lets each call list one page.
+	_, done, err := manager.RemoveFromResources(context.TODO(), dynClient, parents, -time.Second, cursor)
+	require.NoError(t, err)
+	assert.False(t, done)
+
+	_, done, err = manager.RemoveFromResources(context.TODO(), dynClient, parents, -time.Second, cursor)
+
+	require.NoError(t, err)
+	assert.True(t, done)
+	assert.Equal(t, 2, listCalls)
+	assert.Empty(t, liveFinalizers(t, fakeClient, "a"))
+	assert.Empty(t, liveFinalizers(t, fakeClient, "b"))
+}
+
 func TestRemoveFromResources_whenBudgetEndsInSnapshotPage_skipsDoneObjects(t *testing.T) {
 	dynClient, fakeClient := newCleanupClients(newParent("b", parentFinalizer), newParent("c", parentFinalizer))
 	// A page with a continue token is a snapshot. The reactor gives the same
