@@ -469,6 +469,62 @@ being deleted.
 If you don't define a <code>finalize</code> hook, then when the object opts out, any
 attachments you added will remain until the object is deleted,
 and no hooks will be called.</p>
+<p>If the <code>finalize</code> hook is defined, Metacontroller also adds the finalizer
+<code>metacontroller.io/parent-finalizer-cleanup</code> to the DecoratorController object.
+When you delete the DecoratorController, Metacontroller stops the controller,
+removes its finalizer from all objects of the resources in the spec, and
+then lets the DecoratorController be deleted. Thus the delete command can take
+some time when there are many parent objects. The cleanup removes the
+finalizer from approximately <code>--client-go-qps</code> objects each second. This
+<a href="../guide/configuration.html">flag</a> sets the maximum number of requests that
+Metacontroller sends to the API server each second. The cleanup and all
+controllers share this limit.</p>
+<p><strong>Known limitation:</strong> the cleanup uses only the resources that are in the
+spec at the time of the deletion. If you remove a resource from <code>spec.resources</code>,
+Metacontroller does not remove its finalizer from the objects of the old
+resource, at the time of the change or later. These objects cannot be deleted
+until you remove the finalizer <code>metacontroller.io/decoratorcontroller-&lt;name&gt;</code>
+manually. Use <code>kubectl edit &lt;resource&gt; &lt;object&gt;</code> and delete the line of the
+finalizer from <code>metadata.finalizers</code>. Issue
+<a href="https://github.com/metacontroller/metacontroller/issues/1286">#1286</a> tracks
+this limitation.</p>
+<p>To prevent this, delete the DecoratorController and create it again with the
+new spec. Do not change <code>spec.resources</code> of a DecoratorController that has
+a <code>finalize</code> hook.</p>
+<p>Metacontroller does not call your <code>finalize</code> hook during this cleanup.
+Your attachments stay until the parent object is deleted.
+A parent object that is already pending deletion and has no other finalizer
+is deleted immediately, without a <code>finalize</code> call. The garbage collector then
+deletes its attachments. If your <code>finalize</code> hook cleans up resources in an
+external system, delete the parent objects before you delete the
+DecoratorController.</p>
+<p>Metacontroller must be in operation to do this cleanup. If it is not, the
+DecoratorController stays pending deletion until Metacontroller starts again.
+The same occurs in these conditions:</p>
+<ul>
+<li>You use <code>--target-label-selector</code> and no Metacontroller instance selects the
+DecoratorController, for example because you removed its label. Put the label
+back, or remove the finalizer manually.</li>
+<li>You go back to a Metacontroller version that does not have this cleanup.
+Remove the finalizer manually.</li>
+</ul>
+<p>Delete your DecoratorController objects before you uninstall Metacontroller.
+If you uninstall Metacontroller first, you must remove the finalizer from the
+DecoratorController objects and from the parent objects manually. Until you do
+that, the deletion of the Metacontroller CRDs does not complete.</p>
+<p>If you use your own ClusterRole for Metacontroller, it must permit these
+operations for the cleanup:</p>
+<ul>
+<li><code>patch</code> on <code>compositecontrollers</code> and <code>decoratorcontrollers</code>
+(<code>metacontroller.k8s.io</code>). Without it, a DecoratorController that has a
+<code>finalize</code> hook does not start.</li>
+<li><code>list</code> and <code>update</code> on the parent resources.</li>
+<li><code>get</code> on <code>customresourcedefinitions</code> (<code>apiextensions.k8s.io</code>) and on
+<code>apiservices</code> (<code>apiregistration.k8s.io</code>). Metacontroller uses them only when
+a parent resource is not in the discovery data.</li>
+</ul>
+<p>Without these permissions, the DecoratorController stays pending deletion, and
+Metacontroller records a <code>SyncError</code> event on it.</p>
 <p>The semantics of the <code>finalize</code> hook are mostly equivalent to those of
 the <a href="#sync-hook"><code>sync</code> hook</a>.
 Metacontroller will attempt to reconcile the desired states you return in the
