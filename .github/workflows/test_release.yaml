@@ -14,7 +14,7 @@ on:
 jobs:
   dockerbuild:
     name: Build local metacontroller images
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     strategy:
       fail-fast: false
       matrix:
@@ -50,7 +50,7 @@ jobs:
           retention-days: 1
   setmatrix:
     name: Set Configuration Matrix
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
       latest_matrix: ${{ steps.set-matrix.outputs.latest_matrix }}
@@ -76,7 +76,7 @@ jobs:
             echo EOF
           } >> "$GITHUB_OUTPUT"
   tests:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     strategy:
       fail-fast: false
       matrix:
@@ -166,7 +166,7 @@ jobs:
           rm -rf /tmp/metacontroller????
 
   helmtests:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     needs:
       - setmatrix
       - dockerbuild
@@ -219,7 +219,7 @@ jobs:
       DOCKER_CLI_EXPERIMENTAL: "enabled"
     concurrency:
       group: ${{ github.ref }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     needs: ["tests", "e2etests", "helmtests"]
     steps:
       - name: Checkout
