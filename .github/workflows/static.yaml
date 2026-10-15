@@ -96,6 +96,9 @@ jobs:
           cd docs
           mdbook build
   nancy-dependency-scan:
+    # A pull request from a fork does not get the OSS Index secrets, thus the
+    # scan always fails. Run it only for branches of this repository.
+    if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-26.04
     steps:
       - name: Check out code into the Go module directory
