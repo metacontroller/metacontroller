@@ -1,3 +1,10 @@
+## [4.17.6](https://github.com/metacontroller/metacontroller/compare/v4.17.5...v4.17.6) (2026-10-15)
+
+
+### Bug Fixes
+
+* **controllers:**  Removing finalizer from the parent resource on controller deletion ([#1285](https://github.com/metacontroller/metacontroller/issues/1285)) ([fc23f14](https://github.com/metacontroller/metacontroller/commit/fc23f14e93402b19b0ac556eefa5a87660f9cdc7)), closes [#1062](https://github.com/metacontroller/metacontroller/issues/1062) — @grzesuav
+
 ## [4.17.5](https://github.com/metacontroller/metacontroller/compare/v4.17.4...v4.17.5) (2026-10-13)
 
 
