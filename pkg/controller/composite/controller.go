@@ -212,7 +212,7 @@ func newParentController(
 		ssaOptions:    ssaOptions,
 		eventRecorder: eventRecorder,
 		finalizer: finalizer.NewManager(
-			"metacontroller.io/compositecontroller-"+cc.Name,
+			parentFinalizerName(cc.Name),
 			cc.Spec.Hooks.Finalize != nil,
 		),
 		syncHook:     syncHook,

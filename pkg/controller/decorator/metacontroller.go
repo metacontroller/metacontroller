@@ -38,6 +38,7 @@ import (
 
 	"metacontroller/pkg/apis/metacontroller/v1alpha1"
 	"metacontroller/pkg/controller/common"
+	"metacontroller/pkg/controller/common/finalizer"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -53,6 +54,8 @@ type Metacontroller struct {
 	eventRecorder record.EventRecorder
 
 	decoratorControllers common.SyncMap[string, *decoratorController]
+	// cleanupCursors keeps the position of each finalizer cleanup.
+	cleanupCursors finalizer.Cursors
 
 	numWorkers int
 
@@ -105,6 +108,18 @@ func (mc *Metacontroller) Reconcile(ctx context.Context, request reconcile.Reque
 			v1.EventTypeNormal,
 			events.ReasonSyncError,
 			"[%s] sync error - %s", dc.Name, err)
+		return reconcile.Result{}, err
+	}
+
+	if dc.GetDeletionTimestamp() != nil {
+		return mc.finalizeDecoratorController(ctx, &dc)
+	}
+	if err := mc.ensureControllerFinalizer(ctx, &dc); err != nil {
+		mc.eventRecorder.Eventf(
+			&dc,
+			v1.EventTypeWarning,
+			events.ReasonSyncError,
+			"[%s] can't add finalizer - %s", dc.Name, err)
 		return reconcile.Result{}, err
 	}
 

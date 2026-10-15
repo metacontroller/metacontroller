@@ -390,6 +390,68 @@ If you don't define a `finalize` hook, then when the object opts out, any
 attachments you added will remain until the object is deleted,
 and no hooks will be called.
 
+If the `finalize` hook is defined, Metacontroller also adds the finalizer
+`metacontroller.io/parent-finalizer-cleanup` to the DecoratorController object.
+When you delete the DecoratorController, Metacontroller stops the controller,
+removes its finalizer from all objects of the resources in the spec, and
+then lets the DecoratorController be deleted. Thus the delete command can take
+some time when there are many parent objects. The cleanup removes the
+finalizer from approximately `--client-go-qps` objects each second. This
+[flag](../guide/configuration.md) sets the maximum number of requests that
+Metacontroller sends to the API server each second. The cleanup and all
+controllers share this limit.
+
+**Known limitation:** the cleanup uses only the resources that are in the
+spec at the time of the deletion. If you remove a resource from `spec.resources`,
+Metacontroller does not remove its finalizer from the objects of the old
+resource, at the time of the change or later. These objects cannot be deleted
+until you remove the finalizer `metacontroller.io/decoratorcontroller-<name>`
+manually. Use `kubectl edit <resource> <object>` and delete the line of the
+finalizer from `metadata.finalizers`. Issue
+[#1286](https://github.com/metacontroller/metacontroller/issues/1286) tracks
+this limitation.
+
+To prevent this, delete the DecoratorController and create it again with the
+new spec. Do not change `spec.resources` of a DecoratorController that has
+a `finalize` hook.
+
+Metacontroller does not call your `finalize` hook during this cleanup.
+Your attachments stay until the parent object is deleted.
+A parent object that is already pending deletion and has no other finalizer
+is deleted immediately, without a `finalize` call. The garbage collector then
+deletes its attachments. If your `finalize` hook cleans up resources in an
+external system, delete the parent objects before you delete the
+DecoratorController.
+
+Metacontroller must be in operation to do this cleanup. If it is not, the
+DecoratorController stays pending deletion until Metacontroller starts again.
+The same occurs in these conditions:
+
+- You use `--target-label-selector` and no Metacontroller instance selects the
+  DecoratorController, for example because you removed its label. Put the label
+  back, or remove the finalizer manually.
+- You go back to a Metacontroller version that does not have this cleanup.
+  Remove the finalizer manually.
+
+Delete your DecoratorController objects before you uninstall Metacontroller.
+If you uninstall Metacontroller first, you must remove the finalizer from the
+DecoratorController objects and from the parent objects manually. Until you do
+that, the deletion of the Metacontroller CRDs does not complete.
+
+If you use your own ClusterRole for Metacontroller, it must permit these
+operations for the cleanup:
+
+- `patch` on `compositecontrollers` and `decoratorcontrollers`
+  (`metacontroller.k8s.io`). Without it, a DecoratorController that has a
+  `finalize` hook does not start.
+- `list` and `update` on the parent resources.
+- `get` on `customresourcedefinitions` (`apiextensions.k8s.io`) and on
+  `apiservices` (`apiregistration.k8s.io`). Metacontroller uses them only when
+  a parent resource is not in the discovery data.
+
+Without these permissions, the DecoratorController stays pending deletion, and
+Metacontroller records a `SyncError` event on it.
+
 The semantics of the `finalize` hook are mostly equivalent to those of
 the [`sync` hook](#sync-hook).
 Metacontroller will attempt to reconcile the desired states you return in the

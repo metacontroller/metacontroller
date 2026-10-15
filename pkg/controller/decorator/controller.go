@@ -149,7 +149,7 @@ func newDecoratorController(
 		numWorkers:    numWorkers,
 		eventRecorder: eventRecorder,
 		finalizer: finalizer.NewManager(
-			"metacontroller.io/decoratorcontroller-"+dc.Name,
+			parentFinalizerName(dc.Name),
 			dc.Spec.Hooks.Finalize != nil,
 		),
 		syncHook:     syncHook,

@@ -26,6 +26,7 @@ import (
 	"github.com/go-logr/logr"
 
 	"metacontroller/pkg/controller/common"
+	"metacontroller/pkg/controller/common/finalizer"
 
 	"k8s.io/client-go/tools/record"
 
@@ -65,6 +66,8 @@ type Metacontroller struct {
 	revisionInformer cache.SharedIndexInformer
 
 	parentControllers common.SyncMap[string, *parentController]
+	// cleanupCursors keeps the position of each finalizer cleanup.
+	cleanupCursors finalizer.Cursors
 
 	numWorkers int
 	ssaOptions *common.ApplyOptions
@@ -123,6 +126,12 @@ func (mc *Metacontroller) Reconcile(ctx context.Context, request reconcile.Reque
 		return reconcile.Result{}, err
 	}
 
+	// Do this before the checks of the parent CRD. The parent CRD can be
+	// deleted before the CompositeController.
+	if cc.GetDeletionTimestamp() != nil {
+		return mc.finalizeCompositeController(ctx, &cc)
+	}
+
 	groupVersion, err := schema.ParseGroupVersion(cc.Spec.ParentResource.APIVersion)
 	if err != nil {
 		return reconcile.Result{}, err
@@ -150,6 +159,14 @@ func (mc *Metacontroller) Reconcile(ctx context.Context, request reconcile.Reque
 			"groupVersionKind", parentCRD.GroupVersionKind())
 		// returning, as we cannot do anything until 'Status' subresource is added to parent parentCRD
 		return reconcile.Result{}, nil
+	}
+	if err := mc.ensureControllerFinalizer(ctx, &cc); err != nil {
+		mc.eventRecorder.Eventf(
+			&cc,
+			v1.EventTypeWarning,
+			events.ReasonSyncError,
+			"[%s] can't add finalizer - %s", cc.Name, err)
+		return reconcile.Result{}, err
 	}
 	reconcileErr := mc.reconcileCompositeController(ctx, &cc)
 	return reconcile.Result{}, reconcileErr
