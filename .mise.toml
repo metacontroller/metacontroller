@@ -2,7 +2,7 @@
 go = "1.27.2" # keep in sync with go.mod's go directive
 node = "24"
 python = "3.15.0"
-golangci-lint = "2.14.0"
+golangci-lint = "2.15.0"
 goreleaser = "2.18.3"
 kubectl = "1.37.1"
 helm = "4.3.1"
