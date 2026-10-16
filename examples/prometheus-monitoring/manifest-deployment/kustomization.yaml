@@ -1,0 +1,18 @@
+# Same as ../manifest, but for a metacontroller deployed as a Deployment.
+resources:
+- ../../../manifests/dev-deployment
+- service.yaml
+- serviceMonitor.yaml
+patches:
+- target:
+    group: apps
+    version: v1
+    kind: Deployment
+    name: metacontroller
+  patch: |-
+    - op: add
+      path: /spec/template/spec/containers/0/ports
+      value:
+      - containerPort: 9999
+        name: metrics
+        protocol: TCP

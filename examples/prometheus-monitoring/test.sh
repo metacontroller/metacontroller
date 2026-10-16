@@ -1,13 +1,23 @@
 #!/bin/bash
 
+# Metacontroller runs as a StatefulSet (default) or as a Deployment (see
+# manifests/deployment). Pick the resource and overlay matching its kind.
+if kubectl get -n metacontroller deployment/metacontroller >/dev/null 2>&1; then
+  mc=deployment/metacontroller
+  mc_overlay=./manifest-deployment
+else
+  mc=statefulset/metacontroller
+  mc_overlay=./manifest
+fi
+
 cleanup() {
   exit_code=$?
   set +e
   echo "Killing port-forward for prometheus..."
   pkill kubectl
   echo "Rollback metacontroller..."
-  kubectl rollout undo statefulset metacontroller -n metacontroller
-  kubectl rollout status --watch --timeout=180s statefulset/metacontroller -n metacontroller
+  kubectl rollout undo "${mc}" -n metacontroller
+  kubectl rollout status --watch --timeout=180s "${mc}" -n metacontroller
   echo "Uninstall prometheus..."
   kubectl delete -f ./manifest/prometheus.yaml
   kubectl delete -k github.com/prometheus-operator/prometheus-operator?ref=v0.49.0
@@ -30,8 +40,8 @@ until kubectl get statefulset prometheus-prometheus; do sleep 1; done  # prometh
 kubectl rollout status --watch --timeout=180s statefulset/prometheus-prometheus
 
 echo "Enable prometheus monitoring on metacontroller..."
-kubectl apply -k ./manifest
-kubectl rollout status --watch --timeout=180s statefulset/metacontroller -n metacontroller
+kubectl apply -k "$mc_overlay"
+kubectl rollout status --watch --timeout=180s "${mc}" -n metacontroller
 
 echo "Starting port-forward for prometheus..."
 kubectl port-forward statefulset/prometheus-prometheus 9090 &

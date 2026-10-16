@@ -37,6 +37,22 @@ kubectl apply -k https://github.com/metacontroller/metacontroller/manifests/prod
 
 ```
 
+Metacontroller runs as a `StatefulSet` by default. Because it is stateless, you can
+deploy it as a `Deployment` instead, which gives the scheduler more freedom to place
+the Pods:
+
+```sh
+kubectl apply -k https://github.com/metacontroller/metacontroller/manifests/deployment
+```
+
+With Helm, use `--set kind=Deployment` instead (see
+[helm-install.md](helm-install.md)).
+
+Switching the kind of an existing installation cannot be done in place: delete the
+current workload first (for example
+`kubectl -n metacontroller delete statefulset/metacontroller`) and then apply the new
+manifests, so that a StatefulSet and a Deployment do not run side by side.
+
 If you prefer to build and host your own images, please see the
 [build instructions](../contrib/build.md) in the contributor guide.
 

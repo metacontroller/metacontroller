@@ -1,0 +1,6 @@
+# Development manifests using server-side apply, deployed as a Deployment
+# instead of the default StatefulSet.
+resources:
+  - ../dev-ssa
+components:
+  - ../components/deployment

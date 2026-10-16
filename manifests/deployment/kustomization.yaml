@@ -1,0 +1,6 @@
+# Production manifests deployed as a Deployment instead of the default
+# StatefulSet. Apply with: kubectl apply -k manifests/deployment
+resources:
+  - ../production
+components:
+  - ../components/deployment

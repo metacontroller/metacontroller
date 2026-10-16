@@ -1,0 +1,17 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    app.kubernetes.io/instance: metacontroller
+  name: metacontroller
+spec:
+  endpoints:
+    - path: /metrics
+      port: metrics
+      interval: 5s
+  namespaceSelector:
+    matchNames:
+      - metacontroller
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: metacontroller

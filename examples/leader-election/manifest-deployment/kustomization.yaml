@@ -1,0 +1,20 @@
+# Same as ../manifest, but for a metacontroller deployed as a Deployment.
+resources:
+- ../../../manifests/dev-deployment
+patches:
+- target:
+    group: apps
+    version: v1
+    kind: Deployment
+    name: metacontroller
+  patch: |-
+    - op: replace
+      path: /spec/replicas
+      value: 2
+    - op: replace
+      path: /spec/template/spec/containers/0/args
+      value:
+      - --zap-devel
+      - --zap-log-level=5
+      - --discovery-interval=5s
+      - --leader-election

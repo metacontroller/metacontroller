@@ -1,11 +1,21 @@
 #!/bin/bash
 
+# Metacontroller runs as a StatefulSet (default) or as a Deployment (see
+# manifests/deployment). Pick the resource and overlay matching its kind.
+if kubectl get -n metacontroller deployment/metacontroller >/dev/null 2>&1; then
+  mc=deployment/metacontroller
+  mc_overlay=./manifest-deployment
+else
+  mc=statefulset/metacontroller
+  mc_overlay=./manifest
+fi
+
 cleanup() {
   exit_code=$?
   set +e
   echo "Rollback metacontroller..."
-  kubectl rollout undo statefulset metacontroller -n metacontroller
-  kubectl rollout status --watch --timeout=180s statefulset/metacontroller -n metacontroller
+  kubectl rollout undo "${mc}" -n metacontroller
+  kubectl rollout status --watch --timeout=180s "${mc}" -n metacontroller
   kubectl delete -f manifest/service.yaml
   exit $exit_code
 }
@@ -24,8 +34,8 @@ fi
 set -euo
 
 echo "Enable pprof on metacontroller..."
-kubectl apply -k ./manifest
-kubectl rollout status --watch --timeout=180s statefulset/metacontroller -n metacontroller
+kubectl apply -k "$mc_overlay"
+kubectl rollout status --watch --timeout=180s "${mc}" -n metacontroller
 
 echo "Test profiling metacontroller..."
 sleep 5

@@ -71,3 +71,15 @@ Create the name of the service account to use
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
 {{- end }}
+
+{{/*
+Workload kind used to run metacontroller: StatefulSet (default) or Deployment.
+Fails fast on an unknown value so a typo cannot silently render nothing.
+*/}}
+{{- define "metacontroller.workloadKind" -}}
+{{- $kind := .Values.kind | default "StatefulSet" -}}
+{{- if not (has $kind (list "StatefulSet" "Deployment")) -}}
+{{- fail (printf "metacontroller: .Values.kind must be \"StatefulSet\" or \"Deployment\", got %q" $kind) -}}
+{{- end -}}
+{{- $kind -}}
+{{- end }}
