@@ -30,7 +30,7 @@ jobs:
       - name: Find the jactionlint executable
         id: mise
         run: echo "jactionlint=$(mise which jactionlint)" >> "$GITHUB_OUTPUT"
-      - uses: jdx/jactionlint@v2.2.0
+      - uses: jdx/jactionlint@v2.3.0
         with:
           executable: ${{ steps.mise.outputs.jactionlint }}
   docker-image-for-linting:
