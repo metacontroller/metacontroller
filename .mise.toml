@@ -1,7 +1,7 @@
 [tools]
 go = "1.27.2" # keep in sync with go.mod's go directive
 node = "24"
-python = "3.15.0"
+python = "3.15.1"
 golangci-lint = "2.15.0"
 goreleaser = "2.18.3"
 kubectl = "1.37.1"
