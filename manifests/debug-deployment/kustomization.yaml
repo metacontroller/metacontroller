@@ -1,0 +1,6 @@
+# Debug manifests (localhost/metacontroller:debug) deployed as a Deployment
+# instead of the default StatefulSet.
+resources:
+  - ../debug
+components:
+  - ../components/deployment

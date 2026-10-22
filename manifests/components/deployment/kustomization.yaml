@@ -1,0 +1,22 @@
+# Kustomize component that switches the metacontroller workload from a
+# StatefulSet (default) to a Deployment.
+#
+# Metacontroller is stateless, so a Deployment gives the scheduler more
+# flexibility. StatefulSet is kept as the default for backward compatibility
+# (stable Pod name and ordered rollout).
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+patches:
+  - target:
+      group: apps
+      version: v1
+      kind: StatefulSet
+      name: metacontroller
+    patch: |-
+      - op: replace
+        path: /kind
+        value: Deployment
+      - op: remove
+        path: /spec/serviceName
+      - op: remove
+        path: /spec/volumeClaimTemplates

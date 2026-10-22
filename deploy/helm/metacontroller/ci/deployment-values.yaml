@@ -1,0 +1,106 @@
+rbac:
+  create: true
+
+image:
+  repository: localhost/metacontroller
+  pullPolicy: IfNotPresent
+  tag: "dev"
+
+imagePullSecrets: []
+nameOverride: ""
+namespaceOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext: {}
+  # fsGroup: 65532
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 65532
+
+resources: {}
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+# Environment variables to set on the metacontroller container
+env: []
+# - name: MY_ENV_VAR
+#   value: "my-value"
+# - name: MY_SECRET_ENV_VAR
+#   valueFrom:
+#     secretKeyRef:
+#       name: my-secret
+#       key: my-key
+
+# Command which is used to start metacontroller
+command: "/usr/bin/metacontroller"
+
+# Command arguments which are used to start metacontroller
+commandArgs:
+  - --zap-log-level=4
+  - --discovery-interval=20s
+  - --cache-flush-interval=30m
+  - --health-probe-bind-address=:8081
+
+probes:
+  port: 8081
+
+# The name of the PriorityClass that will be assigned to metacontroller
+priorityClassName: ""
+
+clusterRole:
+  aggregationRule: {}
+  rules:
+    - apiGroups:
+        - "*"
+      resources:
+        - "*"
+      verbs:
+        - "*"
+
+# Kind of workload used to run metacontroller: StatefulSet (default) or
+# Deployment.
+#
+# Metacontroller is stateless, so a Deployment lets the scheduler place its
+# Pods more freely. StatefulSet stays the default for backward compatibility
+# (stable Pod name such as `metacontroller-0` and ordered rollout), and
+# `helm upgrade` cannot change the kind of an existing release in place.
+kind: Deployment
+
+replicas: 1
+
+# podDisruptionBudget which can be enabled when running more than one replica
+podDisruptionBudget: {}
+  # minAvailable: 1
+  # maxUnavailable: 0
+
+service:
+  enabled: false
+  ports: []
+#    - name: "metrics"
+#      port: 9999
+#      protocol: "TCP"
+#      targetPort: "metrics"

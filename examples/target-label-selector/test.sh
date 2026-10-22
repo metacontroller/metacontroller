@@ -1,16 +1,26 @@
 #!/bin/bash
 
+# Metacontroller runs as a StatefulSet (default) or as a Deployment (see
+# manifests/deployment). Pick the resource and overlay matching its kind.
+if kubectl get -n metacontroller deployment/metacontroller >/dev/null 2>&1; then
+  mc=deployment/metacontroller
+  mc_overlay=./manifest-deployment
+else
+  mc=statefulset/metacontroller
+  mc_overlay=./manifest
+fi
+
 cleanup() {
   exit_code=$?
   set +e
-  
+
   echo "Delete secretpropagation example resources..."
   kubectl delete -f ../secretpropagation/example-secret.yaml
   kubectl delete -k ./manifest
 
   echo "Rollback metacontroller..."
-  kubectl rollout undo statefulset metacontroller -n metacontroller
-  kubectl rollout status --watch --timeout=180s statefulset/metacontroller -n metacontroller
+  kubectl rollout undo "${mc}" -n metacontroller
+  kubectl rollout status --watch --timeout=180s "${mc}" -n metacontroller
   exit $exit_code
 }
 trap cleanup EXIT
@@ -19,10 +29,11 @@ set -euo
 
 # install metacontroller with the --target-label-selector arg.
 kubectl apply -k ./instance
-kubectl rollout status --watch --timeout=180s statefulset/metacontroller -n metacontroller
+kubectl rollout status --watch --timeout=180s "${mc}" -n metacontroller
 
-# wait for metacontroller pod to be ready
-kubectl wait --timeout=180s --for=condition=ready pod metacontroller-0 -n metacontroller
+# wait for the metacontroller workload to become ready
+replicas=$(kubectl get "${mc}" -n metacontroller -o jsonpath='{.spec.replicas}')
+kubectl wait --timeout=180s --for=jsonpath='{.status.readyReplicas}'="$replicas" "${mc}" -n metacontroller
 
 # install the the secretpropagation example and applies a patch to add labels to the CompositeController instance.
 kubectl apply -k ./manifest
