@@ -74,7 +74,7 @@ require (
 )
 
 replace (
-	golang.org/x/net => golang.org/x/net v0.61.0
+	golang.org/x/net => golang.org/x/net v0.62.0
 	k8s.io/api => k8s.io/api v0.37.1
 	k8s.io/apimachinery => k8s.io/apimachinery v0.37.1
 	k8s.io/client-go => k8s.io/client-go v0.37.1
