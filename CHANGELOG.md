@@ -1,3 +1,10 @@
+## [4.17.7](https://github.com/metacontroller/metacontroller/compare/v4.17.6...v4.17.7) (2026-11-13)
+
+
+### Bug Fixes
+
+* **deps:** Update dependencies ([#1306](https://github.com/metacontroller/metacontroller/issues/1306)) ([cc1dab1](https://github.com/metacontroller/metacontroller/commit/cc1dab1555f955d23d4d171081a81c2ab1455137)) — @grzesuav
+
 ## [4.17.6](https://github.com/metacontroller/metacontroller/compare/v4.17.5...v4.17.6) (2026-10-15)
 
 
