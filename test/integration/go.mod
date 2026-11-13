@@ -1,6 +1,6 @@
 module metacontroller/test/integration
 
-go 1.26.4
+go 1.27.4
 
 require (
 	k8s.io/api v0.37.1
