@@ -1,7 +1,7 @@
-FROM golang:1.27.2-alpine3.24 AS build
+FROM golang:1.27.4-alpine3.24 AS build
 RUN go install github.com/go-delve/delve/cmd/dlv@latest
 
-FROM alpine:3.24.2@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6
+FROM alpine:3.24.4@sha256:f59abe656b692d901e184be3445e084786602108599d2a51d229c0f5a48c71bf
 ARG TARGETPLATFORM
 RUN apk update && apk add --no-cache ca-certificates
 COPY --from=build /go/bin/dlv /

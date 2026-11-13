@@ -2,12 +2,14 @@ module metacontroller
 
 // This denotes the minimum supported language version and
 // should not include the patch version.
-go 1.26.4
+go 1.27.4
 
 require (
+	github.com/cespare/xxhash/v2 v2.3.0
 	github.com/evanphx/json-patch/v5 v5.9.11
 	github.com/go-logr/logr v1.4.4
 	github.com/google/go-cmp v0.7.0
+	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.25.0
 	github.com/stretchr/testify v1.12.1 //test
 	go.uber.org/zap v1.28.0
@@ -16,15 +18,10 @@ require (
 	k8s.io/apimachinery v0.37.1
 	k8s.io/client-go v0.37.1
 	k8s.io/klog/v2 v2.140.0
-	k8s.io/utils v0.0.0-20260707023825-cf1189d6abe3
+	k8s.io/utils v0.0.0-20261023123148-ca04ba58ecab
 	sigs.k8s.io/controller-runtime v0.25.2
 	sigs.k8s.io/json v0.0.0-20260909141634-11ed52e25bc5
 	zgo.at/zcache/v2 v2.4.1
-)
-
-require (
-	github.com/cespare/xxhash/v2 v2.3.0
-	github.com/pkg/errors v0.9.1
 )
 
 require (
@@ -81,7 +78,7 @@ require (
 )
 
 replace (
-	golang.org/x/net => golang.org/x/net v0.61.0
+	golang.org/x/net => golang.org/x/net v0.62.0
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.37.1
 	k8s.io/apimachinery => k8s.io/apimachinery v0.37.1
 	k8s.io/client-go => k8s.io/client-go v0.37.1
