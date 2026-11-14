@@ -290,8 +290,12 @@ func (pc *parentController) Start() {
 		}
 	}
 	pc.childInformers.ForEach(func(_ schema.GroupVersionResource, childInformer *dynamicinformer.ResourceInformer) {
-		_, err := childInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-			AddFunc:    pc.onChildAdd,
+		// Skip the children that the informer replays to a new handler. The
+		// parent handler above adds each parent to the queue, and each sync
+		// reads the children from the cache. Without the skip, each cached
+		// orphan would cost one search through all parents.
+		_, err := childInformer.Informer().AddEventHandler(cache.ResourceEventHandlerDetailedFuncs{
+			AddFunc:    dynamicinformer.SkipInitialList(pc.onChildAdd),
 			UpdateFunc: pc.onChildUpdate,
 			DeleteFunc: pc.onChildDelete,
 		})

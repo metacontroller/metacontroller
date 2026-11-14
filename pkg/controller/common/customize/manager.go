@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 
 	"metacontroller/pkg/controller/common/api"
@@ -46,6 +47,7 @@ import (
 	"metacontroller/pkg/controller/common"
 	dynamicclientset "metacontroller/pkg/dynamic/clientset"
 	dynamicinformer "metacontroller/pkg/dynamic/informer"
+	"metacontroller/pkg/metrics"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -91,6 +93,10 @@ type Manager struct {
 	matchesParent func(*unstructured.Unstructured) bool
 
 	customizeHook hooks.Hook
+
+	// waiting keeps the parents whose sync waits for the cache of a new
+	// related informer.
+	waiting waitingParents
 
 	logger logr.Logger
 }
@@ -261,7 +267,9 @@ func (rm *Manager) getRelatedClient(apiVersion, resource string) (*dynamicclient
 	}
 
 	if !informer.Informer().HasSynced() {
-		return nil, nil, ErrRelatedInformerNotSynced
+		// Return the informer too. The caller records the parent as waiting
+		// for this informer.
+		return nil, informer, ErrRelatedInformerNotSynced
 	}
 
 	return client, informer, nil
@@ -286,8 +294,14 @@ func (rm *Manager) getOrCreateRelatedInformer(apiVersion, resource string, gvr s
 	}
 
 	// We won the race, add event handlers once.
-	_, err = actual.Informer().AddEventHandler(clientgo_cache.ResourceEventHandlerFuncs{
-		AddFunc:    rm.onRelatedAdd,
+	//
+	// client-go replays the current cache to a new handler with OnAdd. Skip
+	// that replay. A parent that uses this resource reads the related objects
+	// from the cache in its sync, and getRelatedClient makes that sync wait
+	// until the cache is filled. So the replay would only cost one search
+	// through all parents for each cached object.
+	_, err = actual.Informer().AddEventHandler(clientgo_cache.ResourceEventHandlerDetailedFuncs{
+		AddFunc:    dynamicinformer.SkipInitialList(rm.onRelatedAdd),
 		UpdateFunc: rm.onRelatedUpdate,
 		DeleteFunc: rm.onRelatedDelete,
 	})
@@ -299,7 +313,106 @@ func (rm *Manager) getOrCreateRelatedInformer(apiVersion, resource string, gvr s
 		return nil, fmt.Errorf("can't add event handlers for related resource: %w", err)
 	}
 
+	// Start the wake-up also when the cache is already filled. Another sync can
+	// get this informer from the map before this check and record its parent
+	// as waiting. The wake-up then adds that parent to the work queue.
+	go rm.enqueueParentsWhenSynced(rm.ctx, gvr, actual)
+
 	return actual, nil
+}
+
+// enqueueParentsWhenSynced waits until the cache of a new related informer is
+// filled. Then it adds to the work queue each parent whose sync failed with
+// ErrRelatedInformerNotSynced for this informer and did not succeed since.
+//
+// The controller adds such a parent to the queue again with a rate limiter.
+// The limiter has a bucket of 10 requests each second that all parents of the
+// controller share. When many parents wait, their next retries can be many
+// seconds after the cache is filled. The related handler ignores the first
+// list, so no event starts the sync earlier. This function starts it
+// immediately. It does not add a parent that a retry already synced, so it
+// does not cause an additional sync for that parent.
+func (rm *Manager) enqueueParentsWhenSynced(ctx context.Context, gvr schema.GroupVersionResource, informer *dynamicinformer.ResourceInformer) {
+	start := time.Now()
+	rm.logger.V(4).Info("Waiting for the cache of a new related informer", "controller", rm.name, "resource", gvr.String())
+	if !clientgo_cache.WaitForCacheSync(ctx.Done(), informer.Informer().HasSynced) {
+		// The controller stopped before the cache was filled.
+		return
+	}
+
+	parents := rm.waiting.take(informer)
+	for _, parent := range parents {
+		rm.enqueueParent(parent)
+	}
+
+	metrics.RecordRelatedInformerWakeup(rm.name, len(parents))
+	rm.logger.V(4).Info("Added the waiting parents to the work queue after the related informer cache was filled", "controller", rm.name, "resource", gvr.String(), "parents", len(parents), "waited", time.Since(start).String())
+}
+
+// markWaiting records that the sync of the parent waits for the cache of the
+// related informer. If the wake-up for this informer is already done, it adds
+// the parent to the work queue immediately: the cache is then filled, and the
+// next sync can succeed.
+func (rm *Manager) markWaiting(informer *dynamicinformer.ResourceInformer, parent *unstructured.Unstructured) {
+	if !rm.waiting.add(informer, parent) {
+		rm.enqueueParent(parent)
+	}
+}
+
+// waitingParents keeps, for each related informer, the parents whose sync
+// waits for the cache of that informer. The key is the informer and not its
+// resource. So the state of an earlier informer for the same resource cannot
+// affect a new informer.
+type waitingParents struct {
+	mutex   sync.Mutex
+	parents map[*dynamicinformer.ResourceInformer]map[types.UID]*unstructured.Unstructured
+	// woken has the informers for which the wake-up is done.
+	woken map[*dynamicinformer.ResourceInformer]bool
+}
+
+// add records a waiting parent. It returns false when the wake-up for the
+// informer is already done.
+func (w *waitingParents) add(informer *dynamicinformer.ResourceInformer, parent *unstructured.Unstructured) bool {
+	w.mutex.Lock()
+	defer w.mutex.Unlock()
+
+	if w.woken[informer] {
+		return false
+	}
+	if w.parents == nil {
+		w.parents = make(map[*dynamicinformer.ResourceInformer]map[types.UID]*unstructured.Unstructured)
+	}
+	if w.parents[informer] == nil {
+		w.parents[informer] = make(map[types.UID]*unstructured.Unstructured)
+	}
+	w.parents[informer][parent.GetUID()] = parent
+	return true
+}
+
+// remove forgets a parent whose sync no longer waits for the informer.
+func (w *waitingParents) remove(informer *dynamicinformer.ResourceInformer, parent *unstructured.Unstructured) {
+	w.mutex.Lock()
+	defer w.mutex.Unlock()
+
+	delete(w.parents[informer], parent.GetUID())
+}
+
+// take returns the waiting parents of the informer, forgets them, and marks
+// the wake-up for the informer as done.
+func (w *waitingParents) take(informer *dynamicinformer.ResourceInformer) []*unstructured.Unstructured {
+	w.mutex.Lock()
+	defer w.mutex.Unlock()
+
+	if w.woken == nil {
+		w.woken = make(map[*dynamicinformer.ResourceInformer]bool)
+	}
+	w.woken[informer] = true
+	parents := make([]*unstructured.Unstructured, 0, len(w.parents[informer]))
+	for _, parent := range w.parents[informer] {
+		parents = append(parents, parent)
+	}
+	delete(w.parents, informer)
+	return parents
 }
 
 func (rm *Manager) onRelatedAdd(obj interface{}) {
@@ -591,9 +704,13 @@ func (rm *Manager) GetRelatedObjects(ctx context.Context, parent *unstructured.U
 
 	for _, relatedRule := range customizeHookResponse.RelatedResourceRules {
 		relatedClient, informer, err := rm.getRelatedClient(relatedRule.APIVersion, relatedRule.Resource)
+		if errors.Is(err, ErrRelatedInformerNotSynced) {
+			rm.markWaiting(informer, parent)
+		}
 		if err != nil {
 			return nil, err
 		}
+		rm.waiting.remove(informer, parent)
 
 		selectionType, err := determineSelectionType(relatedRule)
 
