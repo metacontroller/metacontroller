@@ -1,3 +1,10 @@
+## [4.17.8](https://github.com/metacontroller/metacontroller/compare/v4.17.7...v4.17.8) (2026-11-15)
+
+
+### Bug Fixes
+
+* **dynamic:** [#171](https://github.com/metacontroller/metacontroller/issues/171) - use client-go dynamic informers ([#1311](https://github.com/metacontroller/metacontroller/issues/1311)) ([3e79029](https://github.com/metacontroller/metacontroller/commit/3e790299dc812cedd0173ba59f7c0aee0a51780c)) — @grzesuav
+
 ## [4.17.7](https://github.com/metacontroller/metacontroller/compare/v4.17.6...v4.17.7) (2026-11-13)
 
 
