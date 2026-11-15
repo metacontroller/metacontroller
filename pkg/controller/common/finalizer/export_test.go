@@ -28,3 +28,7 @@ func SetCleanupCallTimeout(t *testing.T, timeout time.Duration) {
 	cleanupCallTimeout = timeout
 	t.Cleanup(func() { cleanupCallTimeout = old })
 }
+
+func Fingerprint(parents []ParentResource) string {
+	return fingerprint(parents)
+}

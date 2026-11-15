@@ -401,19 +401,9 @@ finalizer from approximately `--client-go-qps` objects each second. This
 Metacontroller sends to the API server each second. The cleanup and all
 controllers share this limit.
 
-**Known limitation:** the cleanup uses only the resources that are in the
-spec at the time of the deletion. If you remove a resource from `spec.resources`,
-Metacontroller does not remove its finalizer from the objects of the old
-resource, at the time of the change or later. These objects cannot be deleted
-until you remove the finalizer `metacontroller.io/decoratorcontroller-<name>`
-manually. Use `kubectl edit <resource> <object>` and delete the line of the
-finalizer from `metadata.finalizers`. Issue
-[#1286](https://github.com/metacontroller/metacontroller/issues/1286) tracks
-this limitation.
-
-To prevent this, delete the DecoratorController and create it again with the
-new spec. Do not change `spec.resources` of a DecoratorController that has
-a `finalize` hook.
+If you change the parent resources of a DecoratorController, Metacontroller
+removes the finalizer from the objects of the old resources. See
+[Change of the parent resources](#change-of-the-parent-resources).
 
 Metacontroller does not call your `finalize` hook during this cleanup.
 Your attachments stay until the parent object is deleted.
@@ -471,6 +461,169 @@ This lets you implement `finalize` either as a separate handler or as a check
 within your `sync` handler, depending on how much logic they share.
 To use the same handler for both, just define a `finalize` hook and set it to
 the same value as your `sync` hook.
+
+#### Change of the parent resources
+
+Metacontroller keeps a record of the parent resources on the DecoratorController
+object, in the annotation `metacontroller.io/parent-finalizer-cleanup-state`.
+Metacontroller writes the record only if the DecoratorController object has the
+finalizer `metacontroller.io/parent-finalizer-cleanup`. The object gets this
+finalizer when it has a `finalize` hook. The finalizer stays if you remove the
+hook later. The value is JSON:
+
+```json
+{
+  "version": 1,
+  "active": [{"apiVersion": "example.com/v1", "resource": "widgets"}],
+  "removeParentFinalizerFrom": [{"apiVersion": "example.com/v1", "resource": "gadgets"}]
+}
+```
+
+- `active` lists the parent resources that the running controller uses.
+- `removeParentFinalizerFrom` lists the parent resources that left the spec.
+  Their objects can still have the finalizer.
+
+Metacontroller compares resources by API group and resource name. A change of
+only the version in `apiVersion` does not remove the finalizer, because the
+objects are the same. If the API server does not serve the version of an entry
+any more, Metacontroller uses another served version of the same resource.
+
+Two API groups can serve the same objects, for example `events` in the core
+API group and in `events.k8s.io`. Metacontroller treats them as two resources.
+If you change from one to the other, the cleanup removes the finalizer from
+objects that the new controller uses. The new controller adds it again at its
+next sync. Your `finalize` hook does not run for an object that is deleted
+between these two steps.
+
+When you remove a resource from `spec.resources`, Metacontroller does these
+steps:
+
+1. It moves the old resource from `active` to `removeParentFinalizerFrom` in
+   the record. If the write of the record fails, the old controller
+   continues, and Metacontroller tries again later.
+2. It stops the controller and starts it again with the new spec.
+3. It removes the finalizer `metacontroller.io/decoratorcontroller-<name>`
+   from the objects of each resource in `removeParentFinalizerFrom`. When no
+   object of a resource has the finalizer, it removes the resource from the
+   list.
+
+If the new controller cannot start, Metacontroller has already changed the
+record and stopped the old controller. It tries the start again later. The
+cleanup of the resources in `removeParentFinalizerFrom` continues.
+
+The cleanup runs in slices of about 5 seconds, with 1 second between the
+slices. Other controller objects reconcile between the slices. Like the
+cleanup at deletion, it shares the `--client-go-qps` limit with all
+controllers. A cleanup error does not stop the controller of the current
+spec. Metacontroller records a `SyncError` event and tries again after
+30 seconds.
+
+If a person or a tool removes the annotation, Metacontroller writes it again
+from the running controller. If Metacontroller restarts after the removal, it
+writes the annotation from the current spec only. The resources that were in
+`removeParentFinalizerFrom` are then not cleaned. Clean them as described in
+[Objects from an earlier version](#objects-from-an-earlier-version).
+
+##### The `finalize` hook and retired resources
+
+Metacontroller does not call your `finalize` hook for the objects of a
+resource that left the spec. To make a correct request, Metacontroller must
+watch the attachments of these objects. The new controller does not watch them.
+The results are:
+
+- A resource in an external system that your hook deletes is not deleted.
+- A parent object that has a deletion timestamp is deleted at once.
+  The garbage collector then deletes its attachments.
+
+Before you change the parent resources, delete the objects of the old
+resource, or let your hook finish its work for them. Assume that your
+external cleanup did not run.
+
+##### Objects from an earlier version
+
+Metacontroller does not know a resource that left the spec before this
+version wrote the record. This occurs if you changed the spec before you
+installed this version.
+
+Do these steps:
+
+1. Add the old resource to `spec.resources`.
+2. Wait until the annotation shows the resource in `active`.
+3. Remove the resource from `spec.resources` again. Metacontroller then moves
+   it to `removeParentFinalizerFrom` and cleans it.
+
+**Warning:** while the old resource is in the spec, Metacontroller watches it
+and calls your `sync` hook for each object of the resource that matches the
+selectors. Expect webhook calls and attachment changes during this time.
+
+You can also add the old resource to `removeParentFinalizerFrom` in the
+annotation, for example
+`{"apiVersion": "example.com/v1", "resource": "widgets"}`. If the API of the
+old resource does not exist any more, remove the finalizer from its objects
+manually.
+
+To remove the finalizer manually, use `kubectl edit <resource> <object>` and
+delete the line of the finalizer `metacontroller.io/decoratorcontroller-<name>`
+from `metadata.finalizers`.
+
+Metacontroller can write the annotation while you edit it. Use `kubectl edit`,
+because it rejects a write if the object changed after you read it. Do not
+use `kubectl annotate --overwrite`. Or stop Metacontroller before you edit
+the annotation.
+
+##### Problems with the record
+
+If discovery does not list the resource of an entry, Metacontroller asks for
+the CRD of the resource:
+
+- The CRD exists: Metacontroller keeps the entry and tries again later.
+  Discovery can list the resource later.
+- No CRD, and discovery lists the `apiVersion` but not the resource:
+  Metacontroller removes the entry and records a `SyncError` warning event.
+  The API exists and does not have the resource.
+- No CRD, and the APIService of the `apiVersion` exists: Metacontroller keeps
+  the entry and tries again later. This is an aggregated API, that is, an API
+  that a separate API server serves. The server can be down for a short time,
+  and its objects stay in that server.
+- No CRD and no APIService: Metacontroller removes the entry and records a
+  `SyncError` warning event. This occurs, for example, after a person deletes
+  a CRD, or for a resource with a typo in its group. Kubernetes deletes all
+  objects of a CRD before it deletes the CRD.
+
+If a person deletes the APIService of an aggregated API during the cleanup,
+Metacontroller removes the entry. When the API is available again, remove the
+finalizer from its objects manually.
+
+If the annotation is not valid JSON, has an unknown `version`, or has an entry
+without `apiVersion` or `resource`, Metacontroller does not change the
+annotation and does not remove a finalizer. It records a `SyncError` event.
+The controller of the current spec continues, but a change of the spec waits.
+You cannot delete the DecoratorController until you repair the annotation.
+Repair the JSON, or remove the annotation. If you remove it, clean the
+resources that were in `removeParentFinalizerFrom` as described above.
+
+The total size of all annotations of an object must not be more than 256 KiB.
+If the record does not fit, Metacontroller does not write it. It records a
+`SyncError` event at each try, and a change of the spec waits. After a restart
+of Metacontroller, the controller does not start until the record fits. Make
+the other annotations smaller, or remove entries from
+`removeParentFinalizerFrom`.
+
+##### Operation with more than one replica
+
+If you run more than one Metacontroller replica, enable
+`--leader-election`. Without it, two instances can run the same controller.
+An instance with the old spec can then add the finalizer again after the
+cleanup.
+
+##### Going back to an earlier version
+
+A Metacontroller version without this record does not read or update the
+annotation. It does not record spec changes. After you upgrade again,
+Metacontroller compares the current spec with an old `active` list. A
+resource that you added and removed while the earlier version ran is not
+cleaned. Use the steps in
+[Objects from an earlier version](#objects-from-an-earlier-version) for it.
 
 #### Finalize Hook Request
 

@@ -19,6 +19,7 @@ package decorator
 import (
 	"context"
 
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"metacontroller/pkg/apis/metacontroller/v1alpha1"
@@ -29,6 +30,32 @@ import (
 // DecoratorController with the given name adds to its parent objects.
 func parentFinalizerName(controllerName string) string {
 	return "metacontroller.io/decoratorcontroller-" + controllerName
+}
+
+// newCleaner returns a cleaner that uses the cleanup cursors of mc.
+func (mc *Metacontroller) newCleaner() *finalizer.ControllerCleaner {
+	return &finalizer.ControllerCleaner{
+		K8sClient:     mc.k8sClient,
+		DynClient:     mc.dynClient,
+		Resources:     mc.resources,
+		EventRecorder: mc.eventRecorder,
+		Logger:        mc.logger,
+		Cursors:       &mc.cleanupCursors,
+		Budget:        mc.cleanupBudget,
+	}
+}
+
+// activeParentResources returns the parent resources of the spec.
+func activeParentResources(dc *v1alpha1.DecoratorController) []finalizer.ParentResource {
+	parents := make([]finalizer.ParentResource, 0, len(dc.Spec.Resources))
+	for _, resource := range dc.Spec.Resources {
+		parents = append(parents, finalizer.ParentResource{APIVersion: resource.APIVersion, Resource: resource.Resource})
+	}
+	return parents
+}
+
+func hasControllerFinalizer(dc *v1alpha1.DecoratorController) bool {
+	return controllerutil.ContainsFinalizer(dc, finalizer.ControllerFinalizer)
 }
 
 // ensureControllerFinalizer adds finalizer.ControllerFinalizer to a
@@ -44,18 +71,6 @@ func (mc *Metacontroller) ensureControllerFinalizer(ctx context.Context, dc *v1a
 // finalizeDecoratorController does the cleanup for a DecoratorController that is
 // pending deletion. See finalizer.ControllerCleaner.Finalize.
 func (mc *Metacontroller) finalizeDecoratorController(ctx context.Context, dc *v1alpha1.DecoratorController) (reconcile.Result, error) {
-	cleaner := &finalizer.ControllerCleaner{
-		K8sClient:     mc.k8sClient,
-		DynClient:     mc.dynClient,
-		Resources:     mc.resources,
-		EventRecorder: mc.eventRecorder,
-		Logger:        mc.logger,
-		Cursors:       &mc.cleanupCursors,
-	}
-	parents := make([]finalizer.ParentResource, 0, len(dc.Spec.Resources))
-	for _, resource := range dc.Spec.Resources {
-		parents = append(parents, finalizer.ParentResource{APIVersion: resource.APIVersion, Resource: resource.Resource})
-	}
 	stop := func() bool {
 		c, ok := mc.decoratorControllers.LoadAndDelete(dc.Name)
 		if ok {
@@ -63,5 +78,5 @@ func (mc *Metacontroller) finalizeDecoratorController(ctx context.Context, dc *v
 		}
 		return ok
 	}
-	return cleaner.Finalize(ctx, dc, parentFinalizerName(dc.Name), parents, stop)
+	return mc.newCleaner().Finalize(ctx, dc, parentFinalizerName(dc.Name), activeParentResources(dc), stop)
 }

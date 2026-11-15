@@ -47,8 +47,17 @@ cd test/integration && PATH="$PWD/hack/bin:$PATH" \
   empty line between the blocks. See
   `pkg/controller/common/finalizer/cleanup_test.go`.
 - Assertions: `github.com/stretchr/testify` and `github.com/google/go-cmp`.
-- Shared fakes and builders: `pkg/internal/testutils/{common,dynamic,hooks}`.
-  Use them before you write a new fake.
+- Shared fakes and builders: `pkg/internal/testutils/{common,dynamic,hooks,cleanuprecord}`.
+  Use them before you write a new fake. `clientset.NewFakeClients` gives a
+  dynamic clientset and discovery that lists more than one resource.
+  `cleanuprecord` writes and reads the cleanup record of the parent
+  finalizer cleanup.
+- `record.FakeRecorder` blocks when its buffer is full. Give it a buffer for
+  all events of the test, for example `record.NewFakeRecorder(100)`.
+  `cleanuprecord.RequireEvent` checks that a `FakeRecorder` has an event.
+- The composite and decorator `Metacontroller` have unit tests for `Reconcile`
+  in `metacontroller_test.go`. The fixture sets `newController` to a stub. No
+  informer starts.
 - `goconst` is off for `_test.go` files. All other linters apply.
 - A change in `pkg/controller/composite` usually needs the same test in
   `pkg/controller/decorator`, and the other way round.
@@ -74,6 +83,7 @@ Framework files in `test/integration/framework/`:
 | `webhook.go` | `ServeWebhook` |
 | `secret.go` | Secrets for the authorization suites |
 | `finalizer.go` | `RunFinalizerCleanupOnDelete`, `RunFinalizerCleanupNotInOperation`; shared tests for the two controller kinds |
+| `spec_change.go` | `RunSpecChangeCleanup`: the end-to-end test of the cleanup after a change of the parent resource. Both controller kinds share it. The unit tests in `pkg/controller/common/finalizer` and in the two `metacontroller_test.go` files cover the other rules. |
 
 Pattern for a new test (see `test/integration/composite/composite_v2_test.go`):
 ```go

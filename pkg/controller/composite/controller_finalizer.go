@@ -19,6 +19,7 @@ package composite
 import (
 	"context"
 
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"metacontroller/pkg/apis/metacontroller/v1alpha1"
@@ -29,6 +30,30 @@ import (
 // CompositeController with the given name adds to its parent objects.
 func parentFinalizerName(controllerName string) string {
 	return "metacontroller.io/compositecontroller-" + controllerName
+}
+
+// newCleaner returns a cleaner that uses the cleanup cursors of mc.
+func (mc *Metacontroller) newCleaner() *finalizer.ControllerCleaner {
+	return &finalizer.ControllerCleaner{
+		K8sClient:     mc.k8sClient,
+		DynClient:     mc.dynClient,
+		Resources:     mc.resources,
+		EventRecorder: mc.eventRecorder,
+		Logger:        mc.logger,
+		Cursors:       &mc.cleanupCursors,
+		Budget:        mc.cleanupBudget,
+	}
+}
+
+// activeParentResources returns the parent resource of the spec.
+func activeParentResources(cc *v1alpha1.CompositeController) []finalizer.ParentResource {
+	return []finalizer.ParentResource{
+		{APIVersion: cc.Spec.ParentResource.APIVersion, Resource: cc.Spec.ParentResource.Resource},
+	}
+}
+
+func hasControllerFinalizer(cc *v1alpha1.CompositeController) bool {
+	return controllerutil.ContainsFinalizer(cc, finalizer.ControllerFinalizer)
 }
 
 // ensureControllerFinalizer adds finalizer.ControllerFinalizer to a
@@ -44,17 +69,6 @@ func (mc *Metacontroller) ensureControllerFinalizer(ctx context.Context, cc *v1a
 // finalizeCompositeController does the cleanup for a CompositeController that is
 // pending deletion. See finalizer.ControllerCleaner.Finalize.
 func (mc *Metacontroller) finalizeCompositeController(ctx context.Context, cc *v1alpha1.CompositeController) (reconcile.Result, error) {
-	cleaner := &finalizer.ControllerCleaner{
-		K8sClient:     mc.k8sClient,
-		DynClient:     mc.dynClient,
-		Resources:     mc.resources,
-		EventRecorder: mc.eventRecorder,
-		Logger:        mc.logger,
-		Cursors:       &mc.cleanupCursors,
-	}
-	parents := []finalizer.ParentResource{
-		{APIVersion: cc.Spec.ParentResource.APIVersion, Resource: cc.Spec.ParentResource.Resource},
-	}
 	stop := func() bool {
 		pc, ok := mc.parentControllers.LoadAndDelete(cc.Name)
 		if ok {
@@ -62,5 +76,5 @@ func (mc *Metacontroller) finalizeCompositeController(ctx context.Context, cc *v
 		}
 		return ok
 	}
-	return cleaner.Finalize(ctx, cc, parentFinalizerName(cc.Name), parents, stop)
+	return mc.newCleaner().Finalize(ctx, cc, parentFinalizerName(cc.Name), activeParentResources(cc), stop)
 }

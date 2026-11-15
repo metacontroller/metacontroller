@@ -18,6 +18,8 @@ package decorator
 
 import (
 	"context"
+	"errors"
+	"time"
 
 	"metacontroller/pkg/logging"
 
@@ -53,9 +55,13 @@ type Metacontroller struct {
 
 	eventRecorder record.EventRecorder
 
-	decoratorControllers common.SyncMap[string, *decoratorController]
+	decoratorControllers common.SyncMap[string, runningController]
+	// newController creates the controller of one DecoratorController.
+	newController func(dc *v1alpha1.DecoratorController) (runningController, error)
 	// cleanupCursors keeps the position of each finalizer cleanup.
 	cleanupCursors finalizer.Cursors
+	// cleanupBudget is the finalizer.ControllerCleaner Budget.
+	cleanupBudget time.Duration
 
 	numWorkers int
 
@@ -79,8 +85,21 @@ func NewMetacontroller(ctx context.Context, controllerContext common.ControllerC
 		logger: logging.Logger.WithName("decorator"),
 		ctx:    ctx,
 	}
+	mc.newController = mc.createController
 
 	return mc
+}
+
+// runningController is the controller of one DecoratorController.
+type runningController interface {
+	Start()
+	Stop()
+	// object returns the DecoratorController that the controller was created from.
+	object() *v1alpha1.DecoratorController
+}
+
+func (c *decoratorController) object() *v1alpha1.DecoratorController {
+	return c.dc
 }
 
 func (mc *Metacontroller) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
@@ -91,14 +110,17 @@ func (mc *Metacontroller) Reconcile(ctx context.Context, request reconcile.Reque
 	err := mc.k8sClient.Get(ctx, request.NamespacedName, &dc)
 	if apierrors.IsNotFound(err) {
 		mc.logger.V(4).Info("DecoratorController has been deleted", "name", decoratorControllerName)
+		// The object can be gone before Finalize completed, for example when
+		// a person removed the controller finalizer. Remove its cursor.
+		mc.cleanupCursors.Delete(request.NamespacedName)
 		// Stop and remove the controller if it exists.
 		if c, ok := mc.decoratorControllers.LoadAndDelete(decoratorControllerName); ok {
 			c.Stop()
-			c.eventRecorder.Eventf(
-				c.dc,
+			mc.eventRecorder.Eventf(
+				c.object(),
 				v1.EventTypeNormal,
 				events.ReasonStopped,
-				"Stopped controller: %s", c.dc.Name)
+				"Stopped controller: %s", c.object().Name)
 		}
 		return reconcile.Result{}, nil
 	}
@@ -123,20 +145,47 @@ func (mc *Metacontroller) Reconcile(ctx context.Context, request reconcile.Reque
 		return reconcile.Result{}, err
 	}
 
+	// Clean the retired resources. A cleanup error must not stop the
+	// controller of the current spec, so the reconcile continues. The cleaner
+	// records the event.
+	var cleanupResult reconcile.Result
+	var cleanupErr error
+	if hasControllerFinalizer(&dc) {
+		cleanupResult, cleanupErr = mc.cleanupRetiredParents(ctx, &dc)
+	}
+
+	// A start error does not stop the requeue of the cleanup. See
+	// finalizer.KeepRequeue.
 	reconcileErr := mc.reconcileDecoratorController(ctx, &dc)
-	return reconcile.Result{}, reconcileErr
+	return finalizer.KeepRequeue(mc.logger, cleanupResult, errors.Join(cleanupErr, reconcileErr))
 }
 
 func (mc *Metacontroller) reconcileDecoratorController(ctx context.Context, dc *v1alpha1.DecoratorController) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
-	if c, ok := mc.decoratorControllers.Load(dc.Name); ok {
-		// The controller was already started.
-		if apiequality.Semantic.DeepEqual(dc.Spec, c.dc.Spec) {
-			// Nothing has changed.
-			return nil
+	running, ok := mc.decoratorControllers.Load(dc.Name)
+	if ok && apiequality.Semantic.DeepEqual(dc.Spec, running.object().Spec) {
+		// The spec is unchanged. If the record is missing, write it again.
+		// A later spec change then finds the old resources.
+		if hasControllerFinalizer(dc) && !finalizer.HasCleanupRecord(dc) {
+			return mc.recordActiveParents(ctx, dc, running)
 		}
+		return nil
+	}
+	// Write the record first. It then lists the resources of the old
+	// controller.
+	var recordErr error
+	if hasControllerFinalizer(dc) {
+		recordErr = mc.recordActiveParents(ctx, dc, running)
+		if recordErr != nil && (ok || !errors.Is(recordErr, finalizer.ErrInvalidCleanupRecord)) {
+			// Keep the old controller. The next reconcile tries again.
+			return recordErr
+		}
+		// recordErr is not nil here only if no controller runs and the
+		// record is not valid. A wait does not help, because the old
+		// resources stay unknown until a person repairs the record. Start
+		// the controller.
 	}
 	// Stop and remove the controller so it can be recreated.
 	if c, ok := mc.decoratorControllers.LoadAndDelete(dc.Name); ok {
@@ -148,7 +197,28 @@ func (mc *Metacontroller) reconcileDecoratorController(ctx context.Context, dc *
 			"Stopped controller: %s", dc.Name)
 	}
 
-	c, err := newDecoratorController( //nolint:contextcheck // long-lived controller must use root context, not per-reconcile ctx
+	c, err := mc.newController(dc)
+	if err != nil {
+		mc.eventRecorder.Eventf(
+			dc,
+			v1.EventTypeWarning,
+			events.ReasonCreateError,
+			"Cannot create new controller: %s", err.Error())
+		return errors.Join(recordErr, err)
+	}
+	c.Start()
+	mc.eventRecorder.Eventf(
+		dc,
+		v1.EventTypeNormal,
+		events.ReasonStarted,
+		"Started controller: %s", dc.Name)
+	mc.decoratorControllers.Store(dc.Name, c)
+	return recordErr
+}
+
+// createController creates the controller of one DecoratorController.
+func (mc *Metacontroller) createController(dc *v1alpha1.DecoratorController) (runningController, error) {
+	return newDecoratorController( //nolint:contextcheck // long-lived controller must use root context, not per-reconcile ctx
 		mc.ctx,
 		mc.resources,
 		mc.dynClient,
@@ -160,20 +230,25 @@ func (mc *Metacontroller) reconcileDecoratorController(ctx context.Context, dc *
 		mc.logger,
 		mc.k8sClient,
 	)
-	if err != nil {
-		mc.eventRecorder.Eventf(
-			dc,
-			v1.EventTypeWarning,
-			events.ReasonCreateError,
-			"Cannot create new controller: %s", err.Error())
-		return err
+}
+
+// cleanupRetiredParents cleans one slice. It skips the resources of the spec
+// and of the running controller.
+func (mc *Metacontroller) cleanupRetiredParents(ctx context.Context, dc *v1alpha1.DecoratorController) (reconcile.Result, error) {
+	exclude := activeParentResources(dc)
+	if c, ok := mc.decoratorControllers.Load(dc.Name); ok {
+		exclude = append(exclude, activeParentResources(c.object())...)
 	}
-	c.Start()
-	mc.eventRecorder.Eventf(
-		dc,
-		v1.EventTypeNormal,
-		events.ReasonStarted,
-		"Started controller: %s", dc.Name)
-	mc.decoratorControllers.Store(dc.Name, c)
-	return nil
+	return mc.newCleaner().CleanupRetiredParents(ctx, dc, parentFinalizerName(dc.Name), exclude)
+}
+
+// recordActiveParents writes the cleanup record for the spec. If the
+// annotation is absent, it takes the old resources from the running
+// controller.
+func (mc *Metacontroller) recordActiveParents(ctx context.Context, dc *v1alpha1.DecoratorController, running runningController) error {
+	var runningParents []finalizer.ParentResource
+	if running != nil {
+		runningParents = activeParentResources(running.object())
+	}
+	return mc.newCleaner().RecordActiveParents(ctx, dc, runningParents, activeParentResources(dc))
 }
