@@ -1,0 +1,13 @@
+# Configuration of the Qodo code review.
+# Reference: https://docs.qodo.ai/configuration/configuration-and-command-reference
+# The review instructions are in REVIEW.md.
+
+[github_app]
+pr_commands = ["/agentic_describe", "/agentic_review"]
+# Review each new push to a pull request. Qodo updates one review comment.
+handle_push_trigger = true
+push_commands = ["/agentic_review"]
+
+[review_agent]
+# Use the instructions in REVIEW.md. This is the default for Qodo SaaS.
+enable_review_md = true
