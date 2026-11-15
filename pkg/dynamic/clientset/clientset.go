@@ -102,15 +102,10 @@ type ResourceClient struct {
 	dc         dynamic.Interface
 }
 
-// IsWatchListSemanticsUnSupported returns true if the underlying client explicitly does not support WatchList.
-func (rc *ResourceClient) IsWatchListSemanticsUnSupported() bool {
-	if rc.dc == nil {
-		return false
-	}
-	if s, ok := rc.dc.(interface{ IsWatchListSemanticsUnSupported() bool }); ok {
-		return s.IsWatchListSemanticsUnSupported()
-	}
-	return false
+// DynamicClient returns the dynamic client that backs this ResourceClient.
+// The returned client has no namespace or resource scope.
+func (rc *ResourceClient) DynamicClient() dynamic.Interface {
+	return rc.dc
 }
 
 // Namespace returns a copy of the ResourceClient with the client namespace set.

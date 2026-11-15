@@ -40,6 +40,9 @@ import (
 
 const metacontrollerPrefix = "metacontroller"
 
+// controllerNameLabel is the metric label that holds the controller name.
+const controllerNameLabel = "controller_name"
+
 var metricsCache = cache.New[string, *cachedInstrumentation](20*time.Minute, 10*time.Minute)
 var registerer = controllerruntimemetrics.Registry
 
@@ -64,9 +67,9 @@ func InstrumentClientWithConstLabels(
 	c *http.Client,
 	url string) (*http.Client, error) {
 	constLabels := map[string]string{
-		"url":             url,
-		"controller_name": controllerName,
-		"controller_type": controllerType.String(),
+		"url":               url,
+		controllerNameLabel: controllerName,
+		"controller_type":   controllerType.String(),
 	}
 	key := fmt.Sprintf("%s/%s/%s", controllerName, hookType, url)
 	instrumentation, err := getOrCreateMetrics(key, hookType, constLabels)

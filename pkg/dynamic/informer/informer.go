@@ -17,24 +17,20 @@ limitations under the License.
 package informer
 
 import (
-	"context"
 	"fmt"
 	"sync"
 	"time"
 
-	"k8s.io/apimachinery/pkg/watch"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/client-go/dynamic/dynamicinformer"
+	"k8s.io/client-go/dynamic/dynamiclister"
 	"k8s.io/client-go/tools/cache"
 
 	dynamicclientset "metacontroller/pkg/dynamic/clientset"
-
-	"k8s.io/client-go/dynamic/dynamiclister"
 )
 
 // orphanIndexSentinel is the fixed key under which all controller-ownerless
@@ -94,7 +90,8 @@ type SharedIndexInformer interface {
 
 	// RemoveEventHandlers removes all event handlers added through this instance
 	// of SharedIndexInformer. It does not affect other handlers on the same
-	// underlying shared informer.
+	// underlying shared informer. It waits until each handler stops processing
+	// events.
 	//
 	// This is necessary because the underlying shared informer may continue
 	// running if others are using it, so you should remove the handlers you added
@@ -120,10 +117,7 @@ type ResourceInformer struct {
 func newResourceInformer(sri *sharedResourceInformer) *ResourceInformer {
 	return &ResourceInformer{
 		sharedResourceInformer: sri,
-		informerWrapper: &informerWrapper{
-			SharedIndexInformer:    sri.informer,
-			sharedResourceInformer: sri,
-		},
+		informerWrapper:        newInformerWrapper(sri),
 	}
 }
 
@@ -186,6 +180,9 @@ func (ri *ResourceInformer) byIndexAndNamespace(indexName, key string, namespace
 // informer to be stopped when no users are left.
 // You should call this when you no longer need the informer, so the watches
 // and relists can be stopped.
+//
+// Close does not remove event handlers and does not stop a custom resync
+// timer. Call RemoveEventHandlers on the informer first.
 func (ri *ResourceInformer) Close() {
 	// Decrement the reference count for the sharedResourceInformer.
 	ri.sharedResourceInformer.close()
@@ -194,208 +191,56 @@ func (ri *ResourceInformer) Close() {
 // sharedResourceInformer is the actual, single informer that's shared by
 // multiple ResourceInformer instances.
 type sharedResourceInformer struct {
-	informer cache.SharedIndexInformer
-	lister   dynamiclister.Lister
-
+	informer            cache.SharedIndexInformer
+	lister              dynamiclister.Lister
 	defaultResyncPeriod time.Duration
-
-	eventHandlers *sharedEventHandler
-	registration  cache.ResourceEventHandlerRegistration
 
 	close func()
 }
 
-func newSharedResourceInformer(client *dynamicclientset.ResourceClient, defaultResyncPeriod time.Duration, close func()) (*sharedResourceInformer, error) {
-	informer := cache.NewSharedIndexInformer(
-		cache.ToListWatcherWithWatchListSemantics(
-			&cache.ListWatch{
-				ListWithContextFunc: func(ctx context.Context, opts metav1.ListOptions) (runtime.Object, error) {
-					return client.List(ctx, opts)
-				},
-				WatchFuncWithContext: func(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-					return client.Watch(ctx, opts)
-				},
-			},
-			client,
-		),
-		&unstructured.Unstructured{},
+func newSharedResourceInformer(client *dynamicclientset.ResourceClient, defaultResyncPeriod time.Duration, close func()) *sharedResourceInformer {
+	// Use the client-go dynamic informer. It owns the list/watch loop and
+	// replays the current store to a handler that is added later.
+	//
+	// The custom indexes stay local. They are passed to the informer, so
+	// claimChildren keeps its O(k) lookups.
+	informer := dynamicinformer.NewFilteredDynamicInformer(
+		client.DynamicClient(),
+		client.GroupVersionResource(),
+		metav1.NamespaceAll,
 		defaultResyncPeriod,
 		cache.Indexers{
 			cache.NamespaceIndex: cache.MetaNamespaceIndexFunc,
 			OwnerUIDIndex:        ownerUIDIndexFunc,
 			OrphanIndex:          orphanIndexFunc,
 		},
-	)
-	sri := &sharedResourceInformer{
+		nil,
+	).Informer()
+
+	return &sharedResourceInformer{
 		close:               close,
 		informer:            informer,
 		defaultResyncPeriod: defaultResyncPeriod,
-
-		//lister: dynamiclister.New(client.GroupResource(), informer.GetIndexer()),
-		lister: dynamiclister.New(informer.GetIndexer(), client.GroupVersionResource()),
+		lister:              dynamiclister.New(informer.GetIndexer(), client.GroupVersionResource()),
 	}
-	sri.eventHandlers = newSharedEventHandler(sri.lister, defaultResyncPeriod)
-	reg, err := informer.AddEventHandler(sri.eventHandlers)
-	sri.registration = reg
-	if err != nil {
-		return nil, err
-	}
-	return sri, nil
 }
 
-// sharedEventHandler is the one and only event handler that's actually added
-// to the shared informer. All other event handlers are actually only added here
-// and then this handler broadcasts to them.
+// SkipInitialList returns an add function for
+// cache.ResourceEventHandlerDetailedFuncs that ignores the objects that the
+// informer replays to a new handler. These are the objects of the first list,
+// or the objects that are in the cache when the handler is added.
 //
-// We do this because the real informer library has no support for removing
-// event handlers. Unlike most users of that library, we need to dynamically add
-// and remove handlers throughout the lifetime of a shared informer.
-type sharedEventHandler struct {
-	lister       dynamiclister.Lister
-	relistPeriod time.Duration
-
-	mutex    sync.RWMutex
-	handlers map[*informerWrapper][]*eventHandler
-}
-
-func newSharedEventHandler(lister dynamiclister.Lister, relistPeriod time.Duration) *sharedEventHandler {
-	return &sharedEventHandler{
-		lister:       lister,
-		relistPeriod: relistPeriod,
-		handlers:     make(map[*informerWrapper][]*eventHandler),
-	}
-}
-
-// addHandler adds a subscriber, remembering which informerWrapper it came from.
-// This lets us easily remove all handlers added through the same source.
-func (seh *sharedEventHandler) addHandler(iw *informerWrapper, handler cache.ResourceEventHandler, resyncPeriod time.Duration) {
-	seh.mutex.Lock()
-	defer seh.mutex.Unlock()
-
-	eh := &eventHandler{ResourceEventHandler: handler, sharedEventHandler: seh}
-	seh.handlers[iw] = append(seh.handlers[iw], eh)
-
-	// Do an initial resync to pick up anything that already exists.
-	// Usually the shared informer does this when a new handler is added.
-	// Since we aren't actually adding this handler to the shared informer,
-	// we need to do it ourselves.
-	eh.resync()
-
-	// If the requested resync period is more frequent than the underlying relist,
-	// start a timer just for this handler.
-	if resyncPeriod < seh.relistPeriod {
-		eh.start(resyncPeriod)
-	}
-}
-
-// removeHandlers removes all handlers added through the given informerWrapper.
-func (seh *sharedEventHandler) removeHandlers(iw *informerWrapper) {
-	seh.mutex.Lock()
-	defer seh.mutex.Unlock()
-
-	// Stop the resync timers for these handlers, if any.
-	for _, eh := range seh.handlers[iw] {
-		eh.stop()
-	}
-
-	// Remove all handlers added through this informerWrapper.
-	delete(seh.handlers, iw)
-}
-
-func (seh *sharedEventHandler) OnAdd(obj interface{}, isInInitialList bool) {
-	seh.mutex.RLock()
-	defer seh.mutex.RUnlock()
-
-	for _, handlers := range seh.handlers {
-		for _, handler := range handlers {
-			handler.OnAdd(obj, isInInitialList)
+// Use it only when the handler does not need the replay. For example, a
+// controller that adds each parent to its work queue at start reads the
+// children and the related objects from the cache during the sync. A replay
+// of these objects would only add the same parents again.
+func SkipInitialList(add func(obj interface{})) func(obj interface{}, isInInitialList bool) {
+	return func(obj interface{}, isInInitialList bool) {
+		if isInInitialList {
+			return
 		}
+		add(obj)
 	}
-}
-
-func (seh *sharedEventHandler) OnUpdate(oldObj, newObj interface{}) {
-	seh.mutex.RLock()
-	defer seh.mutex.RUnlock()
-
-	for _, handlers := range seh.handlers {
-		for _, handler := range handlers {
-			handler.OnUpdate(oldObj, newObj)
-		}
-	}
-}
-
-func (seh *sharedEventHandler) OnDelete(obj interface{}) {
-	seh.mutex.RLock()
-	defer seh.mutex.RUnlock()
-
-	for _, handlers := range seh.handlers {
-		for _, handler := range handlers {
-			handler.OnDelete(obj)
-		}
-	}
-}
-
-// eventHandler is a single entry in the sharedEventHandler's map.
-type eventHandler struct {
-	cache.ResourceEventHandler
-
-	stopCh, doneCh     chan struct{}
-	stopOnce           sync.Once
-	sharedEventHandler *sharedEventHandler
-}
-
-// start can be optionally called to give this handler its own custom resync
-// period, which can be less than the underlying shared informer's period.
-func (eh *eventHandler) start(resyncPeriod time.Duration) {
-	eh.stopCh = make(chan struct{})
-	eh.doneCh = make(chan struct{})
-
-	go func() {
-		defer close(eh.doneCh)
-
-		ticker := time.NewTicker(resyncPeriod)
-		defer ticker.Stop()
-
-		for {
-			select {
-			case <-eh.stopCh:
-				return
-			case <-ticker.C:
-				eh.resync()
-			}
-		}
-	}()
-}
-
-// resync sends all the latest cached values to the handler.
-//
-// Unlike the underlying shared informer's resync, this does not imply a relist
-// (fetching a full list from the server and restarting watches).
-// That makes this useful for controllers that may want to resync periodically
-// just to observe time passing, but are not actually concerned about the
-// reliability of the watches keeping the local cache up-to-date.
-func (eh *eventHandler) resync() {
-	// List everything from the cache (not from the server).
-	list, err := eh.sharedEventHandler.lister.List(labels.Everything())
-	if err != nil {
-		utilruntime.HandleError(fmt.Errorf("can't list for resync: %w", err))
-		return
-	}
-
-	// Send them all to OnUpdate to trigger a sync for every object.
-	for _, obj := range list {
-		// Pass the same object for old/new to indicate a resync.
-		eh.OnUpdate(obj, obj)
-	}
-}
-
-func (eh *eventHandler) stop() {
-	eh.stopOnce.Do(func() {
-		if eh.stopCh != nil {
-			close(eh.stopCh)
-			<-eh.doneCh
-		}
-	})
 }
 
 // informerWrapper wraps a cache.SharedIndexInformer and adds the ability to
@@ -404,20 +249,196 @@ func (eh *eventHandler) stop() {
 type informerWrapper struct {
 	cache.SharedIndexInformer
 	sharedResourceInformer *sharedResourceInformer
+
+	mutex    sync.Mutex
+	handlers map[cache.ResourceEventHandlerRegistration]*handlerEntry
+
+	// removal serializes the removal calls. A second call then returns only
+	// after the handlers of the first call have stopped. It is a separate
+	// lock, so a caller can add a handler while a removal waits.
+	removal sync.Mutex
+}
+
+func newInformerWrapper(sri *sharedResourceInformer) *informerWrapper {
+	return &informerWrapper{
+		SharedIndexInformer:    sri.informer,
+		sharedResourceInformer: sri,
+		handlers:               make(map[cache.ResourceEventHandlerRegistration]*handlerEntry),
+	}
 }
 
 func (iw *informerWrapper) AddEventHandler(handler cache.ResourceEventHandler) (cache.ResourceEventHandlerRegistration, error) {
-	iw.sharedResourceInformer.eventHandlers.addHandler(iw, handler, iw.sharedResourceInformer.defaultResyncPeriod)
-
-	return nil, nil
+	return iw.addHandler(handler, cache.HandlerOptions{})
 }
 
 func (iw *informerWrapper) AddEventHandlerWithResyncPeriod(handler cache.ResourceEventHandler, resyncPeriod time.Duration) (cache.ResourceEventHandlerRegistration, error) {
-	iw.sharedResourceInformer.eventHandlers.addHandler(iw, handler, resyncPeriod)
-
-	return nil, nil
+	return iw.addHandler(handler, cache.HandlerOptions{ResyncPeriod: &resyncPeriod})
 }
 
+// AddEventHandlerWithOptions registers the handler and tracks it. It hides the
+// method that this type promotes from cache.SharedIndexInformer. Without this
+// method, a caller could register an untracked handler, and
+// RemoveEventHandlers would not remove it.
+func (iw *informerWrapper) AddEventHandlerWithOptions(handler cache.ResourceEventHandler, options cache.HandlerOptions) (cache.ResourceEventHandlerRegistration, error) {
+	return iw.addHandler(handler, options)
+}
+
+// addHandler registers the handler with the shared informer.
+//
+// The informer replays the current store to a new handler. It also sends
+// resync events at its own period. When the caller asks for a shorter period,
+// a timer repeats the resync from the local cache. The timer is necessary
+// because the informer can start before or after a handler is added.
+// client-go changes the period of the whole shared informer in the first
+// case, and it raises a shorter period to the informer period in the second.
+//
+// The resync period of the handler is not the client-go ResyncPeriod:
+//   - A period that is zero or not shorter than the informer period gives
+//     the informer period. Zero does not disable the resync.
+//   - The first informer resync for a handler that is added late can come
+//     after up to two informer periods. After that, the period is constant.
+func (iw *informerWrapper) addHandler(handler cache.ResourceEventHandler, options cache.HandlerOptions) (cache.ResourceEventHandlerRegistration, error) {
+	iw.mutex.Lock()
+	defer iw.mutex.Unlock()
+
+	resyncPeriod := iw.sharedResourceInformer.defaultResyncPeriod
+	if options.ResyncPeriod != nil {
+		resyncPeriod = *options.ResyncPeriod
+	}
+
+	// Do not pass ResyncPeriod to client-go. Before the informer starts,
+	// client-go changes the resync check period of the whole shared informer.
+	// After the informer starts, client-go raises a short period to the
+	// informer period. The local timer gives the short period in both cases.
+	registration, err := iw.SharedIndexInformer.AddEventHandlerWithOptions(handler, cache.HandlerOptions{
+		Logger: options.Logger,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	entry := &handlerEntry{handler: handler}
+	if resyncPeriod > 0 && resyncPeriod < iw.sharedResourceInformer.defaultResyncPeriod {
+		entry.start(resyncPeriod, iw.sharedResourceInformer.lister)
+	}
+
+	iw.handlers[registration] = entry
+
+	return registration, nil
+}
+
+// RemoveEventHandlers removes all handlers that were added through this
+// instance of SharedIndexInformer. It waits until each handler stops
+// processing events. A caller can release its own resources after it returns.
+//
+// Do not call it from a handler callback: client-go deadlocks in that case.
+//
+// A handler that is being added at the same moment can stay registered. Add
+// handlers in a start path and remove them in a stop path, so a new handler
+// cannot arrive during removal.
 func (iw *informerWrapper) RemoveEventHandlers() {
-	iw.sharedResourceInformer.eventHandlers.removeHandlers(iw)
+	iw.removal.Lock()
+	defer iw.removal.Unlock()
+
+	iw.mutex.Lock()
+	entries := iw.handlers
+	iw.handlers = make(map[cache.ResourceEventHandlerRegistration]*handlerEntry)
+	iw.mutex.Unlock()
+
+	for registration, entry := range entries {
+		entry.stop()
+		if err := cache.ShutDownEventHandler(iw.SharedIndexInformer, registration); err != nil {
+			utilruntime.HandleError(fmt.Errorf("can't shut down event handler: %w", err))
+		}
+	}
+}
+
+// RemoveEventHandler removes one handler added through this instance and waits
+// until it stops processing events. It hides the method that this type
+// promotes from cache.SharedIndexInformer. Without this method, a direct
+// removal would leave the resync timer running.
+//
+// It does nothing for a registration that this instance does not track. Such
+// a registration is already removed, or it belongs to another user of the
+// shared informer. That user must remove it, because only that user can stop
+// its resync timer.
+//
+// Do not call it from a handler callback: client-go deadlocks in that case.
+func (iw *informerWrapper) RemoveEventHandler(registration cache.ResourceEventHandlerRegistration) error {
+	if registration == nil {
+		return fmt.Errorf("can't remove event handler: the registration is nil")
+	}
+
+	iw.removal.Lock()
+	defer iw.removal.Unlock()
+
+	iw.mutex.Lock()
+	entry, tracked := iw.handlers[registration]
+	delete(iw.handlers, registration)
+	iw.mutex.Unlock()
+
+	if !tracked {
+		return nil
+	}
+
+	entry.stop()
+	return cache.ShutDownEventHandler(iw.SharedIndexInformer, registration)
+}
+
+// handlerEntry keeps a handler and its optional resync timer. The registration
+// of the handler is the key in informerWrapper.handlers.
+type handlerEntry struct {
+	handler cache.ResourceEventHandler
+
+	stopCh, doneCh chan struct{}
+	stopOnce       sync.Once
+}
+
+// start gives this handler its own resync period. The period can be shorter
+// than the informer's period.
+func (he *handlerEntry) start(resyncPeriod time.Duration, lister dynamiclister.Lister) {
+	he.stopCh = make(chan struct{})
+	he.doneCh = make(chan struct{})
+
+	go func() {
+		defer close(he.doneCh)
+
+		ticker := time.NewTicker(resyncPeriod)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-he.stopCh:
+				return
+			case <-ticker.C:
+				he.resync(lister)
+			}
+		}
+	}()
+}
+
+// resync sends all the latest cached values to the handler.
+//
+// Unlike the informer's resync, this does not relist from the server. It only
+// replays the local cache.
+func (he *handlerEntry) resync(lister dynamiclister.Lister) {
+	list, err := lister.List(labels.Everything())
+	if err != nil {
+		utilruntime.HandleError(fmt.Errorf("can't list for resync: %w", err))
+		return
+	}
+
+	for _, obj := range list {
+		// Pass the same object for old/new to indicate a resync.
+		he.handler.OnUpdate(obj, obj)
+	}
+}
+
+func (he *handlerEntry) stop() {
+	he.stopOnce.Do(func() {
+		if he.stopCh != nil {
+			close(he.stopCh)
+			<-he.doneCh
+		}
+	})
 }

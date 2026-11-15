@@ -292,8 +292,11 @@ func (c *decoratorController) Start() {
 		}
 	})
 	c.childInformers.ForEach(func(_ schema.GroupVersionResource, informer *dynamicinformer.ResourceInformer) {
-		_, err := informer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-			AddFunc:    c.onChildAdd,
+		// Skip the children that the informer replays to a new handler. The
+		// parent handlers above add each parent to the queue, and each sync
+		// reads the children from the cache.
+		_, err := informer.Informer().AddEventHandler(cache.ResourceEventHandlerDetailedFuncs{
+			AddFunc:    dynamicinformer.SkipInitialList(c.onChildAdd),
 			UpdateFunc: c.onChildUpdate,
 			DeleteFunc: c.onChildDelete,
 		})
@@ -438,7 +441,7 @@ func (c *decoratorController) updateParentObject(old, cur interface{}) {
 				// if ignoreStatusChanges is set to true in the decorator controller, a parent object should only be
 				// enqueued if there is a change in the generation or if there is a change in its labels/annotations,
 				// or if there is a deletion timestamp attached to the object, otherwise it will be ignored.
-				// However, a resync event passes the same pointer for both old and cur (eh.resync()), so we must
+				// However, a resync event passes the same pointer for both old and cur (handlerEntry.resync()), so we must
 				// allow it through to avoid silently dropping periodic reconciles.
 				if parent.IgnoreStatusChanges != nil && *parent.IgnoreStatusChanges {
 					if parentCur, ok := cur.(*unstructured.Unstructured); ok {

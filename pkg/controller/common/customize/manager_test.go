@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"reflect"
 	"slices"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -45,10 +46,13 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	fakediscovery "k8s.io/client-go/discovery/fake"
 	"k8s.io/client-go/dynamic/fake"
 	fakeclientset "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/rest"
+	clienttesting "k8s.io/client-go/testing"
+	controllerruntimemetrics "sigs.k8s.io/controller-runtime/pkg/metrics"
 )
 
 const (
@@ -891,6 +895,396 @@ func Test_findRelatedParents(t *testing.T) {
 			}
 		})
 	}
+}
+
+var configMapsGVR = schema.GroupVersionResource{Group: "", Version: "v1", Resource: resourceConfigMaps}
+
+func TestEnqueueParentsWhenSynced_whenParentsWait_enqueuesThem(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	f := newWakeupFixture(ctx, t)
+	f.rm.markWaiting(f.syncedInformer, newParentSecret("first"))
+	f.rm.markWaiting(f.syncedInformer, newParentSecret("second"))
+
+	f.rm.enqueueParentsWhenSynced(ctx, configMapsGVR, f.syncedInformer)
+
+	got := f.enqueued.names()
+	slices.Sort(got)
+	if want := []string{"first", "second"}; !slices.Equal(got, want) {
+		t.Errorf("expected parents %v to be enqueued, got %v", want, got)
+	}
+}
+
+func TestEnqueueParentsWhenSynced_whenParentSyncedMeanwhile_doesNotEnqueueIt(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	f := newWakeupFixture(ctx, t)
+	synced := newParentSecret("synced")
+	f.rm.markWaiting(f.syncedInformer, newParentSecret("waiting"))
+	f.rm.markWaiting(f.syncedInformer, synced)
+	f.rm.waiting.remove(f.syncedInformer, synced)
+
+	f.rm.enqueueParentsWhenSynced(ctx, configMapsGVR, f.syncedInformer)
+
+	if got, want := f.enqueued.names(), []string{"waiting"}; !slices.Equal(got, want) {
+		t.Errorf("expected parents %v to be enqueued, got %v", want, got)
+	}
+}
+
+func TestEnqueueParentsWhenSynced_whenParentWaitsForOtherInformer_doesNotEnqueueIt(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	f := newWakeupFixture(ctx, t)
+	other, err := f.rm.dynInformers.Resource(ctx, "v1", resourceSecrets)
+	if err != nil {
+		t.Fatalf("can't create other informer: %v", err)
+	}
+	defer other.Close()
+	f.rm.markWaiting(other, newParentSecret("other-informer"))
+
+	f.rm.enqueueParentsWhenSynced(ctx, configMapsGVR, f.syncedInformer)
+
+	if got := f.enqueued.names(); len(got) != 0 {
+		t.Errorf("expected no parents to be enqueued, got %v", got)
+	}
+}
+
+func TestEnqueueParentsWhenSynced_whenContextIsCanceled_enqueuesNoParents(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	f := newWakeupFixture(ctx, t)
+	f.holdRelatedList()
+	notSynced, err := f.rm.dynInformers.Resource(ctx, "v1", resourceConfigMaps)
+	if err != nil {
+		t.Fatalf("can't create related informer: %v", err)
+	}
+	defer notSynced.Close()
+	f.rm.markWaiting(notSynced, newParentSecret("parent"))
+	cancel()
+
+	f.rm.enqueueParentsWhenSynced(ctx, configMapsGVR, notSynced)
+
+	if got := f.enqueued.names(); len(got) != 0 {
+		t.Errorf("expected no parents to be enqueued, got %v", got)
+	}
+}
+
+func TestEnqueueParentsWhenSynced_whenParentsAreEnqueued_recordsTheWakeupMetrics(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	f := newWakeupFixture(ctx, t)
+	f.rm.name = "wakeup-metrics-test-controller"
+	f.rm.markWaiting(f.syncedInformer, newParentSecret("first"))
+	f.rm.markWaiting(f.syncedInformer, newParentSecret("second"))
+	const wakeups = "metacontroller_customize_related_informer_wakeups_total"
+	const parents = "metacontroller_customize_related_informer_enqueued_parents_total"
+	wakeupsBefore := wakeupCounterValue(t, wakeups, f.rm.name)
+	parentsBefore := wakeupCounterValue(t, parents, f.rm.name)
+
+	f.rm.enqueueParentsWhenSynced(ctx, configMapsGVR, f.syncedInformer)
+
+	if got := wakeupCounterValue(t, wakeups, f.rm.name) - wakeupsBefore; got != 1 {
+		t.Errorf("expected 1 wake-up in the metric, got %v", got)
+	}
+	if got := wakeupCounterValue(t, parents, f.rm.name) - parentsBefore; got != 2 {
+		t.Errorf("expected 2 enqueued parents in the metric, got %v", got)
+	}
+}
+
+func TestMarkWaiting_whenWakeupIsDone_enqueuesParentImmediately(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	f := newWakeupFixture(ctx, t)
+	f.rm.enqueueParentsWhenSynced(ctx, configMapsGVR, f.syncedInformer)
+
+	f.rm.markWaiting(f.syncedInformer, newParentSecret("late"))
+
+	if got, want := f.enqueued.names(), []string{"late"}; !slices.Equal(got, want) {
+		t.Errorf("expected parents %v to be enqueued, got %v", want, got)
+	}
+}
+
+func TestGetRelatedObjects_whenRelatedInformerIsNotSynced_enqueuesParentAfterCacheSync(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	parent := newParentSecret("parent")
+	f := newWakeupFixture(ctx, t, parent)
+	f.rm.customizeHook = NewHookExecutorStub(responseWithRelatedRule("v1", resourceConfigMaps))
+	release := f.holdRelatedList()
+
+	_, err := f.rm.GetRelatedObjects(ctx, parent)
+
+	if !errors.Is(err, ErrRelatedInformerNotSynced) {
+		t.Fatalf("expected ErrRelatedInformerNotSynced while the list is held, got %v", err)
+	}
+	if got := f.enqueued.names(); len(got) != 0 {
+		t.Fatalf("expected no parents before the related cache is filled, got %v", got)
+	}
+	release()
+	f.enqueued.waitFor(ctx, t, "parent")
+}
+
+func TestGetRelatedObjects_whenRelatedInformerIsSynced_forgetsTheWaitingParent(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	parent := newParentSecret("parent")
+	f := newWakeupFixture(ctx, t, parent)
+	f.rm.customizeHook = NewHookExecutorStub(responseWithRelatedRule("v1", resourceConfigMaps))
+	related, err := f.rm.dynInformers.Resource(ctx, "v1", resourceConfigMaps)
+	if err != nil {
+		t.Fatalf("can't create related informer: %v", err)
+	}
+	if !waitForSync(ctx, related) {
+		t.Fatal("timed out waiting for related informer sync")
+	}
+	f.rm.relatedInformers.Set(configMapsGVR, related)
+	f.rm.markWaiting(related, parent)
+
+	_, err = f.rm.GetRelatedObjects(ctx, parent)
+
+	if err != nil {
+		t.Fatalf("can't get related objects: %v", err)
+	}
+	if got := f.rm.waiting.take(related); len(got) != 0 {
+		t.Errorf("expected no waiting parents after a successful sync, got %d", len(got))
+	}
+}
+
+func TestGetOrCreateRelatedInformer_whenCacheIsAlreadyFilled_wakesParentsThatWait(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	f := newWakeupFixture(ctx, t)
+	// Another controller already has a filled informer for the resource. So
+	// the new informer of this manager is filled when it is created.
+	shared, err := f.rm.dynInformers.Resource(ctx, "v1", resourceConfigMaps)
+	if err != nil {
+		t.Fatalf("can't create shared informer: %v", err)
+	}
+	defer shared.Close()
+	if !waitForSync(ctx, shared) {
+		t.Fatal("timed out waiting for shared informer sync")
+	}
+
+	related, err := f.rm.getOrCreateRelatedInformer("v1", resourceConfigMaps, configMapsGVR)
+
+	if err != nil {
+		t.Fatalf("can't create related informer: %v", err)
+	}
+	// A parallel sync could get the informer from the map while it was not
+	// filled, and record its parent now. The wake-up must still reach it.
+	f.rm.markWaiting(related, newParentSecret("parallel"))
+	f.enqueued.waitFor(ctx, t, "parallel")
+}
+
+func TestGetRelatedClient_whenRelatedObjectExistsBeforeInformer_doesNotEnqueueParentsForIt(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	// Each parent has a rule for one ConfigMap. Only the first ConfigMap
+	// exists before the related informer.
+	f := newWakeupFixture(ctx, t, newParentSecret("parent-of-existing"), newParentSecret("parent-of-created"), newRelatedConfigMap("existing"))
+	f.rm.customizeCache.Set(customizeKey{"uid-parent-of-existing", 0}, responseWithRelatedName("existing"))
+	f.rm.customizeCache.Set(customizeKey{"uid-parent-of-created", 0}, responseWithRelatedName("created"))
+	// No parent waits for the related informer, so only the related handler
+	// can enqueue a parent.
+
+	_, _, err := f.rm.getRelatedClient("v1", resourceConfigMaps)
+
+	if err != nil && !errors.Is(err, ErrRelatedInformerNotSynced) {
+		t.Fatalf("can't get related client: %v", err)
+	}
+	if !waitForSync(ctx, f.rm.relatedInformers.Get(schema.GroupVersionResource{Version: "v1", Resource: resourceConfigMaps})) {
+		t.Fatal("timed out waiting for related informer sync")
+	}
+	if _, err := f.dynamicClient.Resource(schema.GroupVersionResource{Version: "v1", Resource: resourceConfigMaps}).Namespace(someNS).Create(ctx, newRelatedConfigMap("created"), metav1.CreateOptions{}); err != nil {
+		t.Fatalf("can't create related object: %v", err)
+	}
+	// The events of one handler come in order. So when the parent of the new
+	// object is enqueued, the handler has already got the first list.
+	f.enqueued.waitFor(ctx, t, "parent-of-created")
+	if got, want := f.enqueued.names(), []string{"parent-of-created"}; !slices.Equal(got, want) {
+		t.Errorf("expected parents %v to be enqueued, got %v", want, got)
+	}
+}
+
+// wakeupFixture is a customize manager with one parent resource (Secrets)
+// and one related resource (ConfigMaps) on a fake API.
+type wakeupFixture struct {
+	rm *Manager
+	// syncedInformer is an informer whose cache is filled.
+	syncedInformer *dynamicinformer.ResourceInformer
+	dynamicClient  *fake.FakeDynamicClient
+	enqueued       *enqueuedParents
+	t              *testing.T
+}
+
+// wakeupResourceMap returns one discovery map for the wake-up tests. The fake
+// discovery helper sleeps for one second, so do not call it in each test.
+var wakeupResourceMap = sync.OnceValue(func() *dynamicdiscovery.ResourceMap {
+	simple := fakeclientset.NewClientset()
+	fakeDiscovery := simple.Discovery().(*fakediscovery.FakeDiscovery)
+	fakeDiscovery.Resources = []*metav1.APIResourceList{
+		{
+			GroupVersion: "v1",
+			APIResources: []metav1.APIResource{
+				{Name: resourceSecrets, Kind: kindSecret, Namespaced: true, Group: "", Version: "v1", Verbs: []string{"get", "list", "watch"}},
+				{Name: resourceConfigMaps, Kind: kindConfigMap, Namespaced: true, Group: "", Version: "v1", Verbs: []string{"get", "list", "watch"}},
+			},
+		},
+	}
+	return discovery.NewFakeResourceMap(simple)
+})
+
+// newWakeupFixture creates a manager whose parent informer holds the Secrets
+// in objects, and whose related informers watch the ConfigMaps in objects.
+func newWakeupFixture(ctx context.Context, t *testing.T, objects ...runtime.Object) *wakeupFixture {
+	t.Helper()
+
+	dynamicClient := fake.NewSimpleDynamicClientWithCustomListKinds(runtime.NewScheme(), map[schema.GroupVersionResource]string{
+		{Group: "", Version: "v1", Resource: resourceSecrets}:    "SecretList",
+		{Group: "", Version: "v1", Resource: resourceConfigMaps}: "ConfigMapList",
+	}, objects...)
+	dynClient := dynamicclientset.NewClientset(&rest.Config{}, wakeupResourceMap(), dynamicClient)
+	dynInformers := dynamicinformer.NewSharedInformerFactory(dynClient, 0)
+	parentInformer, err := dynInformers.Resource(ctx, "v1", resourceSecrets)
+	if err != nil {
+		t.Fatalf("can't create parent informer: %v", err)
+	}
+	t.Cleanup(parentInformer.Close)
+	if !waitForSync(ctx, parentInformer) {
+		t.Fatal("timed out waiting for parent informer sync")
+	}
+	parentInformers := common.NewInformerMap()
+	parentInformers.Set(schema.GroupVersionResource{Group: "", Version: "v1", Resource: resourceSecrets}, parentInformer)
+	parentKinds := common.NewGroupKindMap()
+	parentKinds.Set(schema.GroupKind{Group: "", Kind: kindSecret}, &dynamicdiscovery.APIResource{
+		APIResource: metav1.APIResource{Name: resourceSecrets, Namespaced: true, Kind: kindSecret, Group: "", Version: "v1"},
+	})
+	enqueued := &enqueuedParents{}
+	rm := &Manager{
+		parentKinds:      parentKinds,
+		dynClient:        dynClient,
+		dynInformers:     dynInformers,
+		parentInformers:  parentInformers,
+		relatedInformers: common.NewInformerMap(),
+		customizeCache:   newResponseCache(),
+		customizeHook:    NewHookExecutorStub(&v1.CustomizeHookResponse{}),
+		enqueueParent:    enqueued.add,
+		logger:           fakeLogger,
+		ctx:              ctx,
+		informerCtx:      ctx,
+	}
+	t.Cleanup(rm.Stop)
+
+	return &wakeupFixture{rm: rm, syncedInformer: parentInformer, dynamicClient: dynamicClient, enqueued: enqueued, t: t}
+}
+
+// holdRelatedList makes each list of the related resource wait, so the cache
+// of a related informer stays empty. Call the returned function to release
+// the lists. The test cleanup also releases them.
+func (f *wakeupFixture) holdRelatedList() func() {
+	release := make(chan struct{})
+	var once sync.Once
+	releaseList := func() { once.Do(func() { close(release) }) }
+	f.dynamicClient.PrependReactor("list", resourceConfigMaps, func(clienttesting.Action) (bool, runtime.Object, error) {
+		<-release
+		return false, nil, nil
+	})
+	f.t.Cleanup(releaseList)
+	return releaseList
+}
+
+// enqueuedParents records the parents that the manager adds to the work queue.
+type enqueuedParents struct {
+	mutex   sync.Mutex
+	parents []string
+}
+
+func (e *enqueuedParents) add(obj interface{}) {
+	e.mutex.Lock()
+	defer e.mutex.Unlock()
+	e.parents = append(e.parents, obj.(*unstructured.Unstructured).GetName())
+}
+
+func (e *enqueuedParents) names() []string {
+	e.mutex.Lock()
+	defer e.mutex.Unlock()
+	return slices.Clone(e.parents)
+}
+
+// waitFor waits until the named parent is in the work queue.
+func (e *enqueuedParents) waitFor(ctx context.Context, t *testing.T, name string) {
+	t.Helper()
+
+	for !slices.Contains(e.names(), name) {
+		select {
+		case <-ctx.Done():
+			t.Fatalf("parent %q was not enqueued, the enqueued parents are %v", name, e.names())
+		case <-time.After(5 * time.Millisecond):
+		}
+	}
+}
+
+func newParentSecret(name string) *unstructured.Unstructured {
+	secret := &unstructured.Unstructured{}
+	secret.SetAPIVersion("v1")
+	secret.SetKind(kindSecret)
+	secret.SetNamespace(someNS)
+	secret.SetName(name)
+	secret.SetUID(types.UID("uid-" + name))
+	return secret
+}
+
+func newRelatedConfigMap(name string) *unstructured.Unstructured {
+	configMap := &unstructured.Unstructured{}
+	configMap.SetAPIVersion("v1")
+	configMap.SetKind(kindConfigMap)
+	configMap.SetNamespace(someNS)
+	configMap.SetName(name)
+	return configMap
+}
+
+// responseWithRelatedRule returns a customize response with one rule that
+// selects all objects of the resource.
+func responseWithRelatedRule(apiVersion, resource string) *v1.CustomizeHookResponse {
+	return &v1.CustomizeHookResponse{
+		Version: v1alpha1.HookVersionV1,
+		RelatedResourceRules: []*v1alpha1.RelatedResourceRule{{
+			ResourceRule: v1alpha1.ResourceRule{APIVersion: apiVersion, Resource: resource},
+		}},
+	}
+}
+
+// responseWithRelatedName returns a customize response with one rule that
+// selects the ConfigMap with the given name.
+func responseWithRelatedName(name string) *v1.CustomizeHookResponse {
+	response := responseWithRelatedRule("v1", resourceConfigMaps)
+	response.RelatedResourceRules[0].Namespace = someNS
+	response.RelatedResourceRules[0].Names = []string{name}
+	return response
+}
+
+// wakeupCounterValue reads a wake-up counter of one controller from the
+// metrics registry.
+func wakeupCounterValue(t *testing.T, name, controllerName string) float64 {
+	t.Helper()
+
+	families, err := controllerruntimemetrics.Registry.Gather()
+	if err != nil {
+		t.Fatalf("can't gather metrics: %v", err)
+	}
+	for _, family := range families {
+		if family.GetName() != name {
+			continue
+		}
+		for _, metric := range family.GetMetric() {
+			for _, label := range metric.GetLabel() {
+				if label.GetName() == "controller_name" && label.GetValue() == controllerName {
+					return metric.GetCounter().GetValue()
+				}
+			}
+		}
+	}
+	return 0
 }
 
 func TestGetRelatedObjects_ErrorWhenNamespaceSelectorForClusterScopedResource(t *testing.T) {
