@@ -1,3 +1,10 @@
+## [4.17.9](https://github.com/metacontroller/metacontroller/compare/v4.17.8...v4.17.9) (2026-11-16)
+
+
+### Bug Fixes
+
+* **controllers:** [#1286](https://github.com/metacontroller/metacontroller/issues/1286) - remove the parent finalizer after a spec change ([#1315](https://github.com/metacontroller/metacontroller/issues/1315)) ([82f0bc1](https://github.com/metacontroller/metacontroller/commit/82f0bc142b170c19ca2863e134b122084f6d1a12)), closes [#1285](https://github.com/metacontroller/metacontroller/issues/1285) — @grzesuav
+
 ## [4.17.8](https://github.com/metacontroller/metacontroller/compare/v4.17.7...v4.17.8) (2026-11-15)
 
 
