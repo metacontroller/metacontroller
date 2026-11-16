@@ -15,7 +15,7 @@ Each kind has the same shape:
 
 | File | Role |
 |------|------|
-| `metacontroller.go` | lifecycle: `Metacontroller`, `NewMetacontroller`, start and stop of one controller for each controller object |
+| `metacontroller.go` | Starts and stops one controller for each controller object. Contains `Metacontroller` and `NewMetacontroller`. The controller map contains `runningController` values. Unit tests replace `newController` with a stub. |
 | `controller.go` | the sync loop |
 | `hooks.go` | hook plumbing |
 | `api/v1`, `api/v2` | hook request and response types |
@@ -34,7 +34,63 @@ Each kind has the same shape:
 | v1 to v2 conversion | `common/api/v2/` | `MakeUniformObjectMap`, `MakeRelativeObjectMap` |
 | Finalizers | `common/finalizer/` | `ShouldFinalize` decides if a sync is a finalize sync |
 | Cleanup when a controller object is deleted | `common/finalizer/cleanup.go`, `{composite,decorator}/controller_finalizer.go` | `ControllerCleaner.Finalize` removes the parent finalizer from all parents; `ControllerFinalizer` keeps the controller object until then |
+| Cleanup after a change of parent resources | `common/finalizer/cleanup_state.go`, the two `metacontroller.go` files | `RecordActiveParents` and `CleanupRetiredParents`. Read "PARENT FINALIZER CLEANUP". |
 | Diff and equality | `common/diff.go`, `common/equality.go` | shared update primitives; use them, do not write new ones |
+
+## PARENT FINALIZER CLEANUP
+This section applies to `common/finalizer/cleanup_state.go` and to the two
+`metacontroller.go` files.
+
+Terms:
+- Record: the annotation `metacontroller.io/parent-finalizer-cleanup-state`
+  on the controller object. The record has two lists of parent resources:
+  `active` and `removeParentFinalizerFrom`.
+- Entry: one parent resource in a list of the record.
+- Retired resource: a parent resource that the spec contained before and does
+  not contain now.
+- Discovery: the list of the APIs that the API server serves.
+- Requeue: Metacontroller puts the controller object back in the work queue
+  after a delay (`RequeueAfter`).
+
+How the code works:
+1. `RecordActiveParents` writes the record. It moves each retired resource to
+   `removeParentFinalizerFrom`.
+2. `CleanupRetiredParents` removes the parent finalizer from the objects of
+   each entry in `removeParentFinalizerFrom`.
+3. The cleanup runs on each reconcile. It also runs when the spec does not
+   change.
+
+Rules:
+- Compare parent resources by `GroupResource`. Do not compare them by
+  `APIVersion`.
+- Run the two functions only when the controller object has
+  `ControllerFinalizer`.
+- A finalize hook gives `ControllerFinalizer` to the controller object. The
+  object keeps this finalizer when you remove the hook.
+
+An entry that discovery does not list:
+
+| Condition | Action |
+|-----------|--------|
+| The CRD of the resource exists. | Keep the entry. |
+| No CRD. Discovery lists the `apiVersion`. | Remove the entry. |
+| No CRD. The APIService of the `apiVersion` exists. | Keep the entry. |
+| No CRD. No APIService. | Remove the entry. |
+
+When the cleaner removes an entry, it records a `Warning` event. When it keeps
+an entry, it tries the entry again after 30 seconds.
+
+Errors and requeue:
+- Do not let a cleanup error stop the start of the controller.
+- controller-runtime ignores `RequeueAfter` when `Reconcile` returns an
+  error.
+- The cleaner records an entry error as an event. Then it returns
+  `RequeueAfter` of 30 seconds and a nil error.
+- A gate error is an error from a check before the controller starts. An
+  example is the check of the parent CRD.
+- While the cleanup has a requeue, send a gate error or a start error through
+  `finalizer.KeepRequeue`. Record the event for the error before you call
+  `KeepRequeue`.
 
 ## RULES
 - The composite and decorator sync loops are near-duplicates. When you fix one,

@@ -30,7 +30,7 @@ func NewFakeResourceMap(simpleClientset *fakeclientset.Clientset) *dynamicdiscov
 	resourceMap := dynamicdiscovery.NewResourceMap(fakeDiscovery)
 	resourceMap.Start(context.Background(), 1*time.Minute)
 	for ok := false; !ok; ok = resourceMap.HasSynced() {
-		time.Sleep(1 * time.Second)
+		time.Sleep(10 * time.Millisecond)
 	}
 	return resourceMap
 }

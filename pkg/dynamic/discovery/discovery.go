@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"metacontroller/pkg/logging"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -90,6 +91,26 @@ func (rm *ResourceMap) HasGroupVersion(apiVersion string) bool {
 
 	_, ok := rm.groupVersions[apiVersion]
 	return ok
+}
+
+// APIVersionsOf returns the sorted apiVersions of the API group that serve
+// the resource.
+func (rm *ResourceMap) APIVersionsOf(group, resource string) []string {
+	rm.mutex.RLock()
+	defer rm.mutex.RUnlock()
+
+	var apiVersions []string
+	for apiVersion, entry := range rm.groupVersions {
+		gv, err := schema.ParseGroupVersion(apiVersion)
+		if err != nil || gv.Group != group {
+			continue
+		}
+		if _, ok := entry.resources[resource]; ok {
+			apiVersions = append(apiVersions, apiVersion)
+		}
+	}
+	sort.Strings(apiVersions)
+	return apiVersions
 }
 
 func (rm *ResourceMap) GetKind(apiVersion, kind string) (result *APIResource) {

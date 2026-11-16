@@ -18,6 +18,8 @@ package composite
 
 import (
 	"context"
+	"errors"
+	"time"
 
 	"metacontroller/pkg/logging"
 
@@ -65,9 +67,13 @@ type Metacontroller struct {
 	revisionLister   mclisters.ControllerRevisionLister
 	revisionInformer cache.SharedIndexInformer
 
-	parentControllers common.SyncMap[string, *parentController]
+	parentControllers common.SyncMap[string, runningController]
+	// newController creates the controller of one CompositeController.
+	newController func(cc *v1alpha1.CompositeController) (runningController, error)
 	// cleanupCursors keeps the position of each finalizer cleanup.
 	cleanupCursors finalizer.Cursors
+	// cleanupBudget is the finalizer.ControllerCleaner Budget.
+	cleanupBudget time.Duration
 
 	numWorkers int
 	ssaOptions *common.ApplyOptions
@@ -93,8 +99,21 @@ func NewMetacontroller(ctx context.Context, controllerContext common.ControllerC
 		logger:     logging.Logger.WithName("composite"),
 		ctx:        ctx,
 	}
+	mc.newController = mc.createController
 
 	return mc
+}
+
+// runningController is the controller of one CompositeController.
+type runningController interface {
+	Start()
+	Stop()
+	// object returns the CompositeController that the controller was created from.
+	object() *v1alpha1.CompositeController
+}
+
+func (pc *parentController) object() *v1alpha1.CompositeController {
+	return pc.cc
 }
 
 func (mc *Metacontroller) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
@@ -105,14 +124,17 @@ func (mc *Metacontroller) Reconcile(ctx context.Context, request reconcile.Reque
 	err := mc.k8sClient.Get(ctx, request.NamespacedName, &cc)
 	if apierrors.IsNotFound(err) {
 		mc.logger.Info("CompositeController has been deleted", "name", compositeControllerName)
+		// The object can be gone before Finalize completed, for example when
+		// a person removed the controller finalizer. Remove its cursor.
+		mc.cleanupCursors.Delete(request.NamespacedName)
 		// Stop and remove the controller if it exists.
 		if pc, ok := mc.parentControllers.LoadAndDelete(compositeControllerName); ok {
 			pc.Stop()
-			pc.eventRecorder.Eventf(
-				pc.cc,
+			mc.eventRecorder.Eventf(
+				pc.object(),
 				v1.EventTypeNormal,
 				events.ReasonStopped,
-				"Stopped controller: %s", pc.cc.Name)
+				"Stopped controller: %s", pc.object().Name)
 		}
 		return reconcile.Result{}, nil
 	}
@@ -132,9 +154,30 @@ func (mc *Metacontroller) Reconcile(ctx context.Context, request reconcile.Reque
 		return mc.finalizeCompositeController(ctx, &cc)
 	}
 
+	if err := mc.ensureControllerFinalizer(ctx, &cc); err != nil {
+		mc.eventRecorder.Eventf(
+			&cc,
+			v1.EventTypeWarning,
+			events.ReasonSyncError,
+			"[%s] can't add finalizer - %s", cc.Name, err)
+		return reconcile.Result{}, err
+	}
+
+	// Clean the retired resources. A cleanup error must not stop the
+	// controller of the current spec, so the reconcile continues. The cleaner
+	// records the event.
+	var cleanupResult reconcile.Result
+	var cleanupErr error
+	if hasControllerFinalizer(&cc) {
+		cleanupResult, cleanupErr = mc.cleanupRetiredParents(ctx, &cc)
+	}
+
+	// The gates and the start do not stop the requeue of the cleanup. See
+	// finalizer.KeepRequeue.
 	groupVersion, err := schema.ParseGroupVersion(cc.Spec.ParentResource.APIVersion)
 	if err != nil {
-		return reconcile.Result{}, err
+		mc.recordGateError(&cc, err)
+		return finalizer.KeepRequeue(mc.logger, cleanupResult, errors.Join(cleanupErr, err))
 	}
 	parentCRD := &apiextensionsv1.CustomResourceDefinition{}
 	err = mc.k8sClient.Get(ctx,
@@ -143,7 +186,8 @@ func (mc *Metacontroller) Reconcile(ctx context.Context, request reconcile.Reque
 		},
 		parentCRD)
 	if err != nil {
-		return reconcile.Result{}, err
+		mc.recordGateError(&cc, err)
+		return finalizer.KeepRequeue(mc.logger, cleanupResult, errors.Join(cleanupErr, err))
 	}
 	if !common.HasStatusSubresource(parentCRD, groupVersion.Version) {
 		mc.eventRecorder.Eventf(
@@ -158,30 +202,43 @@ func (mc *Metacontroller) Reconcile(ctx context.Context, request reconcile.Reque
 			"reason", "subresource 'Status' not enabled",
 			"groupVersionKind", parentCRD.GroupVersionKind())
 		// returning, as we cannot do anything until 'Status' subresource is added to parent parentCRD
-		return reconcile.Result{}, nil
-	}
-	if err := mc.ensureControllerFinalizer(ctx, &cc); err != nil {
-		mc.eventRecorder.Eventf(
-			&cc,
-			v1.EventTypeWarning,
-			events.ReasonSyncError,
-			"[%s] can't add finalizer - %s", cc.Name, err)
-		return reconcile.Result{}, err
+		return finalizer.KeepRequeue(mc.logger, cleanupResult, cleanupErr)
 	}
 	reconcileErr := mc.reconcileCompositeController(ctx, &cc)
-	return reconcile.Result{}, reconcileErr
+	return finalizer.KeepRequeue(mc.logger, cleanupResult, errors.Join(cleanupErr, reconcileErr))
+}
+
+// recordGateError records an error of a check of the parent resource.
+func (mc *Metacontroller) recordGateError(cc *v1alpha1.CompositeController, err error) {
+	mc.eventRecorder.Eventf(cc, v1.EventTypeWarning, events.ReasonSyncError, "[%s] Sync error - %s", cc.Name, err)
 }
 
 func (mc *Metacontroller) reconcileCompositeController(ctx context.Context, cc *v1alpha1.CompositeController) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
-	if pc, ok := mc.parentControllers.Load(cc.Name); ok {
-		// The controller was already started.
-		if apiequality.Semantic.DeepEqual(cc.Spec, pc.cc.Spec) {
-			// Nothing has changed.
-			return nil
+	running, ok := mc.parentControllers.Load(cc.Name)
+	if ok && apiequality.Semantic.DeepEqual(cc.Spec, running.object().Spec) {
+		// The spec is unchanged. If the record is missing, write it again.
+		// A later spec change then finds the old resource.
+		if hasControllerFinalizer(cc) && !finalizer.HasCleanupRecord(cc) {
+			return mc.recordActiveParents(ctx, cc, running)
 		}
+		return nil
+	}
+	// Write the record first. It then lists the resource of the old
+	// controller.
+	var recordErr error
+	if hasControllerFinalizer(cc) {
+		recordErr = mc.recordActiveParents(ctx, cc, running)
+		if recordErr != nil && (ok || !errors.Is(recordErr, finalizer.ErrInvalidCleanupRecord)) {
+			// Keep the old controller. The next reconcile tries again.
+			return recordErr
+		}
+		// recordErr is not nil here only if no controller runs and the
+		// record is not valid. A wait does not help, because the old
+		// resources stay unknown until a person repairs the record. Start
+		// the controller.
 	}
 	// Stop and remove the controller so it can be recreated.
 	if pc, ok := mc.parentControllers.LoadAndDelete(cc.Name); ok {
@@ -189,7 +246,24 @@ func (mc *Metacontroller) reconcileCompositeController(ctx context.Context, cc *
 		mc.eventRecorder.Eventf(cc, v1.EventTypeNormal, events.ReasonStopped, "Stopped controller: %s", cc.Name)
 	}
 
-	pc, err := newParentController( //nolint:contextcheck // long-lived controller must use root context, not per-reconcile ctx
+	pc, err := mc.newController(cc)
+	if err != nil {
+		mc.eventRecorder.Eventf(
+			cc,
+			v1.EventTypeWarning,
+			events.ReasonCreateError,
+			"Cannot create new controller: %s", err.Error())
+		return errors.Join(recordErr, err)
+	}
+	pc.Start()
+	mc.eventRecorder.Eventf(cc, v1.EventTypeNormal, events.ReasonStarted, "Started controller: %s", cc.Name)
+	mc.parentControllers.Store(cc.Name, pc)
+	return recordErr
+}
+
+// createController creates the controller of one CompositeController.
+func (mc *Metacontroller) createController(cc *v1alpha1.CompositeController) (runningController, error) {
+	return newParentController( //nolint:contextcheck // long-lived controller must use root context, not per-reconcile ctx
 		mc.ctx,
 		mc.resources,
 		mc.dynClient,
@@ -202,16 +276,27 @@ func (mc *Metacontroller) reconcileCompositeController(ctx context.Context, cc *
 		mc.ssaOptions,
 		mc.logger,
 		mc.k8sClient)
-	if err != nil {
-		mc.eventRecorder.Eventf(
-			cc,
-			v1.EventTypeWarning,
-			events.ReasonCreateError,
-			"Cannot create new controller: %s", err.Error())
-		return err
+}
+
+// cleanupRetiredParents cleans one slice. It skips the resource of the spec
+// and the resource of the running controller. The running controller can
+// differ from the spec, because a gate can stop the reconcile before the new
+// controller starts.
+func (mc *Metacontroller) cleanupRetiredParents(ctx context.Context, cc *v1alpha1.CompositeController) (reconcile.Result, error) {
+	exclude := activeParentResources(cc)
+	if pc, ok := mc.parentControllers.Load(cc.Name); ok {
+		exclude = append(exclude, activeParentResources(pc.object())...)
 	}
-	pc.Start()
-	mc.eventRecorder.Eventf(cc, v1.EventTypeNormal, events.ReasonStarted, "Started controller: %s", cc.Name)
-	mc.parentControllers.Store(cc.Name, pc)
-	return nil
+	return mc.newCleaner().CleanupRetiredParents(ctx, cc, parentFinalizerName(cc.Name), exclude)
+}
+
+// recordActiveParents writes the cleanup record for the spec. If the
+// annotation is absent, it takes the old resources from the running
+// controller.
+func (mc *Metacontroller) recordActiveParents(ctx context.Context, cc *v1alpha1.CompositeController, running runningController) error {
+	var runningParents []finalizer.ParentResource
+	if running != nil {
+		runningParents = activeParentResources(running.object())
+	}
+	return mc.newCleaner().RecordActiveParents(ctx, cc, runningParents, activeParentResources(cc))
 }

@@ -32,13 +32,16 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	dynamicfake "k8s.io/client-go/dynamic/fake"
 	clientgotesting "k8s.io/client-go/testing"
+	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	clientfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	"metacontroller/pkg/apis/metacontroller/v1alpha1"
 	"metacontroller/pkg/controller/common/finalizer"
 	dynamicclientset "metacontroller/pkg/dynamic/clientset"
 	dynamicdiscovery "metacontroller/pkg/dynamic/discovery"
+	"metacontroller/pkg/internal/testutils/cleanuprecord"
 	. "metacontroller/pkg/internal/testutils/common"
 	. "metacontroller/pkg/internal/testutils/dynamic/clientset"
 	. "metacontroller/pkg/internal/testutils/dynamic/discovery"
@@ -75,6 +78,20 @@ func newCleanupClientsAndResources(parents ...*unstructured.Unstructured) (*dyna
 	return NewClientset(NewDefaultRestConfig(), resourceMap, fakeClient), fakeClient, resourceMap
 }
 
+// testAndOthers gives two resources of TestAPIVersion for NewFakeClients.
+var testAndOthers = map[string]string{TestResource: TestKind, "others": "Other"}
+
+var (
+	testResourceOthers = finalizer.ParentResource{APIVersion: TestAPIVersion, Resource: "others"}
+	othersGVR          = schema.GroupVersionResource{Group: TestGroup, Version: TestVersion, Resource: "others"}
+)
+
+func newOther(name string, finalizers ...string) *unstructured.Unstructured {
+	other := NewUnstructured(TestAPIVersion, "Other", TestNamespace, name)
+	other.SetFinalizers(finalizers)
+	return other
+}
+
 func liveFinalizers(t *testing.T, fakeClient *dynamicfake.FakeDynamicClient, name string) []string {
 	t.Helper()
 	parent, err := fakeClient.Resource(testGVR).Namespace(TestNamespace).Get(context.TODO(), name, metav1.GetOptions{})
@@ -104,7 +121,7 @@ func TestRemoveFromResources_whenParentsHaveFinalizer_removesOnlyThatFinalizer(t
 	)
 	manager := finalizer.NewManager(parentFinalizer, true)
 
-	removed, done, err := manager.RemoveFromResources(context.TODO(), dynClient, testParents, largeBudget, &finalizer.Cursor{})
+	removed, _, done, err := manager.RemoveFromResources(context.TODO(), dynClient, testParents, largeBudget, &finalizer.Cursor{})
 
 	require.NoError(t, err)
 	assert.True(t, done)
@@ -120,7 +137,7 @@ func TestRemoveFromResources_whenBudgetIsNotSufficient_removesOneFinalizerAndIsN
 	manager := finalizer.NewManager(parentFinalizer, true)
 	cursor := &finalizer.Cursor{}
 
-	removed, done, err := manager.RemoveFromResources(context.TODO(), dynClient, testParents, -time.Second, cursor)
+	removed, _, done, err := manager.RemoveFromResources(context.TODO(), dynClient, testParents, -time.Second, cursor)
 
 	require.NoError(t, err)
 	assert.False(t, done)
@@ -128,7 +145,7 @@ func TestRemoveFromResources_whenBudgetIsNotSufficient_removesOneFinalizerAndIsN
 	assert.Equal(t, 1, countUpdates(fakeClient))
 
 	// The second call completes the work.
-	removed, done, err = manager.RemoveFromResources(context.TODO(), dynClient, testParents, -time.Second, cursor)
+	removed, _, done, err = manager.RemoveFromResources(context.TODO(), dynClient, testParents, -time.Second, cursor)
 
 	require.NoError(t, err)
 	assert.True(t, done)
@@ -148,7 +165,7 @@ func TestRemoveFromResources_whenUpdateFails_returnsErrorAndDoesOtherParents(t *
 	})
 	manager := finalizer.NewManager(parentFinalizer, true)
 
-	removed, done, err := manager.RemoveFromResources(context.TODO(), dynClient, testParents, largeBudget, &finalizer.Cursor{})
+	removed, _, done, err := manager.RemoveFromResources(context.TODO(), dynClient, testParents, largeBudget, &finalizer.Cursor{})
 
 	require.ErrorContains(t, err, "update refused")
 	assert.False(t, done)
@@ -164,38 +181,102 @@ func TestRemoveFromResources_whenUpdateHasConflict_isNotDoneWithoutError(t *test
 	})
 	manager := finalizer.NewManager(parentFinalizer, true)
 
-	removed, done, err := manager.RemoveFromResources(context.TODO(), dynClient, testParents, largeBudget, &finalizer.Cursor{})
+	removed, _, done, err := manager.RemoveFromResources(context.TODO(), dynClient, testParents, largeBudget, &finalizer.Cursor{})
 
 	require.NoError(t, err)
 	assert.False(t, done)
 	assert.Equal(t, 0, removed)
 }
 
-func TestRemoveFromResources_whenParentIsDeletedDuringCleanup_isDone(t *testing.T) {
+func TestRemoveFromResources_whenUpdateReturnsNotFound_retriesResource(t *testing.T) {
 	dynClient, fakeClient := newCleanupClients(newParent("a", parentFinalizer))
+	notFound := true
 	fakeClient.PrependReactor("update", "*", func(clientgotesting.Action) (bool, runtime.Object, error) {
-		return true, nil, apierrors.NewNotFound(testGVR.GroupResource(), "a")
+		if notFound {
+			notFound = false
+			// NotFound can also mean an unserved version. The object then
+			// stays in the next list.
+			return true, nil, apierrors.NewNotFound(testGVR.GroupResource(), "a")
+		}
+		return false, nil, nil
 	})
 	manager := finalizer.NewManager(parentFinalizer, true)
+	cursor := &finalizer.Cursor{}
 
-	removed, done, err := manager.RemoveFromResources(context.TODO(), dynClient, testParents, largeBudget, &finalizer.Cursor{})
+	removed, completed, done, err := manager.RemoveFromResources(context.TODO(), dynClient, testParents, largeBudget, cursor)
+
+	require.NoError(t, err)
+	assert.False(t, done)
+	assert.Empty(t, completed)
+	assert.Equal(t, 0, removed)
+	assert.Equal(t, []string{parentFinalizer}, liveFinalizers(t, fakeClient, "a"))
+
+	removed, completed, done, err = manager.RemoveFromResources(context.TODO(), dynClient, testParents, largeBudget, cursor)
 
 	require.NoError(t, err)
 	assert.True(t, done)
-	assert.Equal(t, 0, removed)
+	assert.Equal(t, []schema.GroupResource{testGVR.GroupResource()}, completed)
+	assert.Equal(t, 1, removed)
+	assert.Empty(t, liveFinalizers(t, fakeClient, "a"))
 }
 
-func TestRemoveFromResources_whenListFails_returnsError(t *testing.T) {
-	dynClient, fakeClient := newCleanupClients(newParent("a", parentFinalizer))
-	fakeClient.PrependReactor("list", "*", func(clientgotesting.Action) (bool, runtime.Object, error) {
+func TestRemoveFromResources_whenCursorSetChanges_resetsCursor(t *testing.T) {
+	// The cursor stops in testkinds, which sorts after "others" in the new set.
+	// A resume would skip "others".
+	dynClient, fakeClient, _ := NewFakeClients(
+		testAndOthers,
+		newParent("a", parentFinalizer),
+		newOther("o", parentFinalizer),
+	)
+	manager := finalizer.NewManager(parentFinalizer, true)
+	cursor := &finalizer.Cursor{Parent: testParents[0], Continue: "", Fingerprint: finalizer.Fingerprint(testParents)}
+
+	_, _, done, err := manager.RemoveFromResources(context.TODO(), dynClient, []finalizer.ParentResource{testResourceOthers, testParents[0]}, largeBudget, cursor)
+
+	require.NoError(t, err)
+	assert.True(t, done)
+	o, err := fakeClient.Resource(othersGVR).Namespace(TestNamespace).Get(context.TODO(), "o", metav1.GetOptions{})
+	require.NoError(t, err)
+	assert.Empty(t, o.GetFinalizers())
+	assert.Empty(t, liveFinalizers(t, fakeClient, "a"))
+}
+
+func TestRemoveFromResources_whenParentOrderChanges_skipsNoResource(t *testing.T) {
+	extras := finalizer.ParentResource{APIVersion: TestAPIVersion, Resource: "extras"}
+	kinds := map[string]string{TestResource: TestKind, "others": "Other", "extras": "Extra"}
+	extra := NewUnstructured(TestAPIVersion, "Extra", TestNamespace, "e")
+	extra.SetFinalizers([]string{parentFinalizer})
+	dynClient, fakeClient, _ := NewFakeClients(kinds, newParent("a", parentFinalizer), newOther("o", parentFinalizer), extra)
+	manager := finalizer.NewManager(parentFinalizer, true)
+	cursor := &finalizer.Cursor{}
+
+	// The first call cleans "extras" and stops before "others".
+	_, _, done, err := manager.RemoveFromResources(context.TODO(), dynClient, []finalizer.ParentResource{extras, testResourceOthers, testParents[0]}, -time.Second, cursor)
+	require.NoError(t, err)
+	require.False(t, done)
+
+	reversed := []finalizer.ParentResource{testParents[0], testResourceOthers, extras}
+	_, _, done, err = manager.RemoveFromResources(context.TODO(), dynClient, reversed, largeBudget, cursor)
+
+	require.NoError(t, err)
+	assert.True(t, done)
+	assert.Empty(t, liveFinalizers(t, fakeClient, "a"))
+}
+
+func TestRemoveFromResources_whenListFails_cleansTheOtherResources(t *testing.T) {
+	dynClient, fakeClient, _ := NewFakeClients(testAndOthers, newParent("a", parentFinalizer), newOther("o", parentFinalizer))
+	// "others" sorts first, so its error must not stop the scan.
+	fakeClient.PrependReactor("list", "others", func(clientgotesting.Action) (bool, runtime.Object, error) {
 		return true, nil, errors.New("list refused")
 	})
 	manager := finalizer.NewManager(parentFinalizer, true)
 
-	_, done, err := manager.RemoveFromResources(context.TODO(), dynClient, testParents, largeBudget, &finalizer.Cursor{})
+	_, completed, done, err := manager.RemoveFromResources(context.TODO(), dynClient, []finalizer.ParentResource{testParents[0], testResourceOthers}, largeBudget, &finalizer.Cursor{})
 
 	require.ErrorContains(t, err, "list refused")
 	assert.False(t, done)
+	assert.Equal(t, []schema.GroupResource{{Group: TestGroup, Resource: TestResource}}, completed)
+	assert.Empty(t, liveFinalizers(t, fakeClient, "a"))
 }
 
 func TestRemoveFromResources_whenResourceIsNotInDiscovery_returnsError(t *testing.T) {
@@ -203,7 +284,7 @@ func TestRemoveFromResources_whenResourceIsNotInDiscovery_returnsError(t *testin
 	manager := finalizer.NewManager(parentFinalizer, true)
 	parents := []finalizer.ParentResource{{APIVersion: TestAPIVersion, Resource: "unknown"}}
 
-	removed, done, err := manager.RemoveFromResources(context.TODO(), dynClient, parents, largeBudget, &finalizer.Cursor{})
+	removed, _, done, err := manager.RemoveFromResources(context.TODO(), dynClient, parents, largeBudget, &finalizer.Cursor{})
 
 	require.Error(t, err)
 	assert.False(t, done)
@@ -229,7 +310,7 @@ func TestRemoveFromResources_whenListHasTwoPages_removesFinalizerFromAllPages(t 
 	})
 	manager := finalizer.NewManager(parentFinalizer, true)
 
-	removed, done, err := manager.RemoveFromResources(context.TODO(), dynClient, testParents, largeBudget, &finalizer.Cursor{})
+	removed, _, done, err := manager.RemoveFromResources(context.TODO(), dynClient, testParents, largeBudget, &finalizer.Cursor{})
 
 	require.NoError(t, err)
 	assert.True(t, done)
@@ -250,7 +331,7 @@ func TestRemoveFromResources_whenUpdateIsSlowerThanCallTimeout_returnsErrorAndSt
 	})
 	manager := finalizer.NewManager(parentFinalizer, true)
 
-	removed, done, err := manager.RemoveFromResources(context.TODO(), dynClient, testParents, largeBudget, &finalizer.Cursor{})
+	removed, _, done, err := manager.RemoveFromResources(context.TODO(), dynClient, testParents, largeBudget, &finalizer.Cursor{})
 
 	require.ErrorIs(t, err, context.DeadlineExceeded)
 	assert.False(t, done)
@@ -272,7 +353,7 @@ func TestRemoveFromResources_whenBudgetEndsBetweenPages_doesNotListNextPage(t *t
 	manager := finalizer.NewManager(parentFinalizer, true)
 	cursor := &finalizer.Cursor{}
 
-	removed, done, err := manager.RemoveFromResources(context.TODO(), dynClient, testParents, -time.Second, cursor)
+	removed, _, done, err := manager.RemoveFromResources(context.TODO(), dynClient, testParents, -time.Second, cursor)
 
 	require.NoError(t, err)
 	assert.False(t, done)
@@ -296,7 +377,7 @@ func TestRemoveFromResources_whenPagesHaveNoFinalizerAndBudgetEnds_continuesAtNe
 	manager := finalizer.NewManager(parentFinalizer, true)
 	cursor := &finalizer.Cursor{}
 
-	_, done, err := manager.RemoveFromResources(context.TODO(), dynClient, testParents, -time.Second, cursor)
+	_, _, done, err := manager.RemoveFromResources(context.TODO(), dynClient, testParents, -time.Second, cursor)
 
 	require.NoError(t, err)
 	assert.False(t, done)
@@ -304,12 +385,12 @@ func TestRemoveFromResources_whenPagesHaveNoFinalizerAndBudgetEnds_continuesAtNe
 	assert.Equal(t, "page-2", cursor.Continue)
 
 	// The second call reads the last page.
-	_, done, err = manager.RemoveFromResources(context.TODO(), dynClient, testParents, -time.Second, cursor)
+	_, _, done, err = manager.RemoveFromResources(context.TODO(), dynClient, testParents, -time.Second, cursor)
 
 	require.NoError(t, err)
 	assert.True(t, done)
 	assert.Equal(t, 2, listCalls)
-	assert.Equal(t, finalizer.Cursor{}, *cursor)
+	assert.Equal(t, finalizer.Cursor{Fingerprint: finalizer.Fingerprint(testParents)}, *cursor)
 }
 
 func TestRemoveFromResources_whenParentIsListedTwice_cleansItOnce(t *testing.T) {
@@ -331,11 +412,11 @@ func TestRemoveFromResources_whenParentIsListedTwice_cleansItOnce(t *testing.T) 
 	cursor := &finalizer.Cursor{}
 
 	// The budget lets each call list one page.
-	_, done, err := manager.RemoveFromResources(context.TODO(), dynClient, parents, -time.Second, cursor)
+	_, _, done, err := manager.RemoveFromResources(context.TODO(), dynClient, parents, -time.Second, cursor)
 	require.NoError(t, err)
 	assert.False(t, done)
 
-	_, done, err = manager.RemoveFromResources(context.TODO(), dynClient, parents, -time.Second, cursor)
+	_, _, done, err = manager.RemoveFromResources(context.TODO(), dynClient, parents, -time.Second, cursor)
 
 	require.NoError(t, err)
 	assert.True(t, done)
@@ -364,11 +445,11 @@ func TestRemoveFromResources_whenBudgetEndsInSnapshotPage_skipsDoneObjects(t *te
 
 	// Each call does one list call or one update.
 	for range 2 {
-		_, done, err := manager.RemoveFromResources(context.TODO(), dynClient, testParents, -time.Second, cursor)
+		_, _, done, err := manager.RemoveFromResources(context.TODO(), dynClient, testParents, -time.Second, cursor)
 		require.NoError(t, err)
 		require.False(t, done)
 	}
-	_, done, err := manager.RemoveFromResources(context.TODO(), dynClient, testParents, -time.Second, cursor)
+	_, _, done, err := manager.RemoveFromResources(context.TODO(), dynClient, testParents, -time.Second, cursor)
 
 	require.NoError(t, err)
 	assert.True(t, done)
@@ -383,29 +464,29 @@ func TestRemoveFromResources_whenContinueTokenExpired_startsAgainAtFirstPage(t *
 		return true, nil, apierrors.NewResourceExpired("continue token is too old")
 	})
 	manager := finalizer.NewManager(parentFinalizer, true)
-	cursor := &finalizer.Cursor{Parent: testParents[0], Continue: "old"}
+	cursor := &finalizer.Cursor{Parent: testParents[0], Continue: "old", Fingerprint: finalizer.Fingerprint(testParents)}
 
-	_, done, err := manager.RemoveFromResources(context.TODO(), dynClient, testParents, largeBudget, cursor)
+	_, _, done, err := manager.RemoveFromResources(context.TODO(), dynClient, testParents, largeBudget, cursor)
 
 	require.NoError(t, err)
 	assert.False(t, done)
-	assert.Equal(t, finalizer.Cursor{Parent: testParents[0]}, *cursor)
+	assert.Equal(t, finalizer.Cursor{Parent: testParents[0], Fingerprint: finalizer.Fingerprint(testParents)}, *cursor)
 }
 
 func TestRemoveFromResources_whenPassNeedsRetry_isNotDoneAndStartsNewPass(t *testing.T) {
 	dynClient, fakeClient := newCleanupClients(newParent("a", parentFinalizer))
 	manager := finalizer.NewManager(parentFinalizer, true)
-	cursor := &finalizer.Cursor{Parent: testParents[0], Retry: true}
+	cursor := &finalizer.Cursor{Parent: testParents[0], Retry: true, Fingerprint: finalizer.Fingerprint(testParents)}
 
-	_, done, err := manager.RemoveFromResources(context.TODO(), dynClient, testParents, largeBudget, cursor)
+	_, _, done, err := manager.RemoveFromResources(context.TODO(), dynClient, testParents, largeBudget, cursor)
 
 	require.NoError(t, err)
 	assert.False(t, done)
-	assert.Equal(t, finalizer.Cursor{}, *cursor)
+	assert.Equal(t, finalizer.Cursor{Fingerprint: finalizer.Fingerprint(testParents)}, *cursor)
 	assert.Empty(t, liveFinalizers(t, fakeClient, "a"))
 
 	// The new pass finds no object with the finalizer.
-	_, done, err = manager.RemoveFromResources(context.TODO(), dynClient, testParents, largeBudget, cursor)
+	_, _, done, err = manager.RemoveFromResources(context.TODO(), dynClient, testParents, largeBudget, cursor)
 
 	require.NoError(t, err)
 	assert.True(t, done)
@@ -431,33 +512,29 @@ func TestEnsureControllerFinalizer_whenFinalizerIsAbsent_addsFinalizer(t *testin
 	assert.Equal(t, []string{otherFinalizer, finalizer.ControllerFinalizer}, live.Finalizers)
 }
 
-func TestRemoveControllerFinalizer_whenFinalizerIsPresent_removesOnlyThatFinalizer(t *testing.T) {
-	cc := &v1alpha1.CompositeController{ObjectMeta: metav1.ObjectMeta{Name: "cc", Finalizers: []string{otherFinalizer, finalizer.ControllerFinalizer}}}
-	k8sClient := newControllerClient(t, cc)
-
-	require.NoError(t, finalizer.RemoveControllerFinalizer(context.TODO(), k8sClient, cc))
-
-	live := &v1alpha1.CompositeController{}
-	require.NoError(t, k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(cc), live))
-	assert.Equal(t, []string{otherFinalizer}, live.Finalizers)
-}
-
-func TestRemoveControllerFinalizer_whenControllerIsAlreadyDeleted_returnsNoError(t *testing.T) {
-	cc := &v1alpha1.CompositeController{ObjectMeta: metav1.ObjectMeta{Name: "cc", Finalizers: []string{finalizer.ControllerFinalizer}}}
-	k8sClient := newControllerClient(t)
-
-	require.NoError(t, finalizer.RemoveControllerFinalizer(context.TODO(), k8sClient, cc))
-}
-
 func newCleaner(k8sClient client.Client, dynClient *dynamicclientset.Clientset, resources *dynamicdiscovery.ResourceMap) *finalizer.ControllerCleaner {
 	return &finalizer.ControllerCleaner{
-		K8sClient:     k8sClient,
-		DynClient:     dynClient,
-		Resources:     resources,
-		EventRecorder: NewFakeRecorder(),
+		K8sClient: k8sClient,
+		DynClient: dynClient,
+		Resources: resources,
+		// Size the buffer for all events of the test. A full buffer blocks.
+		EventRecorder: record.NewFakeRecorder(100),
 		Logger:        logr.Discard(),
 		Cursors:       &finalizer.Cursors{},
 	}
+}
+
+// withBudget sets the Budget of the cleaner and returns the cleaner.
+func withBudget(c *finalizer.ControllerCleaner, budget time.Duration) *finalizer.ControllerCleaner {
+	c.Budget = budget
+	return c
+}
+
+// requireEvent fails the test when the cleaner did not record an event that
+// contains text.
+func requireEvent(t *testing.T, cleaner *finalizer.ControllerCleaner, text string) {
+	t.Helper()
+	cleanuprecord.RequireEvent(t, cleaner.EventRecorder, text)
 }
 
 func TestFinalize_whenControllerHasFinalizer_stopsCleansParentsAndRemovesFinalizer(t *testing.T) {
@@ -496,17 +573,20 @@ func TestFinalize_whenControllerHasNoFinalizer_stopsAndKeepsParentFinalizers(t *
 	assert.Empty(t, fakeClient.Actions())
 }
 
-func TestFinalize_whenCleanupFails_returnsErrorAndKeepsControllerFinalizer(t *testing.T) {
+func TestFinalize_whenCleanupFails_requeuesAndKeepsControllerFinalizer(t *testing.T) {
 	dc := &v1alpha1.DecoratorController{ObjectMeta: metav1.ObjectMeta{Name: "dc", Finalizers: []string{finalizer.ControllerFinalizer}}}
 	k8sClient := newControllerClient(t, dc)
 	dynClient, fakeClient, resources := newCleanupClientsAndResources(newParent("a", parentFinalizer))
 	fakeClient.PrependReactor("update", "*", func(clientgotesting.Action) (bool, runtime.Object, error) {
 		return true, nil, errors.New("update refused")
 	})
+	cleaner := newCleaner(k8sClient, dynClient, resources)
 
-	_, err := newCleaner(k8sClient, dynClient, resources).Finalize(context.TODO(), dc, parentFinalizer, testParents, func() bool { return false })
+	result, err := cleaner.Finalize(context.TODO(), dc, parentFinalizer, testParents, func() bool { return false })
 
-	require.ErrorContains(t, err, "update refused")
+	require.NoError(t, err)
+	assert.Equal(t, 30*time.Second, result.RequeueAfter)
+	requireEvent(t, cleaner, "update refused")
 	live := &v1alpha1.DecoratorController{}
 	require.NoError(t, k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(dc), live))
 	assert.Equal(t, []string{finalizer.ControllerFinalizer}, live.Finalizers)
@@ -514,33 +594,16 @@ func TestFinalize_whenCleanupFails_returnsErrorAndKeepsControllerFinalizer(t *te
 
 // The tests below are for a parent resource that is not in discovery.
 
-func newPendingController() *v1alpha1.DecoratorController {
-	return &v1alpha1.DecoratorController{ObjectMeta: metav1.ObjectMeta{Name: "dc", Finalizers: []string{finalizer.ControllerFinalizer}}}
+func newCRD(resource, group string) *unstructured.Unstructured {
+	return newObject("apiextensions.k8s.io/v1", "CustomResourceDefinition", resource+"."+group)
 }
 
-func newCRD(name, group string, versions ...map[string]interface{}) *unstructured.Unstructured {
-	crd := &unstructured.Unstructured{}
-	crd.SetAPIVersion("apiextensions.k8s.io/v1")
-	crd.SetKind("CustomResourceDefinition")
-	crd.SetName(name + "." + group)
-	list := make([]interface{}, 0, len(versions))
-	for _, version := range versions {
-		list = append(list, version)
-	}
-	_ = unstructured.SetNestedSlice(crd.Object, list, "spec", "versions")
-	return crd
-}
-
-func crdVersion(name string, served bool) map[string]interface{} {
-	return map[string]interface{}{"name": name, "served": served}
-}
-
-func newAPIService(name string) *unstructured.Unstructured {
-	apiService := &unstructured.Unstructured{}
-	apiService.SetAPIVersion("apiregistration.k8s.io/v1")
-	apiService.SetKind("APIService")
-	apiService.SetName(name)
-	return apiService
+func newObject(apiVersion, kind, name string) *unstructured.Unstructured {
+	obj := &unstructured.Unstructured{}
+	obj.SetAPIVersion(apiVersion)
+	obj.SetKind(kind)
+	obj.SetName(name)
+	return obj
 }
 
 func controllerFinalizers(t *testing.T, k8sClient client.Client, dc *v1alpha1.DecoratorController) []string {
@@ -553,9 +616,8 @@ func controllerFinalizers(t *testing.T, k8sClient client.Client, dc *v1alpha1.De
 func noStop() bool { return false }
 
 func TestFinalize_whenSpecVersionIsNotServed_cleansParentsWithServedVersion(t *testing.T) {
-	dc := newPendingController()
-	crd := newCRD(TestResource, TestGroup, crdVersion("old", false), crdVersion(TestVersion, true))
-	k8sClient := newControllerClient(t, dc, crd)
+	dc := newRecordController("")
+	k8sClient := newControllerClient(t, dc)
 	dynClient, fakeClient, resources := newCleanupClientsAndResources(newParent("a", parentFinalizer))
 	parents := []finalizer.ParentResource{{APIVersion: TestGroup + "/old", Resource: TestResource}}
 
@@ -566,51 +628,85 @@ func TestFinalize_whenSpecVersionIsNotServed_cleansParentsWithServedVersion(t *t
 	assert.Empty(t, controllerFinalizers(t, k8sClient, dc))
 }
 
-func TestFinalize_whenCRDExistsButNoServedVersionIsInDiscovery_returnsErrorAndKeepsControllerFinalizer(t *testing.T) {
-	dc := newPendingController()
-	crd := newCRD("others", TestGroup, crdVersion("v1", true))
-	k8sClient := newControllerClient(t, dc, crd)
-	dynClient, _, resources := newCleanupClientsAndResources()
-	parents := []finalizer.ParentResource{{APIVersion: TestGroup + "/v1", Resource: "others"}}
+// An entry is kept while its API can come back: the CRD exists, the
+// APIService exists (an aggregated API can be down for a short time), or the
+// API server cannot tell.
+func TestFinalize_whenAPIIsRegisteredButNotInDiscovery_keepsControllerFinalizer(t *testing.T) {
+	others := finalizer.ParentResource{APIVersion: TestAPIVersion, Resource: "others"}
+	for name, tc := range map[string]struct {
+		object client.Object
+		getErr error
+		parent finalizer.ParentResource
+		event  string
+	}{
+		"CRD exists": {
+			object: newCRD("others", TestGroup),
+			parent: others,
+			event:  "discovery lists no version",
+		},
+		"APIService exists": {
+			object: newObject("apiregistration.k8s.io/v1", "APIService", "v1.agg.example.com"),
+			parent: finalizer.ParentResource{APIVersion: "agg.example.com/v1", Resource: "things"},
+			event:  "is registered, but it is not in discovery",
+		},
+		"CRD Get fails": {
+			getErr: errors.New("server unavailable"),
+			parent: others,
+			event:  "can't get the CRD",
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			dc := newRecordController("")
+			objects := []client.Object{dc}
+			if tc.object != nil {
+				objects = append(objects, tc.object)
+			}
+			k8sClient := newInterceptedControllerClient(t, interceptor.Funcs{
+				Get: func(ctx context.Context, c client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+					if _, ok := obj.(*unstructured.Unstructured); ok && tc.getErr != nil {
+						return tc.getErr
+					}
+					return c.Get(ctx, key, obj, opts...)
+				},
+			}, objects...)
+			dynClient, _, resources := newCleanupClientsAndResources()
+			cleaner := newCleaner(k8sClient, dynClient, resources)
 
-	_, err := newCleaner(k8sClient, dynClient, resources).Finalize(context.TODO(), dc, parentFinalizer, parents, noStop)
+			result, err := cleaner.Finalize(context.TODO(), dc, parentFinalizer, []finalizer.ParentResource{tc.parent}, noStop)
 
-	require.ErrorContains(t, err, "no served version")
-	assert.Equal(t, []string{finalizer.ControllerFinalizer}, controllerFinalizers(t, k8sClient, dc))
+			require.NoError(t, err)
+			assert.Equal(t, 30*time.Second, result.RequeueAfter)
+			requireEvent(t, cleaner, tc.event)
+			assert.Equal(t, []string{finalizer.ControllerFinalizer}, controllerFinalizers(t, k8sClient, dc))
+		})
+	}
 }
 
-func TestFinalize_whenResourceDoesNotExistInServedAPIVersion_removesControllerFinalizer(t *testing.T) {
-	dc := newPendingController()
-	k8sClient := newControllerClient(t, dc)
+func TestFinalize_whenControllerObjectIsGone_returnsNoError(t *testing.T) {
+	dc := newRecordController("")
 	dynClient, _, resources := newCleanupClientsAndResources()
-	parents := []finalizer.ParentResource{{APIVersion: TestAPIVersion, Resource: "unknown"}}
 
-	_, err := newCleaner(k8sClient, dynClient, resources).Finalize(context.TODO(), dc, parentFinalizer, parents, noStop)
+	_, err := newCleaner(newControllerClient(t), dynClient, resources).Finalize(context.TODO(), dc, parentFinalizer, nil, noStop)
 
 	require.NoError(t, err)
-	assert.Empty(t, controllerFinalizers(t, k8sClient, dc))
 }
 
-func TestFinalize_whenAPIVersionDoesNotExist_removesControllerFinalizer(t *testing.T) {
-	dc := newPendingController()
-	k8sClient := newControllerClient(t, dc)
-	dynClient, _, resources := newCleanupClientsAndResources()
-	parents := []finalizer.ParentResource{{APIVersion: "gone.example.com/v1", Resource: "things"}}
+func TestFinalize_whenResourceIsNotInDiscoveryAndHasNoCRD_skipsItWithWarning(t *testing.T) {
+	for name, parent := range map[string]finalizer.ParentResource{
+		"unknown resource": {APIVersion: TestAPIVersion, Resource: "unknown"},
+		"unknown API":      {APIVersion: "gone.example.com/v1", Resource: "things"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			dc := newRecordController("")
+			k8sClient := newControllerClient(t, dc)
+			dynClient, _, resources := newCleanupClientsAndResources()
+			cleaner := newCleaner(k8sClient, dynClient, resources)
 
-	_, err := newCleaner(k8sClient, dynClient, resources).Finalize(context.TODO(), dc, parentFinalizer, parents, noStop)
+			_, err := cleaner.Finalize(context.TODO(), dc, parentFinalizer, []finalizer.ParentResource{parent}, noStop)
 
-	require.NoError(t, err)
-	assert.Empty(t, controllerFinalizers(t, k8sClient, dc))
-}
-
-func TestFinalize_whenAPIServiceExistsButAPIVersionIsNotInDiscovery_returnsErrorAndKeepsControllerFinalizer(t *testing.T) {
-	dc := newPendingController()
-	k8sClient := newControllerClient(t, dc, newAPIService("v1.aggregated.example.com"))
-	dynClient, _, resources := newCleanupClientsAndResources()
-	parents := []finalizer.ParentResource{{APIVersion: "aggregated.example.com/v1", Resource: "things"}}
-
-	_, err := newCleaner(k8sClient, dynClient, resources).Finalize(context.TODO(), dc, parentFinalizer, parents, noStop)
-
-	require.ErrorContains(t, err, "not in discovery")
-	assert.Equal(t, []string{finalizer.ControllerFinalizer}, controllerFinalizers(t, k8sClient, dc))
+			require.NoError(t, err)
+			requireEvent(t, cleaner, "remove the finalizer by hand")
+			assert.Empty(t, controllerFinalizers(t, k8sClient, dc))
+		})
+	}
 }
