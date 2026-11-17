@@ -1,3 +1,10 @@
+## [4.17.10](https://github.com/metacontroller/metacontroller/compare/v4.17.9...v4.17.10) (2026-11-17)
+
+
+### Bug Fixes
+
+* **deps:** update dependencies  ([#1319](https://github.com/metacontroller/metacontroller/issues/1319)) ([718c780](https://github.com/metacontroller/metacontroller/commit/718c780de6762b489844e4725a2b759bd4fb2e04)) — @grzesuav
+
 ## [4.17.9](https://github.com/metacontroller/metacontroller/compare/v4.17.8...v4.17.9) (2026-11-16)
 
 
