@@ -20,6 +20,7 @@ import (
 	"context"
 	"metacontroller/pkg/apis/metacontroller/v1alpha1"
 	commonv2 "metacontroller/pkg/controller/common/api/v2"
+	dynamicapply "metacontroller/pkg/dynamic/apply"
 	dynamicclientset "metacontroller/pkg/dynamic/clientset"
 	. "metacontroller/pkg/internal/testutils/common"
 	. "metacontroller/pkg/internal/testutils/dynamic/clientset"
@@ -515,5 +516,237 @@ func TestManageChildren(t *testing.T) {
 				t.Errorf("ManageChildren() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
+	}
+}
+
+func newEchoedAttachment(resourceVersion string) *unstructured.Unstructured {
+	return &unstructured.Unstructured{Object: map[string]interface{}{
+		"apiVersion": "v1",
+		"kind":       "ConfigMap",
+		"metadata": map[string]interface{}{
+			"name":              "attachment",
+			"namespace":         "default",
+			"uid":               "uid-1",
+			"resourceVersion":   resourceVersion,
+			"generation":        int64(1),
+			"creationTimestamp": "2026-11-19T00:00:00Z",
+		},
+		"data":   map[string]interface{}{"key": "value"},
+		"status": map[string]interface{}{"phase": "Ready"},
+	}}
+}
+
+// newHookChild returns a child as a Go hook sends it. A hook that marshals a
+// typed object sends creationTimestamp: null and an empty status.
+func newHookChild(value string) *unstructured.Unstructured {
+	return &unstructured.Unstructured{Object: map[string]interface{}{
+		"apiVersion": "v1",
+		"kind":       "ConfigMap",
+		"metadata": map[string]interface{}{
+			"name":              "attachment",
+			"namespace":         "default",
+			"creationTimestamp": nil,
+		},
+		"data":   map[string]interface{}{"key": value},
+		"status": map[string]interface{}{},
+	}}
+}
+
+// addServerFields returns a copy of obj with the fields that the API server
+// sets.
+func addServerFields(t *testing.T, obj *unstructured.Unstructured, resourceVersion string) *unstructured.Unstructured {
+	t.Helper()
+	c := obj.DeepCopy()
+	c.SetUID("uid-1")
+	c.SetResourceVersion(resourceVersion)
+	if err := unstructured.SetNestedField(c.Object, "2026-11-19T00:00:00Z", "metadata", "creationTimestamp"); err != nil {
+		t.Fatal(err)
+	}
+	return c
+}
+
+func TestApplyUpdate_whenUpdateHasSystemFieldsAndStatus_excludesThemFromLastApplied(t *testing.T) {
+	observed := newEchoedAttachment("100")
+	update := newEchoedAttachment("100")
+	update.Object["data"] = map[string]interface{}{"key": "changed"}
+
+	newObj, err := ApplyUpdate(observed, update)
+
+	if err != nil {
+		t.Fatalf("ApplyUpdate() error = %v", err)
+	}
+	lastApplied, err := dynamicapply.GetLastApplied(newObj)
+	if err != nil {
+		t.Fatalf("GetLastApplied() error = %v", err)
+	}
+	for _, fieldName := range objectMetaSystemFields {
+		if _, found, _ := unstructured.NestedFieldNoCopy(lastApplied, "metadata", fieldName); found {
+			t.Errorf("last-applied annotation contains metadata.%s", fieldName)
+		}
+	}
+	if _, found, _ := unstructured.NestedFieldNoCopy(lastApplied, "status"); found {
+		t.Errorf("last-applied annotation contains status")
+	}
+	if got, _, _ := unstructured.NestedString(lastApplied, "data", "key"); got != "changed" {
+		t.Errorf("last-applied data.key = %q, want %q", got, "changed")
+	}
+}
+
+func TestApplyUpdate_whenCalled_doesNotChangeUpdateArgument(t *testing.T) {
+	observed := newEchoedAttachment("100")
+	update := newEchoedAttachment("100")
+	if err := dynamicapply.SetLastApplied(update, map[string]interface{}{"data": map[string]interface{}{"key": "value"}}); err != nil {
+		t.Fatal(err)
+	}
+	want := update.DeepCopy()
+
+	_, err := ApplyUpdate(observed, update)
+
+	if err != nil {
+		t.Fatalf("ApplyUpdate() error = %v", err)
+	}
+	if diff := cmp.Diff(want.UnstructuredContent(), update.UnstructuredContent()); diff != "" {
+		t.Errorf("ApplyUpdate() changed the update argument (-want +got):\n%s", diff)
+	}
+}
+
+// See: https://github.com/metacontroller/metacontroller/issues/1003
+func TestApplyUpdate_whenHookEchoesObservedChild_converges(t *testing.T) {
+	observed := newEchoedAttachment("100")
+	newObj, err := ApplyUpdate(observed, observed.DeepCopy())
+	if err != nil {
+		t.Fatalf("first ApplyUpdate() error = %v", err)
+	}
+	// The API server sets a new resourceVersion after the first update.
+	observed = newObj.DeepCopy()
+	observed.SetResourceVersion("101")
+
+	newObj, err = ApplyUpdate(observed, observed.DeepCopy())
+
+	if err != nil {
+		t.Fatalf("second ApplyUpdate() error = %v", err)
+	}
+	if diff := cmp.Diff(observed.UnstructuredContent(), newObj.UnstructuredContent()); diff != "" {
+		t.Errorf("second sync found a diff, want no update (-observed +new):\n%s", diff)
+	}
+}
+
+func TestApplyUpdate_whenChildIsCreatedAndHookSendsSameChild_findsNoDiff(t *testing.T) {
+	desired := newHookChild("value")
+	created := desired.DeepCopy()
+	if err := dynamicapply.SetLastApplied(created, sanitizeLastApplied(created.UnstructuredContent())); err != nil {
+		t.Fatal(err)
+	}
+	observed := addServerFields(t, created, "100")
+
+	newObj, err := ApplyUpdate(observed, newHookChild("value"))
+
+	if err != nil {
+		t.Fatalf("ApplyUpdate() error = %v", err)
+	}
+	if diff := cmp.Diff(observed.UnstructuredContent(), newObj.UnstructuredContent()); diff != "" {
+		t.Errorf("sync after create found a diff, want no update (-observed +new):\n%s", diff)
+	}
+}
+
+func TestApplyUpdate_whenOldAnnotationHasSystemFieldsAndHookIsUnchanged_keepsAnnotation(t *testing.T) {
+	// An older Metacontroller version stored the full hook output, with
+	// system fields and status.
+	child := newEchoedAttachment("100")
+	if err := dynamicapply.SetLastApplied(child, newEchoedAttachment("100").UnstructuredContent()); err != nil {
+		t.Fatal(err)
+	}
+	child.SetLabels(map[string]string{"other-client": "label"})
+	observed := addServerFields(t, child, "200")
+
+	newObj, err := ApplyUpdate(observed, newEchoedAttachment("150"))
+
+	if err != nil {
+		t.Fatalf("ApplyUpdate() error = %v", err)
+	}
+	if diff := cmp.Diff(observed.UnstructuredContent(), newObj.UnstructuredContent()); diff != "" {
+		t.Errorf("sync after upgrade found a diff, want no update (-observed +new):\n%s", diff)
+	}
+}
+
+func TestApplyUpdate_whenOldAnnotationHasEmptyAnnotationsAndHookOmitsThem_keepsOtherAnnotations(t *testing.T) {
+	// An older Metacontroller version stored "annotations": {} when a hook
+	// echoed a child that had only the last-applied annotation.
+	oldLastApplied := newHookChild("value").UnstructuredContent()
+	if err := unstructured.SetNestedStringMap(oldLastApplied, map[string]string{}, "metadata", "annotations"); err != nil {
+		t.Fatal(err)
+	}
+	child := newHookChild("value")
+	if err := dynamicapply.SetLastApplied(child, oldLastApplied); err != nil {
+		t.Fatal(err)
+	}
+	annotations := child.GetAnnotations()
+	annotations["other-client"] = "x"
+	child.SetAnnotations(annotations)
+	observed := addServerFields(t, child, "100")
+
+	newObj, err := ApplyUpdate(observed, newHookChild("value"))
+
+	if err != nil {
+		t.Fatalf("ApplyUpdate() error = %v", err)
+	}
+	if got := newObj.GetAnnotations()["other-client"]; got != "x" {
+		t.Errorf("annotation other-client = %q, want %q", got, "x")
+	}
+	if diff := cmp.Diff(observed.UnstructuredContent(), newObj.UnstructuredContent()); diff != "" {
+		t.Errorf("sync found a diff, want no update (-observed +new):\n%s", diff)
+	}
+}
+
+func TestApplyUpdate_whenHookChangesChild_writesNewAnnotation(t *testing.T) {
+	created := newHookChild("value")
+	if err := dynamicapply.SetLastApplied(created, sanitizeLastApplied(created.UnstructuredContent())); err != nil {
+		t.Fatal(err)
+	}
+	observed := addServerFields(t, created, "100")
+
+	newObj, err := ApplyUpdate(observed, newHookChild("changed"))
+
+	if err != nil {
+		t.Fatalf("ApplyUpdate() error = %v", err)
+	}
+	if got, _, _ := unstructured.NestedString(newObj.Object, "data", "key"); got != "changed" {
+		t.Errorf("data.key = %q, want %q", got, "changed")
+	}
+	lastApplied, err := dynamicapply.GetLastApplied(newObj)
+	if err != nil {
+		t.Fatalf("GetLastApplied() error = %v", err)
+	}
+	if got, _, _ := unstructured.NestedString(lastApplied, "data", "key"); got != "changed" {
+		t.Errorf("last-applied data.key = %q, want %q", got, "changed")
+	}
+}
+
+func TestSanitizeLastApplied_whenAnnotationsAreEmpty_removesAnnotations(t *testing.T) {
+	obj := newHookChild("value").UnstructuredContent()
+	if err := unstructured.SetNestedStringMap(obj, map[string]string{}, "metadata", "annotations"); err != nil {
+		t.Fatal(err)
+	}
+
+	got := sanitizeLastApplied(obj)
+
+	if _, found, _ := unstructured.NestedFieldNoCopy(got, "metadata", "annotations"); found {
+		t.Errorf("sanitizeLastApplied() kept an empty metadata.annotations map")
+	}
+	if _, found, _ := unstructured.NestedFieldNoCopy(obj, "metadata", "annotations"); !found {
+		t.Errorf("sanitizeLastApplied() changed its argument")
+	}
+}
+
+func TestSanitizeLastApplied_whenAnnotationsAreNotEmpty_keepsAnnotations(t *testing.T) {
+	obj := newHookChild("value").UnstructuredContent()
+	if err := unstructured.SetNestedStringMap(obj, map[string]string{"a": "b"}, "metadata", "annotations"); err != nil {
+		t.Fatal(err)
+	}
+
+	got := sanitizeLastApplied(obj)
+
+	if value, _, _ := unstructured.NestedString(got, "metadata", "annotations", "a"); value != "b" {
+		t.Errorf("metadata.annotations.a = %q, want %q", value, "b")
 	}
 }
