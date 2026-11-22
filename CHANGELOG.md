@@ -1,3 +1,10 @@
+## [4.17.11](https://github.com/metacontroller/metacontroller/compare/v4.17.10...v4.17.11) (2026-11-22)
+
+
+### Bug Fixes
+
+* **controllers:** [#1003](https://github.com/metacontroller/metacontroller/issues/1003) - stop the update loop when a hook returns the observed child ([#1325](https://github.com/metacontroller/metacontroller/issues/1325)) ([da303f5](https://github.com/metacontroller/metacontroller/commit/da303f5c4212ec251d44446d0582d5ca6ee637f1)) — @grzesuav
+
 ## [4.17.10](https://github.com/metacontroller/metacontroller/compare/v4.17.9...v4.17.10) (2026-11-17)
 
 
