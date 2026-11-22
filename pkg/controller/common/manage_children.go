@@ -45,7 +45,17 @@ func ApplyUpdate(orig, update *unstructured.Unstructured) (*unstructured.Unstruc
 	if err != nil {
 		return nil, err
 	}
+	if lastApplied != nil {
+		// An older Metacontroller version wrote the full hook output in the
+		// annotation. Use the same sanitized content for the merge and for
+		// the comparison below. If the merge uses the old content, an old
+		// empty annotations map deletes the annotations of other clients
+		// on each sync.
+		lastApplied = sanitizeLastApplied(lastApplied)
+	}
 
+	// Work on a copy, so that the caller's object does not change.
+	update = update.DeepCopy()
 	// prevent setting last applied values in the new object
 	nullifyLastAppliedAnnotation(update)
 
@@ -67,10 +77,56 @@ func ApplyUpdate(orig, update *unstructured.Unstructured) (*unstructured.Unstruc
 		return nil, fmt.Errorf("failed to revert .status: %w", err)
 	}
 
-	if err = dynamicapply.SetLastApplied(newObj, update.UnstructuredContent()); err != nil {
+	newLastApplied := sanitizeLastApplied(update.UnstructuredContent())
+	if lastApplied != nil && DeepEqual(lastApplied, newLastApplied) {
+		// The hook did not change the content that it controls. Keep the old
+		// annotation text. A new text causes a diff, which causes an update or
+		// a recreate of the child. The old text can contain fields that
+		// sanitizeLastApplied removes. An older Metacontroller version wrote
+		// such fields on create and on update.
+		annotations := newObj.GetAnnotations()
+		if annotations == nil {
+			annotations = make(map[string]string, 1)
+		}
+		annotations[dynamicapply.LastAppliedAnnotation] = orig.GetAnnotations()[dynamicapply.LastAppliedAnnotation]
+		newObj.SetAnnotations(annotations)
+		return newObj, nil
+	}
+	if err = dynamicapply.SetLastApplied(newObj, newLastApplied); err != nil {
 		logging.Logger.Error(err, "failed to set lastApplied")
 	}
 	return newObj, nil
+}
+
+// sanitizeLastApplied returns a copy of obj without the ObjectMeta system
+// fields and without status. ApplyUpdate reverts these fields in the new
+// object, so they must not go into the last-applied annotation. If they go
+// into it, the annotation changes after each update, because the API server
+// sets a new resourceVersion. Then the next sync finds a diff again and the
+// update never stops.
+// See: https://github.com/metacontroller/metacontroller/issues/1003
+//
+// The function also removes an empty metadata.annotations map. An empty map
+// stays in obj when nullifyLastAppliedAnnotation removes the only annotation.
+// An empty map records no annotations that the hook controls. But if the
+// last-applied content has the map and the hook omits it, the merge deletes
+// all annotations of the child. This includes annotations of other clients.
+func sanitizeLastApplied(obj map[string]interface{}) map[string]interface{} {
+	c := (&unstructured.Unstructured{Object: obj}).DeepCopy()
+	removeSystemFieldsAndStatus(c)
+	if annotations, found, _ := unstructured.NestedMap(c.Object, "metadata", "annotations"); found && len(annotations) == 0 {
+		unstructured.RemoveNestedField(c.Object, "metadata", "annotations")
+	}
+	return c.Object
+}
+
+// removeSystemFieldsAndStatus removes the ObjectMeta system fields and status
+// from obj.
+func removeSystemFieldsAndStatus(obj *unstructured.Unstructured) {
+	for _, fieldName := range objectMetaSystemFields {
+		unstructured.RemoveNestedField(obj.Object, "metadata", fieldName)
+	}
+	unstructured.RemoveNestedField(obj.Object, "status")
 }
 
 // objectMetaSystemFields is a list of JSON field names within ObjectMeta that
@@ -322,12 +378,9 @@ func sanitizeForSSACompare(obj *unstructured.Unstructured) *unstructured.Unstruc
 
 	// Remove metadata fields that are known to be read-only, system fields,
 	// so that they don't cause cache misses or SSA conflicts.
-	for _, fieldName := range objectMetaSystemFields {
-		unstructured.RemoveNestedField(c.Object, "metadata", fieldName)
-	}
 	// Remove status because we don't currently support a parent changing status of
 	// its children.
-	unstructured.RemoveNestedField(c.Object, "status")
+	removeSystemFieldsAndStatus(c)
 
 	// prevent setting last applied values in the new object
 	nullifyLastAppliedAnnotation(c)
@@ -617,7 +670,7 @@ func (h *DynamicApply) Apply(ctx context.Context, op *ApplyOperation) error {
 	// a 3-way merge upon update, in the style of "kubectl apply".
 	//
 	// Make sure this happens before we add anything else to the object.
-	if err := dynamicapply.SetLastApplied(op.desired, op.desired.UnstructuredContent()); err != nil {
+	if err := dynamicapply.SetLastApplied(op.desired, sanitizeLastApplied(op.desired.UnstructuredContent())); err != nil {
 		return err
 	}
 
