@@ -19,6 +19,7 @@ package main
 import (
 	"flag"
 	"metacontroller/pkg/logging"
+	"metacontroller/pkg/metrics"
 	"metacontroller/pkg/profile"
 	"os"
 	"sync"
@@ -66,7 +67,7 @@ func main() {
 	opts := zap.Options{}
 	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
-	logging.InitLogging(&opts)
+	logging.InitLogging(&opts, logging.WithErrorObserver(metrics.RecordLogError))
 
 	logging.Logger.Info("Configuration information",
 		"discovery-interval", *discoveryInterval,
