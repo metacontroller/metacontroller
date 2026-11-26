@@ -1,3 +1,10 @@
+## [4.17.12](https://github.com/metacontroller/metacontroller/compare/v4.17.11...v4.17.12) (2026-11-26)
+
+
+### Bug Fixes
+
+* **deps:** update kubernetes monorepo to v0.37.3 and golang.org/x/net to v0.63.0 ([#1330](https://github.com/metacontroller/metacontroller/issues/1330)) ([a0759b4](https://github.com/metacontroller/metacontroller/commit/a0759b4e8705ef51f2d476f07143c38ba09bc9ed)) — @grzesuav
+
 ## [4.17.11](https://github.com/metacontroller/metacontroller/compare/v4.17.10...v4.17.11) (2026-11-22)
 
 
