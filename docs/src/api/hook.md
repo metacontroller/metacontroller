@@ -231,6 +231,64 @@ webhook:
     privateKeyKey: tls.key # optional; defaults to "tls.key"
 ```
 
+## Webhook Error Metrics
+
+Metacontroller has two counters for webhook requests. In the first name,
+`<hook>` is the hook type, for example `sync`.
+
+| Metric | What it counts |
+| ------ | -------------- |
+| `metacontroller_<hook>_requests_total` | HTTP requests that received a response. The `code` label has the status code. |
+| `metacontroller_webhook_request_errors_total` | HTTP requests that ended without a response. The `hook` label has the hook type. The `reason` label has the cause. |
+
+The `reason` label has one of these values:
+
+| Value | Cause |
+| ----- | ----- |
+| `dns` | The host name did not resolve. An example is a wrong domain in the webhook URL. |
+| `tls` | The TLS handshake or the certificate check failed. |
+| `timeout` | The request did not complete in the webhook timeout. |
+| `connection` | The connection failed. An example is a refused connection. |
+| `canceled` | Metacontroller canceled the request. This can occur during shutdown. |
+| `other` | Any other error. |
+
+Each `reason` starts at `0`. Thus `rate` also shows the first error.
+
+The two counters count HTTP requests, not webhook calls. A redirect adds one
+more request to a webhook call. Each request increments only one of the two
+counters. To calculate the error ratio of requests, divide the errors by the
+sum of the two counters.
+
+If Metacontroller cannot parse the webhook URL, it does not send a request.
+An example is a space in the host name. The two counters do not count this
+error. The `metacontroller_log_errors_total` counter counts it.
+
+Use this query to find webhooks that you cannot reach:
+
+```promql
+sum by (controller_name, hook, url, reason) (
+  rate(metacontroller_webhook_request_errors_total{reason!="canceled"}[10m])
+) > 0
+```
+
+### Total Error Count
+
+The `metacontroller_log_errors_total` counter counts all error log entries of
+Metacontroller. It includes errors that are not webhook errors. Use it for one
+general error graph or alert:
+
+```promql
+sum(rate(metacontroller_log_errors_total[10m]))
+```
+
+The counter has no controller label. To find the cause, read the logs or use
+the webhook metrics above.
+
+The counter counts only the entries that Metacontroller writes to the log. In
+production mode, the logger samples repeated entries. If one message occurs
+more than 100 times in one second, the logger writes only some of them. Thus
+the counter can show fewer errors than occurred.
+
 ## Endpoint Configs
 
 The `endpointConfigs` field on a `CompositeController` or `DecoratorController` lets you define

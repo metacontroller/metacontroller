@@ -17,6 +17,7 @@ limitations under the License.
 package logging
 
 import (
+	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	controllerruntimelog "sigs.k8s.io/controller-runtime/pkg/log"
 	controllerruntimezap "sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -30,11 +31,40 @@ var (
 	Logger logr.Logger
 )
 
-func InitLogging(opts *controllerruntimezap.Options) {
+// Option changes the logger that InitLogging creates.
+type Option func(*config)
+
+type config struct {
+	errorObserver func()
+}
+
+// WithErrorObserver makes the logger call observe for each error log entry that
+// it writes. In production mode, the logger samples repeated entries. The
+// logger does not call observe for an entry that it drops.
+func WithErrorObserver(observe func()) Option {
+	return func(c *config) {
+		c.errorObserver = observe
+	}
+}
+
+func InitLogging(opts *controllerruntimezap.Options, options ...Option) {
 	if opts.Development {
 		opts.EncoderConfigOptions = append(opts.EncoderConfigOptions, func(encoderConfig *zapcore.EncoderConfig) {
 			encoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
 		})
+	}
+	cfg := config{}
+	for _, option := range options {
+		option(&cfg)
+	}
+	if cfg.errorObserver != nil {
+		observe := cfg.errorObserver
+		opts.ZapOpts = append(opts.ZapOpts, zap.Hooks(func(entry zapcore.Entry) error {
+			if entry.Level >= zapcore.ErrorLevel {
+				observe()
+			}
+			return nil
+		}))
 	}
 	Logger = controllerruntimezap.New(controllerruntimezap.UseFlagOptions(opts))
 	klog.SetLogger(Logger)

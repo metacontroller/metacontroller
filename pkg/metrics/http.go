@@ -52,11 +52,12 @@ type cachedInstrumentation struct {
 }
 
 type instrumentation struct {
-	duration    *prometheus.HistogramVec
-	requests    *prometheus.CounterVec
-	dnsDuration *prometheus.HistogramVec
-	tlsDuration *prometheus.HistogramVec
-	inflight    prometheus.Gauge
+	duration      *prometheus.HistogramVec
+	requests      *prometheus.CounterVec
+	requestErrors *prometheus.CounterVec
+	dnsDuration   *prometheus.HistogramVec
+	tlsDuration   *prometheus.HistogramVec
+	inflight      prometheus.Gauge
 }
 
 // InstrumentClientWithConstLabels instruments given http.Client with metrics registered in given prometheus.Registerer
@@ -71,7 +72,7 @@ func InstrumentClientWithConstLabels(
 		controllerNameLabel: controllerName,
 		"controller_type":   controllerType.String(),
 	}
-	key := fmt.Sprintf("%s/%s/%s", controllerName, hookType, url)
+	key := fmt.Sprintf("%s/%s/%s/%s", controllerType, controllerName, hookType, url)
 	instrumentation, err := getOrCreateMetrics(key, hookType, constLabels)
 	if err != nil {
 		return nil, err
@@ -86,9 +87,11 @@ func InstrumentClientWithConstLabels(
 		Jar:           c.Jar,
 		Timeout:       c.Timeout,
 		Transport: pph.InstrumentRoundTripperInFlight(instrumentation.Collector.inflight,
-			pph.InstrumentRoundTripperCounter(instrumentation.Collector.requests,
-				pph.InstrumentRoundTripperTrace(instrumentation.Trace,
-					pph.InstrumentRoundTripperDuration(instrumentation.Collector.duration, transport),
+			instrumentRoundTripperErrors(instrumentation.Collector.requestErrors,
+				pph.InstrumentRoundTripperCounter(instrumentation.Collector.requests,
+					pph.InstrumentRoundTripperTrace(instrumentation.Trace,
+						pph.InstrumentRoundTripperDuration(instrumentation.Collector.duration, transport),
+					),
 				),
 			),
 		),
@@ -125,6 +128,7 @@ func createNewMetrics(hookType common.HookType, constLabels map[string]string) (
 			},
 			[]string{"code", "method"},
 		),
+		requestErrors: newRequestErrorsCounter(hookType.String(), constLabels),
 		duration: prometheus.NewHistogramVec(
 			prometheus.HistogramOpts{
 				Namespace:   metacontrollerPrefix,
@@ -188,6 +192,7 @@ func createNewMetrics(hookType common.HookType, constLabels map[string]string) (
 func (i *instrumentation) Describe(in chan<- *prometheus.Desc) {
 	i.duration.Describe(in)
 	i.requests.Describe(in)
+	i.requestErrors.Describe(in)
 	i.dnsDuration.Describe(in)
 	i.tlsDuration.Describe(in)
 	i.inflight.Describe(in)
@@ -197,6 +202,7 @@ func (i *instrumentation) Describe(in chan<- *prometheus.Desc) {
 func (i *instrumentation) Collect(in chan<- prometheus.Metric) {
 	i.duration.Collect(in)
 	i.requests.Collect(in)
+	i.requestErrors.Collect(in)
 	i.dnsDuration.Collect(in)
 	i.tlsDuration.Collect(in)
 	i.inflight.Collect(in)
